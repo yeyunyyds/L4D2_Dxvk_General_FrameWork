@@ -28,6 +28,22 @@ class GpuArtifactValidation(unittest.TestCase):
     def test_corrupted_gpu_color_is_rejected(self):
         b=bytearray(self.raw.read_bytes());struct.pack_into('<f',b,0,9);self.raw.write_bytes(b)
         with self.assertRaisesRegex(ValueError,'GPU/CPU mismatch'):analyze_gpu(self.data)
+    def test_fp32_nearest_boundary_accepts_only_matching_adjacent_color(self):
+        # CPU projection sits just below a half-cell; GPU motion sits just above.
+        matrix=list(struct.unpack_from('<16f',(self.data/'state-2.bin').read_bytes(),64));matrix[3]=.5000001
+        (self.data/'state-2.bin').write_bytes(struct.pack('<32f',*([0]*16+matrix)))
+        self.events[-2]['matrix_rows']=list(struct.unpack_from('<16f',(self.data/'state-2.bin').read_bytes(),64))
+        self.events[-2].update(status_counts=[0,2,0,2,0,0],valid_pixels=2,depth_consistent_pixels=2);self.write()
+        colors=[.25,.5,1,1, .75,.125,.5,1]*2
+        (self.data/'0-0-0-color.rgba16f').write_bytes(struct.pack('<16e',*colors))
+        invalid=[0,0,0,0,0,0,0,3];valid=[.75,.125,.5,1,2.4999995,0,0,1]
+        self.raw.write_bytes(struct.pack('<32f',*(invalid+valid+invalid+valid)))
+        r=analyze_gpu(self.data);self.assertEqual(r['gpu_pairs'][0]['accepted_adjacent_samples'],2)
+        # The neighboring color is allowed only while the sample lies at the tie.
+        self.events[-2]['matrix_rows'][3]=.6;matrix[3]=.6
+        (self.data/'state-2.bin').write_bytes(struct.pack('<32f',*([0]*16+matrix)));self.write()
+        valid[4]=3.0;self.raw.write_bytes(struct.pack('<32f',*(invalid+valid+invalid+valid)))
+        with self.assertRaisesRegex(ValueError,'GPU/CPU mismatch'):analyze_gpu(self.data)
     def test_wrong_gpu_frame_pair_is_rejected(self):
         self.events[-2]['previous_frame']=9;self.write()
         with self.assertRaisesRegex(ValueError,'missing frame'):analyze_gpu(self.data)
