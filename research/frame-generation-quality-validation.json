@@ -100,6 +100,34 @@
       "b580_validation": "unrun",
       "exe_sha256": "b8bb964704af8d1a5263d3765293e2c7d340ffbb40282b9291efae312c1a0c23",
       "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "d323b0e1d4fd4ef8aced92c7ce4d02f7",
+      "frames": 16,
+      "backend_calls": 28,
+      "actual_present_calls": 28,
+      "generated_backbuffers_verified": 12,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 10,
+      "near_colour_mask": "verified_before_after_HDR",
+      "near_fixture_case": "no_depth_and_rebind",
+      "whole_frame_quality": "verified",
+      "rejected_frames": [
+        2,
+        3
+      ],
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "10500c747b621275a99736d045ea61f5c44b2b76d51296f00c5bd7ea4b970683",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
     }
   ],
   "guard_counterfactual": {
