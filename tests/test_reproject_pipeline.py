@@ -46,6 +46,9 @@ class ExplicitMatrixPipeline(unittest.TestCase):
     def test_wrong_shader_mapping_is_rejected(self):
         self.mapping['shader_sha256']='incorrect'
         with self.assertRaisesRegex(ValueError,'shader does not match'):reproject(self.data,'0-0-0','1-0-0',self.mapping,self.root/'output')
+    def test_unknown_snapshot_producer_is_rejected(self):
+        self.events[2]['last_draw_sequence']=12345;self.write()
+        with self.assertRaisesRegex(ValueError,'unknown draw'):inventory(self.data)
     def test_wrong_pair_direction_is_rejected(self):
         with self.assertRaisesRegex(ValueError,'chronological'):reproject(self.data,'1-0-0','0-0-0',self.mapping,self.root/'output')
 if __name__=='__main__':unittest.main()

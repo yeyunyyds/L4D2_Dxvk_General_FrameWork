@@ -110,6 +110,8 @@ def analyze(directory):
             if 'export' in event:
                 ex=event['export'];stride=ex['stride']
                 if not 1<=stride<=8 or ex['offset']!=stride//2 or ex['width']!=(event['color']['width']+stride-1)//stride or ex['height']!=(event['color']['height']+stride-1)//stride: raise ValueError('Invalid sampled-image mapping')
+            if events[0].get('capture_schema',1)>=2 and event.get('last_draw_sequence') not in draw_sequences and event.get('last_draw_sequence')!=2**64-1:
+                raise ValueError('Snapshot references an unknown draw sequence')
             if events[0].get('capture_schema',1)>=2 and event.get('last_draw_sequence') in draw_sequences:
                 producer=draw_sequences[event['last_draw_sequence']]
                 if producer['frame']!=event['frame'] or producer['generation']!=event['generation'] or producer['hresult']!=0: raise ValueError('Snapshot metadata belongs to another frame/generation')

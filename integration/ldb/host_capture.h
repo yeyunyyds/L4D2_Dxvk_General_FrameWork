@@ -252,7 +252,7 @@ inline void viewportBefore(IDirect3DDevice9* device, const D3DVIEWPORT9* next, u
 inline void result(IDirect3DDevice9* device, const char* name, uint32_t uid, HRESULT hresult) noexcept {
   observe(device,[&](State& s) {
     if (!s.active()) return;
-    if (SUCCEEDED(hresult) && std::string(name) == "Clear") { s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; }
+    if (SUCCEEDED(hresult) && std::string(name) == "Clear") { s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; s.lastDrawSequence=UINT64_MAX; }
     s.emit("api_result",uid,"\"api\":"+quote(name)+",\"hresult\":"+std::to_string(uint32_t(hresult)));
   });
 }
@@ -260,7 +260,7 @@ inline void draw(IDirect3DDevice9* device, const char* name, uint32_t uid, HRESU
   observe(device, [&](State& s) {
     if (!s.active()) return;
     if (SUCCEEDED(hresult)) { s.draws++; s.segmentDraws++; }
-    if (s.events++ >= 12000) return;
+    if (s.events++ >= 12000) { s.lastDrawSequence=UINT64_MAX; return; }
     Com<IDirect3DSurface9> rt, ds;
     Com<IDirect3DVertexShader9> vs; Com<IDirect3DPixelShader9> ps;
     Com<IDirect3DVertexDeclaration9> declaration;
@@ -328,7 +328,7 @@ inline void afterPresent(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult
 }
 inline void reset(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult) noexcept {
   observe(device,[&](State& s) {
-    if(SUCCEEDED(hresult)) { s.generation++; s.segmentDraws=0; s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; }
+    if(SUCCEEDED(hresult)) { s.generation++; s.segmentDraws=0; s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; s.lastDrawSequence=UINT64_MAX; }
     s.emit("reset_result",uid,"\"hresult\":"+std::to_string(uint32_t(hresult)));
   });
 }
