@@ -75,6 +75,7 @@ def smoke(args):
         environment["DXVK_DEBUG"] = "validation"
     command = [str(wine), str(exe), "--dxvk", str(backend), "--adapter", "llvmpipe",
                "--run-id", directory.name, "--frames", str(args.frames), "--depth-format", args.depth_format]
+    if getattr(args,"fg_odd_extent",False):command += ["--width","641","--height","361"]
     if args.negative_case == "wrong-arch":
         import struct
         data = bytearray(160)
@@ -144,6 +145,16 @@ def smoke(args):
                             captures=[e for e in fgevents if e['event']=='capture']
                             if len(captures)<8 or min(e['frame'] for e in captures)<2:raise ValueError('Delayed periodic capture failed')
                             result['delayed_periodic_captures']=[e['frame'] for e in captures]
+                        init=None
+                        for event in fgevents:
+                            if event['event']=='gpu_initialized':init=event
+                            elif event['event']=='frame_metrics' and event.get('quality_total_pixels'):
+                                if not init or event['quality_total_pixels']!=init['width']*init['height']:raise ValueError('GPU quality counter missed pixels')
+                        rejects=[e for e in fgevents if e['event']=='frame_rejected']
+                        if args.fg_case=='quality':
+                            if [e['frame'] for e in rejects]!=[2,3] or any(not e.get('original_restored') or e.get('presented') for e in rejects):raise ValueError('Quality-rejected candidate was presented')
+                        elif rejects:raise ValueError('Normal fixture was incorrectly rejected')
+                        result['whole_frame_quality']='verified';result['rejected_frames']=[e['frame'] for e in rejects]
                         result['fg_events']='verified';result['history_storage']='full_size_gpu'
                 else:
                     result = analyze(read_events(directory / "capture.jsonl"), directory.name, process.returncode)
@@ -190,10 +201,11 @@ if __name__ == "__main__":
     parser.add_argument("--hdr-scene", action="store_true")
     parser.add_argument("--gpu-reproject", action="store_true")
     parser.add_argument("--fg-mode",choices=("paired","generated","off"))
+    parser.add_argument("--fg-odd-extent",action="store_true")
     parser.add_argument("--fg-near-case",choices=("normal","no_depth_and_rebind"),default="normal")
     parser.add_argument("--fg-auto-capture",action="store_true")
     parser.add_argument("--fg-pacing-ms",type=int,choices=range(9),default=0)
-    parser.add_argument("--fg-case",choices=("normal","partial","failure"),default="normal")
+    parser.add_argument("--fg-case",choices=("normal","partial","failure","quality"),default="normal")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))
     args = parser.parse_args()

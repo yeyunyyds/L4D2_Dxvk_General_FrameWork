@@ -549,7 +549,8 @@ struct State {
     previousArrival = arrival;
     previousPacingMs = 0;
     hotkeys(uid);
-    bool captured = false, generatedFrame = false;
+    bool captured = false, generatedFrame = false, qualityRejected = false;
+    ResidentFg::Quality quality{};
     double captureMs = 0, generatedPresentMs = 0, logicalPresentMs = 0;
     int64_t generatedStart = 0;
     bool wrote = false, ready = false;
@@ -615,7 +616,25 @@ struct State {
             generatedFrame = true;
             transfer(back.get(), ResidentFg::Output, true);
 
-            if (!generatedOnly) {
+            quality = gpu->readQuality();
+            qualityRejected =
+                quality.reject(uint64_t(gpu->width) * gpu->height);
+            if (qualityRejected) {
+              transfer(back.get(), ResidentFg::CurrentFinal, true);
+              wrote = false;
+              generatedFrame = false;
+              emit(
+                  "frame_rejected", uid,
+                  "\"reason\":\"invalid_scene_coverage\",\"invalid_scene_"
+                  "ratio\":" +
+                      std::to_string(quality.invalidSceneRatio()) +
+                      ",\"invalid_pixels\":" + std::to_string(quality.invalid) +
+                      ",\"total_pixels\":" + std::to_string(quality.total) +
+                      ",\"foreground_pixels\":" +
+                      std::to_string(quality.foreground) +
+                      ",\"original_restored\":true,\"presented\":false");
+            }
+            if (!generatedOnly && !qualityRejected) {
               generatedStart = now();
               extra = backend();
               generatedPresentMs = ms(now() - generatedStart);
@@ -747,6 +766,11 @@ struct State {
             ",\"mode\":" + quote(generatedOnly ? "generated" : "paired") +
             ",\"generated\":" + std::string(generatedFrame ? "true" : "false") +
             ",\"captured\":" + std::string(captured ? "true" : "false") +
+            ",\"quality_rejected\":" +
+            std::string(qualityRejected ? "true" : "false") +
+            ",\"quality_total_pixels\":" + std::to_string(quality.total) +
+            ",\"invalid_scene_ratio\":" +
+            std::to_string(quality.invalidSceneRatio()) +
             ",\"near_preserved\":" +
             std::string(nearCopied ? "true" : "false") +
             ",\"near_colour_mask_valid\":" +

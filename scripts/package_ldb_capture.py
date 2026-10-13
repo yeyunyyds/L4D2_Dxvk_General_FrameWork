@@ -59,6 +59,7 @@ def package(source, build_id, output):
         archive.write(ROOT/'scripts/start_fg_test.cmd','start_fg_test.cmd')
         archive.write(ROOT/'shaders/camera_reproject.comp','sources/camera_reproject.comp')
         archive.write(ROOT/'shaders/frame_generate.comp','sources/frame_generate.comp')
+        archive.write(ROOT/'shaders/frame_quality.comp','sources/frame_quality.comp')
         archive.write(source/'LICENSE', 'licenses/Remix-LICENSE')
         archive.write(ROOT/'.research/sources/bridge-131/LICENSE', 'licenses/LDB-LICENSE')
         archive.write(ROOT/'.research/sources/dxvk/LICENSE', 'licenses/DXVK-LICENSE')

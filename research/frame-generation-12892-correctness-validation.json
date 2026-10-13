@@ -1,0 +1,146 @@
+{
+  "upload": "fg-12892-9351359-2571502282496.7z",
+  "upload_sha256": "44de17a4d6dffcb240c2eebdabecb58afa3ee3cc84d5e7e63a22e852db47e6ba",
+  "overall_correctness": "not_accepted_large_scene_stitching_artifact",
+  "weapon_and_hand_sample_acceptance": "passed",
+  "successful_generated_presents": 4756,
+  "generated_by_mode": {
+    "generated": 4756
+  },
+  "errors": [],
+  "saved_generated_images": 8,
+  "foreground_sample_pixels": 226270,
+  "foreground_max_difference": 0,
+  "weapon_and_hand_checks": {
+    "method": "Visually inspected first-person frames; blue texture/bright hand-and-weapon colour selections within bounded ROIs, eroded one pixel. These are sampled-image checks, not full-resolution semantic segmentation.",
+    "samples": [
+      {
+        "frame": 13074,
+        "selection": "blue_weapon",
+        "roi": [
+          270,
+          100,
+          480,
+          395
+        ],
+        "pixels": 2258,
+        "yellow_pixels": 2258,
+        "changed_above_one": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 13074,
+        "selection": "light_hand_and_weapon",
+        "roi": [
+          260,
+          250,
+          450,
+          395
+        ],
+        "pixels": 7007,
+        "yellow_pixels": 7007,
+        "changed_above_one": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 13075,
+        "selection": "blue_weapon",
+        "roi": [
+          270,
+          100,
+          480,
+          395
+        ],
+        "pixels": 2225,
+        "yellow_pixels": 2225,
+        "changed_above_one": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 13075,
+        "selection": "light_hand_and_weapon",
+        "roi": [
+          260,
+          250,
+          450,
+          395
+        ],
+        "pixels": 6726,
+        "yellow_pixels": 6726,
+        "changed_above_one": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 13076,
+        "selection": "blue_weapon",
+        "roi": [
+          270,
+          100,
+          480,
+          395
+        ],
+        "pixels": 2236,
+        "yellow_pixels": 2236,
+        "changed_above_one": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 13076,
+        "selection": "light_hand_and_weapon",
+        "roi": [
+          260,
+          250,
+          450,
+          395
+        ],
+        "pixels": 6939,
+        "yellow_pixels": 6939,
+        "changed_above_one": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 13077,
+        "selection": "blue_weapon",
+        "roi": [
+          270,
+          100,
+          480,
+          395
+        ],
+        "pixels": 1459,
+        "yellow_pixels": 1459,
+        "changed_above_one": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 13077,
+        "selection": "light_hand_and_weapon",
+        "roi": [
+          260,
+          250,
+          450,
+          395
+        ],
+        "pixels": 5359,
+        "yellow_pixels": 5359,
+        "changed_above_one": 0,
+        "max_difference": 0
+      }
+    ]
+  },
+  "selected_weapon_hand_pixels": 34209,
+  "scene_failure": {
+    "frame": 13077,
+    "visible_artifact": "Large discontinuous sky/wall/road patches in the saved generated candidate.",
+    "red_fallback_percent_sampled": 33.832,
+    "foreground_percent_sampled": 10.156,
+    "invalid_scene_fraction_sampled": 0.3765638217354526
+  },
+  "limits": [
+    "This test is generated-only preview, not paired Present delivery.",
+    "Weapon/hand checks are sampled, bounded colour selections, not full-resolution semantic segmentation.",
+    "Only two capture bursts are present; dynamic-object true midpoint poses remain unverified.",
+    "Generation/Present success does not establish image correctness or monitor delivery.",
+    "The whole-frame guard rejects untrustworthy candidates; it does not reconstruct unseen geometry or solve all local seams."
+  ]
+}

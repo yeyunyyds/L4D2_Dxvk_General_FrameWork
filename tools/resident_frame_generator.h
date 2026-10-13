@@ -1,6 +1,7 @@
 #pragma once
 #include "dxvk_capture_shared.h"
 #include "frame_generate_spirv.h"
+#include "frame_quality_spirv.h"
 #include <algorithm>
 namespace dxvk_capture {
 // Own Vulkan histories only. The device/interop is borrowed from the live Host
@@ -52,6 +53,17 @@ private:
   LARGE_INTEGER clockFrequency{};
 
 public:
+  struct Quality {
+    uint32_t total = 0, invalid = 0, foreground = 0, reserved = 0;
+    double invalidSceneRatio() const {
+      return total > foreground ? double(invalid) / double(total - foreground)
+                                : 0;
+    }
+    bool reject(uint64_t expected) const {
+      return total != expected || uint64_t(invalid) + foreground > total ||
+             invalidSceneRatio() > .15;
+    }
+  };
   struct Counters {
     uint32_t submissions = 0;
     double fenceMs = 0, dispatchMs = -1;
@@ -60,19 +72,24 @@ public:
 private:
   Counters counters;
   VkSampler sampler{};
-  VkShaderModule shader{};
+  VkShaderModule shader{}, qualityShader{};
   VkDescriptorSetLayout setLayout{};
   VkPipelineLayout pipelineLayout{};
-  VkPipeline pipeline{};
+  VkPipeline pipeline{}, qualityPipeline{};
   VkDescriptorPool descriptors{};
   VkDescriptorSet set{};
 
-  VkBuffer uniform{}, readback{};
+  VkBuffer uniform{}, readback{}, qualityBuffer{}, qualityReadback{};
+  VkDeviceMemory qualityMemory{}, qualityReadbackMemory{};
+  VkDeviceSize qualityBytes = 0, qualityResultOffset = 0;
+  void *qualityMap = nullptr;
   VkDeviceMemory uniformMemory{}, readbackMemory{};
   void *uniformMap = nullptr;
   void *readbackMap = nullptr;
 
 #define FN(name) PFN_##name name = nullptr
+  FN(vkCmdFillBuffer);
+  FN(vkCmdCopyBuffer);
   FN(vkCreateQueryPool);
   FN(vkDestroyQueryPool);
   FN(vkCmdResetQueryPool);
@@ -207,6 +224,8 @@ public:
   name = reinterpret_cast<PFN_##name>(get(c.device, #name));                   \
   if (!name)                                                                   \
   throw std::runtime_error(#name " missing")
+    LOAD(vkCmdFillBuffer);
+    LOAD(vkCmdCopyBuffer);
     LOAD(vkCreateQueryPool);
     LOAD(vkDestroyQueryPool);
     LOAD(vkCmdResetQueryPool);
@@ -245,6 +264,10 @@ public:
     }
     if (timestamps)
       vkDestroyQueryPool(c.device, timestamps, nullptr);
+    if (qualityPipeline)
+      vkDestroyPipeline(c.device, qualityPipeline, nullptr);
+    if (qualityShader)
+      vkDestroyShaderModule(c.device, qualityShader, nullptr);
     if (pipeline)
       vkDestroyPipeline(c.device, pipeline, nullptr);
     if (pipelineLayout)
@@ -257,6 +280,16 @@ public:
       vkDestroyShaderModule(c.device, shader, nullptr);
     if (sampler)
       vkDestroySampler(c.device, sampler, nullptr);
+    if (qualityMap)
+      c.vkUnmapMemory(c.device, qualityReadbackMemory);
+    if (qualityReadback)
+      c.vkDestroyBuffer(c.device, qualityReadback, nullptr);
+    if (qualityReadbackMemory)
+      c.vkFreeMemory(c.device, qualityReadbackMemory, nullptr);
+    if (qualityBuffer)
+      c.vkDestroyBuffer(c.device, qualityBuffer, nullptr);
+    if (qualityMemory)
+      c.vkFreeMemory(c.device, qualityMemory, nullptr);
     if (uniformMap)
       c.vkUnmapMemory(c.device, uniformMemory);
     if (uniform)
@@ -415,24 +448,45 @@ public:
     vkcheck(vkCreateSampler(c.device, &sam, nullptr, &sampler), "FG sampler");
     buffer(uniform, uniformMemory, uniformMap, sizeof(Params),
            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    static_assert(sizeof(Quality) == 16, "FG quality ABI");
+    VkBufferCreateInfo qb{};
+    qb.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    qualityResultOffset =
+        VkDeviceSize((w + 7) / 8) * ((h + 7) / 8) * sizeof(Quality);
+    qualityBytes = qualityResultOffset + sizeof(Quality);
+    qb.size = qualityBytes;
+    qb.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+               VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+               VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    vkcheck(c.vkCreateBuffer(c.device, &qb, nullptr, &qualityBuffer),
+            "FG quality GPU buffer");
+    VkMemoryRequirements qr{};
+    c.vkGetBufferMemoryRequirements(c.device, qualityBuffer, &qr);
+    qualityMemory = c.allocate(qr, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    vkcheck(c.vkBindBufferMemory(c.device, qualityBuffer, qualityMemory, 0),
+            "FG quality GPU memory");
+    buffer(qualityReadback, qualityReadbackMemory, qualityMap, sizeof(Quality),
+           VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     VkShaderModuleCreateInfo sm{};
     sm.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     sm.codeSize = sizeof(frameGenerateSpirv);
     sm.pCode = frameGenerateSpirv;
     vkcheck(vkCreateShaderModule(c.device, &sm, nullptr, &shader), "FG shader");
-    std::array<VkDescriptorSetLayoutBinding, 15> bindings{};
-    for (uint32_t n = 0; n < 15; n++) {
+    std::array<VkDescriptorSetLayoutBinding, 16> bindings{};
+    for (uint32_t n = 0; n < 16; n++) {
       bindings[n].binding = n;
       bindings[n].descriptorCount = 1;
       bindings[n].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
       bindings[n].descriptorType =
-          (n < 8 || n >= 11) ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                             : (n == 9 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-                                       : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+          (n < 8 || (n >= 11 && n < 15))
+              ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+              : (n == 15  ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+                 : n == 9 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+                          : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     }
     VkDescriptorSetLayoutCreateInfo sl{};
     sl.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    sl.bindingCount = 15;
+    sl.bindingCount = 16;
     sl.pBindings = bindings.data();
     vkcheck(vkCreateDescriptorSetLayout(c.device, &sl, nullptr, &setLayout),
             "FG set layout");
@@ -452,14 +506,25 @@ public:
     vkcheck(vkCreateComputePipelines(c.device, VK_NULL_HANDLE, 1, &cp, nullptr,
                                      &pipeline),
             "FG pipeline");
-    std::array<VkDescriptorPoolSize, 3> sizes{
+    VkShaderModuleCreateInfo qs{};
+    qs.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    qs.codeSize = sizeof(frameQualitySpirv);
+    qs.pCode = frameQualitySpirv;
+    vkcheck(vkCreateShaderModule(c.device, &qs, nullptr, &qualityShader),
+            "FG quality shader");
+    cp.stage.module = qualityShader;
+    vkcheck(vkCreateComputePipelines(c.device, VK_NULL_HANDLE, 1, &cp, nullptr,
+                                     &qualityPipeline),
+            "FG quality reduction pipeline");
+    std::array<VkDescriptorPoolSize, 4> sizes{
         {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 12},
          {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2},
-         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}}};
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
+         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}}};
     VkDescriptorPoolCreateInfo dp{};
     dp.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     dp.maxSets = 1;
-    dp.poolSizeCount = 3;
+    dp.poolSizeCount = 4;
     dp.pPoolSizes = sizes.data();
     vkcheck(vkCreateDescriptorPool(c.device, &dp, nullptr, &descriptors),
             "FG descriptors");
@@ -503,20 +568,25 @@ public:
     range.memory = uniformMemory;
     range.size = VK_WHOLE_SIZE;
     vkcheck(vkFlushMappedMemoryRanges(c.device, 1, &range), "FG uniform flush");
-    std::array<VkDescriptorImageInfo, 15> infos{};
-    std::array<VkWriteDescriptorSet, 15> writes{};
+    std::array<VkDescriptorImageInfo, 16> infos{};
+    std::array<VkWriteDescriptorSet, 16> writes{};
     VkDescriptorBufferInfo bufferInfo{uniform, 0, sizeof(Params)};
-    for (uint32_t n = 0; n < 15; n++) {
+    VkDescriptorBufferInfo qualityInfo{qualityBuffer, 0, qualityBytes};
+    for (uint32_t n = 0; n < 16; n++) {
       writes[n].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       writes[n].dstSet = set;
       writes[n].dstBinding = n;
       writes[n].descriptorCount = 1;
       writes[n].descriptorType =
-          (n < 8 || n >= 11) ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                             : (n == 9 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-                                       : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+          (n < 8 || (n >= 11 && n < 15))
+              ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+              : (n == 15  ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+                 : n == 9 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+                          : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
       if (n == 9)
         writes[n].pBufferInfo = &bufferInfo;
+      else if (n == 15)
+        writes[n].pBufferInfo = &qualityInfo;
       else {
         uint32_t slot = n >= 11 ? uint32_t(CurrentNearBefore) + n - 11
                                 : (n == 10 ? uint32_t(Mask) : n);
@@ -525,7 +595,7 @@ public:
         writes[n].pImageInfo = &infos[n];
       }
     }
-    vkUpdateDescriptorSets(c.device, 15, writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(c.device, 16, writes.data(), 0, nullptr);
     begin();
     VkBufferMemoryBarrier b{};
     b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -548,14 +618,63 @@ public:
       vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                           timestamps, 0);
     }
+    vkCmdFillBuffer(c.command, qualityBuffer, 0, qualityBytes, 0);
+    VkBufferMemoryBarrier clear{};
+    clear.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    clear.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    clear.dstAccessMask =
+        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    clear.srcQueueFamilyIndex = clear.dstQueueFamilyIndex =
+        VK_QUEUE_FAMILY_IGNORED;
+    clear.buffer = qualityBuffer;
+    clear.size = qualityBytes;
+    c.vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
+                           1, &clear, 0, nullptr);
     vkCmdDispatch(c.command, (width + 7) / 8, (height + 7) / 8, 1);
     if (timestamps) {
       vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                           timestamps, 1);
       queryPending = true;
     }
+    clear.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    clear.dstAccessMask =
+        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    c.vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
+                           1, &clear, 0, nullptr);
+    vkCmdBindPipeline(c.command, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      qualityPipeline);
+    vkCmdDispatch(c.command, 1, 1, 1);
+    clear.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    clear.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    c.vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
+                           &clear, 0, nullptr);
+    VkBufferCopy copy{qualityResultOffset, 0, sizeof(Quality)};
+    vkCmdCopyBuffer(c.command, qualityBuffer, qualityReadback, 1, &copy);
+    clear.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    clear.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+    clear.buffer = qualityReadback;
+    clear.size = sizeof(Quality);
+    c.vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &clear,
+                           0, nullptr);
     if (!deferSubmit)
       end();
+  }
+  Quality readQuality() {
+    if (recording || c.pending)
+      throw std::runtime_error("FG quality read before completion");
+    VkMappedMemoryRange range{};
+    range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    range.memory = qualityReadbackMemory;
+    range.size = VK_WHOLE_SIZE;
+    vkcheck(c.vkInvalidateMappedMemoryRanges(c.device, 1, &range),
+            "FG quality invalidate");
+    Quality q{};
+    std::memcpy(&q, qualityMap, sizeof(q));
+    return q;
   }
   void writeBack(const ImageInfo &destination, Slot source) {
     if (!matches(destination) || (destination.create.format != finalFormat) ||

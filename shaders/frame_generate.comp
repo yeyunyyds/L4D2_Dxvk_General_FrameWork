@@ -62,8 +62,12 @@ bool temporalChange(vec2 cx,vec2 px) {
  }
  return changed>=2;
 }
+layout(set=0,binding=15,std430) buffer FrameQuality { uint counts[]; } quality;
+shared uvec3 groupCounts[64];
 void main() {
- ivec2 xy=ivec2(gl_GlobalInvocationID.xy);if(any(greaterThanEqual(xy,ivec2(p.flags.xy))))return;
+ uint local=gl_LocalInvocationIndex;uvec3 cell=uvec3(0u);
+ ivec2 xy=ivec2(gl_GlobalInvocationID.xy);
+ if(all(lessThan(xy,ivec2(p.flags.xy)))) {
  vec2 screen=vec2(xy);vec4 fallback=sampleAt(currentFinal,screen),result=fallback;vec4 mark=vec4(1,0,0,1);
  vec2 ndc=vec2(2*screen.x/float(p.flags.x)-1,1-2*screen.y/float(p.flags.y));
  if(foregroundEdge(screen)){mark=vec4(1,1,0,1);}
@@ -102,4 +106,15 @@ void main() {
  result.a=1;
  if((p.flags.z&4u)!=0u)result=result.bgra;
  imageStore(generated,xy,result);imageStore(classification,xy,mark);
+ cell.x=1u;
+ if(mark.r>.5&&mark.g<.5&&mark.b<.5)cell.y=1u;
+ if(mark.r>.5&&mark.g>.5&&mark.b<.5)cell.z=1u;
+ }
+ groupCounts[local]=cell;barrier();
+ for(uint stride=32u;stride>0u;stride/=2u){if(local<stride)groupCounts[local]+=groupCounts[local+stride];barrier();}
+ if(local==0u) {
+  uint offset=(gl_WorkGroupID.y*gl_NumWorkGroups.x+gl_WorkGroupID.x)*4u;
+  quality.counts[offset]=groupCounts[0].x;quality.counts[offset+1u]=groupCounts[0].y;
+  quality.counts[offset+2u]=groupCounts[0].z;quality.counts[offset+3u]=0u;
+ }
 }

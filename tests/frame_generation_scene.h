@@ -70,7 +70,8 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   hr(device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE), "FG fixture cull");
   hr(device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE), "FG fixture blend");
   hr(device->BeginScene(), "FG fixture begin");
-  projection(.02f * frame);
+  bool qualityCase = ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"quality";
+  projection(qualityCase && frame == 2 ? 1.8f : .02f * frame);
   quad(-.1f * width, .15f * height, 1.1f * width, float(height), .75f,
        {.08f, .3f, .12f, 1});
   quad(.2f * width, .2f * height, .35f * width, .65f * height, .5f,
@@ -177,21 +178,28 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
       }
     }
   }
-  uint32_t edge = width;
+  bool qualityCase = ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"quality";
+  uint32_t edge = width, redPixels = 0;
   for (uint32_t x = 0; x < width; x++) {
     auto c = rgb(x, uint32_t(height * .4f));
     if (c[0] > 180 && c[1] < 60 && c[2] < 30) {
-      edge = x;
-      break;
+      if (edge == width)
+        edge = x;
+      redPixels++;
     }
   }
   read->UnlockRect();
-  if (dynamic[0] > 35 || (frame % 2 ? (dynamic[1] < 220 || dynamic[2] > 65)
-                                    : (dynamic[1] > 35 || dynamic[2] < 220)))
+  if (qualityCase && frame == 3 && redPixels > uint32_t(width * .15f) + 3)
+    throw std::runtime_error("Quality fallback duplicated scene geometry");
+  if (!(qualityCase && frame == 2) &&
+      (dynamic[0] > 35 || (frame % 2 ? (dynamic[1] < 220 || dynamic[2] > 65)
+                                     : (dynamic[1] > 35 || dynamic[2] < 220))))
     throw std::runtime_error(
         "Changing object was blended or camera-warped instead of preserved");
   float expected = .2f * width +
                    .01f * float(width) * (float(frame) - (generated ? .5f : 0));
+  if (qualityCase && frame == 2)
+    expected = float(width);
   if (std::abs(float(edge) - expected) > 2)
     throw std::runtime_error("Generated image was not the expected midpoint in "
                              "the actual backbuffer");

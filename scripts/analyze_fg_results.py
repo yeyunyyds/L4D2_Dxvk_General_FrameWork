@@ -20,7 +20,7 @@ def analyze(path):
     counts = Counter()
     by_mode = Counter()
     groups = defaultdict(lambda: defaultdict(list))
-    summaries, errors, changes, captures = [], [], [], []
+    summaries, errors, changes, captures, rejected = [], [], [], [], []
     previous = None
     frequency = None
     complete = False
@@ -42,6 +42,8 @@ def analyze(path):
                 changes.append(event)
             elif kind == 'capture':
                 captures.append(event)
+            elif kind == 'frame_rejected':
+                rejected.append(event)
             elif kind == 'generated_present':
                 by_mode[event['mode']] += 1
                 successful += int(0 <= event['hresult'] < 0x80000000)
@@ -70,9 +72,11 @@ def analyze(path):
                 generated_by_mode=dict(by_mode), successful_generated_presents=successful,
                 backend_calls=logical+extra_calls if logical is not None else None,
                 summaries=summaries, errors=errors, mode_changes=changes, captures=captures,
+                rejected_candidates=rejected, rejected_candidate_count=len(rejected),
                 metrics={group: {key: distribution(values) for key, values in data.items()}
                          for group, data in groups.items()},
                 interpretation=['Capture frames and adjacent arrival intervals are excluded from metrics.',
+                                'Rejected candidates restore the original before Present; candidate PPMs do not prove presentation.',
                                 'GPU dispatch uses device timestamps; -1 means unavailable.',
                                 'Fence waits cover FG submissions including stage copies; Host work covers the Present wrapper only.',
                                 'Source arrival intervals and backend calls do not measure monitor delivery, FPS gain or added input latency.',

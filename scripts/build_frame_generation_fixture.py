@@ -15,9 +15,10 @@ a=s.index('    draw(device.get(), frame,');b=s.index('\n  }\n  capture.reset();'
 s=s[:a]+r'''    if(ldb_fg::readEnv(L"LDB_FG_FIXTURE_CAPTURE_CLOCK")==L"1" && (frame==2||frame==7||frame==10)) Sleep(frame==7?21000:2300);
     fgFixtureScene(device.get(),frame,params.BackBufferWidth,params.BackBufferHeight);
     uint32_t calls=0;
-    bool special=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")!=L"normal" && !ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE").empty();
+    bool special=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"partial" || ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"failure";
+    bool quality=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"quality";
     bool failure=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"failure";
-    bool generatedExpected=ldb_fg::config().enabled && frame!=0 && int(frame)!=args.resetFrame && !(special&&(frame==2||frame==3));
+    bool generatedExpected=ldb_fg::config().enabled && frame!=0 && int(frame)!=args.resetFrame && !((special||quality)&&(frame==2||frame==3));
     Com<IDirect3DSwapChain9> chain;
     if(frame%2)hr(device->GetSwapChain(0,chain.put()),"FG fixture swapchain");
     HRESULT result=ldb_fg::present(device.get(),frame,[&](){

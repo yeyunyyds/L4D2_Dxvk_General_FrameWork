@@ -1,0 +1,13 @@
+#version 450
+layout(local_size_x=64) in;
+layout(set=0,binding=9,std140) uniform Parameters { vec4 rows[20];uvec4 flags;vec4 thresholds; } p;
+layout(set=0,binding=15,std430) buffer FrameQuality { uint counts[]; } quality;
+shared uvec3 sums[64];
+void main() {
+ uint groups=((p.flags.x+7u)/8u)*((p.flags.y+7u)/8u);
+ uint id=gl_LocalInvocationIndex;uvec3 sum=uvec3(0u);
+ for(uint i=id;i<groups;i+=64u)sum+=uvec3(quality.counts[i*4u],quality.counts[i*4u+1u],quality.counts[i*4u+2u]);
+ sums[id]=sum;barrier();
+ for(uint stride=32u;stride>0u;stride/=2u){if(id<stride)sums[id]+=sums[id+stride];barrier();}
+ if(id==0u){uint offset=groups*4u;quality.counts[offset]=sums[0].x;quality.counts[offset+1u]=sums[0].y;quality.counts[offset+2u]=sums[0].z;quality.counts[offset+3u]=0u;}
+}

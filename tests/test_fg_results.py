@@ -28,6 +28,15 @@ class SessionResultsTests(unittest.TestCase):
         self.assertIsNone(result['backend_calls'])
         self.assertEqual(result['successful_generated_presents'],0)
 
+    def test_rejected_candidate_is_not_a_generated_present(self):
+        rejection=dict(event='frame_rejected',frame=3,reason='invalid_scene_coverage',
+                       invalid_scene_ratio=.38,original_restored=True,presented=False)
+        result=self.analyze([rejection,dict(event='summary',logical_presents=10)])
+        self.assertEqual(result['rejected_candidates'],[rejection])
+        self.assertEqual(result['rejected_candidate_count'],1)
+        self.assertEqual(result['backend_calls'],10)
+        self.assertEqual(result['successful_generated_presents'],0)
+
     def test_capture_stall_excluded_from_arrival_distribution(self):
         events=[dict(event='session',qpc_frequency=1000)]
         # Interval after captured frame includes readback stalls and must not enter statistics.
