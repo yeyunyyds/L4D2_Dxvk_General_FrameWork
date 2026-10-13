@@ -6,7 +6,7 @@
 
 已实现[独立 Host 采集原型](docs/research/host-capture.md)：颜色/深度像素与 Reset 已通过软件 Vulkan 及用户上传的 B580 实机日志检查。
 
-已编写 [LDB Host 诊断接入补丁](docs/research/ldb-host-capture.md)，支持游戏绘制边界、限量快照和进地图后手动触发。同一组件的真实 DXVK 测试场景已通过；完整 Windows Host 构建与游戏实测仍未执行。
+已编写 [LDB Host 诊断接入补丁](docs/research/ldb-host-capture.md)，支持游戏绘制边界、限量快照和进地图后手动触发。同一组件的真实 DXVK 测试场景已通过，Windows/MSVC Release 三件套已构建；游戏实测仍未执行。
 
 - [第一阶段研究结果](docs/research/phase1.md)：源码接入点、必要改动与验证证据。
 - [Windows / B580 验证步骤](docs/research/windows-validation.md)：GPU 探测与官方 FSR Vulkan 样例验收。

@@ -1,0 +1,32 @@
+{
+  "framework_commit": "86f973924c357ab089d41c8392164018885d3f7a",
+  "run_id": "38330930416",
+  "run_attempt": "1",
+  "native_build_outcome": "success",
+  "package_sha256": "1e83fdc4eb02f3935873d7d6d47c51adc4a491794aedeafb8645f6e69965c357",
+  "l4d2_game_capture": "unrun",
+  "b580_integrated_capture": "unrun",
+  "gpu_fg_execution": "unrun",
+  "post_build_updates": [
+    "README and offline analyzer bundled; compiled binaries unchanged"
+  ],
+  "build_id": "ldb-capture-dev+4a9131dce1c4800b",
+  "compiler": "MSVC 19.29.30159 / toolset 14.29 / Windows 2022 runner",
+  "compile_examples": {
+    "x86": "\"cl\" \"-Isrc\\tracy\\libtracy.a.p\" \"-Isrc\\tracy\" \"-I..\\src\\tracy\" \"/MT\" \"/nologo\" \"/showIncludes\" \"/utf-8\" \"/Zc:__cplusplus\" \"/W2\" \"/WX\" \"/EHsc\" \"/std:c++17\" \"/O2\" \"/Gw\" \"-DNOMINMAX\" \"-DNDEBUG\" \"-DWITH_MULTITHREADED_DEVICE\" \"/DBUILD_NINJA=1\" \"/DBUILD_SOURCE_ROOT=\\\"D:/a/L4D2_Dxvk_General_FrameWork/L4D2_Dxvk_General_FrameWork/.research/ldb-capture-source/bridge/\\\"\" \"/MP\" \"/DREMIX_BRIDGE_CLIENT\" \"/Fdsrc\\tracy\\libtracy.a.p\\TracyClient.cpp.pdb\" /Fosrc/tracy/libtracy.a.p/TracyClient.cpp.obj \"/c\" ../src/tracy/TracyClient.cpp",
+    "x64": "\"cl\" \"-Isrc\\tracy\\libtracy.a.p\" \"-Isrc\\tracy\" \"-I..\\src\\tracy\" \"/MT\" \"/nologo\" \"/showIncludes\" \"/utf-8\" \"/Zc:__cplusplus\" \"/W2\" \"/WX\" \"/EHsc\" \"/std:c++17\" \"/O2\" \"/Gw\" \"-DNOMINMAX\" \"-DNDEBUG\" \"-DWITH_MULTITHREADED_DEVICE\" \"/DBUILD_NINJA=1\" \"/DBUILD_SOURCE_ROOT=\\\"D:/a/L4D2_Dxvk_General_FrameWork/L4D2_Dxvk_General_FrameWork/.research/ldb-capture-source/bridge/\\\"\" \"/MP\" \"/DREMIX_BRIDGE_SERVER\" \"/Fdsrc\\tracy\\libtracy.a.p\\TracyClient.cpp.pdb\" /Fosrc/tracy/libtracy.a.p/TracyClient.cpp.obj \"/c\" ../src/tracy/TracyClient.cpp",
+    "x86_server": "\"cl\" \"-Isrc\\tracy\\libtracy.a.p\" \"-Isrc\\tracy\" \"-I..\\src\\tracy\" \"/MT\" \"/nologo\" \"/showIncludes\" \"/utf-8\" \"/Zc:__cplusplus\" \"/W2\" \"/WX\" \"/EHsc\" \"/std:c++17\" \"/O2\" \"/Gw\" \"-DNOMINMAX\" \"-DNDEBUG\" \"-DWITH_MULTITHREADED_DEVICE\" \"/DBUILD_NINJA=1\" \"/DBUILD_SOURCE_ROOT=\\\"D:/a/L4D2_Dxvk_General_FrameWork/L4D2_Dxvk_General_FrameWork/.research/ldb-capture-source/bridge/\\\"\" \"/MP\" \"/DREMIX_BRIDGE_X86_SERVER\" \"/DREMIX_BRIDGE_SERVER\" \"/Fdsrc\\tracy\\libtracy.a.p\\TracyClient.cpp.pdb\" /Fosrc/tracy/libtracy.a.p/TracyClient.cpp.obj \"/c\" ../src/tracy/TracyClient.cpp"
+  },
+  "binaries_sha256": {
+    "bin/dxvk_d3d9.dll": "5e17f6a379e87e0ae1f90065d374bdc3b72db12c0e0d5ee4cca4727dcbec195e",
+    "bin/.l4d2bridge/L4D2Bridge64.exe": "5df05cc8f562ffc2f9515054f69bf24c6c926257db1778f18d95c6321c53ea2e",
+    "bin/.l4d2bridge/L4D2Bridge32.exe": "17d61b5932bed6e662e540d8cdc30443a3351262f0229d0710b1a6f91a139e85"
+  },
+  "original_native_package_sha256": "0319838ddf269c4294c74c682994dfda312bfcb813fe4dea035130eebc6298c1",
+  "final_package_bytes": 1366070,
+  "zip_integrity": "passed",
+  "PE_architecture_and_build_identity": "passed",
+  "tests": {
+    "passed": 18
+  }
+}

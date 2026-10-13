@@ -1,6 +1,6 @@
 # LDB Host 游戏采集诊断接入
 
-当前交付是固定 LDB 基线上的 Host 源码补丁与诊断组件。完整 Windows/MSVC Host 构建和 L4D2 实机接入尚未执行，因此目前没有可安装的新版 Host ZIP。旧独立测试 ZIP 保持原样。
+已在 Windows runner 完成 **MSVC 14.29 Release 三件套构建**。开发包只更新三个桥二进制，并附带构建记录与日志检查脚本；不包含 DXVK 或配置。**L4D2 / B580 游戏内采集仍待实测，尚未实现插帧。**
 
 ## 接入内容与证据
 
@@ -16,7 +16,7 @@ Host 的 DrawPrimitive / DrawIndexedPrimitive / UP 调用记录实际绑定颜�
 
 同一份组件已在交叉编译的 Windows 测试程序中通过 Wine + llvmpipe 的真实 DXVK 调用。该程序交替执行 Device/SwapChain Present，校验导出像素，并测试失败/成功 Reset。**这证明组件测试场景，不证明完整 LDB IPC 或游戏集成。** 独立原型的 B580 实机通过证据也不能直接转移为本次集成通过。
 
-## Windows 构建（待验证）
+## 从源码进行 Windows 构建
 
 准备 Git、Python 3.12+、Meson、Ninja、VS 2019/2022 的 MSVC v142 14.29 工具集和 Windows SDK。工作目录为本框架仓库：
 
