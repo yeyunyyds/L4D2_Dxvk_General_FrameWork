@@ -38,7 +38,7 @@ jobs:
           }
           Start-Transcript -Path native-build.log
           try {
-            Invoke-Logged 'prepare-research' 'python scripts/prepare_research.py'
+            Invoke-Logged 'prepare-research' 'python scripts/prepare_research.py --only dxvk vulkan_headers'
             Invoke-Logged 'prepare-host' 'python scripts/prepare_ldb_capture.py'
             Invoke-Logged 'tests' 'python -m unittest discover -s tests -v'
             Invoke-Logged 'native-build' 'powershell.exe -NoProfile -File scripts/build_ldb_capture.ps1'

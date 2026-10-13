@@ -23,10 +23,12 @@ def require_source(path, commit):
         raise RuntimeError(f"Dependency has local changes; preserved: {path}")
 
 
-def prepare(cache):
+def prepare(cache, only=None):
     lock = json.loads((ROOT / "research/sources.lock.json").read_text())
     cache.mkdir(parents=True, exist_ok=True)
     for name, spec in lock["sources"].items():
+        if only is not None and name not in only:
+            continue
         dest = cache / name
         if dest.exists():
             require_source(dest, spec["commit"])
@@ -49,8 +51,9 @@ def prepare(cache):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache", type=Path, default=ROOT / ".research/sources")
+    parser.add_argument("--only", nargs="+", choices=("dxvk", "fidelityfx", "vulkan_headers"))
     args = parser.parse_args()
     try:
-        prepare(args.cache.resolve())
+        prepare(args.cache.resolve(), args.only)
     except (RuntimeError, subprocess.CalledProcessError) as error:
         parser.exit(1, f"{error}\n")

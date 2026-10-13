@@ -22,7 +22,7 @@ def checkout(path, repository, commit, sparse=None):
     path.mkdir(parents=True)
     subprocess.run(['git', 'init', '-q', str(path)], check=True)
     subprocess.run(['git', 'remote', 'add', 'origin', repository], cwd=path, check=True)
-    subprocess.run(['git', 'fetch', '--depth=1', 'origin', commit], cwd=path, check=True)
+    subprocess.run(['git', 'fetch', '--depth=1', *(['--filter=blob:none'] if sparse else []), 'origin', commit], cwd=path, check=True)
     if sparse:
         subprocess.run(['git', 'sparse-checkout', 'set', *sparse], cwd=path, check=True)
     subprocess.run(['git', 'checkout', '--detach', 'FETCH_HEAD'], cwd=path, check=True)
@@ -48,7 +48,8 @@ def prepare(args):
     patch = args.bridge / 'patches/l4d2-bridge.patch'
     if digest(patch) != baseline['base_patch_sha256']:
         raise RuntimeError('LDB baseline patch hash differs')
-    archive = subprocess.check_output(['git', 'archive', 'HEAD', 'bridge', 'public', 'LICENSE'], cwd=args.upstream)
+    archive = subprocess.check_output(['git', 'archive', 'HEAD', 'bridge', 'public', 'LICENSE',
+                                       'src/util/util_per_game_config.h', 'src/util/util_crash_report.h', 'src/util/xxHash'], cwd=args.upstream)
     args.output.mkdir(parents=True)
     with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
         tar.extractall(args.output, filter='data')
