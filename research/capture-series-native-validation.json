@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "framework_commit": "0f7706173537f951c145cad25e3a637d8c88105c",
+  "download_branch_commit": "649eba6c1281cbafb4f2103a4ee9708ad74243b8",
+  "ci": {
+    "framework_commit": "0f7706173537f951c145cad25e3a637d8c88105c",
+    "run_id": "38356196818",
+    "run_attempt": "1",
+    "native_build_outcome": "success",
+    "package_sha256": "8b8a942ff9284dd350f6ade71c1921751503918d7fc8b10ccc97ab63d0cfb354",
+    "l4d2_game_capture": "unrun",
+    "b580_integrated_capture": "unrun",
+    "gpu_fg_execution": "unrun"
+  },
+  "build_id": "ldb-capture-dev+8667847d15ba31ac",
+  "zip_bytes": 1385193,
+  "zip_sha256": "8b8a942ff9284dd350f6ade71c1921751503918d7fc8b10ccc97ab63d0cfb354",
+  "native_host_build": "compiled_MSVC_Release",
+  "binaries_sha256": {
+    "bin/dxvk_d3d9.dll": "0831581be58d3599e95dc97ddabb4246ee441be8fcd9234c858814abadbdb830",
+    "bin/.l4d2bridge/L4D2Bridge64.exe": "5be95eb03488d4f8aab9fa12c255993d53738da35e50f2dc22d2166e9db765c5",
+    "bin/.l4d2bridge/L4D2Bridge32.exe": "0a92ea24f39ff15e455f3b827b8baff6ef7c673c801567834a04056c943bf874"
+  },
+  "zip_only_branch": [
+    "downloads/host-capture-windows-x64.zip",
+    "downloads/ldb-host-capture-build-status.zip",
+    "downloads/ldb-host-capture-dev.zip"
+  ],
+  "bundled_tools_match_source": true,
+  "unit_tests": 33,
+  "game_camera_and_fg": "unrun; awaiting user capture",
+  "immutable_https_artifact": "passed_matching_sha256"
+}
