@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "framework_commit": "3cc2e93b73f03f806a18d69eb41d463c59421653",
+  "download_branch_commit": "8585f7a1554ff9cfc38c582cd915b9c02b6731a0",
+  "ci": {
+    "framework_commit": "3cc2e93b73f03f806a18d69eb41d463c59421653",
+    "run_id": "38455556726",
+    "run_attempt": "1",
+    "native_build_outcome": "success",
+    "package_sha256": "b5c30ec294101b787a69b1165453769ebb73b4cf68b1409dbc12dc1ef5247bfd",
+    "l4d2_game_capture": "unrun",
+    "b580_integrated_capture": "unrun",
+    "gpu_fg_execution": "unrun"
+  },
+  "build_id": "ldb-capture-dev+f176612bc0be3ade",
+  "zip_bytes": 1461550,
+  "zip_sha256": "b5c30ec294101b787a69b1165453769ebb73b4cf68b1409dbc12dc1ef5247bfd",
+  "binaries_sha256": {
+    "bin/dxvk_d3d9.dll": "01d5531b5036699608e7bcb8656fe5ee1b4f84b9d16e6aa26c46e647f2bed758",
+    "bin/.l4d2bridge/L4D2Bridge64.exe": "cb007b4b8933ff76b6f3a75f5e0ca173c25366c5c71fc8f7837fa43c5cf377a6",
+    "bin/.l4d2bridge/L4D2Bridge32.exe": "0fc29161b5732022c772a1d919000c9d617a225533aff03c0b7269557dde95b8"
+  },
+  "source_receipt": "matches_independently_prepared_pinned_source",
+  "bundled_scripts_readme_shader": "match_source",
+  "shader_spirv_in_native_host": "matches_validated_binary",
+  "native_architectures": "x86_DLL_x64_Host_x86_Host_LARGEADDRESSAWARE",
+  "python_tests_passed": 42,
+  "cpp_math_windows": "compiled_and_executed",
+  "immutable_https_download": "verified_matching_sha256",
+  "zip_only_branch": [
+    "downloads/host-capture-windows-x64.zip",
+    "downloads/ldb-host-capture-build-status.zip",
+    "downloads/ldb-host-capture-dev.zip"
+  ],
+  "b580_new_revision_game_test": "unrun",
+  "limits": [
+    "Earlier B580 revision succeeded; new dynamic guard, timings and spacing await the user session.",
+    "No monitor display FPS or end-to-end input latency claim."
+  ]
+}
