@@ -21,7 +21,15 @@ try {
     foreach ($role in @('x64', 'x86', 'x86_server')) {
       $arch = if ($role -eq 'x64') { 'x64' } else { 'x86' }
       $extra = if ($role -eq 'x86_server') { '-Dexperimental_x86_server=true' } else { '' }
-      $command = ". .\build_common.ps1; SetupVS -Platform $arch -VcVarsVer $VcVarsVer; & meson setup _captureRelease_$role --buildtype release --backend ninja $extra; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; Copy-Item Directory.Build.Props _captureRelease_$role; & meson compile -C _captureRelease_$role; exit `$LASTEXITCODE"
+      $mathCheck = ''
+      if ($role -eq 'x64') {
+        $mathExe = Join-Path $sourcePath 'frame_math_cases.exe'
+        $mathObj = Join-Path $sourcePath 'frame_math_cases.obj'
+        $mathSource = Join-Path $repo 'tests/frame_math_cases.cpp'
+        $mathInclude = Join-Path $repo 'integration/ldb'
+        $mathCheck = "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /I`"$mathInclude`" `"$mathSource`" /Fe:`"$mathExe`" /Fo:`"$mathObj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `"$mathExe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; "
+      }
+      $command = ". .\build_common.ps1; SetupVS -Platform $arch -VcVarsVer $VcVarsVer; $mathCheck & meson setup _captureRelease_$role --buildtype release --backend ninja $extra; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; Copy-Item Directory.Build.Props _captureRelease_$role; & meson compile -C _captureRelease_$role; exit `$LASTEXITCODE"
       & powershell.exe -NoProfile -Command $command
       if ($LASTEXITCODE -ne 0) { throw "Native $role build failed" }
     }

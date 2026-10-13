@@ -1,0 +1,76 @@
+#version 450
+layout(local_size_x=8,local_size_y=8) in;
+layout(set=0,binding=0) uniform sampler2D currentDepth;
+layout(set=0,binding=1) uniform sampler2D previousDepth;
+layout(set=0,binding=2) uniform sampler2D currentNear;
+layout(set=0,binding=3) uniform sampler2D previousNear;
+layout(set=0,binding=4) uniform sampler2D currentUi;
+layout(set=0,binding=5) uniform sampler2D previousUi;
+layout(set=0,binding=6) uniform sampler2D currentFinal;
+layout(set=0,binding=7) uniform sampler2D previousFinal;
+layout(set=0,binding=8,rgba8) writeonly uniform image2D generated;
+layout(set=0,binding=9,std140) uniform Parameters { vec4 rows[20];uvec4 flags;vec4 thresholds; } p;
+layout(set=0,binding=10,rgba8) writeonly uniform image2D classification;
+vec4 project(uint m,vec4 v) { return vec4(dot(p.rows[m*4],v),dot(p.rows[m*4+1],v),dot(p.rows[m*4+2],v),dot(p.rows[m*4+3],v)); }
+ivec2 pixel(vec2 v) { return ivec2(floor(v+0.5)); }
+bool inside(vec2 v) { ivec2 x=pixel(v);return all(greaterThanEqual(x,ivec2(0)))&&all(lessThan(x,ivec2(p.flags.xy))); }
+vec4 sampleAt(sampler2D s,vec2 v) { return texelFetch(s,clamp(pixel(v),ivec2(0),ivec2(p.flags.xy)-1),0); }
+bool locate(uint matrix,vec4 clip,out vec2 xy,out float z) {
+ vec4 v=project(matrix,clip);
+ if(any(isnan(v))||any(isinf(v))||v.w<=1e-8)return false;
+ v.xyz/=v.w;xy=vec2((v.x+1)*float(p.flags.x)/2,(1-v.y)*float(p.flags.y)/2);z=v.z;
+ return inside(xy);
+}
+bool foreground(vec2 xy,bool previous) {
+ uint f=previous?p.flags.w:p.flags.z;
+ if((f&1u)!=0u) {
+  float d=previous?sampleAt(previousNear,xy).r:sampleAt(currentNear,xy).r;
+  if(d>=0&&d<=0.10001)return true;
+ }
+ if((f&2u)!=0u) {
+  vec3 finalColor=previous?sampleAt(previousFinal,xy).rgb:sampleAt(currentFinal,xy).rgb;
+  vec3 before=previous?sampleAt(previousUi,xy).rgb:sampleAt(currentUi,xy).rgb;
+  if(any(greaterThan(abs(finalColor-before),vec3(0.5/255))))return true;
+ }
+ return false;
+}
+void main() {
+ ivec2 xy=ivec2(gl_GlobalInvocationID.xy);if(any(greaterThanEqual(xy,ivec2(p.flags.xy))))return;
+ vec2 screen=vec2(xy);vec4 fallback=sampleAt(currentFinal,screen),result=fallback;vec4 mark=vec4(1,0,0,1);
+ vec2 ndc=vec2(2*screen.x/float(p.flags.x)-1,1-2*screen.y/float(p.flags.y));
+ if(foreground(screen,false)){mark=vec4(1,1,0,1);}
+ else {
+  float z=texelFetch(currentDepth,xy,0).r;vec2 cx,px;float cz,pz;
+  if(z>=0.999999) {
+   bool c=locate(3u,vec4(ndc,1,1),cx,cz);bool a=locate(4u,vec4(ndc,1,1),px,pz);
+   c=c&&sampleAt(currentDepth,cx).r>=0.999999&&!foreground(cx,false);
+   a=a&&sampleAt(previousDepth,px).r>=0.999999&&!foreground(px,true);
+   if(c){result=sampleAt(currentFinal,cx);if(a)result=(result+sampleAt(previousFinal,px))*0.5;mark=vec4(1,1,1,1);}
+  } else if(z>0.2&&!isnan(z)&&!isinf(z)) {
+   float midZ=z;bool c=false;
+   for(int i=0;i<3;i++) {
+    c=locate(0u,vec4(ndc,midZ,1),cx,cz);if(!c)break;
+    float actual=sampleAt(currentDepth,cx).r;if(actual<=0.2||actual>=0.999999){c=false;break;}
+    vec2 cndc=vec2(2*cx.x/float(p.flags.x)-1,1-2*cx.y/float(p.flags.y));
+    vec4 m=project(2u,vec4(cndc,actual,1));if(m.w<=1e-8){c=false;break;}midZ=m.z/m.w;
+   }
+   c=c&&locate(0u,vec4(ndc,midZ,1),cx,cz);
+   if(c) {
+    float actual=sampleAt(currentDepth,cx).r;
+    c=actual>0.2&&actual<0.999999&&abs(actual-cz)<=p.thresholds.x&&!foreground(cx,false);
+   }
+   bool a=locate(1u,vec4(ndc,midZ,1),px,pz);
+   if(a){float actual=sampleAt(previousDepth,px).r;a=actual>0.2&&actual<0.999999&&abs(actual-pz)<=p.thresholds.x&&!foreground(px,true);}
+   if(c) {
+    result=sampleAt(currentFinal,cx);mark=vec4(0,1,1,1);
+    if(a) {
+     vec4 old=sampleAt(previousFinal,px);
+     if(all(lessThanEqual(abs(old.rgb-result.rgb),vec3(p.thresholds.y)))){result=(result+old)*0.5;mark=vec4(0,1,0,1);}
+    }
+   }
+  }
+ }
+ result.a=1;
+ if((p.flags.z&4u)!=0u)result=result.bgra;
+ imageStore(generated,xy,result);imageStore(classification,xy,mark);
+}

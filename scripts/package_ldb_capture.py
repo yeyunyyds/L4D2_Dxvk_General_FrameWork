@@ -43,19 +43,22 @@ def package(source, build_id, output):
         entries[destination] = data
         examples[role] = actual[0]
     receipt.update(native_host_build='compiled_MSVC_Release', build_id=build_id, compile_examples=examples,
-                   l4d2_game_capture='unrun', b580_integrated_capture='unrun', gpu_fg_execution='unrun',
+                   l4d2_game_capture='unrun', b580_integrated_capture='unrun', gpu_fg_execution='unrun_in_game', frame_generation_prototype='compiled_with_real_present_path',
                    binaries_sha256={name: hashlib.sha256(data).hexdigest() for name,data in entries.items()})
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for name, data in entries.items(): archive.writestr(name, data)
         archive.writestr('capture-build.json', json.dumps(receipt, indent=2)+'\n')
-        archive.write(ROOT/'docs/research/gpu-reprojection.md', 'README.md')
+        archive.write(ROOT/'docs/research/frame-generation-prototype.md', 'README.md')
+        archive.write(ROOT/'docs/research/gpu-reprojection.md','docs/gpu-reprojection.md')
         archive.write(ROOT/'docs/research/capture-series.md','docs/capture-series.md')
         archive.write(ROOT/'docs/research/ldb-host-capture.md', 'docs/host-capture.md')
         for name in ['analyze_ldb_capture.py','analyze_capture_series.py','reproject_capture.py','capture_math.py','analyze_gpu_capture.py']:
             archive.write(ROOT/'scripts'/name,'scripts/'+name)
         archive.write(ROOT/'scripts/trigger_capture.cmd','trigger_capture.cmd')
+        archive.write(ROOT/'scripts/start_fg_test.cmd','start_fg_test.cmd')
         archive.write(ROOT/'shaders/camera_reproject.comp','sources/camera_reproject.comp')
+        archive.write(ROOT/'shaders/frame_generate.comp','sources/frame_generate.comp')
         archive.write(source/'LICENSE', 'licenses/Remix-LICENSE')
         archive.write(ROOT/'.research/sources/bridge-131/LICENSE', 'licenses/LDB-LICENSE')
         archive.write(ROOT/'.research/sources/dxvk/LICENSE', 'licenses/DXVK-LICENSE')

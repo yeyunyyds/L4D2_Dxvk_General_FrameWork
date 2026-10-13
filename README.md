@@ -6,7 +6,7 @@
 
 已实现[独立 Host 采集原型](docs/research/host-capture.md)：颜色/深度像素与 Reset 已通过软件 Vulkan 及用户上传的 B580 实机日志检查。
 
-已编写 [LDB Host 诊断接入补丁](docs/research/ldb-host-capture.md)。用户 B580 三组连续帧数据已支持 cViewProj 相机映射与离线重投影；本版升级至 LDB v1.3.1，并加入[GPU 相机重投影诊断](docs/research/gpu-reprojection.md)：输出降采样对齐预览、运动和深度一致性，处理 Reset 与目标变化。当前仍使用 CPU 回读/上传及同步等待，不修改游戏画面，尚未实现中间帧生成或全尺寸 GPU 常驻历史。
+本版合并[可显示生成帧的相机插帧原型](docs/research/frame-generation-prototype.md)：全尺寸 GPU 历史、场景/武器/UI 阶段掩码、中间视角合成和真实 Present。武器/UI 保留当前帧，动态物体、透明边缘与帧节奏仍属原型限制。用户之前的 B580 GPU 重投影验证见[报告](docs/research/gpu-reprojection-user-results.md)。
 
 - [第一阶段研究结果](docs/research/phase1.md)：源码接入点、必要改动与验证证据。
 - [Windows / B580 验证步骤](docs/research/windows-validation.md)：GPU 探测与官方 FSR Vulkan 样例验收。

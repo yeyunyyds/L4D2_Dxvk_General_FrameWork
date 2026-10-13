@@ -102,8 +102,11 @@ std::string imageJson(const ImageInfo& info) {
 }
 
 class ReprojectCompute;
+class ResidentFg;
 class Capture {
   friend class ReprojectCompute;
+  friend class ResidentFg;
+class ResidentFg;
 public:
   explicit Capture(ID3D9VkInteropDevice* interop) : interop(interop) {
     interop->GetVulkanHandles(&instance, &physical, &device);

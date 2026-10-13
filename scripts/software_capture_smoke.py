@@ -43,6 +43,8 @@ def smoke(args):
     )
     environment["LD_LIBRARY_PATH"] = str(runtime / "root/usr/lib/x86_64-linux-gnu/wine/x86_64-unix") + ":" + str(runtime / "root/usr/lib/x86_64-linux-gnu")
     environment["LDB_GPU_REPROJECT"] = "1" if getattr(args,"gpu_reproject",False) else "0"
+    if getattr(args,"fg_mode",None):
+        environment.update(LDB_FG_ENABLE="0" if args.fg_mode=="off" else "1",LDB_FG_MODE="generated" if args.fg_mode=="generated" else "paired",LDB_FG_LOG_DIR="Z:"+str(directory/"fg").replace("/","\\"),LDB_FG_CAPTURE_FRAMES="8",LDB_FG_HOTKEYS="0",LDB_FG_FIXTURE_CASE=getattr(args,"fg_case","normal"))
     if getattr(args, "observer", None) in ("enabled", "waiting", "triggered"):
         environment.update(LDB_CAPTURE_DIR="Z:" + str(directory / "observer").replace("/", "\\"),
                            LDB_CAPTURE_START="0", LDB_CAPTURE_FRAMES=str(args.frames), LDB_CAPTURE_STRIDE=str(getattr(args,"stride",1)), LDB_CAPTURE_SNAPSHOTS="6" if getattr(args, "hdr_scene", False) else "3")
@@ -100,7 +102,28 @@ def smoke(args):
                           "exit_code": process.returncode, "validation_level": "wrong_arch_backend_rejection",
                           "game_capture": "unrun", "gpu_fg_execution": "unrun"}
             else:
-                result = analyze(read_events(directory / "capture.jsonl"), directory.name, process.returncode)
+                if getattr(args,"fg_mode",None):
+                    events=read_events(directory/"capture.jsonl")
+                    if process.returncode!=0 or not events or events[-1]['event']!='completed':raise ValueError('FG fixture failed; inspect capture.jsonl')
+                    presents=[e for e in events if e['event']=='fixture_present']
+                    expected_generated=0 if args.fg_mode=='off' else args.frames-2-(2 if getattr(args,'fg_case','normal')!='normal' else 0)
+                    expected=args.frames if args.fg_mode in ('off','generated') else args.frames+expected_generated
+                    if len(presents)!=expected:raise ValueError('Wrong real Present call count')
+                    generated=sum(e['generated_verified'] for e in presents)
+                    if generated!=expected_generated:raise ValueError('Generated backbuffer pixels not verified')
+                    result={'status':'passed','run_id':directory.name,'frames':args.frames,'backend_calls':len(presents),'actual_present_calls':len(presents)-(1 if getattr(args,'fg_case','normal')=='failure' else 0),'generated_backbuffers_verified':generated,'ui_and_near_pixels':'verified_actual_backbuffer','gpu_fg_execution':'executed_fixture' if generated else 'disabled','game_capture':'unrun'}
+                    if getattr(args,'fg_case','normal')=='failure' and not any(e['event']=='fixture_failure' and e.get('hresult_preserved') for e in events):raise ValueError('Original backend failure not preserved')
+                    if args.fg_mode=='off':
+                        if (directory/'fg').exists():raise ValueError('Disabled FG created state/output')
+                    else:
+                        folders=list((directory/'fg').iterdir())
+                        if len(folders)!=1:raise ValueError('FG fixture session count')
+                        fgevents=read_events(folders[0]/'fg-events.jsonl')
+                        if any(e['event']=='fg_error' for e in fgevents):raise ValueError('FG runtime reported error')
+                        if not any(e['event']=='history_invalidated' and e.get('reason')=='reset' for e in fgevents):raise ValueError('FG Reset invalidation unobserved')
+                        result['fg_events']='verified';result['history_storage']='full_size_gpu'
+                else:
+                    result = analyze(read_events(directory / "capture.jsonl"), directory.name, process.returncode)
             if args.validation:
                 messages = (directory / "stderr.log").read_text()
                 if "Validation Error" in messages or "VUID-" in messages:
@@ -143,6 +166,8 @@ if __name__ == "__main__":
     parser.add_argument("--stride",type=int,choices=range(1,9),default=1)
     parser.add_argument("--hdr-scene", action="store_true")
     parser.add_argument("--gpu-reproject", action="store_true")
+    parser.add_argument("--fg-mode",choices=("paired","generated","off"))
+    parser.add_argument("--fg-case",choices=("normal","partial","failure"),default="normal")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))
     args = parser.parse_args()
