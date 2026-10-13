@@ -99,6 +99,8 @@ struct State {
   bool scene = false, nearSeen = false, nearCopied = false, uiCopied = false,
        history = false, paused = false, generatedOnly = false, disabled = false;
 
+  uint64_t nearTarget = 0, nearDraws = 0, nearCapturedDraws = 0;
+  bool nearBeforeCopied = false, nearColourCopied = false, nearInvalid = false;
   bool f8 = false, f9 = false;
   std::filesystem::path directory;
   std::ofstream log;
@@ -180,6 +182,8 @@ struct State {
     scene = false;
     nearSeen = false;
     nearCopied = false;
+    nearBeforeCopied = nearColourCopied = nearInvalid = false;
+    nearTarget = nearDraws = nearCapturedDraws = 0;
     uiCopied = false;
     draws = 0;
   }
@@ -345,21 +349,47 @@ struct State {
            "\"matrix_register\":" + std::to_string(candidate.reg) +
                ",\"matching_draws\":" + std::to_string(candidate.matches));
   }
+  void nearBegin() {
+    if (!scene || !gpu || nearInvalid)
+      return;
+    Com<IDirect3DSurface9> rt;
+    D3DSURFACE_DESC desc{};
+    if (FAILED(device->GetRenderTarget(0, rt.put())) || !rt.get() ||
+        FAILED(rt->GetDesc(&desc)) || desc.Format != D3DFMT_A16B16G16R16F ||
+        desc.Width != gpu->width || desc.Height != gpu->height) {
+      nearInvalid = true;
+      return;
+    }
+    if (nearBeforeCopied) {
+      if (id(rt.get()) != nearTarget)
+        nearInvalid = true;
+      return;
+    }
+    transfer(rt.get(), ResidentFg::CurrentNearBefore);
+    nearTarget = id(rt.get());
+    nearBeforeCopied = true;
+  }
   void nearCopy(uint32_t uid) {
-    if (!scene || !nearSeen || nearCopied || !gpu)
+    if (!scene || !nearSeen || !gpu || !nearDraws ||
+        nearCapturedDraws == nearDraws)
       return;
-
-    Com<IDirect3DSurface9> ds;
-
-    if (FAILED(device->GetDepthStencilSurface(ds.put())) || !ds.get() ||
-        id(ds.get()) != sceneDepth)
-      return;
-
-    transfer(ds.get(), ResidentFg::CurrentNear);
-    nearCopied = true;
-
+    Com<IDirect3DSurface9> rt, ds;
+    if (nearBeforeCopied && !nearInvalid &&
+        SUCCEEDED(device->GetRenderTarget(0, rt.put())) && rt.get() &&
+        id(rt.get()) == nearTarget) {
+      transfer(rt.get(), ResidentFg::CurrentNearAfter);
+      nearColourCopied = true;
+    }
+    if (SUCCEEDED(device->GetDepthStencilSurface(ds.put())) && ds.get() &&
+        id(ds.get()) == sceneDepth) {
+      transfer(ds.get(), ResidentFg::CurrentNear);
+      nearCopied = true;
+    }
+    nearCapturedDraws = nearDraws;
     if (frame < 16)
-      emit("near_stage", uid);
+      emit("near_stage", uid,
+           "\"colour_mask_valid\":" +
+               std::string(nearColourCopied ? "true" : "false"));
   }
   void boundary(uint32_t uid) {
     if (disabled || paused)
@@ -390,6 +420,7 @@ struct State {
     if (v.MinZ == 0 && v.MaxZ > 0 && v.MaxZ <= .2f) {
       sceneCopy(uid);
       nearSeen = scene;
+      nearBegin();
     } else if (nearSeen)
       nearCopy(uid);
 
@@ -420,9 +451,16 @@ struct State {
            "\"classification\":\"screen_alpha_on_backbuffer_candidate\"");
   }
   void afterDraw(uint32_t uid, HRESULT result) {
-    if (disabled || paused || FAILED(result) || scene)
+    if (disabled || paused || FAILED(result))
       return;
-
+    D3DVIEWPORT9 observed{};
+    if (scene && nearSeen && SUCCEEDED(device->GetViewport(&observed)) &&
+        observed.MinZ == 0 && observed.MaxZ > 0 && observed.MaxZ <= .2f) {
+      nearDraws++;
+      nearColourCopied = false;
+    }
+    if (scene)
+      return;
     D3DVIEWPORT9 v{};
 
     if (FAILED(device->GetViewport(&v)) || v.X || v.Y || v.MinZ != 0 ||
@@ -524,7 +562,8 @@ struct State {
       bool primaryChain = !chain || chain == primary.get();
 
       if (!disabled && !paused && !partial && primaryChain && scene &&
-          !candidate.conflict && (!nearSeen || nearCopied) && gpu) {
+          !candidate.conflict &&
+          (!nearSeen || (nearColourCopied && !nearInvalid)) && gpu) {
         hr(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, back.put()),
            "FG final backbuffer");
         transfer(back.get(), ResidentFg::CurrentFinal);
@@ -538,7 +577,8 @@ struct State {
                                           params.rows)) {
             uint32_t flags =
                 (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
-                (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u);
+                (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u) |
+                (nearColourCopied ? 8u : 0u);
             params.flags = {gpu->width, gpu->height, flags, previousFlags};
             bool captureDue =
                 config().autoCapture
@@ -679,21 +719,26 @@ struct State {
       previousMatrix = currentMatrix;
       previousColor = sceneColor;
       previousDepth = sceneDepth;
-      previousFlags = (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u);
+      previousFlags = (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
+                      (nearColourCopied ? 8u : 0u);
       gpu->advance();
       history = true;
     } else
       history = false;
 
     if (frame < 256 || frame % 120 == 0)
-      emit("logical_present", uid,
-           "\"hresult\":" + std::to_string(uint32_t(result)) +
-               ",\"generated_total\":" + std::to_string(generated) +
-               ",\"logical_total\":" + std::to_string(logical) +
-               ",\"near_preserved\":" +
-               std::string(nearCopied ? "true" : "false") +
-               ",\"ui_boundary_observed\":" +
-               std::string(uiCopied ? "true" : "false"));
+      emit(
+          "logical_present", uid,
+          "\"hresult\":" + std::to_string(uint32_t(result)) +
+              ",\"generated_total\":" + std::to_string(generated) +
+              ",\"logical_total\":" + std::to_string(logical) +
+              ",\"near_preserved\":" +
+              std::string(nearCopied ? "true" : "false") +
+              ",\"near_colour_mask_valid\":" +
+              std::string(nearColourCopied && !nearInvalid ? "true" : "false") +
+              ",\"near_draws\":" + std::to_string(nearDraws) +
+              ",\"ui_boundary_observed\":" +
+              std::string(uiCopied ? "true" : "false"));
 
     auto metrics = gpu ? gpu->takeCounters() : ResidentFg::Counters{};
     emit(
@@ -704,6 +749,9 @@ struct State {
             ",\"captured\":" + std::string(captured ? "true" : "false") +
             ",\"near_preserved\":" +
             std::string(nearCopied ? "true" : "false") +
+            ",\"near_colour_mask_valid\":" +
+            std::string(nearColourCopied && !nearInvalid ? "true" : "false") +
+            ",\"near_draws\":" + std::to_string(nearDraws) +
             ",\"ui_boundary_observed\":" +
             std::string(uiCopied ? "true" : "false") +
             ",\"arrival_qpc\":" + std::to_string(arrival) +

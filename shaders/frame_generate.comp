@@ -11,6 +11,10 @@ layout(set=0,binding=7) uniform sampler2D previousFinal;
 layout(set=0,binding=8,rgba8) writeonly uniform image2D generated;
 layout(set=0,binding=9,std140) uniform Parameters { vec4 rows[20];uvec4 flags;vec4 thresholds; } p;
 layout(set=0,binding=10,rgba8) writeonly uniform image2D classification;
+layout(set=0,binding=11) uniform sampler2D currentNearBefore;
+layout(set=0,binding=12) uniform sampler2D currentNearAfter;
+layout(set=0,binding=13) uniform sampler2D previousNearBefore;
+layout(set=0,binding=14) uniform sampler2D previousNearAfter;
 vec4 project(uint m,vec4 v) { return vec4(dot(p.rows[m*4],v),dot(p.rows[m*4+1],v),dot(p.rows[m*4+2],v),dot(p.rows[m*4+3],v)); }
 ivec2 pixel(vec2 v) { return ivec2(floor(v+0.5)); }
 bool inside(vec2 v) { ivec2 x=pixel(v);return all(greaterThanEqual(x,ivec2(0)))&&all(lessThan(x,ivec2(p.flags.xy))); }
@@ -23,6 +27,13 @@ bool locate(uint matrix,vec4 clip,out vec2 xy,out float z) {
 }
 bool foreground(vec2 xy,bool previous) {
  uint f=previous?p.flags.w:p.flags.z;
+ if((f&8u)!=0u) {
+  vec3 a=previous?sampleAt(previousNearBefore,xy).rgb:sampleAt(currentNearBefore,xy).rgb;
+  vec3 b=previous?sampleAt(previousNearAfter,xy).rgb:sampleAt(currentNearAfter,xy).rgb;
+  // Same-format before/after HDR snapshots: detect the actual colour draw,
+  // including viewmodels with disabled depth writes and alpha materials.
+  if(any(greaterThan(abs(a-b),vec3(0.00001))))return true;
+ }
  if((f&1u)!=0u) {
   float d=previous?sampleAt(previousNear,xy).r:sampleAt(currentNear,xy).r;
   if(d>=0&&d<=0.10001)return true;

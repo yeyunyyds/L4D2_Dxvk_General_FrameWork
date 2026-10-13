@@ -83,9 +83,43 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   D3DVIEWPORT9 nearView{0, 0, width, height, 0, .1f};
   ldb_fg::viewport(device, &nearView, frame);
   hr(device->SetViewport(&nearView), "FG fixture near");
+  bool mixedNear =
+      ldb_fg::readEnv(L"LDB_FG_FIXTURE_NEAR_CASE") == L"no_depth_and_rebind";
+  if (frame == 0)
+    std::cout << "{\"event\":\"near_fixture_selection\",\"mixed\":"
+              << (mixedNear ? "true" : "false") << ",\"env_size\":"
+              << ldb_fg::readEnv(L"LDB_FG_FIXTURE_NEAR_CASE").size() << "}\n"
+              << std::flush;
+  if (mixedNear) {
+    // A real near pass may clear before drawing and repeat a target boundary.
+    ldb_fg::boundary(device, frame);
+    HRESULT clear = device->Clear(0, nullptr, D3DCLEAR_ZBUFFER, 0, 1, 0);
+    ldb_fg::clear(device, frame, clear);
+    hr(clear, "FG fixture near clear");
+    hr(device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE),
+       "FG fixture near no depth writes");
+  }
   projection(0);
   quad(.72f * width, .7f * height, .9f * width, .95f * height, .05f,
        {.9f, .9f, .08f, 1});
+  if (mixedNear) {
+    ldb_fg::boundary(device, frame);
+    hr(device->SetRenderTarget(0, fgFixtureTarget.get()),
+       "FG fixture same near target rebind");
+    // SetRenderTarget resets the D3D9 viewport; re-enter the near range.
+    ldb_fg::viewport(device, &nearView, frame);
+    hr(device->SetViewport(&nearView), "FG fixture near viewport after rebind");
+    quad(.73f * width, .73f * height, .87f * width, .9f * height, .04f,
+         {.95f, .95f, .04f, 1});
+    // Low-contrast stripes stay below the temporal rejection threshold. A
+    // depth-only mask wrongly camera-warps this texture even if flat colour
+    // samples happen to match.
+    uint32_t stripeStart = uint32_t(width * .74f);
+    for (uint32_t i = 0; i < 16; i++)
+      quad(float(stripeStart + i * 4), height * .74f,
+           float(stripeStart + (i + 1) * 4), height * .89f, .03f,
+           {i % 2 ? .98f : .9f, .9f, .08f, 1});
+  }
   ldb_fg::viewport(device, &full, frame);
   hr(device->SetViewport(&full), "FG fixture full");
   hr(device->EndScene(), "FG fixture end");
@@ -131,6 +165,18 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   auto ui = rgb(20, 20);
   auto dynamic =
       rgb(uint32_t(width * (.61f + .01f * frame)), uint32_t(height * .43f));
+  if (ldb_fg::readEnv(L"LDB_FG_FIXTURE_NEAR_CASE") == L"no_depth_and_rebind") {
+    uint32_t stripeStart = uint32_t(width * .74f);
+    for (uint32_t i = 0; i < 16; i++) {
+      auto pixel = rgb(stripeStart + i * 4 + 2, uint32_t(height * .8f));
+      if (std::abs(pixel[0] - (i % 2 ? 250 : 230)) > 2 ||
+          std::abs(pixel[1] - 230) > 2 || std::abs(pixel[2] - 20) > 2) {
+        read->UnlockRect();
+        throw std::runtime_error(
+            "Near texture was camera-warped despite disabled depth writes");
+      }
+    }
+  }
   uint32_t edge = width;
   for (uint32_t x = 0; x < width; x++) {
     auto c = rgb(x, uint32_t(height * .4f));

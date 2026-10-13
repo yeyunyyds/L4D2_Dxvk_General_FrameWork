@@ -1,0 +1,92 @@
+{
+  "upload": "fg-2680-4873531-1594259677248.7z",
+  "upload_sha256": "f0ee218322f65778d9b6850cc3d59ae6a24157168f0da84baf9864532e411553",
+  "overall_correctness": "not_accepted_weapon_mask_incomplete",
+  "generated_by_mode": {
+    "paired": 2139,
+    "generated": 14391
+  },
+  "successful_generated_presents": 16530,
+  "errors": [],
+  "mode_changes": [
+    {
+      "event": "mode",
+      "frame": 5635,
+      "generation": 0,
+      "uid": 30925804,
+      "cpu_qpc": 49913351721,
+      "enabled": true,
+      "mode": "generated"
+    },
+    {
+      "event": "mode",
+      "frame": 20028,
+      "generation": 0,
+      "uid": 100680218,
+      "cpu_qpc": 51423042040,
+      "enabled": false,
+      "mode": "generated"
+    }
+  ],
+  "saved_images": 32,
+  "protected_foreground_sample_pixels": 943618,
+  "protected_foreground_max_channel_difference": 0,
+  "dynamic_fallback_sample_pixels": 265367,
+  "dynamic_fallback_max_channel_difference": 0,
+  "weapon_failure_sample": {
+    "frame": 5083,
+    "selection": "Visually inspected blue weapon within sampled-image ROI x330..379/y240..354, B>100, B>R+35, B>G+15, eroded by 1 pixel to remove boundaries. This is a single-frame weapon sample, not general semantic segmentation.",
+    "selected_pixels": 1308,
+    "foreground_yellow_pixels": 27,
+    "scene_green_pixels": 877,
+    "dynamic_fallback_purple_pixels": 391,
+    "changed_pixels_above_one_channel_level": 688,
+    "max_channel_difference": 148,
+    "mean_absolute_channel_difference": 2.502803261977574
+  },
+  "sparse_static_scene_check": {
+    "method": "Independent grayscale 13x13 normalized-correlation template matching in sampled images, stable green-classified candidates; excludes low-texture/ambiguous/small-motion matches. Pixel size is 3 original render pixels. Camera geometry approximates screen midpoint for small per-frame motion. This is sparse image evidence, not exact matrix, temporal display or dynamic-motion verification.",
+    "matches": 17,
+    "median_phase_ratio": 0.47793877043712213,
+    "median_midpoint_error_sampled_pixels": 0.26076299056506635,
+    "frames": [
+      {
+        "frame": 5083,
+        "matches": 7
+      },
+      {
+        "frame": 5837,
+        "matches": 5
+      },
+      {
+        "frame": 7716,
+        "matches": 5
+      },
+      {
+        "frame": 9539,
+        "matches": 0
+      },
+      {
+        "frame": 13671,
+        "matches": 0
+      }
+    ]
+  },
+  "limits": [
+    "Successful backend Present and sampled output images do not prove monitor frame delivery or scheduling.",
+    "Yellow-mask pixel preservation passes, but mask coverage of the actual weapon fails; those are distinct tests.",
+    "Exact draw-level cause is unavailable in this capture. Depth-only coverage does not reliably protect non-depth-writing weapon materials.",
+    "Dynamic-object true midpoint poses are not established.",
+    "User prioritizes correctness before performance; no performance optimization is claimed."
+  ],
+  "user_reported_fps": {
+    "baseline": [
+      350,
+      400
+    ],
+    "fg_enabled": [
+      120,
+      150
+    ]
+  }
+}

@@ -45,6 +45,7 @@ def smoke(args):
     environment["LDB_GPU_REPROJECT"] = "1" if getattr(args,"gpu_reproject",False) else "0"
     if getattr(args,"fg_mode",None):
         environment.update(LDB_FG_ENABLE="0" if args.fg_mode=="off" else "1",LDB_FG_MODE="generated" if args.fg_mode=="generated" else "paired",LDB_FG_LOG_DIR="Z:"+str(directory/"fg").replace("/","\\"),LDB_FG_CAPTURE_FRAMES="8",LDB_FG_HOTKEYS="0",LDB_FG_FIXTURE_CASE=getattr(args,"fg_case","normal"))
+    if getattr(args,"fg_near_case",None):environment["LDB_FG_FIXTURE_NEAR_CASE"]=args.fg_near_case
     if getattr(args,"fg_auto_capture",False):
         environment.update(LDB_FG_AUTO_CAPTURE="1",LDB_FG_CAPTURE_FRAMES="4",LDB_FG_FIXTURE_CAPTURE_CLOCK="1")
     if getattr(args,"fg_pacing_ms",0):environment["LDB_FG_PACING_MS"]=str(args.fg_pacing_ms)
@@ -108,6 +109,8 @@ def smoke(args):
                 if getattr(args,"fg_mode",None):
                     events=read_events(directory/"capture.jsonl")
                     if process.returncode!=0 or not events or events[-1]['event']!='completed':raise ValueError('FG fixture failed; inspect capture.jsonl')
+                    selection=[e for e in events if e['event']=='near_fixture_selection']
+                    if len(selection)!=1 or selection[0]['mixed']!=(args.fg_near_case=='no_depth_and_rebind'):raise ValueError('Requested near fixture case not executed')
                     presents=[e for e in events if e['event']=='fixture_present']
                     expected_generated=0 if args.fg_mode=='off' else args.frames-2-(2 if getattr(args,'fg_case','normal')!='normal' else 0)
                     expected=args.frames if args.fg_mode in ('off','generated') else args.frames+expected_generated
@@ -130,9 +133,13 @@ def smoke(args):
                         dispatch=[e['gpu_dispatch_ms'] for e in metrics if e['generated']]
                         if not dispatch or any(x<0 for x in dispatch):raise ValueError('Fixture GPU timestamps unavailable')
                         normal=[e for e in metrics if e['generated'] and not e['captured']]
-                        # scene, near, UI, final, combined compute/write, restore: six submissions.
-                        if not normal or any(e['gpu_submissions']!=6 for e in normal):raise ValueError('Combined dispatch/write submission not verified')
-                        result['gpu_timestamps']='verified';result['combined_submission_count']=6
+                        # scene, two near colour copies, depth, UI, final, combined compute/write, restore.
+                        expected_submissions=10 if getattr(args,'fg_near_case',None)=='no_depth_and_rebind' else 8
+                        if not normal or any(e['gpu_submissions']!=expected_submissions for e in normal):raise ValueError('Combined dispatch/write submission not verified')
+                        result['gpu_timestamps']='verified';result['combined_submission_count']=expected_submissions
+                        if any(not e.get('near_colour_mask_valid') for e in metrics if e['generated']):raise ValueError('Near colour mask not validated')
+                        result['near_colour_mask']='verified_before_after_HDR'
+                        result['near_fixture_case']=getattr(args,'fg_near_case','normal')
                         if getattr(args,'fg_auto_capture',False):
                             captures=[e for e in fgevents if e['event']=='capture']
                             if len(captures)<8 or min(e['frame'] for e in captures)<2:raise ValueError('Delayed periodic capture failed')
@@ -183,6 +190,7 @@ if __name__ == "__main__":
     parser.add_argument("--hdr-scene", action="store_true")
     parser.add_argument("--gpu-reproject", action="store_true")
     parser.add_argument("--fg-mode",choices=("paired","generated","off"))
+    parser.add_argument("--fg-near-case",choices=("normal","no_depth_and_rebind"),default="normal")
     parser.add_argument("--fg-auto-capture",action="store_true")
     parser.add_argument("--fg-pacing-ms",type=int,choices=range(9),default=0)
     parser.add_argument("--fg-case",choices=("normal","partial","failure"),default="normal")

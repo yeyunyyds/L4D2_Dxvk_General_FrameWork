@@ -18,6 +18,10 @@ public:
     PreviousFinal,
     Output,
     Mask,
+    CurrentNearBefore,
+    CurrentNearAfter,
+    PreviousNearBefore,
+    PreviousNearAfter,
     SlotCount
   };
 
@@ -334,8 +338,12 @@ public:
     vkcheck(c.vkCreateFence(c.device, &fence, nullptr, &c.fence), "FG fence");
     for (size_t n = 0; n < SlotCount; n++) {
       auto &i = images[n];
-      const bool ds = n < CurrentUi, out = n >= Output;
-      i.format = ds ? depth : (out ? VK_FORMAT_R8G8B8A8_UNORM : color);
+      const bool ds = n < CurrentUi, out = n == Output || n == Mask;
+      i.format =
+          ds ? depth
+             : (out ? VK_FORMAT_R8G8B8A8_UNORM
+                    : (n >= CurrentNearBefore ? VK_FORMAT_R16G16B16A16_SFLOAT
+                                              : color));
       i.aspect = ds ? (depth == VK_FORMAT_D32_SFLOAT
                            ? VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT)
                            : VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT |
@@ -391,8 +399,9 @@ public:
         VkClearColorValue value{};
         vkCmdClearColorImage(c.command, i.image, i.layout, &value, 1, &range);
       }
-      transition(i, n >= Output ? VK_IMAGE_LAYOUT_GENERAL
-                                : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+      transition(i, (n == Output || n == Mask)
+                        ? VK_IMAGE_LAYOUT_GENERAL
+                        : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
     end();
     VkSamplerCreateInfo sam{};
@@ -411,19 +420,19 @@ public:
     sm.codeSize = sizeof(frameGenerateSpirv);
     sm.pCode = frameGenerateSpirv;
     vkcheck(vkCreateShaderModule(c.device, &sm, nullptr, &shader), "FG shader");
-    std::array<VkDescriptorSetLayoutBinding, 11> bindings{};
-    for (uint32_t n = 0; n < 11; n++) {
+    std::array<VkDescriptorSetLayoutBinding, 15> bindings{};
+    for (uint32_t n = 0; n < 15; n++) {
       bindings[n].binding = n;
       bindings[n].descriptorCount = 1;
       bindings[n].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
       bindings[n].descriptorType =
-          n < 8 ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                : (n == 9 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-                          : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+          (n < 8 || n >= 11) ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+                             : (n == 9 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+                                       : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     }
     VkDescriptorSetLayoutCreateInfo sl{};
     sl.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    sl.bindingCount = 11;
+    sl.bindingCount = 15;
     sl.pBindings = bindings.data();
     vkcheck(vkCreateDescriptorSetLayout(c.device, &sl, nullptr, &setLayout),
             "FG set layout");
@@ -444,7 +453,7 @@ public:
                                      &pipeline),
             "FG pipeline");
     std::array<VkDescriptorPoolSize, 3> sizes{
-        {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8},
+        {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 12},
          {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2},
          {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}}};
     VkDescriptorPoolCreateInfo dp{};
@@ -494,28 +503,29 @@ public:
     range.memory = uniformMemory;
     range.size = VK_WHOLE_SIZE;
     vkcheck(vkFlushMappedMemoryRanges(c.device, 1, &range), "FG uniform flush");
-    std::array<VkDescriptorImageInfo, 11> infos{};
-    std::array<VkWriteDescriptorSet, 11> writes{};
+    std::array<VkDescriptorImageInfo, 15> infos{};
+    std::array<VkWriteDescriptorSet, 15> writes{};
     VkDescriptorBufferInfo bufferInfo{uniform, 0, sizeof(Params)};
-    for (uint32_t n = 0; n < 11; n++) {
+    for (uint32_t n = 0; n < 15; n++) {
       writes[n].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       writes[n].dstSet = set;
       writes[n].dstBinding = n;
       writes[n].descriptorCount = 1;
       writes[n].descriptorType =
-          n < 8 ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                : (n == 9 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-                          : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+          (n < 8 || n >= 11) ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+                             : (n == 9 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+                                       : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
       if (n == 9)
         writes[n].pBufferInfo = &bufferInfo;
       else {
-        uint32_t slot = n == 10 ? uint32_t(Mask) : n;
-        infos[n] = {n < 8 ? sampler : VK_NULL_HANDLE, images[slot].view,
-                    images[slot].layout};
+        uint32_t slot = n >= 11 ? uint32_t(CurrentNearBefore) + n - 11
+                                : (n == 10 ? uint32_t(Mask) : n);
+        infos[n] = {(n < 8 || n >= 11) ? sampler : VK_NULL_HANDLE,
+                    images[slot].view, images[slot].layout};
         writes[n].pImageInfo = &infos[n];
       }
     }
-    vkUpdateDescriptorSets(c.device, 11, writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(c.device, 15, writes.data(), 0, nullptr);
     begin();
     VkBufferMemoryBarrier b{};
     b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -569,6 +579,8 @@ public:
     std::swap(images[CurrentNear], images[PreviousNear]);
     std::swap(images[CurrentUi], images[PreviousUi]);
     std::swap(images[CurrentFinal], images[PreviousFinal]);
+    std::swap(images[CurrentNearBefore], images[PreviousNearBefore]);
+    std::swap(images[CurrentNearAfter], images[PreviousNearAfter]);
   }
   void save(Slot slot, const std::filesystem::path &path, uint32_t stride = 3) {
     if (!readback)
