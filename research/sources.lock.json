@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "dxvk": {
+      "repository": "https://github.com/doitsujin/dxvk.git",
+      "commit": "2b1a284f8453baa2bd193709b67e5183074c74ba",
+      "version": "v2.6.1"
+    },
+    "fidelityfx": {
+      "repository": "https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git",
+      "commit": "c6efa6bf7f2027b3ec94f28578bb5965eabb9e55",
+      "version": "v1.1.4",
+      "sparse_paths": [
+        "sdk/include",
+        "sdk/src/backends/vk",
+        "sdk/src/components/frameinterpolation",
+        "sdk/src/components/opticalflow",
+        "sdk/src/components/fsr3upscaler",
+        "sdk/src/shared",
+        "docs/techniques",
+        "docs/getting-started",
+        "samples/fsrapi"
+      ]
+    },
+    "vulkan_headers": {
+      "repository": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+      "commit": "234c4b7370a8ea3239a214c9e871e4b17c89f4ab",
+      "version": "DXVK 2.6.1 Vulkan-Headers gitlink"
+    }
+  },
+  "references": {
+    "bridge": "f6a059b758f9fcbf9c66ace73625aae9db34ad6a",
+    "bridge_upstream": "9aa74f8dfad2188efbd0f717c64d9f8fa909787e",
+    "l4d2_rtx": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+    "eblenix": "54a04b5f3873e35a68d7f99d2656c54251fb098d",
+    "remix": "257f2708bdb02b78d0f6fb9d56da4b7c7c62f6b6"
+  }
+}
