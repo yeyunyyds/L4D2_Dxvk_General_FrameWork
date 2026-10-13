@@ -1,0 +1,10 @@
+{
+  "bridge_repository": "https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge.git",
+  "bridge_commit": "c8d55b0f5d913d71488266469b4dca236439a4e9",
+  "upstream_repository": "https://github.com/NVIDIAGameWorks/dxvk-remix.git",
+  "upstream_commit": "9aa74f8dfad2188efbd0f717c64d9f8fa909787e",
+  "base_patch_sha256": "bd2660b1fd8052fabdad04adbed8f81498046c6d4c4a1a4bf9e937a6460c1583",
+  "post_base_main_sha256": "e42f1af3b6aee0d35dd570ef971efdb84ca37c0376d7b15ddf4b80d22c16d40e",
+  "detours_repository": "https://github.com/microsoft/Detours.git",
+  "detours_commit": "ea6c4ae7f3f1b1772b8a7cda4199230b932f5a50"
+}

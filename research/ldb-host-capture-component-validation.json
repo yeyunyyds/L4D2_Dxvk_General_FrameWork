@@ -1,0 +1,168 @@
+{
+  "baseline": {
+    "bridge_repository": "https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge.git",
+    "bridge_commit": "c8d55b0f5d913d71488266469b4dca236439a4e9",
+    "upstream_repository": "https://github.com/NVIDIAGameWorks/dxvk-remix.git",
+    "upstream_commit": "9aa74f8dfad2188efbd0f717c64d9f8fa909787e",
+    "base_patch_sha256": "bd2660b1fd8052fabdad04adbed8f81498046c6d4c4a1a4bf9e937a6460c1583",
+    "post_base_main_sha256": "e42f1af3b6aee0d35dd570ef971efdb84ca37c0376d7b15ddf4b80d22c16d40e",
+    "detours_repository": "https://github.com/microsoft/Detours.git",
+    "detours_commit": "ea6c4ae7f3f1b1772b8a7cda4199230b932f5a50"
+  },
+  "observer_sha256": "4a9131dce1c4800bfa5952a035b88aea621bcf253fcd1660f33846d83e558758",
+  "shared_capture_sha256": "f51163924c8d5177736330aee7f4fe6d9e83a6cebcbc228057174e0e2fedd9d8",
+  "hook_patch_sha256": "9488694589a6b69699ebccb364b4304299135d6495c280131b368e89871906fd",
+  "component_test_fixture_build": {
+    "exe_sha256": "03798bc77dc7dbad6ed8800e1baeadbce65627c1c4989959afddc40be24a4591",
+    "observer_sha256": "4a9131dce1c4800bfa5952a035b88aea621bcf253fcd1660f33846d83e558758",
+    "command": [
+      "/workspace/L4D2_Dxvk_General_FrameWork/.research/windows-tools/root/usr/bin/x86_64-w64-mingw32-g++-posix",
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wno-cast-function-type",
+      "-static",
+      "-municode",
+      "-I/workspace/L4D2_Dxvk_General_FrameWork/tools",
+      "-I/workspace/L4D2_Dxvk_General_FrameWork/integration/ldb",
+      "-I/workspace/L4D2_Dxvk_General_FrameWork/.research/bin",
+      "-I/workspace/L4D2_Dxvk_General_FrameWork/.research/sources/vulkan_headers/include",
+      "/workspace/L4D2_Dxvk_General_FrameWork/.research/ldb-fixture/host_observer_fixture.cpp",
+      "-luser32",
+      "-luuid",
+      "-o",
+      "/workspace/L4D2_Dxvk_General_FrameWork/.research/ldb-fixture/host_observer_fixture.exe"
+    ],
+    "l4d2_game_capture": "unrun",
+    "full_host_build": "unrun"
+  },
+  "runs": [
+    {
+      "status": "passed",
+      "run_id": "a04be97d0622493f86703abd021147f7",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "enabled",
+        "frames": 8,
+        "snapshots": 16,
+        "successful_resets": 1,
+        "exported_color_depth_pixels": "verified",
+        "device_and_swapchain_present": "exercised",
+        "l4d2_game_capture": "unrun",
+        "full_host_build": "unrun"
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "03798bc77dc7dbad6ed8800e1baeadbce65627c1c4989959afddc40be24a4591",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "4fe25821dcd247a3bc24e468251ff186",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "enabled",
+        "frames": 8,
+        "snapshots": 16,
+        "successful_resets": 1,
+        "exported_color_depth_pixels": "verified",
+        "device_and_swapchain_present": "exercised",
+        "l4d2_game_capture": "unrun",
+        "full_host_build": "unrun"
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "03798bc77dc7dbad6ed8800e1baeadbce65627c1c4989959afddc40be24a4591",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "0d796c02a1174f47adbec0736505a31f",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "disabled",
+        "output_created": false
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "03798bc77dc7dbad6ed8800e1baeadbce65627c1c4989959afddc40be24a4591",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "c42f79bccab2419fa999bf17c49e2dd9",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "waiting",
+        "snapshots": 0,
+        "premature_completion": false
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "03798bc77dc7dbad6ed8800e1baeadbce65627c1c4989959afddc40be24a4591",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "0697896a110343fca8909006bf06dfb0",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "triggered",
+        "frames": 7,
+        "snapshots": 14,
+        "successful_resets": 1,
+        "exported_color_depth_pixels": "verified",
+        "device_and_swapchain_present": "exercised",
+        "l4d2_game_capture": "unrun",
+        "full_host_build": "unrun"
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "03798bc77dc7dbad6ed8800e1baeadbce65627c1c4989959afddc40be24a4591",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    }
+  ],
+  "python_tests": {
+    "passed": 18,
+    "scope": "synthetic capture-log rejection and pinned source guards"
+  },
+  "prepared_source": "Exact base and hook patches applied to isolated source; public headers and pinned Detours included",
+  "x86_noop_branch": "Syntax checked using x64 compiler with _WIN64 undefined; not an actual x86 build",
+  "full_host_build": "unrun",
+  "full_host_mingw_syntax_attempt": "blocked by baseline Windows header filename casing (tracy.hpp and Psapi.h); no successful complete Host compilation",
+  "l4d2_game_capture": "unrun",
+  "b580_integrated_capture": "unrun",
+  "gpu_fg_execution": "unrun"
+}

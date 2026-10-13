@@ -1,0 +1,108 @@
+{
+  "evidence": "User uploaded native Windows capture logs",
+  "archive_sha256": "cfa1b47bc2c649f0c2edd64d277cc724d0f309f4f3671abfa9a1cd1a6fd911d3",
+  "gpu": "Intel(R) Arc(TM) B580 Graphics",
+  "driver_reported": "Intel Corporation 101.8531.0",
+  "dxvk": "2.6.1",
+  "runs": [
+    {
+      "run_id": "82685faa5a7c47daa1c6653fdf4d8e86",
+      "recorded_result": {
+        "status": "passed",
+        "run_id": "82685faa5a7c47daa1c6653fdf4d8e86",
+        "frames": 60,
+        "resets": 1,
+        "validation_level": "standalone_scene_color_depth_snapshot_readback",
+        "game_capture": "unrun",
+        "gpu_fg_execution": "unrun"
+      },
+      "event_recheck": "passed",
+      "exit_code_evidence": "Not stored separately; zero inferred from launcher passed result, not independently measured",
+      "exe_sha256": "97303f60d21c46e75ef3ec6bed964689d90d813c47cb3159ad61dc003018aeb1",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150",
+      "device": {
+        "event": "device",
+        "run_id": "82685faa5a7c47daa1c6653fdf4d8e86",
+        "adapter": "Intel(R) Arc(TM) B580 Graphics",
+        "backend": "D:\\Steam\\steamapps\\common\\Left 4 Dead 2\\bin\\.l4d2bridge\\d3d9vk_x64.dll",
+        "frames_requested": 60,
+        "reset_frame": 30,
+        "width": 640,
+        "height": 360,
+        "depth_d3d_format": 75,
+        "physical_device_name": "Intel(R) Arc(TM) B580 Graphics",
+        "physical_vendor_id": 32902,
+        "submission_queue_family": 0,
+        "gpu_fg_execution": "unrun",
+        "diagnostic_gpu_waits": true
+      },
+      "reset": [
+        {
+          "event": "reset",
+          "run_id": "82685faa5a7c47daa1c6653fdf4d8e86",
+          "generation": 1,
+          "before_frame": 30,
+          "width": 576,
+          "height": 296
+        }
+      ],
+      "vulkan_depth_formats": [
+        129
+      ],
+      "stderr_bytes": 0,
+      "log_sha256": "c66b0d6feb611b78bdf200e0fea64f9e1b8c95e1cb755a67d5850badc470bb3c"
+    },
+    {
+      "run_id": "f04d9bca25254310bebc86ee81e18f71",
+      "recorded_result": {
+        "status": "passed",
+        "run_id": "f04d9bca25254310bebc86ee81e18f71",
+        "frames": 60,
+        "resets": 1,
+        "validation_level": "standalone_scene_color_depth_snapshot_readback",
+        "game_capture": "unrun",
+        "gpu_fg_execution": "unrun"
+      },
+      "event_recheck": "passed",
+      "exit_code_evidence": "Not stored separately; zero inferred from launcher passed result, not independently measured",
+      "exe_sha256": "97303f60d21c46e75ef3ec6bed964689d90d813c47cb3159ad61dc003018aeb1",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150",
+      "device": {
+        "event": "device",
+        "run_id": "f04d9bca25254310bebc86ee81e18f71",
+        "adapter": "Intel(R) Arc(TM) B580 Graphics",
+        "backend": "D:\\Steam\\steamapps\\common\\Left 4 Dead 2\\bin\\.l4d2bridge\\d3d9vk_x64.dll",
+        "frames_requested": 60,
+        "reset_frame": 30,
+        "width": 640,
+        "height": 360,
+        "depth_d3d_format": 82,
+        "physical_device_name": "Intel(R) Arc(TM) B580 Graphics",
+        "physical_vendor_id": 32902,
+        "submission_queue_family": 0,
+        "gpu_fg_execution": "unrun",
+        "diagnostic_gpu_waits": true
+      },
+      "reset": [
+        {
+          "event": "reset",
+          "run_id": "f04d9bca25254310bebc86ee81e18f71",
+          "generation": 1,
+          "before_frame": 30,
+          "width": 576,
+          "height": 296
+        }
+      ],
+      "vulkan_depth_formats": [
+        126
+      ],
+      "stderr_bytes": 0,
+      "log_sha256": "c37fa33041d03a2c81f8e1796fac03cabaa172fd6c12d5208703526618de9e83"
+    }
+  ],
+  "limits": [
+    "Standalone test scene only; no L4D2 capture or frame generation",
+    "No evidence of Vulkan validation-layer activation in these logs",
+    "Synchronous diagnostic readback timings are not production performance measurements"
+  ]
+}

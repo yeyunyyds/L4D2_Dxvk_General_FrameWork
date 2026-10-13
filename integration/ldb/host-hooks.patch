@@ -1,0 +1,126 @@
+--- a/bridge/src/server/main.cpp
++++ b/bridge/src/server/main.cpp
+@@ -25,6 +25,7 @@
+  */
+ #include "api_wait_commands.h"
+ #include <windows.h>
++#include "host_capture.h"
+
+ #include "version.h"
+ #include "module_processing.h"
+@@ -713,6 +714,7 @@
+       case IDirect3DDevice9Ex_Destroy:
+       {
+         GET_RES(pD3DDevice, gpD3DDevices);
++        ldb_capture::destroy(pD3DDevice);
+         safeDestroy(pD3DDevice, pD3DDeviceHandle);
+         gpD3DDevices.erase(pD3DDeviceHandle);
+         break;
+@@ -880,6 +882,7 @@
+         const auto resetStart = GetTickCount64();
+         const HRESULT hresult = !PresentationParameters.Windowed && !bDxvkModuleLoaded
+           ? D3DERR_INVALIDCALL : l4d2_api_wait::backend([&]() { return pD3DDevice->Reset(&PresentationParameters); });
++        ldb_capture::reset(pD3DDevice, currentUID, hresult);
+         char message[768] {};
+         sprintf_s(message,
+           "event=reset_backend_result api=Reset object_id=0x%x uid=%u hresult=0x%08lx swapchain_hresult=0x%08lx size=%ux%u format=%u backbuffers=%u windowed=%u window=%p window_valid=%u swap_effect=%u multisample=%u quality=%u interval=0x%x duration_ms=%llu surface_queries=%llu query_mismatches=%llu",
+@@ -917,6 +920,7 @@
+         const auto resetStart = GetTickCount64();
+         const HRESULT hresult = !PresentationParameters.Windowed && !bDxvkModuleLoaded
+           ? D3DERR_INVALIDCALL : l4d2_api_wait::backend([&]() { return ((IDirect3DDevice9Ex*) pD3DDevice)->ResetEx(&PresentationParameters, pFullscreenDisplayMode); });
++        ldb_capture::reset(pD3DDevice, currentUID, hresult);
+         char message[768] {};
+         sprintf_s(message,
+           "event=reset_backend_result api=ResetEx object_id=0x%x uid=%u hresult=0x%08lx swapchain_hresult=0x%08lx size=%ux%u format=%u backbuffers=%u windowed=%u window=%p window_valid=%u swap_effect=%u multisample=%u quality=%u interval=0x%x duration_ms=%llu surface_queries=%llu query_mismatches=%llu",
+@@ -952,7 +956,9 @@
+         HWND hwnd = overlayPresentWindow(TRUNCATE_HANDLE(HWND, hDestWindowOverride));
+
+         l4d2_color::backendSnapshot(pD3DDevice, pD3DDeviceHandle, gpD3DResources, gpD3DPixelShaders, gpD3DVertexShaders, "Present");
++        ldb_capture::beforePresent(pD3DDevice, currentUID);
+         const auto hresult = l4d2_api_wait::backend([&]() { return pD3DDevice->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion); });
++        ldb_capture::afterPresent(pD3DDevice, currentUID, hresult);
+         if (!SUCCEEDED(hresult)) {
+           std::stringstream ss;
+           ss << "Present() failed! Check all logs for reported errors.";
+@@ -1280,7 +1286,9 @@
+         }
+         assert((pHandle != 0 && pRenderTarget != 0) || pHandle == 0);
+         if ((pHandle != 0 && pRenderTarget != 0) || pHandle == 0) {
++          if (RenderTargetIndex == 0) ldb_capture::boundary(pD3DDevice, "SetRenderTarget", currentUID, pHandle);
+           hresult = pD3DDevice->SetRenderTarget(IN RenderTargetIndex, IN pRenderTarget);
++          ldb_capture::result(pD3DDevice, "SetRenderTarget", currentUID, hresult);
+           l4d2_color::observe(pD3DDeviceHandle, l4d2_color::State::RenderTarget, RenderTargetIndex, pHandle, hresult);
+           assert(SUCCEEDED(hresult));
+         }
+@@ -1309,7 +1317,9 @@
+         }
+         assert((pHandle != 0 && pDepthStencil != 0) || pHandle == 0);
+         if ((pHandle != 0 && pDepthStencil != 0) || pHandle == 0) {
++          if (true) ldb_capture::boundary(pD3DDevice, "SetDepthStencilSurface", currentUID, pHandle);
+           hresult = pD3DDevice->SetDepthStencilSurface(IN pDepthStencil);
++          ldb_capture::result(pD3DDevice, "SetDepthStencilSurface", currentUID, hresult);
+           l4d2_color::observe(pD3DDeviceHandle, l4d2_color::State::Depth, 0, pHandle, hresult);
+           assert(SUCCEEDED(hresult));
+         }
+@@ -1354,7 +1364,9 @@
+         PULL_DATA(sizeof(D3DRECT) * Count, pRects);
+         D3DCOLOR* Color = nullptr;
+         PULL_DATA(sizeof(D3DCOLOR), Color);
++        if (Flags & (D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER)) ldb_capture::boundary(pD3DDevice, "Clear", currentUID, Flags);
+         const auto hresult = pD3DDevice->Clear(Count, pRects, Flags, *Color, *Z, Stencil);
++        ldb_capture::result(pD3DDevice, "Clear", currentUID, hresult);
+         assert(SUCCEEDED(hresult));
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+@@ -1378,7 +1390,9 @@
+       {
+         GET_RES(pD3DDevice, gpD3DDevices);
+         PULL_OBJ(D3DVIEWPORT9, pViewport);
++        if (true) ldb_capture::boundary(pD3DDevice, "SetViewport", currentUID, 0);
+         const auto hresult = pD3DDevice->SetViewport(pViewport);
++        ldb_capture::result(pD3DDevice, "SetViewport", currentUID, hresult);
+         assert(SUCCEEDED(hresult));
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+@@ -1609,6 +1623,7 @@
+         PULL_U(StartVertex);
+         PULL_U(PrimitiveCount);
+         const auto hresult = pD3DDevice->DrawPrimitive(IN PrimitiveType, IN StartVertex, IN PrimitiveCount);
++        ldb_capture::draw(pD3DDevice, "DrawPrimitive", currentUID, hresult, PrimitiveCount);
+         assert(SUCCEEDED(hresult));
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+@@ -1624,6 +1639,7 @@
+         PULL_U(startIndex);
+         PULL_U(primCount);
+         const auto hresult = pD3DDevice->DrawIndexedPrimitive(IN Type, IN BaseVertexIndex, IN MinVertexIndex, IN NumVertices, IN startIndex, IN primCount);
++        ldb_capture::draw(pD3DDevice, "DrawIndexedPrimitive", currentUID, hresult, primCount);
+         assert(SUCCEEDED(hresult));
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+@@ -1638,6 +1654,7 @@
+         DeviceBridge::get_data(&pVertexStreamZeroData);
+         PULL_U(VertexStreamZeroStride);
+         const auto hresult = pD3DDevice->DrawPrimitiveUP(IN PrimitiveType, IN PrimitiveCount, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
++        ldb_capture::draw(pD3DDevice, "DrawPrimitiveUP", currentUID, hresult, PrimitiveCount);
+         assert(SUCCEEDED(hresult));
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+@@ -1659,6 +1676,7 @@
+         DeviceBridge::get_data(&pVertexStreamZeroData);
+
+         const auto hresult = pD3DDevice->DrawIndexedPrimitiveUP(IN PrimitiveType, IN MinVertexIndex, IN NumVertices, IN PrimitiveCount, IN pIndexData, IN IndexDataFormat, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
++        ldb_capture::draw(pD3DDevice, "DrawIndexedPrimitiveUP", currentUID, hresult, PrimitiveCount);
+         assert(SUCCEEDED(hresult));
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+@@ -2078,7 +2096,9 @@
+
+         HWND hwnd = overlayPresentWindow(TRUNCATE_HANDLE(HWND, hDestWindowOverride));
+
++        ldb_capture::swapBefore(pSwapChain, currentUID);
+         const auto hresult = l4d2_api_wait::backend([&]() { return pSwapChain->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion, dwFlags); });
++        ldb_capture::swapAfter(pSwapChain, currentUID, hresult);
+
+         if (!SUCCEEDED(hresult)) {
+           std::stringstream ss;

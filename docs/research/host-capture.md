@@ -13,7 +13,9 @@
 
 本轮使用官方 DXVK 2.6.1 x64 DLL，通过 **Wine 10 + Mesa 25.0.7 llvmpipe + Xvfb** 执行真实 Vulkan 调用。60 帧 D32 与 8 帧 D24 流程均完成一次 Reset；底层 Vulkan loader 确认加载 Khronos validation layer，日志没有 Validation Error / VUID。错误位数 DLL 测试返回预期错误。
 
-这是软件 Vulkan 的功能证据。B580、原生 Windows、MSVC 构建、游戏世界深度识别、相机/HUD/运动矢量和 FG 执行仍未验证。测试使用诊断性 GPU 等待和整图回读，不能把其 CPU 时间或 FPS 当作生产性能。
+后续用户上传的原生 Windows / B580 日志已验证原始测试包：D32 与 D24S8 各 60 帧、一次 Reset、所有颜色/深度校验和 Present 均通过；设备为 Intel Arc B580，驱动报告 101.8531.0，DXVK 2.6.1。记录见 [B580 实机证据](../../research/b580-user-capture-validation.json)。这些日志没有验证层启用证据；成功结果不单独保存 process exit code，零退出码来自 launcher 的 passed 结果。
+
+MSVC 构建、游戏世界深度识别、相机/HUD/运动矢量和 FG 执行仍未验证。测试使用诊断性 GPU 等待和整图回读，不能把其 CPU 时间或 FPS 当作生产性能。新的 [LDB Host 接入](ldb-host-capture.md) 需要单独完成完整 Host 构建和游戏实测。
 
 证据见 [host-capture-validation-2026-10-12.json](../../research/host-capture-validation-2026-10-12.json)。Linux 系统默认 ICD 仍不可用；软件驱动只通过每次测试的局部环境配置启用，并没有替换系统驱动。
 
