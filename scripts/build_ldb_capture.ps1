@@ -15,7 +15,7 @@ $expected = (Get-Content $receipt -Raw | ConvertFrom-Json).host_capture_sha256
 if ($observerHash -ne $expected) { throw 'Prepared observer differs from receipt' }
 $oldBuildId = $env:L4D2_BRIDGE_BUILD_ID
 try {
-  $env:L4D2_BRIDGE_BUILD_ID = 'ldb-capture-dev+' + $observerHash.Substring(0, 16)
+  $env:L4D2_BRIDGE_BUILD_ID = 'ldb-capture-dev+' + (Get-Content $receipt -Raw | ConvertFrom-Json).build_fingerprint.Substring(0, 16)
   Push-Location (Join-Path $sourcePath 'bridge')
   try {
     foreach ($role in @('x64', 'x86', 'x86_server')) {

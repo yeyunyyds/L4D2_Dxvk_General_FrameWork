@@ -101,7 +101,9 @@ std::string imageJson(const ImageInfo& info) {
   return out.str();
 }
 
+class ReprojectCompute;
 class Capture {
+  friend class ReprojectCompute;
 public:
   explicit Capture(ID3D9VkInteropDevice* interop) : interop(interop) {
     interop->GetVulkanHandles(&instance, &physical, &device);
@@ -293,6 +295,22 @@ public:
     if (!color || !depth || !raw || (colorBytes == 8 && !hdr)) throw std::runtime_error("Snapshot file write failed");
   }
 
+  std::vector<float> sampled(uint32_t stride) const {
+    const uint32_t w=(width+stride-1)/stride,h=(height+stride-1)/stride;
+    std::vector<float> out(size_t(w)*h*5);auto bytes=static_cast<const uint8_t*>(mapped);
+    for(uint32_t y=0;y<h;y++)for(uint32_t x=0;x<w;x++) {
+      const size_t j=size_t(std::min(y*stride+stride/2,height-1))*width+std::min(x*stride+stride/2,width-1),i=(size_t(y)*w+x)*5;
+      const auto* rgba=bytes+j*colorBytes;
+      for(size_t k=0;k<4;k++) {
+        if(colorBytes==8){uint16_t bits=0;std::memcpy(&bits,rgba+k*2,2);out[i+k]=halfFloat(bits);}
+        else out[i+k]=float(rgba[(formats[0]==VK_FORMAT_B8G8R8A8_UNORM&&k<3)?2-k:k])/255;
+      }
+      if(formats[1]==VK_FORMAT_D24_UNORM_S8_UINT){uint32_t bits=0;std::memcpy(&bits,bytes+size_t(depthOffset)+j*4,4);out[i+4]=float(bits&0xffffffu)/float(0xffffffu);}
+      else std::memcpy(&out[i+4],bytes+size_t(depthOffset)+j*4,4);
+    }
+    return out;
+  }
+
   void verify(uint32_t background) const {
     auto bytes = static_cast<const uint8_t*>(mapped);
     auto testColor = [&](uint32_t x, uint32_t y, uint32_t expected) {
@@ -378,3 +396,5 @@ private:
 };
 
 }
+
+#include "gpu_reprojection.h"

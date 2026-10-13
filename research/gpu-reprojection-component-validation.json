@@ -1,0 +1,429 @@
+{
+  "status": "passed_component_validation",
+  "unit_tests": 37,
+  "source_sha256": {
+    "integration/ldb/host_capture.h": "07406a69bc6453f4cf5b775995f25d2ef3a55ce8a21c977bdc3a8ddb8a44bc44",
+    "integration/ldb/camera_state.h": "e2345d8b036d05fcd43a7a22f2a17d0cae0d852181e453e91da897cf32fb9918",
+    "tools/dxvk_capture_shared.h": "ca8df91a7b7fcd4d1200a8f13d140fe8bd540a60ca1734a63af64331173918e9",
+    "tools/gpu_reprojection.h": "c924980778f8d5e824988a44ac9e7a76793cec44b5112d3c5819eef8367c2f40",
+    "tools/camera_reproject_spirv.h": "a89b8d91dad31410f7160d484802b8cdaa9e1c865f08cffef3625c3d760dc1da",
+    "shaders/camera_reproject.comp": "c0c3d692ff06d16f404b55406ecb9853190d8d1164d636ffd6691e36df63d4e2"
+  },
+  "spirv_sha256": "9b8f101536fa54c20a001a0a11f28258620680528394b886f90156c84f1bafc2",
+  "spirv_validation": "spirv-val --target-env vulkan1.1 passed",
+  "runs": {
+    "d32": {
+      "status": "passed",
+      "run_id": "a6949ce334c9458ab64d0b58e0b32c4a",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "enabled",
+        "frames": 8,
+        "snapshots": 32,
+        "successful_resets": 1,
+        "exported_color_depth_pixels": "verified",
+        "device_and_swapchain_present": "exercised",
+        "l4d2_game_capture": "unrun",
+        "full_host_build": "unrun",
+        "hdr_values_and_depth_range": "verified"
+      },
+      "gpu_reprojection_validation": {
+        "status": "passed_gpu_compute_diagnostic",
+        "gpu_pairs": [
+          {
+            "previous": "0-0-0",
+            "current": "1-0-0",
+            "pixels_checked": 4584,
+            "status_counts": [
+              21088,
+              4584,
+              0,
+              0,
+              8,
+              0
+            ],
+            "max_motion_error_pixels": 1.5407031298764196e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "28fea731468cd2bd29ff53d5c93e8b8ec5235b206ad7df63bcd85319712bb21f"
+          },
+          {
+            "previous": "1-0-0",
+            "current": "2-0-0",
+            "pixels_checked": 4584,
+            "status_counts": [
+              21096,
+              4584,
+              0,
+              0,
+              0,
+              0
+            ],
+            "max_motion_error_pixels": 1.5430546909556142e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "70358f02284daa5bbf1fa2b5deab3e4afb198aef6ae9ecd54930454b07e8fe03"
+          },
+          {
+            "previous": "2-0-0",
+            "current": "3-0-0",
+            "pixels_checked": 4576,
+            "status_counts": [
+              21096,
+              4576,
+              0,
+              0,
+              8,
+              0
+            ],
+            "max_motion_error_pixels": 1.5407031298764196e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "b74d9f755293aa1c4dffa97a309264ef04ce4cd1ddbd69acc85d0f752e67225b"
+          },
+          {
+            "previous": "4-1-0",
+            "current": "5-1-0",
+            "pixels_checked": 3388,
+            "status_counts": [
+              15616,
+              3388,
+              0,
+              0,
+              4,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "fcf022c88565efbb7653f594f3294c4502c6faae694949d183ec0203ccfcdbb5"
+          },
+          {
+            "previous": "5-1-0",
+            "current": "6-1-0",
+            "pixels_checked": 3390,
+            "status_counts": [
+              15616,
+              3390,
+              0,
+              0,
+              2,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "54fc26248aad8cbad200c8b6c0ae6a09391405c2c47a27016312b18662a02680"
+          },
+          {
+            "previous": "6-1-0",
+            "current": "7-1-0",
+            "pixels_checked": 3389,
+            "status_counts": [
+              15615,
+              3389,
+              0,
+              0,
+              4,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "e43e75b3935f0a6caffd496312db0bdd5a6886319f62c314ce61a50565fe645b"
+          }
+        ],
+        "world_motion_verified": false,
+        "gpu_fg_execution": "unrun",
+        "game_image_modified": false
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "da2d8348affef3f67ee280ece40d0809272c6225fbd9cb8086a059ce40b30504",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    "d24": {
+      "status": "passed",
+      "run_id": "794084738ceb4e8ea261fc01b3ebe836",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "enabled",
+        "frames": 8,
+        "snapshots": 32,
+        "successful_resets": 1,
+        "exported_color_depth_pixels": "verified",
+        "device_and_swapchain_present": "exercised",
+        "l4d2_game_capture": "unrun",
+        "full_host_build": "unrun",
+        "hdr_values_and_depth_range": "verified"
+      },
+      "gpu_reprojection_validation": {
+        "status": "passed_gpu_compute_diagnostic",
+        "gpu_pairs": [
+          {
+            "previous": "0-0-0",
+            "current": "1-0-0",
+            "pixels_checked": 4584,
+            "status_counts": [
+              21088,
+              4584,
+              0,
+              0,
+              8,
+              0
+            ],
+            "max_motion_error_pixels": 1.5407031298764196e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "28fea731468cd2bd29ff53d5c93e8b8ec5235b206ad7df63bcd85319712bb21f"
+          },
+          {
+            "previous": "1-0-0",
+            "current": "2-0-0",
+            "pixels_checked": 4584,
+            "status_counts": [
+              21096,
+              4584,
+              0,
+              0,
+              0,
+              0
+            ],
+            "max_motion_error_pixels": 1.5430546909556142e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "70358f02284daa5bbf1fa2b5deab3e4afb198aef6ae9ecd54930454b07e8fe03"
+          },
+          {
+            "previous": "2-0-0",
+            "current": "3-0-0",
+            "pixels_checked": 4576,
+            "status_counts": [
+              21096,
+              4576,
+              0,
+              0,
+              8,
+              0
+            ],
+            "max_motion_error_pixels": 1.5407031298764196e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "b74d9f755293aa1c4dffa97a309264ef04ce4cd1ddbd69acc85d0f752e67225b"
+          },
+          {
+            "previous": "4-1-0",
+            "current": "5-1-0",
+            "pixels_checked": 3388,
+            "status_counts": [
+              15616,
+              3388,
+              0,
+              0,
+              4,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "fcf022c88565efbb7653f594f3294c4502c6faae694949d183ec0203ccfcdbb5"
+          },
+          {
+            "previous": "5-1-0",
+            "current": "6-1-0",
+            "pixels_checked": 3390,
+            "status_counts": [
+              15616,
+              3390,
+              0,
+              0,
+              2,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "54fc26248aad8cbad200c8b6c0ae6a09391405c2c47a27016312b18662a02680"
+          },
+          {
+            "previous": "6-1-0",
+            "current": "7-1-0",
+            "pixels_checked": 3389,
+            "status_counts": [
+              15615,
+              3389,
+              0,
+              0,
+              4,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "e43e75b3935f0a6caffd496312db0bdd5a6886319f62c314ce61a50565fe645b"
+          }
+        ],
+        "world_motion_verified": false,
+        "gpu_fg_execution": "unrun",
+        "game_image_modified": false
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "da2d8348affef3f67ee280ece40d0809272c6225fbd9cb8086a059ce40b30504",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    "triggered": {
+      "status": "passed",
+      "run_id": "a1eb215395a24889a60a2a209e5a02bf",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "triggered",
+        "frames": 7,
+        "snapshots": 28,
+        "successful_resets": 1,
+        "exported_color_depth_pixels": "verified",
+        "device_and_swapchain_present": "exercised",
+        "l4d2_game_capture": "unrun",
+        "full_host_build": "unrun",
+        "hdr_values_and_depth_range": "verified"
+      },
+      "gpu_reprojection_validation": {
+        "status": "passed_gpu_compute_diagnostic",
+        "gpu_pairs": [
+          {
+            "previous": "0-0-0",
+            "current": "1-0-0",
+            "pixels_checked": 4584,
+            "status_counts": [
+              21096,
+              4584,
+              0,
+              0,
+              0,
+              0
+            ],
+            "max_motion_error_pixels": 1.5430546909556142e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "70358f02284daa5bbf1fa2b5deab3e4afb198aef6ae9ecd54930454b07e8fe03"
+          },
+          {
+            "previous": "1-0-0",
+            "current": "2-0-0",
+            "pixels_checked": 4576,
+            "status_counts": [
+              21096,
+              4576,
+              0,
+              0,
+              8,
+              0
+            ],
+            "max_motion_error_pixels": 1.5407031298764196e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "b74d9f755293aa1c4dffa97a309264ef04ce4cd1ddbd69acc85d0f752e67225b"
+          },
+          {
+            "previous": "3-1-0",
+            "current": "4-1-0",
+            "pixels_checked": 3388,
+            "status_counts": [
+              15616,
+              3388,
+              0,
+              0,
+              4,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "fcf022c88565efbb7653f594f3294c4502c6faae694949d183ec0203ccfcdbb5"
+          },
+          {
+            "previous": "4-1-0",
+            "current": "5-1-0",
+            "pixels_checked": 3390,
+            "status_counts": [
+              15616,
+              3390,
+              0,
+              0,
+              2,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "54fc26248aad8cbad200c8b6c0ae6a09391405c2c47a27016312b18662a02680"
+          },
+          {
+            "previous": "5-1-0",
+            "current": "6-1-0",
+            "pixels_checked": 3389,
+            "status_counts": [
+              15615,
+              3389,
+              0,
+              0,
+              4,
+              0
+            ],
+            "max_motion_error_pixels": 1.525878911934342e-05,
+            "max_depth_error": 0.0,
+            "max_raw_hdr_error": 0.0,
+            "raw_sha256": "e43e75b3935f0a6caffd496312db0bdd5a6886319f62c314ce61a50565fe645b"
+          }
+        ],
+        "world_motion_verified": false,
+        "gpu_fg_execution": "unrun",
+        "game_image_modified": false
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "da2d8348affef3f67ee280ece40d0809272c6225fbd9cb8086a059ce40b30504",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    "disabled": {
+      "status": "passed",
+      "run_id": "6a525ef4d0e54c7bb40002f1b42b6254",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "disabled",
+        "output_created": false
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "da2d8348affef3f67ee280ece40d0809272c6225fbd9cb8086a059ce40b30504",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    }
+  },
+  "b580_gpu_reprojection": "unrun; requires next user capture",
+  "game_fg_execution": "unrun",
+  "persistent_gpu_history": "not_implemented; CPU diagnostic staging"
+}

@@ -1,13 +1,15 @@
 #pragma once
 // Real DXVK test pass: HDR values above one plus a depth-range/near-geometry change.
+inline Com<IDirect3DSurface9> hdrFixtureTarget;
+inline void hdrFixtureReset(){hdrFixtureTarget.reset();}
 void hdrScene(IDirect3DDevice9* device, uint32_t frame, uint32_t width, uint32_t height) {
   if (halfFloat(0x0001) != std::ldexp(1.0f,-24) || halfFloat(0x7bff) != 65504.0f ||
       halfFloat(0xbc00) != -1.0f || !std::signbit(halfFloat(0x8000)) ||
       !std::isinf(halfFloat(0x7c00)) || !std::isnan(halfFloat(0x7e00)))
     throw std::runtime_error("Binary16 decoder edge cases failed");
-  Com<IDirect3DSurface9> original, target;
+  Com<IDirect3DSurface9> original;auto& target=hdrFixtureTarget;
   hr(device->GetRenderTarget(0, original.put()), "HDR original RT");
-  hr(device->CreateRenderTarget(width,height,D3DFMT_A16B16G16R16F,D3DMULTISAMPLE_NONE,0,FALSE,target.put(),nullptr), "HDR CreateRenderTarget");
+  if(!target.get())hr(device->CreateRenderTarget(width,height,D3DFMT_A16B16G16R16F,D3DMULTISAMPLE_NONE,0,FALSE,target.put(),nullptr), "HDR CreateRenderTarget");
   hr(device->SetRenderTarget(0,target.get()), "HDR bind RT");
   hr(device->Clear(0,nullptr,D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER,D3DCOLOR_XRGB(16,32,192),1.0f,0), "HDR Clear");
   Com<IDirect3DPixelShader9> shader;
@@ -16,7 +18,11 @@ void hdrScene(IDirect3DDevice9* device, uint32_t frame, uint32_t width, uint32_t
   hr(device->SetPixelShader(shader.get()), "HDR bind shader");
   Com<IDirect3DVertexShader9> vertexShader;
   const DWORD vertexCode[]={0xfffe0200,0x0200001f,0x80000000,0x900f0000,0x03000014,0xc00f0000,0x90e40000,0xa0e40004,0x0000ffff};
-  hr(device->CreateVertexShader(vertexCode,vertexShader.put()),"HDR real VS");
+  const DWORD table[]={0x42415443,0x1c,0x0,0xfffe0200,0x1,0x1c,0x0,0x0,0x30,0x40002,0x4,0x0,0x0,0x65695663,0x6f725077,0x6a};
+  std::vector<DWORD> annotated{vertexCode[0],0x10fffe};
+  annotated.insert(annotated.end(),std::begin(table),std::end(table));
+  annotated.insert(annotated.end(),std::begin(vertexCode)+1,std::end(vertexCode));
+  hr(device->CreateVertexShader(annotated.data(),vertexShader.put()),"HDR real VS");
   Com<IDirect3DVertexDeclaration9> declaration;
   const D3DVERTEXELEMENT9 elements[]={{0,0,D3DDECLTYPE_FLOAT4,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_POSITION,0},D3DDECL_END()};
   hr(device->CreateVertexDeclaration(elements,declaration.put()),"HDR declaration");

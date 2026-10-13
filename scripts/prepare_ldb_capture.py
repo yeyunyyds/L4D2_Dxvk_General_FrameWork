@@ -62,7 +62,7 @@ def prepare(args):
     hooks = ROOT / 'integration/ldb/host-hooks.patch'
     subprocess.run(['git', 'apply', '--check', str(hooks)], cwd=args.output, check=True)
     subprocess.run(['git', 'apply', str(hooks)], cwd=args.output, check=True)
-    for source in [ROOT / 'integration/ldb/host_capture.h', ROOT / 'tools/dxvk_capture_shared.h']:
+    for source in [ROOT / 'integration/ldb/host_capture.h', ROOT / 'integration/ldb/camera_state.h', ROOT / 'tools/dxvk_capture_shared.h', ROOT / 'tools/gpu_reprojection.h', ROOT / 'tools/camera_reproject_spirv.h']:
         shutil.copy2(source, server / source.name)
     generate_interop(args.dxvk, server / 'dxvk_interop.h')
     for name in ('vulkan', 'vk_video'):
@@ -76,7 +76,9 @@ def prepare(args):
     meson.write_text(text.replace(old, old.replace('public_include_path', "public_include_path, include_directories('.')")))
     receipt = {**baseline, 'hooks_sha256': digest(hooks), 'host_capture_sha256': digest(server / 'host_capture.h'),
                'shared_capture_sha256': digest(server / 'dxvk_capture_shared.h'),
+               'gpu_sources_sha256': {name:digest(server/name) for name in ['camera_state.h','gpu_reprojection.h','camera_reproject_spirv.h']},
                'native_host_build': 'unrun', 'l4d2_game_capture': 'unrun'}
+    receipt['build_fingerprint']=hashlib.sha256(json.dumps(receipt,sort_keys=True).encode()).hexdigest()
     (args.output / 'capture-source.json').write_text(json.dumps(receipt, indent=2) + '\n')
     # Meson requires a local HEAD for its generated version resource.
     subprocess.run(['git', 'add', '.'], cwd=args.output, check=True)
@@ -87,7 +89,7 @@ def prepare(args):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--bridge', type=Path, default=ROOT / '.research/sources/bridge')
+    p.add_argument('--bridge', type=Path, default=ROOT / '.research/sources/bridge-131')
     p.add_argument('--upstream', type=Path, default=ROOT / '.research/sources/bridge-upstream')
     p.add_argument('--dxvk', type=Path, default=ROOT / '.research/sources/dxvk')
     p.add_argument('--headers', type=Path, default=ROOT / '.research/sources/vulkan_headers')

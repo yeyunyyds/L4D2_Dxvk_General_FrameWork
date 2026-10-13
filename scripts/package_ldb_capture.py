@@ -16,7 +16,9 @@ def package(source, build_id, output):
     for filename, field in [('host_capture.h', 'host_capture_sha256'), ('dxvk_capture_shared.h', 'shared_capture_sha256')]:
         if hashlib.sha256((server / filename).read_bytes()).hexdigest() != receipt[field]:
             raise ValueError('Prepared source changed after receipt')
-    expected_id = 'ldb-capture-dev+' + receipt['host_capture_sha256'][:16]
+    for name,expected in receipt.get('gpu_sources_sha256',{}).items():
+        if hashlib.sha256((server/name).read_bytes()).hexdigest()!=expected:raise ValueError('GPU source changed after receipt')
+    expected_id = 'ldb-capture-dev+' + receipt['build_fingerprint'][:16]
     if build_id != expected_id:
         raise ValueError('Mismatched development identity')
     entries = {}
@@ -47,12 +49,15 @@ def package(source, build_id, output):
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for name, data in entries.items(): archive.writestr(name, data)
         archive.writestr('capture-build.json', json.dumps(receipt, indent=2)+'\n')
-        archive.write(ROOT/'docs/research/capture-series.md', 'README.md')
+        archive.write(ROOT/'docs/research/gpu-reprojection.md', 'README.md')
+        archive.write(ROOT/'docs/research/capture-series.md','docs/capture-series.md')
         archive.write(ROOT/'docs/research/ldb-host-capture.md', 'docs/host-capture.md')
-        for name in ['analyze_ldb_capture.py','analyze_capture_series.py','reproject_capture.py','capture_math.py']:
+        for name in ['analyze_ldb_capture.py','analyze_capture_series.py','reproject_capture.py','capture_math.py','analyze_gpu_capture.py']:
             archive.write(ROOT/'scripts'/name,'scripts/'+name)
+        archive.write(ROOT/'scripts/trigger_capture.cmd','trigger_capture.cmd')
+        archive.write(ROOT/'shaders/camera_reproject.comp','sources/camera_reproject.comp')
         archive.write(source/'LICENSE', 'licenses/Remix-LICENSE')
-        archive.write(ROOT/'.research/sources/bridge/LICENSE', 'licenses/LDB-LICENSE')
+        archive.write(ROOT/'.research/sources/bridge-131/LICENSE', 'licenses/LDB-LICENSE')
         archive.write(ROOT/'.research/sources/dxvk/LICENSE', 'licenses/DXVK-LICENSE')
         archive.write(ROOT/'.research/sources/vulkan_headers/LICENSE.md', 'licenses/Vulkan-Headers-LICENSE.md')
     print(output)

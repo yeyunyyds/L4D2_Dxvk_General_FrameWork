@@ -37,9 +37,9 @@ replace(anchor, '''      ldb_capture::draw(device.get(), "DrawPrimitiveUP", fram
       }
       hr(presented, "Present");''')
 replace('      hr(device->Reset(&params), "Reset");',
-        '      ldb_capture::reset(device.get(), frame, D3DERR_INVALIDCALL); // failed Reset must not advance generation\n      const HRESULT resetResult = device->Reset(&params);\n      ldb_capture::reset(device.get(), frame, resetResult);\n      hr(resetResult, "Reset");')
+        '      ldb_capture::reset(device.get(), frame, D3DERR_INVALIDCALL); // failed Reset must not advance generation\n      hdrFixtureReset();\n      const HRESULT resetResult = device->Reset(&params);\n      ldb_capture::reset(device.get(), frame, resetResult);\n      hr(resetResult, "Reset");')
 replace('  capture.reset();\n  std::cout << "{\\"event\\":\\"completed\\",',
-        '  capture.reset();\n  ldb_capture::destroy(device.get());\n  std::cout << "{\\"event\\":\\"completed\\",')
+        '  capture.reset();\n  hdrFixtureReset();\n  ldb_capture::destroy(device.get());\n  std::cout << "{\\"event\\":\\"completed\\",')
 source = out / 'host_observer_fixture.cpp'
 source.write_text('// Generated test fixture; executes the exact Host observer, not LDB IPC.\n' + s)
 compiler = ROOT / '.research/windows-tools/root/usr/bin/x86_64-w64-mingw32-g++-posix'

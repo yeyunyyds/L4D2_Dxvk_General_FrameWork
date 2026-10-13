@@ -1,0 +1,20 @@
+{
+  "status": "source_compatibility_passed",
+  "old_bridge_commit": "c8d55b0f5d913d71488266469b4dca236439a4e9",
+  "new_main_commit": "677653d5d6751377799187c0677ff1e7d3f2f9ad",
+  "release_source_commit": "9e3ee1292f901b0bb9352e36bba93a4cd5cfbda4",
+  "changed_patch_sections": [
+    "bridge/src/client/remix_state.h",
+    "bridge/src/client/window.cpp",
+    "bridge/src/util/steam_web_diagnostics.h",
+    "bridge/src/server/steam_window_diagnostics.h",
+    "bridge/src/client/remix_state.cpp",
+    "bridge/src/util/steam_workshop_status.h"
+  ],
+  "unchanged_patch_sections": 126,
+  "host_main_sha256": "e42f1af3b6aee0d35dd570ef971efdb84ca37c0376d7b15ddf4b80d22c16d40e",
+  "host_main_matches_old_baseline": true,
+  "host_capture_hooks_apply_check": "passed",
+  "baseline_changed": false,
+  "new_native_capture_build": "unrun"
+}

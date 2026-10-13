@@ -1,0 +1,26 @@
+#version 450
+layout(local_size_x=8,local_size_y=8) in;
+layout(set=0,binding=0,std430) readonly buffer Inputs { float inputData[]; };
+layout(set=0,binding=1,std430) writeonly buffer Outputs { float outputData[]; };
+layout(push_constant) uniform Parameters { vec4 row0;vec4 row1;vec4 row2;vec4 row3;uvec4 sizes;uvec4 sampling; } p;
+void main() {
+ uvec2 xy=gl_GlobalInvocationID.xy;uint w=p.sizes.x,h=p.sizes.y;
+ if(xy.x>=w||xy.y>=h)return;
+ uint i=xy.y*w+xy.x;
+ for(uint k=0;k<8;k++)outputData[i*8+k]=0;
+ float z=inputData[i*10+9];
+ if(isnan(z)||isinf(z)||z<=0.2||z>=1.0)return; // sky/near range is handled separately later
+ vec2 full=min(vec2(xy*p.sampling.x+p.sampling.y),vec2(p.sizes.zw)-1.0);
+ vec4 clip=vec4(2*full.x/float(p.sizes.z)-1,1-2*full.y/float(p.sizes.w),z,1);
+ vec4 prev=vec4(dot(p.row0,clip),dot(p.row1,clip),dot(p.row2,clip),dot(p.row3,clip));
+ if(any(isnan(prev))||any(isinf(prev))||prev.w<=1e-8){outputData[i*8+7]=5;return;}
+ prev.xyz/=prev.w;
+ vec2 pos=vec2((prev.x+1)*float(p.sizes.z)/2,(1-prev.y)*float(p.sizes.w)/2);
+ ivec2 sampleXY=ivec2(roundEven((pos-float(p.sampling.y))/float(p.sampling.x)));
+ if(any(lessThan(sampleXY,ivec2(0)))||any(greaterThanEqual(sampleXY,ivec2(w,h)))||prev.z<0||prev.z>1){outputData[i*8+7]=3;return;}
+ uint j=uint(sampleXY.y)*w+uint(sampleXY.x);float old=inputData[j*10+4];
+ if(isnan(old)||isinf(old)||old<=0.2||old>=1){outputData[i*8+7]=4;return;}
+ for(uint k=0;k<4;k++)outputData[i*8+k]=inputData[j*10+k];
+ outputData[i*8+4]=full.x-pos.x;outputData[i*8+5]=full.y-pos.y;
+ float error=abs(old-prev.z);outputData[i*8+6]=error;outputData[i*8+7]=error<=0.0001?1:2;
+}

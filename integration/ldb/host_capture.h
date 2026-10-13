@@ -6,7 +6,9 @@
 #include <cstdint>
 #if defined(_WIN64)
 #include "dxvk_capture_shared.h"
+#include "camera_state.h"
 #include <map>
+#include <algorithm>
 #include <memory>
 #include <mutex>
 #include <limits>
@@ -25,7 +27,7 @@ struct Config {
   std::filesystem::path root;
   std::filesystem::path trigger;
   uint32_t start = 180, frames = 8, snapshots = 8, stride = 3;
-  bool enabled = false;
+  bool enabled = false, reproject = false;
   Config() noexcept {
     try {
       root = env(L"LDB_CAPTURE_DIR");
@@ -42,6 +44,7 @@ struct Config {
       frames = number(L"LDB_CAPTURE_FRAMES", frames, 16);
       snapshots = number(L"LDB_CAPTURE_SNAPSHOTS", snapshots, 16);
       stride = number(L"LDB_CAPTURE_STRIDE", stride, 8);
+      reproject = env(L"LDB_GPU_REPROJECT") == L"1";
       enabled = frames > 0 && snapshots > 0 && stride > 0;
     } catch (...) { enabled = false; }
   }
@@ -61,6 +64,9 @@ struct State {
   std::string lastPrefix;
   uint64_t totalBytes = 0, metadataBytes = 0, lastDrawSequence = UINT64_MAX;
   uint32_t vsRegisters = 0, psRegisters = 0;
+  std::map<std::pair<uint64_t,uint64_t>,ldb_camera::Candidate> cameras;
+  ldb_camera::History history;
+  uint64_t gpuFrame=UINT64_MAX,gpuBytes=0;
   LARGE_INTEGER frequency{};
   std::map<std::vector<uint8_t>, std::string> blobs;
   bool stopped = false;
@@ -78,7 +84,7 @@ struct State {
     log.open(directory / "events.jsonl", std::ios::binary);
     if (!log) throw std::runtime_error("Cannot open capture log");
     emit("session", 0, "\"start_frame\":" + std::to_string(config().start) + ",\"frames_requested\":" + std::to_string(config().frames) +
-      ",\"capture_schema\":2,\"qpc_frequency\":" + std::to_string(frequency.QuadPart) + ",\"export_stride\":" + std::to_string(config().stride) +
+      ",\"gpu_reprojection_enabled\":" + std::string(config().reproject?"true":"false") + ",\"capture_schema\":2,\"qpc_frequency\":" + std::to_string(frequency.QuadPart) + ",\"export_stride\":" + std::to_string(config().stride) +
       ",\"max_snapshots_per_frame\":" + std::to_string(config().snapshots) +
       ",\"diagnostic_gpu_waits\":true,\"semantic_labels\":\"unknown\",\"gpu_fg_execution\":\"unrun\"");
   }
@@ -131,6 +137,39 @@ template<class F> inline void observe(IDirect3DDevice9* device, F&& f) noexcept 
       try { value->emit("diagnostic_error", 0, "\"message\":" + quote(e.what())); } catch (...) {}
     }
   } catch (...) {}
+}
+inline void gpuSnapshot(State& s,Capture& capture,const ImageInfo& color,const ImageInfo& depth,uint64_t colorId,uint64_t depthId,const std::string& prefix,uint32_t uid) {
+  if(!config().reproject||s.gpuFrame==s.frame||color.create.format!=VK_FORMAT_R16G16B16A16_SFLOAT)return;
+  auto found=s.cameras.find({colorId,depthId});if(found==s.cameras.end())return;
+  const auto candidate=found->second;s.gpuFrame=s.frame;
+  if(candidate.conflict||!candidate.matches){s.history={};s.emit("gpu_reprojection_skipped",uid,"\"reason\":\"ambiguous_scene_matrix\"");return;}
+  const uint32_t width=color.create.extent.width,height=color.create.extent.height,stride=config().stride;
+  const size_t n=size_t((width+stride-1)/stride)*((height+stride-1)/stride);
+  if(n>1024*1024||s.gpuBytes+n*38+512>128ull*1024*1024){s.history={};s.emit("gpu_reprojection_skipped",uid,"\"reason\":\"gpu_output_budget\"");return;}
+  auto pixels=capture.sampled(stride);auto& old=s.history;
+  const bool compatible=!old.pixels.empty()&&old.frame+1==s.frame&&old.generation==s.generation&&old.width==width&&old.height==height&&old.stride==stride&&old.color==colorId&&old.depth==depthId&&old.colorFormat==int(color.create.format)&&old.depthFormat==int(depth.create.format);
+  std::ostringstream rows;rows<<'[';for(size_t i=0;i<16;i++){if(i)rows<<',';rows.precision(9);rows<<candidate.matrix[i];}rows<<']';
+  std::string selected="\"prefix\":"+quote(prefix)+",\"matrix_draw_sequence\":"+std::to_string(candidate.sequence)+",\"matrix_register\":"+std::to_string(candidate.reg)+",\"matrix_shader\":"+candidate.shader+",\"matching_draws\":"+std::to_string(candidate.matches)+",\"matrix_rows\":"+rows.str();
+  if(compatible) {
+    ReprojectCompute::Push push{};
+    if(!ldb_camera::transform(old.matrix,candidate.matrix,push.transform))throw std::runtime_error("Scene matrix inversion failed");
+    push.sizes={uint32_t((width+stride-1)/stride),uint32_t((height+stride-1)/stride),width,height};push.sampling={stride,stride/2,0,0};
+    std::vector<float> input(n*10);for(size_t i=0;i<n;i++){std::copy_n(old.pixels.data()+i*5,5,input.data()+i*10);std::copy_n(pixels.data()+i*5,5,input.data()+i*10+5);}
+    ReprojectCompute compute(capture);auto output=compute.run(input,push);
+    std::ofstream raw(s.directory/(prefix+"-gpu.f32"),std::ios::binary),warp(s.directory/(prefix+"-gpu-warp.ppm"),std::ios::binary),mask(s.directory/(prefix+"-gpu-valid.ppm"),std::ios::binary);
+    raw.write(reinterpret_cast<const char*>(output.data()),std::streamsize(output.size()*4));warp<<"P6\n"<<push.sizes[0]<<' '<<push.sizes[1]<<"\n255\n";mask<<"P6\n"<<push.sizes[0]<<' '<<push.sizes[1]<<"\n255\n";
+    uint64_t valid=0,consistent=0;std::array<uint64_t,6> statuses{};
+    for(size_t i=0;i<n;i++) {
+      const float* value=output.data()+i*8;for(size_t k=0;k<8;k++)if(!std::isfinite(value[k]))throw std::runtime_error("Nonfinite GPU diagnostic output");
+      int status=int(value[7]);if(status<0||status>5||value[7]!=float(status))throw std::runtime_error("Invalid GPU output status");statuses[size_t(status)]++;valid+=(status==1||status==2);consistent+=(status==1);
+      char rgb[3]={char(hdrPreview(value[0])),char(hdrPreview(value[1])),char(hdrPreview(value[2]))};warp.write(rgb,3);
+      const char classification[3]={char(status==2?255:0),char(status==1?255:0),char(status>=3?255:0)};mask.write(classification,3);
+    }
+    raw.close();warp.close();mask.close();if(!raw||!warp||!mask)throw std::runtime_error("GPU diagnostic export failed");s.gpuBytes+=n*38+512;
+    std::ostringstream counts;counts<<'[';for(size_t i=0;i<6;i++){if(i)counts<<',';counts<<statuses[i];}counts<<']';
+    s.emit("gpu_reprojection",uid,selected+",\"previous_prefix\":"+quote(old.prefix)+",\"previous_frame\":"+std::to_string(old.frame)+",\"valid_pixels\":"+std::to_string(valid)+",\"depth_consistent_pixels\":"+std::to_string(consistent)+",\"status_counts\":"+counts.str()+",\"depth_tolerance\":0.0001,\"implementation\":\"vulkan_compute_sampled_cpu_staged_diagnostic\",\"game_image_modified\":false,\"gpu_fg_execution\":\"unrun\"");
+  } else s.emit("gpu_history",uid,selected+",\"reason\":\"warmup_or_incompatible_history\"");
+  old.pixels=std::move(pixels);old.matrix=candidate.matrix;old.prefix=prefix;old.frame=s.frame;old.generation=s.generation;old.width=width;old.height=height;old.stride=stride;old.color=colorId;old.depth=depthId;old.colorFormat=int(color.create.format);old.depthFormat=int(depth.create.format);
 }
 inline void snapshot(State& s, IDirect3DDevice9* device, const char* reason, uint32_t uid, IDirect3DSwapChain9* chain = nullptr) {
   if (!s.active() || !s.segmentDraws) return;
@@ -217,6 +256,7 @@ inline void snapshot(State& s, IDirect3DDevice9* device, const char* reason, uin
     ",\"raw_hdr_color\":" + (hdrColor ? "true" : "false");
   s.emit("snapshot", uid, details + ",\"prefix\":" + quote(name) + ",\"physical_device\":" + quote(capture.physicalProperties.deviceName) +
     ",\"source_layout_restored\":true,\"gpu_copy_completed\":true,\"pixel_verification\":\"unknown_game_content\"");
+  gpuSnapshot(s,capture,color,depth,id(colorSurface.get()),id(depthSurface.get()),name,uid);
 }
 inline void boundary(IDirect3DDevice9* device, const char* name, uint32_t uid, uint64_t argument = 0) noexcept {
   observe(device, [&](State& s) {
@@ -252,7 +292,7 @@ inline void viewportBefore(IDirect3DDevice9* device, const D3DVIEWPORT9* next, u
 inline void result(IDirect3DDevice9* device, const char* name, uint32_t uid, HRESULT hresult) noexcept {
   observe(device,[&](State& s) {
     if (!s.active()) return;
-    if (SUCCEEDED(hresult) && std::string(name) == "Clear") { s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; s.lastDrawSequence=UINT64_MAX; }
+    if (SUCCEEDED(hresult) && std::string(name) == "Clear") { s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; s.lastDrawSequence=UINT64_MAX; s.cameras.clear(); }
     s.emit("api_result",uid,"\"api\":"+quote(name)+",\"hresult\":"+std::to_string(uint32_t(hresult)));
   });
 }
@@ -260,7 +300,7 @@ inline void draw(IDirect3DDevice9* device, const char* name, uint32_t uid, HRESU
   observe(device, [&](State& s) {
     if (!s.active()) return;
     if (SUCCEEDED(hresult)) { s.draws++; s.segmentDraws++; }
-    if (s.events++ >= 12000) { s.lastDrawSequence=UINT64_MAX; return; }
+    if (s.events++ >= 12000) { s.lastDrawSequence=UINT64_MAX; s.cameras.clear(); s.history={}; return; }
     Com<IDirect3DSurface9> rt, ds;
     Com<IDirect3DVertexShader9> vs; Com<IDirect3DPixelShader9> ps;
     Com<IDirect3DVertexDeclaration9> declaration;
@@ -292,6 +332,21 @@ inline void draw(IDirect3DDevice9* device, const char* name, uint32_t uid, HRESU
       ",\"legacy_transforms\":"+((SUCCEEDED(wh)&&SUCCEEDED(viewh)&&SUCCEEDED(projh))?s.store(transforms.data(),sizeof(transforms)):"null")+
       ",\"vs_registers\":"+std::to_string(s.vsRegisters)+",\"ps_registers\":"+std::to_string(s.psRegisters)+
       ",\"vertex_mode\":"+quote(vs.get()?"programmable":"fixed_function")+"}";
+    if(config().reproject&&SUCCEEDED(hresult)&&SUCCEEDED(vfh)&&SUCCEEDED(rh)&&SUCCEEDED(dh)&&SUCCEEDED(viewport)&&SUCCEEDED(zh)&&SUCCEEDED(zwh)&&z!=D3DZB_FALSE&&zw&&vs.get()&&rt.get()&&ds.get()&&v.X==0&&v.Y==0&&v.MinZ==0&&v.MaxZ==1) {
+      D3DSURFACE_DESC desc{};
+      if(SUCCEEDED(rt->GetDesc(&desc))&&desc.Format==D3DFMT_A16B16G16R16F&&desc.Width==v.Width&&desc.Height==v.Height) {
+        UINT bytes=0;hr(vs->GetFunction(nullptr,&bytes),"Camera shader size");
+        if(bytes>1024*1024||bytes%4)throw std::runtime_error("Camera bytecode budget");
+        std::vector<uint8_t> code(bytes);hr(vs->GetFunction(code.data(),&bytes),"Camera shader data");int reg=ldb_camera::viewProjectionRegister(code);
+        if(reg>=0&&uint32_t(reg+4)<=s.vsRegisters) {
+          ldb_camera::Matrix matrix{};std::copy_n(vf.data()+size_t(reg)*4,16,matrix.data());std::array<double,16> inv{};
+          if(ldb_camera::inverse(matrix,inv)) {
+            auto& candidate=s.cameras[{id(rt.get()),id(ds.get())}];if(candidate.matches&&candidate.matrix!=matrix)candidate.conflict=true;
+            candidate.matrix=matrix;candidate.matches++;candidate.reg=reg;candidate.sequence=s.sequence;candidate.shader=s.store(code.data(),code.size());
+          }
+        }
+      }
+    }
     if(SUCCEEDED(hresult)) s.lastDrawSequence=s.sequence;
     s.emit("draw",uid,state+",\"api\":"+quote(name)+",\"hresult\":"+std::to_string(uint32_t(hresult))+",\"primitives\":"+std::to_string(primitives)+
       ",\"draw_index\":"+std::to_string(s.draws)+",\"color_id\":"+std::to_string(id(rt.get()))+",\"depth_id\":"+std::to_string(id(ds.get()))+
@@ -319,6 +374,8 @@ inline void afterPresent(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult
       return;
     }
     if (s.active()) s.emit("present_result",uid,"\"hresult\":"+std::to_string(uint32_t(hresult))+",\"snapshots\":"+std::to_string(s.snapshots));
+    if(FAILED(hresult)||s.gpuFrame!=s.frame) s.history={};
+    s.cameras.clear();
     // An attempted Present defines an observation frame, even if it failed.
     s.frame++; s.draws=0; s.segmentDraws=0; s.snapshots=0; s.clearAttempts=0; s.otherAttempts=0; s.rangeAttempts=0; s.presentAttempts=0; s.lastSnapshotDraws=UINT64_MAX; s.lastPrefix.clear(); s.lastDrawSequence=UINT64_MAX; s.events=0;
     if (s.frame >= uint64_t(config().start)+config().frames) {
@@ -328,7 +385,7 @@ inline void afterPresent(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult
 }
 inline void reset(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult) noexcept {
   observe(device,[&](State& s) {
-    if(SUCCEEDED(hresult)) { s.generation++; s.segmentDraws=0; s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; s.lastDrawSequence=UINT64_MAX; }
+    if(SUCCEEDED(hresult)) { s.generation++; s.segmentDraws=0; s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; s.lastDrawSequence=UINT64_MAX; s.cameras.clear(); s.history={}; s.gpuFrame=UINT64_MAX; }
     s.emit("reset_result",uid,"\"hresult\":"+std::to_string(uint32_t(hresult)));
   });
 }

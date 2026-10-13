@@ -42,6 +42,7 @@ def smoke(args):
         DXVK_FILTER_DEVICE_NAME="llvmpipe", DXVK_HUD="0",
     )
     environment["LD_LIBRARY_PATH"] = str(runtime / "root/usr/lib/x86_64-linux-gnu/wine/x86_64-unix") + ":" + str(runtime / "root/usr/lib/x86_64-linux-gnu")
+    environment["LDB_GPU_REPROJECT"] = "1" if getattr(args,"gpu_reproject",False) else "0"
     if getattr(args, "observer", None) in ("enabled", "waiting", "triggered"):
         environment.update(LDB_CAPTURE_DIR="Z:" + str(directory / "observer").replace("/", "\\"),
                            LDB_CAPTURE_START="0", LDB_CAPTURE_FRAMES=str(args.frames), LDB_CAPTURE_STRIDE=str(getattr(args,"stride",1)), LDB_CAPTURE_SNAPSHOTS="6" if getattr(args, "hdr_scene", False) else "3")
@@ -110,6 +111,12 @@ def smoke(args):
             if getattr(args, "observer", None):
                 from analyze_ldb_capture import verify_fixture
                 result["observer_validation"] = verify_fixture(directory / "observer", args.observer, args.frames, getattr(args, "hdr_scene", False))
+            if getattr(args,"gpu_reproject",False) and args.observer in ("enabled","triggered"):
+                from analyze_gpu_capture import analyze_gpu
+                folder=next((directory/"observer").iterdir());gpu=analyze_gpu(folder)
+                if gpu['status']!='passed_gpu_compute_diagnostic':raise ValueError('GPU compute was not exercised')
+                if args.hdr_scene and len(gpu['gpu_pairs'])!=args.frames-2-(1 if args.observer=='triggered' else 0):raise ValueError('Unexpected GPU history count across Reset')
+                result['gpu_reprojection_validation']=gpu
             result.update(platform="Wine 10 / Mesa llvmpipe / Xvfb", b580_validation="unrun",
                           exe_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
                           backend_sha256=hashlib.sha256(backend.read_bytes()).hexdigest())
@@ -135,13 +142,14 @@ if __name__ == "__main__":
     parser.add_argument("--negative-case", choices=("wrong-arch",))
     parser.add_argument("--stride",type=int,choices=range(1,9),default=1)
     parser.add_argument("--hdr-scene", action="store_true")
+    parser.add_argument("--gpu-reproject", action="store_true")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))
     args = parser.parse_args()
     if not 2 <= args.frames <= 1000:
         parser.error("--frames must be 2..1000")
-    if args.hdr_scene and args.observer != "enabled":
-        parser.error("HDR scene validation requires --observer enabled")
+    if args.hdr_scene and args.observer not in ("enabled","triggered"):
+        parser.error("HDR scene validation requires --observer enabled or triggered")
     if args.negative_case and args.validation:
         parser.error("Backend rejection occurs before Vulkan activation; omit --validation")
     try:
