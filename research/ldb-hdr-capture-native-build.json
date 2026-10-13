@@ -1,0 +1,26 @@
+{
+  "framework_commit": "bd00171c7c95e5931cabd4c4d401406dc714c8d4",
+  "run_id": "38334809625",
+  "run_attempt": "1",
+  "native_build_outcome": "success",
+  "package_sha256": "4b75ccfda98f78ca7e3ce33042ef6b92507e2eaeb1bb5bd8bc392ebbfcf7eb6e",
+  "l4d2_game_capture": "unrun",
+  "b580_integrated_capture": "unrun",
+  "gpu_fg_execution": "unrun",
+  "download_branch_commit": "724f4c34aa397403d84dfa80c2a5c4237fff3abc",
+  "build_id": "ldb-capture-dev+31105222e87b6804",
+  "binaries_sha256": {
+    "bin/dxvk_d3d9.dll": "1ed9afed38bd90b99546c70f89de4870d97a128ffa16a0b9df7d714849a3fe15",
+    "bin/.l4d2bridge/L4D2Bridge64.exe": "9af247b7d267b52187e638d1a478d563717c0ad71f29c677e31043a8d011cb1f",
+    "bin/.l4d2bridge/L4D2Bridge32.exe": "e98f03b57197aab1d9648f0de40c2916fa681f17e0ba7d5e99eaa3853bad8fbc"
+  },
+  "package_bytes": 1371398,
+  "package_integrity": "passed",
+  "PE_architecture_and_build_identity": "passed",
+  "source_headers_and_hooks": "matched",
+  "raw_download_verification": "passed",
+  "user_file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/ldb-host-capture-dev.zip",
+  "compiler": "MSVC 14.29 Release / Windows 2022 runner",
+  "tests_passed": 22,
+  "new_B580_HDR_game_depth": "unrun"
+}
