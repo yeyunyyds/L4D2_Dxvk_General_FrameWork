@@ -1,6 +1,6 @@
 # Host 采集测试包（Windows x64）
 
-[下载 ZIP](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/raw/refs/heads/zip-host-capture/downloads/host-capture-windows-x64.zip)
+[下载 ZIP](https://raw.githubusercontent.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/zip-host-capture/downloads/host-capture-windows-x64.zip)
 
 这是独立 DXVK 颜色/深度采集诊断原型，尚未实现插帧或游戏接入。已完成 Wine + llvmpipe 软件 Vulkan 验证；原生 Windows 与 Arc B580 仍待实机验证。
 
