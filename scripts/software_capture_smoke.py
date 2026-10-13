@@ -44,7 +44,8 @@ def smoke(args):
     environment["LD_LIBRARY_PATH"] = str(runtime / "root/usr/lib/x86_64-linux-gnu/wine/x86_64-unix") + ":" + str(runtime / "root/usr/lib/x86_64-linux-gnu")
     if getattr(args, "observer", None) in ("enabled", "waiting", "triggered"):
         environment.update(LDB_CAPTURE_DIR="Z:" + str(directory / "observer").replace("/", "\\"),
-                           LDB_CAPTURE_START="0", LDB_CAPTURE_FRAMES=str(args.frames), LDB_CAPTURE_SNAPSHOTS="3")
+                           LDB_CAPTURE_START="0", LDB_CAPTURE_FRAMES=str(args.frames), LDB_CAPTURE_SNAPSHOTS="6" if getattr(args, "hdr_scene", False) else "3")
+        if getattr(args, "hdr_scene", False): environment["LDB_FIXTURE_HDR"] = "1"
         if args.observer == "waiting":
             environment["LDB_CAPTURE_TRIGGER"] = "Z:" + str(directory / "not-created.trigger").replace("/", "\\")
         elif args.observer == "triggered":
@@ -108,7 +109,7 @@ def smoke(args):
                 result["vulkan_validation"] = "passed_no_reported_errors"
             if getattr(args, "observer", None):
                 from analyze_ldb_capture import verify_fixture
-                result["observer_validation"] = verify_fixture(directory / "observer", args.observer, args.frames)
+                result["observer_validation"] = verify_fixture(directory / "observer", args.observer, args.frames, getattr(args, "hdr_scene", False))
             result.update(platform="Wine 10 / Mesa llvmpipe / Xvfb", b580_validation="unrun",
                           exe_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
                           backend_sha256=hashlib.sha256(backend.read_bytes()).hexdigest())
@@ -132,11 +133,14 @@ if __name__ == "__main__":
     parser.add_argument("--depth-format", choices=("auto", "d32", "d24"), default="auto")
     parser.add_argument("--validation", action="store_true")
     parser.add_argument("--negative-case", choices=("wrong-arch",))
+    parser.add_argument("--hdr-scene", action="store_true")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))
     args = parser.parse_args()
     if not 2 <= args.frames <= 1000:
         parser.error("--frames must be 2..1000")
+    if args.hdr_scene and args.observer != "enabled":
+        parser.error("HDR scene validation requires --observer enabled")
     if args.negative_case and args.validation:
         parser.error("Backend rejection occurs before Vulkan activation; omit --validation")
     try:

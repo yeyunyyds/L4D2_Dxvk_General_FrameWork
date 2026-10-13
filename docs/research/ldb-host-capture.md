@@ -1,6 +1,8 @@
 # LDB Host 游戏采集诊断接入
 
-已在 Windows runner 完成 **MSVC 14.29 Release 三件套构建**。开发包只更新三个桥二进制，并附带构建记录与日志检查脚本；不包含 DXVK 或配置。**L4D2 / B580 游戏内采集仍待实测，尚未实现插帧。**
+开发三件套通过 Windows runner 的 **MSVC 14.29 Release 编译检查**后发布，构建记录见包内 `capture-build.json`。包只更新三个桥二进制，并附带日志检查脚本，不包含 DXVK 或配置。原版已在 B580 游戏内完成颜色采集；本次增加 HDR 与更早的深度范围边界，仍需新的实机日志验证世界深度。插帧尚未实现。
+
+[GitHub 下载文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/ldb-host-capture-dev.zip)
 
 ## 接入内容与证据
 
@@ -8,11 +10,13 @@
 
 Host 的 DrawPrimitive / DrawIndexedPrimitive / UP 调用记录实际绑定颜色、深度、shader、viewport、Z 写入和混合状态。Clear、SetRenderTarget(0)、SetDepthStencilSurface、SetViewport 前保存有限的快照；Device Present 与 SwapChain Present 均覆盖。成功 Reset 后增加 generation，失败 Reset 保留 generation；Destroy 删除诊断状态。
 
-颜色导出为 PPM，深度导出为 16 位 PGM 和 little-endian float32 原始数据。深度是设备归一化深度，**没有线性化为世界距离**。文件名包含采集帧、generation、快照序号，事件包含 UID、进程内对象标识、实际 VkFormat、尺寸、样本数和 usage。对象标识只在该进程的对象存活期间有意义，不能跨进程传递或视为永久资源身份。
+普通颜色导出为 PPM；RGBA16F 额外导出 `*-color.rgba16f`，按逐行 RGBA、每通道 little-endian binary16 保存原始 GPU 数据，每像素 8 字节，不裁剪大于 1 或负值。HDR 的 PPM 仅用于预览，映射为 `round(255 * max(c,0)/(1+max(c,0)))`，不做 gamma 校正，非有限值预览为 0。深度导出为 16 位 PGM 和 little-endian float32 原始数据。深度是设备归一化深度，**没有线性化为世界距离**。文件名包含采集帧、generation、快照序号，事件包含 UID、进程内对象标识、实际 VkFormat、尺寸、样本数和 usage。对象标识只在该进程的对象存活期间有意义，不能跨进程传递或视为永久资源身份。
+
+viewport 深度范围改变前记录 `previous/next`，独立保留两个尝试名额。若同一绑定、绘制计数下已有快照，则以 `snapshot_prefix` 引用，避免重复导出；Clear/Reset 后引用失效。这些边界只标为候选，不直接认定为世界或武器。
 
 所有游戏内容先标为 unknown；Present 处的绑定不自动等于主世界。没有取得完整游戏相机或 shader 常量解释，也没有运动矢量、FSR 调度或插帧。
 
-诊断默认关闭，x86 Host 为无操作实现。启用后只在指定区间执行 getter、GPU 等待与回读；每次 getter 引用在回调内释放，不跨 Reset 保留 COM 引用。每帧快照上限 8（可设 1..16），最多 8 帧，总导出预算 256 MiB、单边最大 4096、每帧最多 12000 条 draw 记录，并有事件/日志总预算。深度 Clear、其他绑定边界和 Present 分配独立尝试预算，跳过也占预算。MSAA、尺寸不一致、无深度、格式不支持等明确记录跳过。异常停止该设备诊断，并保留原 backend HRESULT；GPU/驱动卡死仍可能阻塞 Host，这不是生产异步采集路径。
+诊断默认关闭，x86 Host 为无操作实现。启用后只在指定区间执行 getter、GPU 等待与回读；每次 getter 引用在回调内释放，不跨 Reset 保留 COM 引用。每帧快照上限 8（可设 1..16），最多 8 帧，总导出预算 256 MiB、单边最大 4096、每帧最多 12000 条 draw 记录，并有事件/日志总预算。默认 8 个名额分为深度范围变化 2、Clear 2、其他绑定边界 3、Present 1，跳过也占预算。MSAA、尺寸不一致、无深度、格式不支持等明确记录跳过。异常停止该设备诊断，并保留原 backend HRESULT；GPU/驱动卡死仍可能阻塞 Host，这不是生产异步采集路径。
 
 同一份组件已在交叉编译的 Windows 测试程序中通过 Wine + llvmpipe 的真实 DXVK 调用。该程序交替执行 Device/SwapChain Present，校验导出像素，并测试失败/成功 Reset。**这证明组件测试场景，不证明完整 LDB IPC 或游戏集成。** 独立原型的 B580 实机通过证据也不能直接转移为本次集成通过。
 
@@ -59,7 +63,7 @@ Host 在检测到标记后的下一帧开始观察两帧，采集期间可能明
 python scripts\analyze_ldb_capture.py "D:\LDB-captures\你的采集目录"
 ```
 
-通过只表示完整观察记录与文件一致；需查看画面/深度及绘制序列来确定世界、武器、HUD 边界。若都是 skipped 或没有 completed，保留日志排查，不能当成游戏深度取得成功。
+通过只表示完整观察记录与文件一致；输出另含每个快照的深度范围、非清屏像素数与 `non_clear_depth_snapshots`。全为 1 的深度会明确标出，不视为世界深度通过；仍需查看画面、原始深度和绘制序列来确定世界、武器、HUD 边界。若都是 skipped 或没有 completed，保留日志排查，不能当成游戏深度取得成功。
 
 一次进程只采集一个指定区间。重测请完整退出 Steam/游戏/Host、删除触发文件，再重新启动。停用时清除这些临时变量并重新启动 Steam；恢复正式版时同批恢复备份的三个二进制。
 
@@ -73,7 +77,9 @@ python3 scripts/software_capture_smoke.py --exe .research/ldb-fixture/host_obser
 python3 scripts/software_capture_smoke.py --exe .research/ldb-fixture/host_observer_fixture.exe --frames 8 --observer disabled --validation
 python3 scripts/software_capture_smoke.py --exe .research/ldb-fixture/host_observer_fixture.exe --frames 8 --observer waiting --validation
 python3 scripts/software_capture_smoke.py --exe .research/ldb-fixture/host_observer_fixture.exe --frames 8 --observer triggered --validation
+python3 scripts/software_capture_smoke.py --exe .research/ldb-fixture/host_observer_fixture.exe --frames 8 --observer enabled --hdr-scene --validation
+python3 scripts/software_capture_smoke.py --exe .research/ldb-fixture/host_observer_fixture.exe --frames 8 --depth-format d24 --observer enabled --hdr-scene --validation
 python3 -m unittest discover -s tests -v
 ```
 
-这些检查始终标记 `full_host_build=unrun` 和 `l4d2_game_capture=unrun`。最终记录见 `research/ldb-host-capture-component-validation.json`。
+这些检查始终标记 `full_host_build=unrun` 和 `l4d2_game_capture=unrun`。原组件记录见 `research/ldb-host-capture-component-validation.json`，本次 HDR 组件验证见 `research/ldb-hdr-capture-component-validation.json`。

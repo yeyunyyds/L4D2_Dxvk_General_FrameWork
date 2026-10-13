@@ -16,11 +16,12 @@ def replace(a, b):
         raise RuntimeError(f'Unexpected diagnostic fixture anchor: {a}')
     s = s.replace(a, b)
 replace('#include "dxvk_capture_shared.h"', '#include "dxvk_capture_shared.h"\n#include "host_capture.h"')
+replace('void draw(IDirect3DDevice9* device,', '#include "ldb_hdr_scene.h"\n\nvoid draw(IDirect3DDevice9* device,')
 replace('  hr(device->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, background, 1.0f, 0), "Clear");',
-        '  ldb_capture::boundary(device, "Clear", frame, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER);\n  hr(device->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, background, 1.0f, 0), "Clear");')
+        '  ldb_capture::boundary(device, "Clear", frame, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER);\n  hr(device->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, background, 1.0f, 0), "Clear");\n  ldb_capture::result(device,"Clear",frame,S_OK);')
 anchor = '      hr(device->Present(nullptr, nullptr, nullptr, nullptr), "Present");'
 replace('    draw(device.get(), frame, params.BackBufferWidth, params.BackBufferHeight, background);',
-        '    draw(device.get(), frame, params.BackBufferWidth, params.BackBufferHeight, background);\n    ldb_capture::draw(device.get(), "DrawPrimitiveUP", frame, S_OK, 1);\n    draw(device.get(), frame, params.BackBufferWidth, params.BackBufferHeight, background);')
+        '    if (ldb_capture::env(L"LDB_FIXTURE_HDR") == L"1") hdrScene(device.get(),frame,params.BackBufferWidth,params.BackBufferHeight);\n    draw(device.get(), frame, params.BackBufferWidth, params.BackBufferHeight, background);\n    ldb_capture::draw(device.get(), "DrawPrimitiveUP", frame, S_OK, 1);\n    draw(device.get(), frame, params.BackBufferWidth, params.BackBufferHeight, background);')
 replace(anchor, '''      ldb_capture::draw(device.get(), "DrawPrimitiveUP", frame, S_OK, 1);
       HRESULT presented = S_OK;
       if (frame % 2) {
@@ -46,7 +47,7 @@ env = os.environ.copy()
 env['PATH'] = str(compiler.parent) + os.pathsep + env.get('PATH', '')
 exe = out / 'host_observer_fixture.exe'
 command = [str(compiler), '-std=c++17', '-O2', '-Wall', '-Wextra', '-Werror', '-Wno-cast-function-type',
-           '-static', '-municode', *[f'-I{p}' for p in [ROOT/'tools', ROOT/'integration/ldb', ROOT/'.research/bin', ROOT/'.research/sources/vulkan_headers/include']],
+           '-static', '-municode', *[f'-I{p}' for p in [ROOT/'tools', ROOT/'tests', ROOT/'integration/ldb', ROOT/'.research/bin', ROOT/'.research/sources/vulkan_headers/include']],
            str(source), '-luser32', '-luuid', '-o', str(exe)]
 subprocess.run(command, check=True, env=env)
 (out / 'build.json').write_text(json.dumps({'exe_sha256': hashlib.sha256(exe.read_bytes()).hexdigest(),

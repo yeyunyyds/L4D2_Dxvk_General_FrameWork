@@ -4,6 +4,9 @@ import hashlib
 import json
 from pathlib import Path
 import struct
+import math
+from array import array
+import sys
 
 
 def image_files(directory, event):
@@ -25,6 +28,25 @@ def image_files(directory, event):
     if len(raw) != width * height * 4:
         raise ValueError('Incomplete raw depth image')
     result['depth.f32'] = hashlib.sha256(raw).hexdigest()
+    if event['color'].get('format') == 97:
+        if event.get('raw_hdr_color') is not True or event.get('color_preview') != 'reinhard_linear_no_gamma':
+            raise ValueError('Missing HDR export metadata')
+        hdr = (directory / f'{prefix}-color.rgba16f').read_bytes()
+        if len(hdr) != width * height * 8:
+            raise ValueError('Incomplete raw RGBA16F image')
+        result['color.rgba16f'] = hashlib.sha256(hdr).hexdigest()
+    values = array('f'); values.frombytes(raw)
+    if sys.byteorder != 'little': values.byteswap()
+    finite_count = non_clear = 0
+    minimum, maximum_value = math.inf, -math.inf
+    for value in values:
+        if math.isfinite(value):
+            finite_count += 1
+            minimum = min(minimum, value); maximum_value = max(maximum_value, value)
+            if value != 1.0: non_clear += 1
+    result['depth_content'] = {'pixels': len(values), 'finite_pixels': finite_count,
+        'min': minimum if finite_count else None, 'max': maximum_value if finite_count else None,
+        'non_clear_pixels': non_clear, 'all_depth_equals_1': finite_count == len(values) and non_clear == 0}
     return result
 
 
@@ -57,7 +79,9 @@ def analyze(directory):
             if event.get('source_layout_restored') is not True or event.get('gpu_copy_completed') is not True:
                 raise ValueError('Snapshot copy/restoration not complete')
             prefixes.add(event['prefix'])
-            snapshots.append({**event, 'files_sha256': image_files(directory, event)})
+            files = image_files(directory, event)
+            content = files.pop('depth_content')
+            snapshots.append({**event, 'files_sha256': files, 'depth_content': content})
         if event['event'] == 'snapshot_skipped':
             skips.append(event)
     if not snapshots:
@@ -68,10 +92,11 @@ def analyze(directory):
     return {'status': 'passed_observation_structure_and_files', 'directory': str(directory), 'frames': len(presents),
             'snapshots': snapshots, 'skips': skips, 'successful_resets': generation,
             'draw_events_truncated': any(e.get('draw_events_truncated') is True for e in events),
-            'semantic_labels': 'unknown', 'gpu_fg_execution': 'unrun'}
+            'non_clear_depth_snapshots': [e['prefix'] for e in snapshots if e['depth_content']['non_clear_pixels'] > 0],
+            'world_depth_verified': False, 'semantic_labels': 'unknown', 'gpu_fg_execution': 'unrun'}
 
 
-def verify_fixture(root, mode, frames):
+def verify_fixture(root, mode, frames, hdr_scene=False):
     root = Path(root)
     if mode == 'disabled':
         if root.exists():
@@ -93,7 +118,7 @@ def verify_fixture(root, mode, frames):
     events = [json.loads(line) for line in (directory / 'events.jsonl').read_text().splitlines()]
     shift = 1 if mode == 'triggered' else 0
     expected_frames = frames - shift
-    if report['frames'] != expected_frames or report['successful_resets'] != 1 or len(report['snapshots']) != expected_frames * 2:
+    if report['frames'] != expected_frames or report['successful_resets'] != 1 or len(report['snapshots']) != expected_frames * (4 if hdr_scene else 2):
         raise ValueError('Fixture frame/reset/boundary snapshot count differs')
     if not any(e['event'] == 'reset_result' and e['hresult'] != 0 and e['generation'] == 0 for e in events):
         raise ValueError('Failed Reset generation case not observed')
@@ -105,16 +130,38 @@ def verify_fixture(root, mode, frames):
             raise ValueError('Fixture extent incorrect across Reset')
         rgb = (directory / (event['prefix'] + '-color.ppm')).read_bytes().split(b'\n', 3)[3]
         raw = (directory / (event['prefix'] + '-depth.f32')).read_bytes()
-        for x, y, color, depth in [(width//2, height//2, (32,220,64), 0.25), (2,2,(16+physical_frame%100,32,192),1.0)]:
-            offset = y * width + x
-            actual = tuple(rgb[offset*3:offset*3+3])
-            if any(abs(a-b) > 1 for a,b in zip(actual,color)) or abs(struct.unpack_from('<f',raw,offset*4)[0] - depth) > 0.0001:
-                raise ValueError('Exported fixture pixels do not match rendered content')
+        if event['color']['format'] == 97:
+            references = [e for e in events if e['event'] == 'depth_range_before' and e.get('snapshot_prefix') == event['prefix']]
+            if len(references) != 1:
+                raise ValueError('HDR snapshot is not associated with a depth-range boundary')
+            entering = references[0]['next']['max_z'] == 0.1
+            expected_color = (4.0,0.5,0.25,1.0) if entering else (0.125,2.0,0.5,0.75)
+            old_range = references[0]['previous']
+            geometry_z = 0.25 if entering else 0.05
+            expected_depth = old_range['min_z'] + geometry_z * (old_range['max_z'] - old_range['min_z'])
+            hdr = (directory / (event['prefix'] + '-color.rgba16f')).read_bytes()
+            offset = (height//2 * width + width//2)
+            actual = struct.unpack_from('<4e',hdr,offset*8)
+            if any(abs(a-b) > 0.001 for a,b in zip(actual,expected_color)):
+                raise ValueError(f'Raw HDR values were clipped, reordered or corrupted: {actual}')
+            if abs(struct.unpack_from('<f',raw,offset*4)[0] - expected_depth) > 0.0001:
+                raise ValueError('HDR depth offset or near geometry is incorrect')
+            expected_preview = tuple(round(max(v,0)/(1+max(v,0))*255) for v in expected_color[:3])
+            if tuple(rgb[offset*3:offset*3+3]) != expected_preview:
+                raise ValueError('HDR preview differs from declared mapping')
+            if struct.unpack_from('<f',raw,(2*width+2)*4)[0] != 1.0:
+                raise ValueError('HDR background depth differs from clear value')
+        else:
+            for x, y, color, depth in [(width//2, height//2, (32,220,64), 0.25), (2,2,(16+physical_frame%100,32,192),1.0)]:
+                offset = y * width + x
+                actual = tuple(rgb[offset*3:offset*3+3])
+                if any(abs(a-b) > 1 for a,b in zip(actual,color)) or abs(struct.unpack_from('<f',raw,offset*4)[0] - depth) > 0.0001:
+                    raise ValueError('Exported fixture pixels do not match rendered content')
     if mode == 'triggered' and sum(e['event'] == 'triggered' for e in events) != 1:
         raise ValueError('Trigger activation missing or duplicated')
     return {'status': 'passed', 'mode': mode, 'frames': expected_frames, 'snapshots': len(report['snapshots']),
             'successful_resets': 1, 'exported_color_depth_pixels': 'verified', 'device_and_swapchain_present': 'exercised',
-            'l4d2_game_capture': 'unrun', 'full_host_build': 'unrun'}
+            'l4d2_game_capture': 'unrun', 'full_host_build': 'unrun', 'hdr_values_and_depth_range': 'verified' if hdr_scene else 'unrun'}
 
 
 if __name__ == '__main__':

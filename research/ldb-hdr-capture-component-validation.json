@@ -1,0 +1,100 @@
+{
+  "observer_sha256": "31105222e87b68042fccf87ec2064a90f07dc0b23759f2bc4601f23048d6ddf8",
+  "shared_capture_sha256": "59ca05616121c4af522019ef9440e3b8d4d7e5cbf5a1201d0f945bba5c2ed4be",
+  "hooks_sha256": "7e41e799c991b815ab2f754a3a3b270c58051268ff870537ef9d29948686cd73",
+  "runs": [
+    {
+      "status": "passed",
+      "run_id": "748adfa9a2b148cf8c15d32b86de0aee",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "enabled",
+        "frames": 8,
+        "snapshots": 32,
+        "successful_resets": 1,
+        "exported_color_depth_pixels": "verified",
+        "device_and_swapchain_present": "exercised",
+        "l4d2_game_capture": "unrun",
+        "full_host_build": "unrun",
+        "hdr_values_and_depth_range": "verified"
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "2d1d803a34e2a929bf384c01449ca63ab1edbda2120cb910a43a69dd298459b6",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "0f90426062a44a1f8968548767338051",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "enabled",
+        "frames": 8,
+        "snapshots": 32,
+        "successful_resets": 1,
+        "exported_color_depth_pixels": "verified",
+        "device_and_swapchain_present": "exercised",
+        "l4d2_game_capture": "unrun",
+        "full_host_build": "unrun",
+        "hdr_values_and_depth_range": "verified"
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "2d1d803a34e2a929bf384c01449ca63ab1edbda2120cb910a43a69dd298459b6",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "a1a170d789d340d8b20feae241cb5ad7",
+      "frames": 8,
+      "resets": 1,
+      "validation_level": "standalone_scene_color_depth_snapshot_readback",
+      "game_capture": "unrun",
+      "gpu_fg_execution": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "observer_validation": {
+        "status": "passed",
+        "mode": "disabled",
+        "output_created": false
+      },
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "2d1d803a34e2a929bf384c01449ca63ab1edbda2120cb910a43a69dd298459b6",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    }
+  ],
+  "python_tests_passed": 22,
+  "HDR_test_values": {
+    "before_near_pass_RGBA": [
+      4.0,
+      0.5,
+      0.25,
+      1.0
+    ],
+    "after_near_pass_RGBA": [
+      0.125,
+      2.0,
+      0.5,
+      0.75
+    ],
+    "before_depth": 0.25,
+    "after_depth": 0.005,
+    "background_depth": 1.0
+  },
+  "binary16_decoder_edges": "subnormal, maximum finite, negative, signed zero, infinity, NaN checked in executed fixture",
+  "scope": "Wine + software Vulkan functional evidence; not new B580 game validation",
+  "b580_HDR_game_depth": "unrun",
+  "gpu_fg_execution": "unrun"
+}

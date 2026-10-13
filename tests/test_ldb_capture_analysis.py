@@ -67,6 +67,37 @@ class HostObservationEvidence(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'No usable'):
             self.run_analysis()
 
+    def make_hdr(self):
+        e = self.events[1]
+        e['color']['format'] = 97
+        e['raw_hdr_color'] = True
+        e['color_preview'] = 'reinhard_linear_no_gamma'
+        (self.root / '0-0-0-color.rgba16f').write_bytes(struct.pack('<4e', 4.0,0.5,-0.25,1.0))
+
+    def test_hdr_raw_bytes_are_required_and_hashed(self):
+        self.make_hdr()
+        result = self.run_analysis()
+        self.assertIn('color.rgba16f', result['snapshots'][0]['files_sha256'])
+
+    def test_truncated_hdr_is_rejected(self):
+        self.make_hdr()
+        (self.root / '0-0-0-color.rgba16f').write_bytes(b'\x00')
+        with self.assertRaisesRegex(ValueError, 'Incomplete raw RGBA16F'):
+            self.run_analysis()
+
+    def test_hdr_preview_cannot_be_mislabeled_as_unorm(self):
+        self.make_hdr()
+        self.events[1]['color_preview'] = 'unorm_rgb'
+        with self.assertRaisesRegex(ValueError, 'Missing HDR export metadata'):
+            self.run_analysis()
+
+    def test_all_clear_depth_does_not_establish_world_depth(self):
+        (self.root / '0-0-0-depth.f32').write_bytes(struct.pack('<f',1.0))
+        result = self.run_analysis()
+        self.assertEqual(result['non_clear_depth_snapshots'], [])
+        self.assertFalse(result['world_depth_verified'])
+        self.assertTrue(result['snapshots'][0]['depth_content']['all_depth_equals_1'])
+
 
 if __name__ == '__main__':
     unittest.main()

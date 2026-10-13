@@ -55,7 +55,9 @@ inline std::string viewportJson(const D3DVIEWPORT9& v) {
 }
 struct State {
   uint64_t deviceId = 0, frame = 0, sequence = 0, draws = 0, segmentDraws = 0;
-  uint32_t generation = 0, snapshots = 0, clearAttempts = 0, otherAttempts = 0, presentAttempts = 0, events = 0;
+  uint32_t generation = 0, snapshots = 0, clearAttempts = 0, otherAttempts = 0, rangeAttempts = 0, presentAttempts = 0, events = 0;
+  uint64_t lastSnapshotDraws = UINT64_MAX, lastColor = 0, lastDepth = 0;
+  std::string lastPrefix;
   uint64_t totalBytes = 0;
   bool stopped = false;
   bool armed = false;
@@ -106,10 +108,14 @@ inline void snapshot(State& s, IDirect3DDevice9* device, const char* reason, uin
   if (!s.active() || !s.segmentDraws) return;
   // Separate budgets keep early shadow/RT switches from exhausting depth-clear
   // and final Present observations. Rejected candidates also consume budget.
-  uint32_t clearLimit = config().snapshots / 2;
-  uint32_t otherLimit = config().snapshots - clearLimit - 1;
+  uint32_t rangeLimit = config().snapshots >= 4 ? 2u : 0u;
+  uint32_t clearLimit = (config().snapshots - rangeLimit - 1) / 2;
+  uint32_t otherLimit = config().snapshots - rangeLimit - clearLimit - 1;
   if (std::string(reason) == "Present") {
     if (s.presentAttempts++) return;
+  } else if (std::string(reason) == "DepthRangeChange") {
+    if (s.rangeAttempts >= rangeLimit) return;
+    s.rangeAttempts++;
   } else if (std::string(reason) == "Clear") {
     if (s.clearAttempts >= clearLimit) return;
     s.clearAttempts++;
@@ -132,12 +138,13 @@ inline void snapshot(State& s, IDirect3DDevice9* device, const char* reason, uin
     ",\"color\":" + imageJson(color) + ",\"depth\":" + imageJson(depth);
   s.emit("snapshot_candidate", uid, details);
   uint64_t pixels = uint64_t(color.create.extent.width) * color.create.extent.height;
-  uint64_t bytes = pixels * 9 + 128;
+  const bool hdrColor = color.create.format == VK_FORMAT_R16G16B16A16_SFLOAT;
+  uint64_t bytes = pixels * (hdrColor ? 17u : 9u) + 128;
   if (color.create.extent.width != depth.create.extent.width || color.create.extent.height != depth.create.extent.height ||
       color.create.extent.width > 4096 || color.create.extent.height > 4096 || !pixels || s.totalBytes + bytes > 256ull * 1024 * 1024) {
     skip("Mismatched extent or capture byte/extent budget exceeded"); return;
   }
-  if ((color.create.format != VK_FORMAT_B8G8R8A8_UNORM && color.create.format != VK_FORMAT_R8G8B8A8_UNORM) ||
+  if ((color.create.format != VK_FORMAT_B8G8R8A8_UNORM && color.create.format != VK_FORMAT_R8G8B8A8_UNORM && color.create.format != VK_FORMAT_R16G16B16A16_SFLOAT) ||
       (depth.create.format != VK_FORMAT_D32_SFLOAT && depth.create.format != VK_FORMAT_D24_UNORM_S8_UINT && depth.create.format != VK_FORMAT_D32_SFLOAT_S8_UINT)) {
     skip("Unsupported diagnostic format"); return;
   }
@@ -172,7 +179,10 @@ inline void snapshot(State& s, IDirect3DDevice9* device, const char* reason, uin
     throw std::runtime_error("DXVK restoration wait failed");
   auto name = std::to_string(s.frame) + "-" + std::to_string(s.generation) + "-" + std::to_string(s.snapshots);
   capture.save(s.directory / name);
+  s.lastSnapshotDraws = s.draws; s.lastColor = id(colorSurface.get()); s.lastDepth = id(depthSurface.get()); s.lastPrefix = name;
   s.totalBytes += bytes; s.snapshots++;
+  details += ",\"color_preview\":" + quote(hdrColor ? "reinhard_linear_no_gamma" : "unorm_rgb") +
+    ",\"raw_hdr_color\":" + (hdrColor ? "true" : "false");
   s.emit("snapshot", uid, details + ",\"prefix\":" + quote(name) + ",\"physical_device\":" + quote(capture.physicalProperties.deviceName) +
     ",\"source_layout_restored\":true,\"gpu_copy_completed\":true,\"pixel_verification\":\"unknown_game_content\"");
 }
@@ -184,8 +194,35 @@ inline void boundary(IDirect3DDevice9* device, const char* name, uint32_t uid, u
     s.segmentDraws = 0;
   });
 }
+inline void viewportBefore(IDirect3DDevice9* device, const D3DVIEWPORT9* next, uint32_t uid) noexcept {
+  observe(device, [&](State& s) {
+    if (!s.active() || !next) return;
+    D3DVIEWPORT9 previous{};
+    if (FAILED(device->GetViewport(&previous))) return;
+    s.emit("viewport_before", uid, "\"previous\":" + viewportJson(previous) + ",\"next\":" + viewportJson(*next));
+    if (previous.MinZ == next->MinZ && previous.MaxZ == next->MaxZ) return;
+    Com<IDirect3DSurface9> color, depth;
+    device->GetRenderTarget(0, color.put()); device->GetDepthStencilSurface(depth.put());
+    // Reuse an immediately preceding snapshot only for the same bindings/draw count.
+    bool reuse = !s.lastPrefix.empty() && s.lastSnapshotDraws == s.draws &&
+      s.lastColor == id(color.get()) && s.lastDepth == id(depth.get());
+    if (!reuse) {
+      s.segmentDraws = s.draws;
+      snapshot(s, device, "DepthRangeChange", uid);
+      reuse = !s.lastPrefix.empty() && s.lastSnapshotDraws == s.draws &&
+        s.lastColor == id(color.get()) && s.lastDepth == id(depth.get());
+    }
+    s.emit("depth_range_before", uid, "\"previous\":" + viewportJson(previous) + ",\"next\":" + viewportJson(*next) +
+      ",\"snapshot_prefix\":" + (reuse ? quote(s.lastPrefix) : "null") + ",\"semantic_label\":\"candidate_only\"");
+    s.segmentDraws = 0;
+  });
+}
 inline void result(IDirect3DDevice9* device, const char* name, uint32_t uid, HRESULT hresult) noexcept {
-  observe(device,[&](State& s) { if(s.active()) s.emit("api_result",uid,"\"api\":"+quote(name)+",\"hresult\":"+std::to_string(uint32_t(hresult))); });
+  observe(device,[&](State& s) {
+    if (!s.active()) return;
+    if (SUCCEEDED(hresult) && std::string(name) == "Clear") { s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; }
+    s.emit("api_result",uid,"\"api\":"+quote(name)+",\"hresult\":"+std::to_string(uint32_t(hresult)));
+  });
 }
 inline void draw(IDirect3DDevice9* device, const char* name, uint32_t uid, HRESULT hresult, uint32_t primitives) noexcept {
   observe(device, [&](State& s) {
@@ -226,7 +263,7 @@ inline void afterPresent(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult
     }
     if (s.active()) s.emit("present_result",uid,"\"hresult\":"+std::to_string(uint32_t(hresult))+",\"snapshots\":"+std::to_string(s.snapshots));
     // An attempted Present defines an observation frame, even if it failed.
-    s.frame++; s.draws=0; s.segmentDraws=0; s.snapshots=0; s.clearAttempts=0; s.otherAttempts=0; s.presentAttempts=0; s.events=0;
+    s.frame++; s.draws=0; s.segmentDraws=0; s.snapshots=0; s.clearAttempts=0; s.otherAttempts=0; s.rangeAttempts=0; s.presentAttempts=0; s.lastSnapshotDraws=UINT64_MAX; s.lastPrefix.clear(); s.events=0;
     if (s.frame >= uint64_t(config().start)+config().frames) {
       s.emit("completed",uid,"\"game_capture\":\"observed_dispatcher\",\"semantic_labels\":\"unknown\",\"gpu_fg_execution\":\"unrun\""); s.stopped=true;
     }
@@ -234,7 +271,7 @@ inline void afterPresent(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult
 }
 inline void reset(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult) noexcept {
   observe(device,[&](State& s) {
-    if(SUCCEEDED(hresult)) { s.generation++; s.segmentDraws=0; }
+    if(SUCCEEDED(hresult)) { s.generation++; s.segmentDraws=0; s.lastPrefix.clear(); s.lastSnapshotDraws=UINT64_MAX; }
     s.emit("reset_result",uid,"\"hresult\":"+std::to_string(uint32_t(hresult)));
   });
 }
@@ -257,6 +294,7 @@ inline void swapAfter(IDirect3DSwapChain9* chain, uint32_t uid, HRESULT hresult)
 namespace ldb_capture {
 inline bool enabled() noexcept { return false; }
 inline void boundary(IDirect3DDevice9*,const char*,uint32_t,uint64_t=0) noexcept {}
+inline void viewportBefore(IDirect3DDevice9*,const D3DVIEWPORT9*,uint32_t) noexcept {}
 inline void result(IDirect3DDevice9*,const char*,uint32_t,HRESULT) noexcept {}
 inline void draw(IDirect3DDevice9*,const char*,uint32_t,HRESULT,uint32_t) noexcept {}
 inline void beforePresent(IDirect3DDevice9*,uint32_t,IDirect3DSwapChain9* = nullptr) noexcept {}

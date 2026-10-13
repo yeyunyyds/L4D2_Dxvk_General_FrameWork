@@ -15,7 +15,25 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
+#include <limits>
 namespace dxvk_capture {
+// IEEE 754 binary16 decoding; raw bytes remain unchanged in HDR exports.
+inline float halfFloat(uint16_t bits) {
+  const int exponent = (bits >> 10) & 31;
+  const int mantissa = bits & 1023;
+  if (exponent == 31) {
+    if (mantissa) return std::numeric_limits<float>::quiet_NaN();
+    return bits & 0x8000 ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
+  }
+  float value = exponent ? std::ldexp(float(1024 + mantissa), exponent - 25) : std::ldexp(float(mantissa), -24);
+  return bits & 0x8000 ? -value : value;
+}
+inline uint8_t hdrPreview(float value) {
+  if (!std::isfinite(value) || value <= 0) return 0;
+  return uint8_t(std::lround((value / (1.0f + value)) * 255.0f));
+}
+
 std::string quote(const std::string& text) {
   std::ostringstream out;
   out << '"';
@@ -133,8 +151,10 @@ public:
     formats = {color.create.format, depth.create.format};
     if (depth.create.extent.width != width || depth.create.extent.height != height)
       throw std::runtime_error("Color and depth dimensions differ");
-    if (formats[0] != VK_FORMAT_B8G8R8A8_UNORM && formats[0] != VK_FORMAT_R8G8B8A8_UNORM)
-      throw std::runtime_error("Diagnostic readback supports UNORM RGBA8/BGRA8 only");
+    if (formats[0] != VK_FORMAT_B8G8R8A8_UNORM && formats[0] != VK_FORMAT_R8G8B8A8_UNORM && formats[0] != VK_FORMAT_R16G16B16A16_SFLOAT)
+      throw std::runtime_error("Diagnostic readback supports RGBA8/BGRA8 and RGBA16F only");
+    colorBytes = formats[0] == VK_FORMAT_R16G16B16A16_SFLOAT ? 8u : 4u;
+    depthOffset = VkDeviceSize(width) * height * colorBytes;
     if (formats[1] != VK_FORMAT_D32_SFLOAT && formats[1] != VK_FORMAT_D24_UNORM_S8_UINT && formats[1] != VK_FORMAT_D32_SFLOAT_S8_UINT)
       throw std::runtime_error("Unsupported diagnostic depth format");
     aspects = {VK_IMAGE_ASPECT_COLOR_BIT, formats[1] == VK_FORMAT_D32_SFLOAT ? VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT)
@@ -156,7 +176,7 @@ public:
     }
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = VkDeviceSize(width) * height * 8;
+    bufferInfo.size = depthOffset + VkDeviceSize(width) * height * 4;
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     vkcheck(vkCreateBuffer(device, &bufferInfo, nullptr, &buffer), "vkCreateBuffer readback");
@@ -198,7 +218,7 @@ public:
       barrier(images[index], aspects[index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
       VkBufferImageCopy readback{};
-      readback.bufferOffset = index * VkDeviceSize(width) * height * 4;
+      readback.bufferOffset = index ? depthOffset : 0;
       readback.imageSubresource = region.srcSubresource; readback.imageExtent = region.extent;
       vkCmdCopyImageToBuffer(command, images[index], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1, &readback);
     }
@@ -227,27 +247,45 @@ public:
     std::ofstream color(std::filesystem::path(prefix.wstring() + L"-color.ppm"), std::ios::binary);
     std::ofstream depth(std::filesystem::path(prefix.wstring() + L"-depth.pgm"), std::ios::binary);
     std::ofstream raw(std::filesystem::path(prefix.wstring() + L"-depth.f32"), std::ios::binary);
+    std::ofstream hdr;
+    if (colorBytes == 8) hdr.open(std::filesystem::path(prefix.wstring() + L"-color.rgba16f"), std::ios::binary);
     color << "P6\n" << width << ' ' << height << "\n255\n";
     depth << "P5\n" << width << ' ' << height << "\n65535\n";
     auto bytes = static_cast<const uint8_t*>(mapped);
-    for (size_t pixel = 0; pixel < size_t(width) * height; pixel++) {
-      const auto* rgba = bytes + pixel * 4;
-      const char rgb[] = {char(rgba[formats[0] == VK_FORMAT_B8G8R8A8_UNORM ? 2 : 0]), char(rgba[1]),
-        char(rgba[formats[0] == VK_FORMAT_B8G8R8A8_UNORM ? 0 : 2])};
-      color.write(rgb, 3);
-      const auto* address = bytes + size_t(width) * height * 4 + pixel * 4;
-      float value = 0;
-      if (formats[1] == VK_FORMAT_D24_UNORM_S8_UINT) {
-        uint32_t packed = 0; std::memcpy(&packed, address, 4);
-        value = float(packed & 0xffffffu) / float(0xffffffu);
-      } else std::memcpy(&value, address, 4);
-      raw.write(reinterpret_cast<const char*>(&value), sizeof(value));
-      uint16_t preview = std::isfinite(value) ? uint16_t(std::fmax(0.0f, std::fmin(1.0f, value)) * 65535.0f) : 0;
-      const char bigEndian[] = {char(preview >> 8), char(preview & 255)};
-      depth.write(bigEndian, 2);
+    std::vector<char> rgb(size_t(width) * 3), pgm(size_t(width) * 2);
+    std::vector<float> values(width);
+    for (uint32_t y = 0; y < height; y++) {
+      const auto* row = bytes + size_t(y) * width * colorBytes;
+      if (colorBytes == 8) hdr.write(reinterpret_cast<const char*>(row), std::streamsize(width) * 8);
+      for (uint32_t x = 0; x < width; x++) {
+        const auto* rgba = row + size_t(x) * colorBytes;
+        if (colorBytes == 8) {
+          for (size_t channel = 0; channel < 3; channel++) {
+            uint16_t bits = 0; std::memcpy(&bits, rgba + channel * 2, 2);
+            rgb[size_t(x) * 3 + channel] = char(hdrPreview(halfFloat(bits)));
+          }
+        } else {
+          rgb[size_t(x) * 3] = char(rgba[formats[0] == VK_FORMAT_B8G8R8A8_UNORM ? 2 : 0]);
+          rgb[size_t(x) * 3 + 1] = char(rgba[1]);
+          rgb[size_t(x) * 3 + 2] = char(rgba[formats[0] == VK_FORMAT_B8G8R8A8_UNORM ? 0 : 2]);
+        }
+        const auto* address = bytes + size_t(depthOffset) + (size_t(y) * width + x) * 4;
+        float value = 0;
+        if (formats[1] == VK_FORMAT_D24_UNORM_S8_UINT) {
+          uint32_t packed = 0; std::memcpy(&packed, address, 4);
+          value = float(packed & 0xffffffu) / float(0xffffffu);
+        } else std::memcpy(&value, address, 4);
+        values[x] = value;
+        uint16_t preview = std::isfinite(value) ? uint16_t(std::fmax(0.0f, std::fmin(1.0f, value)) * 65535.0f) : 0;
+        pgm[size_t(x) * 2] = char(preview >> 8); pgm[size_t(x) * 2 + 1] = char(preview & 255);
+      }
+      color.write(rgb.data(), std::streamsize(rgb.size()));
+      depth.write(pgm.data(), std::streamsize(pgm.size()));
+      raw.write(reinterpret_cast<const char*>(values.data()), std::streamsize(values.size() * sizeof(float)));
     }
     color.close(); depth.close(); raw.close();
-    if (!color || !depth || !raw) throw std::runtime_error("Snapshot file write failed");
+    if (colorBytes == 8) hdr.close();
+    if (!color || !depth || !raw || (colorBytes == 8 && !hdr)) throw std::runtime_error("Snapshot file write failed");
   }
 
   void verify(uint32_t background) const {
@@ -263,7 +301,7 @@ public:
     testColor(width / 2, height / 2, D3DCOLOR_XRGB(32, 220, 64));
     testColor(2, 2, background);
     auto depthAt = [&](uint32_t x, uint32_t y) {
-      auto address = bytes + size_t(width) * height * 4 + (size_t(y) * width + x) * 4;
+      auto address = bytes + size_t(depthOffset) + (size_t(y) * width + x) * 4;
       if (formats[1] == VK_FORMAT_D24_UNORM_S8_UINT) {
         uint32_t packed = 0; std::memcpy(&packed, address, 4);
         return float(packed & 0xffffffu) / float(0xffffffu);
@@ -310,7 +348,8 @@ private:
   ID3D9VkInteropDevice* interop;
   VkPhysicalDeviceMemoryProperties memory{};
   VkQueue queue = VK_NULL_HANDLE;
-  uint32_t width = 0, height = 0;
+  uint32_t width = 0, height = 0, colorBytes = 4;
+  VkDeviceSize depthOffset = 0;
   std::array<VkFormat, 2> formats{};
   std::array<VkImage, 2> images{};
   std::array<VkDeviceMemory, 2> imageMemory{};

@@ -76,7 +76,7 @@
        {
          GET_RES(pD3DDevice, gpD3DDevices);
          PULL_OBJ(D3DVIEWPORT9, pViewport);
-+        if (true) ldb_capture::boundary(pD3DDevice, "SetViewport", currentUID, 0);
++        ldb_capture::viewportBefore(pD3DDevice, pViewport, currentUID);
          const auto hresult = pD3DDevice->SetViewport(pViewport);
 +        ldb_capture::result(pD3DDevice, "SetViewport", currentUID, hresult);
          assert(SUCCEEDED(hresult));

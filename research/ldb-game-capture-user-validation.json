@@ -1,0 +1,300 @@
+{
+  "archive_sha256": "1b803dd7f2f590882171e8e59bf192bcc89eae612c5cedd89e59e9e7dceaf35a",
+  "observed_device": "Intel(R) Arc(TM) B580 Graphics",
+  "log_structure_and_export_files": "passed",
+  "completed_frames": 2,
+  "snapshots": [
+    {
+      "prefix": "0-0-0",
+      "reason": "Clear",
+      "width": 1920,
+      "height": 1200,
+      "depth_min": 1.0,
+      "depth_max": 1.0,
+      "depth_unique_values": 1,
+      "all_depth_equals_1": true
+    },
+    {
+      "prefix": "0-0-1",
+      "reason": "Present",
+      "width": 1920,
+      "height": 1200,
+      "depth_min": 1.0,
+      "depth_max": 1.0,
+      "depth_unique_values": 1,
+      "all_depth_equals_1": true
+    },
+    {
+      "prefix": "1-0-0",
+      "reason": "Clear",
+      "width": 1920,
+      "height": 1200,
+      "depth_min": 1.0,
+      "depth_max": 1.0,
+      "depth_unique_values": 1,
+      "all_depth_equals_1": true
+    },
+    {
+      "prefix": "1-0-1",
+      "reason": "Present",
+      "width": 1920,
+      "height": 1200,
+      "depth_min": 1.0,
+      "depth_max": 1.0,
+      "depth_unique_values": 1,
+      "all_depth_equals_1": true
+    }
+  ],
+  "per_frame": [
+    {
+      "frame": 0,
+      "draws": 213,
+      "depth_enabled_and_write_draws": 52,
+      "narrow_viewport_max_z_0_1_draw_indices": [
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97
+      ]
+    },
+    {
+      "frame": 1,
+      "draws": 213,
+      "depth_enabled_and_write_draws": 52,
+      "narrow_viewport_max_z_0_1_draw_indices": [
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97
+      ]
+    }
+  ],
+  "present_hresult": [
+    0,
+    0
+  ],
+  "snapshot_skips": [
+    {
+      "event": "snapshot_skipped",
+      "device_id": 1932807143424,
+      "sequence": 42,
+      "frame": 0,
+      "generation": 0,
+      "uid": 29987703,
+      "reason": "SetRenderTarget",
+      "message": "No color/depth pair bound"
+    },
+    {
+      "event": "snapshot_skipped",
+      "device_id": 1932807143424,
+      "sequence": 108,
+      "frame": 0,
+      "generation": 0,
+      "uid": 29988261,
+      "reason": "SetRenderTarget",
+      "message": "Unsupported diagnostic format"
+    },
+    {
+      "event": "snapshot_skipped",
+      "device_id": 1932807143424,
+      "sequence": 142,
+      "frame": 0,
+      "generation": 0,
+      "uid": 29988536,
+      "reason": "SetRenderTarget",
+      "message": "Unsupported diagnostic format"
+    },
+    {
+      "event": "snapshot_skipped",
+      "device_id": 1932807143424,
+      "sequence": 799,
+      "frame": 1,
+      "generation": 0,
+      "uid": 29989906,
+      "reason": "SetRenderTarget",
+      "message": "No color/depth pair bound"
+    },
+    {
+      "event": "snapshot_skipped",
+      "device_id": 1932807143424,
+      "sequence": 865,
+      "frame": 1,
+      "generation": 0,
+      "uid": 29990464,
+      "reason": "SetRenderTarget",
+      "message": "Unsupported diagnostic format"
+    },
+    {
+      "event": "snapshot_skipped",
+      "device_id": 1932807143424,
+      "sequence": 899,
+      "frame": 1,
+      "generation": 0,
+      "uid": 29990739,
+      "reason": "SetRenderTarget",
+      "message": "Unsupported diagnostic format"
+    }
+  ],
+  "early_HDR_candidates": [
+    {
+      "event": "snapshot_candidate",
+      "device_id": 1932807143424,
+      "sequence": 107,
+      "frame": 0,
+      "generation": 0,
+      "uid": 29988261,
+      "reason": "SetRenderTarget",
+      "draws": 74,
+      "color_id": 1933177950704,
+      "depth_id": 1932806985680,
+      "color": {
+        "format": 97,
+        "width": 1920,
+        "height": 1200,
+        "samples": 1,
+        "usage": 19,
+        "flush_layout": 2
+      },
+      "depth": {
+        "format": 129,
+        "width": 1920,
+        "height": 1200,
+        "samples": 1,
+        "usage": 35,
+        "flush_layout": 3
+      }
+    },
+    {
+      "event": "snapshot_candidate",
+      "device_id": 1932807143424,
+      "sequence": 141,
+      "frame": 0,
+      "generation": 0,
+      "uid": 29988536,
+      "reason": "SetRenderTarget",
+      "draws": 97,
+      "color_id": 1933177950704,
+      "depth_id": 1932806985680,
+      "color": {
+        "format": 97,
+        "width": 1920,
+        "height": 1200,
+        "samples": 1,
+        "usage": 19,
+        "flush_layout": 2
+      },
+      "depth": {
+        "format": 129,
+        "width": 1920,
+        "height": 1200,
+        "samples": 1,
+        "usage": 35,
+        "flush_layout": 3
+      }
+    },
+    {
+      "event": "snapshot_candidate",
+      "device_id": 1932807143424,
+      "sequence": 864,
+      "frame": 1,
+      "generation": 0,
+      "uid": 29990464,
+      "reason": "SetRenderTarget",
+      "draws": 74,
+      "color_id": 1933177950704,
+      "depth_id": 1932806985680,
+      "color": {
+        "format": 97,
+        "width": 1920,
+        "height": 1200,
+        "samples": 1,
+        "usage": 19,
+        "flush_layout": 2
+      },
+      "depth": {
+        "format": 129,
+        "width": 1920,
+        "height": 1200,
+        "samples": 1,
+        "usage": 35,
+        "flush_layout": 3
+      }
+    },
+    {
+      "event": "snapshot_candidate",
+      "device_id": 1932807143424,
+      "sequence": 898,
+      "frame": 1,
+      "generation": 0,
+      "uid": 29990739,
+      "reason": "SetRenderTarget",
+      "draws": 97,
+      "color_id": 1933177950704,
+      "depth_id": 1932806985680,
+      "color": {
+        "format": 97,
+        "width": 1920,
+        "height": 1200,
+        "samples": 1,
+        "usage": 19,
+        "flush_layout": 2
+      },
+      "depth": {
+        "format": 129,
+        "width": 1920,
+        "height": 1200,
+        "samples": 1,
+        "usage": 35,
+        "flush_layout": 3
+      }
+    }
+  ],
+  "visual_inspection": "Exported color depicts L4D2 world, first-person weapon and HUD; Present adds overlay elements",
+  "usable_world_depth": "not_obtained; all exported depth pixels equal clear value 1.0",
+  "likely_explanation": "Earlier full-resolution RGBA16F color/depth pairs have depth-writing draws but were skipped because color format 97 is unsupported; later captures occur after depth reuse/clear. Causal diagnosis remains a hypothesis until earlier depth is captured.",
+  "next_capture_requirement": "Support RGBA16F color staging and export (8 bytes/pixel), or capture depth independently of unsupported color formats; preserve pre-weapon and pre-clear boundaries",
+  "scope_limits": [
+    "No Reset in these two frames",
+    "No evidence of validation-layer activation in uploaded files",
+    "Camera/motion vectors and FG not executed",
+    "World and weapon classification inferred from state/viewport chronology, not yet verified with nonconstant depth images"
+  ]
+}
