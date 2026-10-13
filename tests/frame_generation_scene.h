@@ -75,6 +75,11 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
        {.08f, .3f, .12f, 1});
   quad(.2f * width, .2f * height, .35f * width, .65f * height, .5f,
        {.9f, .05f, .03f, 1});
+  float objectShift = frame % 2 ? .025f * width : 0;
+  quad(.55f * width + objectShift, .32f * height, .68f * width + objectShift,
+       .55f * height, .4f,
+       frame % 2 ? std::array<float, 4>{.1f, .9f, .2f, 1}
+                 : std::array<float, 4>{.1f, .1f, .9f, 1});
   D3DVIEWPORT9 nearView{0, 0, width, height, 0, .1f};
   ldb_fg::viewport(device, &nearView, frame);
   hr(device->SetViewport(&nearView), "FG fixture near");
@@ -124,6 +129,8 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   };
   auto nearColor = rgb(uint32_t(width * .8f), uint32_t(height * .8f));
   auto ui = rgb(20, 20);
+  auto dynamic =
+      rgb(uint32_t(width * (.61f + .01f * frame)), uint32_t(height * .43f));
   uint32_t edge = width;
   for (uint32_t x = 0; x < width; x++) {
     auto c = rgb(x, uint32_t(height * .4f));
@@ -133,6 +140,10 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
     }
   }
   read->UnlockRect();
+  if (dynamic[0] > 35 || (frame % 2 ? (dynamic[1] < 220 || dynamic[2] > 65)
+                                    : (dynamic[1] > 35 || dynamic[2] < 220)))
+    throw std::runtime_error(
+        "Changing object was blended or camera-warped instead of preserved");
   float expected = .2f * width +
                    .01f * float(width) * (float(frame) - (generated ? .5f : 0));
   if (std::abs(float(edge) - expected) > 2)
@@ -147,6 +158,7 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
             << ",\"present_index\":" << index
             << ",\"generated_verified\":" << (generated ? "true" : "false")
             << ",\"bar_edge\":" << edge << ",\"expected_bar_edge\":" << expected
-            << ",\"ui_preserved\":true,\"near_preserved\":true}\n"
+            << ",\"ui_preserved\":true,\"near_preserved\":true,\"dynamic_"
+               "preserved\":true}\n"
             << std::flush;
 }

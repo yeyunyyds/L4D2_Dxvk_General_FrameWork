@@ -34,11 +34,28 @@ bool foreground(vec2 xy,bool previous) {
  }
  return false;
 }
+bool foregroundEdge(vec2 xy) {
+ if(foreground(xy,false))return true;
+ const vec2 offsets[4]=vec2[](vec2(1,0),vec2(-1,0),vec2(0,1),vec2(0,-1));
+ for(int i=0;i<4;i++)if(foreground(xy+offsets[i],false))return true;
+ return false;
+}
+bool temporalChange(vec2 cx,vec2 px) {
+ // Conservative rejection, not object motion estimation. Preserve the current
+ // screen pixel instead of moving a changed object with camera-only flow.
+ if(any(greaterThan(abs(sampleAt(currentFinal,cx).rgb-sampleAt(previousFinal,px).rgb),vec3(0.12))))return true;
+ const vec2 offsets[4]=vec2[](vec2(1,0),vec2(-1,0),vec2(0,1),vec2(0,-1));
+ int changed=0;
+ for(int i=0;i<4;i++) {
+  if(any(greaterThan(abs(sampleAt(currentFinal,cx+offsets[i]).rgb-sampleAt(previousFinal,px+offsets[i]).rgb),vec3(0.12))))changed++;
+ }
+ return changed>=2;
+}
 void main() {
  ivec2 xy=ivec2(gl_GlobalInvocationID.xy);if(any(greaterThanEqual(xy,ivec2(p.flags.xy))))return;
  vec2 screen=vec2(xy);vec4 fallback=sampleAt(currentFinal,screen),result=fallback;vec4 mark=vec4(1,0,0,1);
  vec2 ndc=vec2(2*screen.x/float(p.flags.x)-1,1-2*screen.y/float(p.flags.y));
- if(foreground(screen,false)){mark=vec4(1,1,0,1);}
+ if(foregroundEdge(screen)){mark=vec4(1,1,0,1);}
  else {
   float z=texelFetch(currentDepth,xy,0).r;vec2 cx,px;float cz,pz;
   if(z>=0.999999) {
@@ -65,7 +82,8 @@ void main() {
     result=sampleAt(currentFinal,cx);mark=vec4(0,1,1,1);
     if(a) {
      vec4 old=sampleAt(previousFinal,px);
-     if(all(lessThanEqual(abs(old.rgb-result.rgb),vec3(p.thresholds.y)))){result=(result+old)*0.5;mark=vec4(0,1,0,1);}
+     if(!temporalChange(cx,px)&&all(lessThanEqual(abs(old.rgb-result.rgb),vec3(p.thresholds.y)))){result=(result+old)*0.5;mark=vec4(0,1,0,1);}
+     else {result=fallback;mark=vec4(1,0,1,1);}
     }
    }
   }

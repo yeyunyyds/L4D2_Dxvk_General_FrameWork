@@ -1,0 +1,376 @@
+{
+  "features": [
+    "combined_compute_and_backbuffer_write_submission",
+    "GPU_dispatch_timestamps_and_per_frame_CPU_wait_telemetry",
+    "bounded_high_resolution_timer_spacing",
+    "dynamic_colour_neighbourhood_rejection",
+    "foreground_one_pixel_edge_guard",
+    "delayed_periodic_single_session_capture",
+    "whole_session_analysis_without_Present_count_as_FPS"
+  ],
+  "python_tests_passed": 42,
+  "runtime_validation": [
+    {
+      "status": "passed",
+      "run_id": "a42014c719b341ccb303500485c0d38b",
+      "frames": 16,
+      "backend_calls": 16,
+      "actual_present_calls": 16,
+      "generated_backbuffers_verified": 14,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 6,
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "4910878228db0353d3872ed1c18f4723980b2891604dd8ba661716862c1a66d0",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "53f3d4a2584c4d5ebd17483676575789",
+      "frames": 16,
+      "backend_calls": 28,
+      "actual_present_calls": 27,
+      "generated_backbuffers_verified": 12,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 6,
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "0e287b74eec0842e1d5aafaa64a39c3baf88b757e54eaa21906f7daa2df03515",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "ea1297fc7fe747caae9e630a20d26e7b",
+      "frames": 16,
+      "backend_calls": 30,
+      "actual_present_calls": 30,
+      "generated_backbuffers_verified": 14,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 6,
+      "delayed_periodic_captures": [
+        2,
+        3,
+        4,
+        5,
+        7,
+        10,
+        11,
+        12,
+        13
+      ],
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "0e287b74eec0842e1d5aafaa64a39c3baf88b757e54eaa21906f7daa2df03515",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "status": "passed",
+      "run_id": "ec33bcc44c6d415ead17e80820f7c959",
+      "frames": 8,
+      "backend_calls": 8,
+      "actual_present_calls": 8,
+      "generated_backbuffers_verified": 0,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "disabled",
+      "game_capture": "unrun",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "0e287b74eec0842e1d5aafaa64a39c3baf88b757e54eaa21906f7daa2df03515",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "c56decb0e7aa40b597307efad1caeeb9",
+      "frames": 16,
+      "backend_calls": 28,
+      "actual_present_calls": 28,
+      "generated_backbuffers_verified": 12,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 6,
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "361ef3aac25d1ffe7746409907bf7ee8de5056a3fb753a799239fcf75fd4eca2",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "1f85657710474723afdd4854a4947577",
+      "frames": 16,
+      "backend_calls": 16,
+      "actual_present_calls": 16,
+      "generated_backbuffers_verified": 14,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 6,
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "361ef3aac25d1ffe7746409907bf7ee8de5056a3fb753a799239fcf75fd4eca2",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "8d8c504457014e749350c2956cb18531",
+      "frames": 16,
+      "backend_calls": 30,
+      "actual_present_calls": 30,
+      "generated_backbuffers_verified": 14,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 6,
+      "delayed_periodic_captures": [
+        2,
+        3,
+        4,
+        5,
+        7,
+        10,
+        11,
+        12,
+        13
+      ],
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "361ef3aac25d1ffe7746409907bf7ee8de5056a3fb753a799239fcf75fd4eca2",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    }
+  ],
+  "source_sha256": {
+    "integration/ldb/frame_generation.h": "1c78e1254af68cb244dd4266873f76d1ca034dfa86673c8c555f304ddacb8346",
+    "tools/resident_frame_generator.h": "876ed4a8d9e78e2fd7cdc2cbd2531091d7ce3ef563761b25aa966e71d49e4d28",
+    "tools/frame_generate_spirv.h": "81550aa60ff2afa034a1269aba9575d9267cee296fb54d218cde97d8fc714b13",
+    "shaders/frame_generate.comp": "d639b3df000d52637cb43d8087d6d6fe886bb7dfc90ac92a69db97558b6eb211"
+  },
+  "limits": [
+    "Wine/Mesa tests do not establish B580 performance or display FPS.",
+    "Tests before final fixture identity differ by capture clock/test flags and added near/UI metadata only; image algorithm and command batching are unchanged.",
+    "Dynamic preservation is a conservative fallback, not object motion interpolation.",
+    "A timer budget is not a hard latency bound; actual scheduler delay is logged."
+  ],
+  "final_session_analysis": {
+    "successful_generated_presents": 14,
+    "backend_calls": 30,
+    "metrics": {
+      "enabled_fallback": {
+        "host_work_ms": {
+          "samples": 2,
+          "median": 6.9274,
+          "p90": 11.48212,
+          "p99": 12.506931999999999
+        },
+        "fence_wait_ms": {
+          "samples": 2,
+          "median": 3.06155,
+          "p90": 3.50567,
+          "p99": 3.6055969999999995
+        },
+        "gpu_submissions": {
+          "samples": 2,
+          "median": 5.0,
+          "p90": 5.0,
+          "p99": 5.0
+        },
+        "generated_present_ms": {
+          "samples": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "logical_present_ms": {
+          "samples": 2,
+          "median": 1.2088,
+          "p90": 1.79472,
+          "p99": 1.926552
+        },
+        "pacing_wait_ms": {
+          "samples": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "paired_start_gap_ms": {
+          "samples": 2,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        }
+      },
+      "paired": {
+        "host_work_ms": {
+          "samples": 5,
+          "median": 14.4231,
+          "p90": 20.351100000000002,
+          "p99": 23.870820000000002
+        },
+        "gpu_dispatch_ms": {
+          "samples": 5,
+          "median": 10.105616,
+          "p90": 13.3916228,
+          "p99": 15.30244448
+        },
+        "fence_wait_ms": {
+          "samples": 5,
+          "median": 10.7696,
+          "p90": 14.289640000000002,
+          "p99": 16.222084000000002
+        },
+        "gpu_submissions": {
+          "samples": 5,
+          "median": 6.0,
+          "p90": 6.0,
+          "p99": 6.0
+        },
+        "generated_present_ms": {
+          "samples": 5,
+          "median": 0.2569,
+          "p90": 0.61276,
+          "p99": 0.777136
+        },
+        "logical_present_ms": {
+          "samples": 5,
+          "median": 0.2334,
+          "p90": 0.24598,
+          "p99": 0.247168
+        },
+        "pacing_wait_ms": {
+          "samples": 5,
+          "median": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "paired_start_gap_ms": {
+          "samples": 5,
+          "median": 2.9303,
+          "p90": 3.03824,
+          "p99": 3.0598039999999997
+        },
+        "source_arrival_interval_ms": {
+          "samples": 1,
+          "median": 18.097,
+          "p90": 18.097,
+          "p99": 18.097
+        }
+      }
+    },
+    "captures": [
+      {
+        "event": "capture",
+        "frame": 2,
+        "generation": 0,
+        "uid": 2,
+        "cpu_qpc": 11961909597,
+        "index": 1,
+        "mode": "paired"
+      },
+      {
+        "event": "capture",
+        "frame": 3,
+        "generation": 0,
+        "uid": 3,
+        "cpu_qpc": 11962162339,
+        "index": 2,
+        "mode": "paired"
+      },
+      {
+        "event": "capture",
+        "frame": 4,
+        "generation": 0,
+        "uid": 4,
+        "cpu_qpc": 11962401107,
+        "index": 3,
+        "mode": "paired"
+      },
+      {
+        "event": "capture",
+        "frame": 5,
+        "generation": 0,
+        "uid": 5,
+        "cpu_qpc": 11962606196,
+        "index": 4,
+        "mode": "paired"
+      },
+      {
+        "event": "capture",
+        "frame": 7,
+        "generation": 0,
+        "uid": 7,
+        "cpu_qpc": 12173172668,
+        "index": 5,
+        "mode": "paired"
+      },
+      {
+        "event": "capture",
+        "frame": 10,
+        "generation": 1,
+        "uid": 10,
+        "cpu_qpc": 12196873133,
+        "index": 6,
+        "mode": "paired"
+      },
+      {
+        "event": "capture",
+        "frame": 11,
+        "generation": 1,
+        "uid": 11,
+        "cpu_qpc": 12197094132,
+        "index": 7,
+        "mode": "paired"
+      },
+      {
+        "event": "capture",
+        "frame": 12,
+        "generation": 1,
+        "uid": 12,
+        "cpu_qpc": 12197317093,
+        "index": 8,
+        "mode": "paired"
+      },
+      {
+        "event": "capture",
+        "frame": 13,
+        "generation": 1,
+        "uid": 13,
+        "cpu_qpc": 12197532420,
+        "index": 9,
+        "mode": "paired"
+      }
+    ]
+  }
+}

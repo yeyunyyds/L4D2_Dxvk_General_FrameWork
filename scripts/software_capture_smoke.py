@@ -45,6 +45,9 @@ def smoke(args):
     environment["LDB_GPU_REPROJECT"] = "1" if getattr(args,"gpu_reproject",False) else "0"
     if getattr(args,"fg_mode",None):
         environment.update(LDB_FG_ENABLE="0" if args.fg_mode=="off" else "1",LDB_FG_MODE="generated" if args.fg_mode=="generated" else "paired",LDB_FG_LOG_DIR="Z:"+str(directory/"fg").replace("/","\\"),LDB_FG_CAPTURE_FRAMES="8",LDB_FG_HOTKEYS="0",LDB_FG_FIXTURE_CASE=getattr(args,"fg_case","normal"))
+    if getattr(args,"fg_auto_capture",False):
+        environment.update(LDB_FG_AUTO_CAPTURE="1",LDB_FG_CAPTURE_FRAMES="4",LDB_FG_FIXTURE_CAPTURE_CLOCK="1")
+    if getattr(args,"fg_pacing_ms",0):environment["LDB_FG_PACING_MS"]=str(args.fg_pacing_ms)
     if getattr(args, "observer", None) in ("enabled", "waiting", "triggered"):
         environment.update(LDB_CAPTURE_DIR="Z:" + str(directory / "observer").replace("/", "\\"),
                            LDB_CAPTURE_START="0", LDB_CAPTURE_FRAMES=str(args.frames), LDB_CAPTURE_STRIDE=str(getattr(args,"stride",1)), LDB_CAPTURE_SNAPSHOTS="6" if getattr(args, "hdr_scene", False) else "3")
@@ -111,7 +114,8 @@ def smoke(args):
                     if len(presents)!=expected:raise ValueError('Wrong real Present call count')
                     generated=sum(e['generated_verified'] for e in presents)
                     if generated!=expected_generated:raise ValueError('Generated backbuffer pixels not verified')
-                    result={'status':'passed','run_id':directory.name,'frames':args.frames,'backend_calls':len(presents),'actual_present_calls':len(presents)-(1 if getattr(args,'fg_case','normal')=='failure' else 0),'generated_backbuffers_verified':generated,'ui_and_near_pixels':'verified_actual_backbuffer','gpu_fg_execution':'executed_fixture' if generated else 'disabled','game_capture':'unrun'}
+                    if not all(e.get('dynamic_preserved') for e in presents):raise ValueError('Changing object pixels not verified')
+                    result={'dynamic_pixels':'verified_actual_backbuffer','status':'passed','run_id':directory.name,'frames':args.frames,'backend_calls':len(presents),'actual_present_calls':len(presents)-(1 if getattr(args,'fg_case','normal')=='failure' else 0),'generated_backbuffers_verified':generated,'ui_and_near_pixels':'verified_actual_backbuffer','gpu_fg_execution':'executed_fixture' if generated else 'disabled','game_capture':'unrun'}
                     if getattr(args,'fg_case','normal')=='failure' and not any(e['event']=='fixture_failure' and e.get('hresult_preserved') for e in events):raise ValueError('Original backend failure not preserved')
                     if args.fg_mode=='off':
                         if (directory/'fg').exists():raise ValueError('Disabled FG created state/output')
@@ -121,6 +125,18 @@ def smoke(args):
                         fgevents=read_events(folders[0]/'fg-events.jsonl')
                         if any(e['event']=='fg_error' for e in fgevents):raise ValueError('FG runtime reported error')
                         if not any(e['event']=='history_invalidated' and e.get('reason')=='reset' for e in fgevents):raise ValueError('FG Reset invalidation unobserved')
+                        metrics=[e for e in fgevents if e['event']=='frame_metrics']
+                        if len(metrics)!=args.frames:raise ValueError('Missing per-frame telemetry')
+                        dispatch=[e['gpu_dispatch_ms'] for e in metrics if e['generated']]
+                        if not dispatch or any(x<0 for x in dispatch):raise ValueError('Fixture GPU timestamps unavailable')
+                        normal=[e for e in metrics if e['generated'] and not e['captured']]
+                        # scene, near, UI, final, combined compute/write, restore: six submissions.
+                        if not normal or any(e['gpu_submissions']!=6 for e in normal):raise ValueError('Combined dispatch/write submission not verified')
+                        result['gpu_timestamps']='verified';result['combined_submission_count']=6
+                        if getattr(args,'fg_auto_capture',False):
+                            captures=[e for e in fgevents if e['event']=='capture']
+                            if len(captures)<8 or min(e['frame'] for e in captures)<2:raise ValueError('Delayed periodic capture failed')
+                            result['delayed_periodic_captures']=[e['frame'] for e in captures]
                         result['fg_events']='verified';result['history_storage']='full_size_gpu'
                 else:
                     result = analyze(read_events(directory / "capture.jsonl"), directory.name, process.returncode)
@@ -167,6 +183,8 @@ if __name__ == "__main__":
     parser.add_argument("--hdr-scene", action="store_true")
     parser.add_argument("--gpu-reproject", action="store_true")
     parser.add_argument("--fg-mode",choices=("paired","generated","off"))
+    parser.add_argument("--fg-auto-capture",action="store_true")
+    parser.add_argument("--fg-pacing-ms",type=int,choices=range(9),default=0)
     parser.add_argument("--fg-case",choices=("normal","partial","failure"),default="normal")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))

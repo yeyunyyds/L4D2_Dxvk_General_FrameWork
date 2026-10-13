@@ -53,7 +53,7 @@ def package(source, build_id, output):
         archive.write(ROOT/'docs/research/gpu-reprojection.md','docs/gpu-reprojection.md')
         archive.write(ROOT/'docs/research/capture-series.md','docs/capture-series.md')
         archive.write(ROOT/'docs/research/ldb-host-capture.md', 'docs/host-capture.md')
-        for name in ['analyze_ldb_capture.py','analyze_capture_series.py','reproject_capture.py','capture_math.py','analyze_gpu_capture.py']:
+        for name in ['analyze_ldb_capture.py','analyze_capture_series.py','reproject_capture.py','capture_math.py','analyze_gpu_capture.py','analyze_fg_results.py']:
             archive.write(ROOT/'scripts'/name,'scripts/'+name)
         archive.write(ROOT/'scripts/trigger_capture.cmd','trigger_capture.cmd')
         archive.write(ROOT/'scripts/start_fg_test.cmd','start_fg_test.cmd')

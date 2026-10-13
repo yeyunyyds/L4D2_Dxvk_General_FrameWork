@@ -26,7 +26,8 @@ inline std::wstring readEnv(const wchar_t *key) {
 }
 struct Config {
   bool enabled = false, generatedOnly = false, hotkeys = true;
-  uint32_t captures = 4;
+  uint32_t captures = 4, pacingMs = 0;
+  bool autoCapture = false;
   std::filesystem::path root;
 
   Config() noexcept {
@@ -42,6 +43,15 @@ struct Config {
         throw std::runtime_error("FG mode");
 
       generatedOnly = mode == L"generated";
+      autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
+      auto pacing = readEnv(L"LDB_FG_PACING_MS");
+      if (!pacing.empty()) {
+        size_t used = 0;
+        auto value = std::stoul(pacing, &used);
+        if (used != pacing.size() || value > 8)
+          throw std::runtime_error("FG pacing budget");
+        pacingMs = uint32_t(value);
+      }
       hotkeys = readEnv(L"LDB_FG_HOTKEYS") != L"0";
       root = readEnv(L"LDB_FG_LOG_DIR");
 
@@ -93,6 +103,23 @@ struct State {
   std::filesystem::path directory;
   std::ofstream log;
   LARGE_INTEGER frequency{};
+  int64_t nextCapture = 0, previousArrival = 0;
+  double previousPacingMs = 0, sourceIntervalMs = 0;
+  uint32_t burstRemaining = 0;
+  HANDLE pacingTimer = nullptr;
+  bool pacingUnavailable = false;
+  int64_t now() const {
+    LARGE_INTEGER q{};
+    QueryPerformanceCounter(&q);
+    return q.QuadPart;
+  }
+  double ms(int64_t ticks) const {
+    return double(ticks) * 1000.0 / frequency.QuadPart;
+  }
+  void scheduleCapture() {
+    nextCapture = now() + frequency.QuadPart * 2;
+    burstRemaining = config().captures;
+  }
 
   explicit State(IDirect3DDevice9 *d)
       : device(d), generatedOnly(config().generatedOnly) {
@@ -107,15 +134,24 @@ struct State {
       throw std::runtime_error("FG log unavailable");
 
     QueryPerformanceFrequency(&frequency);
+    if (config().autoCapture)
+      scheduleCapture();
 
     emit("session", 0,
          "\"qpc_frequency\":" + std::to_string(frequency.QuadPart) +
              ",\"full_size_gpu_history\":true,\"pixel_cpu_upload\":false,"
              "\"prototype\":true,\"mode\":" +
-             quote(generatedOnly ? "generated" : "paired"));
+             quote(generatedOnly ? "generated" : "paired") +
+             ",\"auto_capture\":" +
+             std::string(config().autoCapture ? "true" : "false") +
+             ",\"pacing_budget_ms\":" + std::to_string(config().pacingMs));
   }
   ~State() {
     gpu.reset();
+    if (pacingTimer) {
+      CancelWaitableTimer(pacingTimer);
+      CloseHandle(pacingTimer);
+    }
     emit("summary", 0,
          "\"logical_presents\":" + std::to_string(logical) +
              ",\"generated_presents\":" + std::to_string(generated));
@@ -123,7 +159,7 @@ struct State {
   void emit(const char *event, uint32_t uid,
             const std::string &fields = {}) noexcept {
     try {
-      if (!log || log.tellp() > std::streampos(16ull * 1024 * 1024))
+      if (!log || log.tellp() > std::streampos(64ull * 1024 * 1024))
         return;
 
       LARGE_INTEGER q{};
@@ -180,6 +216,8 @@ struct State {
 
       if (!paused)
         disabled = false;
+      if (config().autoCapture)
+        scheduleCapture();
       emit("mode", uid,
            "\"enabled\":" + std::string(paused ? "false" : "true") +
                ",\"mode\":" + quote(generatedOnly ? "generated" : "paired"));
@@ -187,6 +225,8 @@ struct State {
     if (b && !f9) {
       generatedOnly = !generatedOnly;
       captureLimit = std::min(16u, captures + config().captures);
+      if (config().autoCapture)
+        scheduleCapture();
       emit("mode", uid,
            "\"enabled\":" + std::string(paused ? "false" : "true") +
                ",\"mode\":" + quote(generatedOnly ? "generated" : "paired"));
@@ -274,6 +314,8 @@ struct State {
       gpu = std::make_unique<ResidentFg>(interop.get());
       gpu->initialize(b.create.extent.width, b.create.extent.height,
                       d.create.format, b.create.format);
+      if (config().autoCapture)
+        scheduleCapture();
       emit("gpu_initialized", 0,
            "\"width\":" + std::to_string(gpu->width) +
                ",\"height\":" + std::to_string(gpu->height) +
@@ -459,7 +501,19 @@ struct State {
   template <class F>
   HRESULT present(uint32_t uid, F &&backend, bool partial,
                   IDirect3DSwapChain9 *chain) {
+    const int64_t arrival = now();
+    double interval =
+        previousArrival ? ms(arrival - previousArrival) - previousPacingMs : 0;
+    if (interval > 0 && interval < 100)
+      sourceIntervalMs = sourceIntervalMs > 0
+                             ? .9 * sourceIntervalMs + .1 * interval
+                             : interval;
+    previousArrival = arrival;
+    previousPacingMs = 0;
     hotkeys(uid);
+    bool captured = false, generatedFrame = false;
+    double captureMs = 0, generatedPresentMs = 0, logicalPresentMs = 0;
+    int64_t generatedStart = 0;
     bool wrote = false, ready = false;
     HRESULT extra = S_OK;
     Com<IDirect3DSurface9> back;
@@ -486,9 +540,14 @@ struct State {
                 (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
                 (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u);
             params.flags = {gpu->width, gpu->height, flags, previousFlags};
-            gpu->generate(params);
+            bool captureDue =
+                config().autoCapture
+                    ? (captures < 32 && burstRemaining && now() >= nextCapture)
+                    : captures < captureLimit;
+            gpu->generate(params, !captureDue);
 
-            if (captures < captureLimit) {
+            if (captureDue) {
+              auto captureStart = now();
               std::string prefix = std::to_string(frame);
               gpu->save(ResidentFg::Output,
                         directory / (prefix + "-generated.ppm"));
@@ -502,12 +561,24 @@ struct State {
                 gpu->save(ResidentFg::CurrentUi,
                           directory / (prefix + "-before-ui.ppm"));
               captures++;
+              captured = true;
+              captureMs = ms(now() - captureStart);
+              emit("capture", uid,
+                   "\"index\":" + std::to_string(captures) + ",\"mode\":" +
+                       quote(generatedOnly ? "generated" : "paired"));
+              if (config().autoCapture && --burstRemaining == 0) {
+                nextCapture = now() + frequency.QuadPart * 20;
+                burstRemaining = config().captures;
+              }
             }
             wrote = true;
+            generatedFrame = true;
             transfer(back.get(), ResidentFg::Output, true);
 
             if (!generatedOnly) {
+              generatedStart = now();
               extra = backend();
+              generatedPresentMs = ms(now() - generatedStart);
               emit("generated_present", uid,
                    "\"hresult\":" + std::to_string(uint32_t(extra)) +
                        ",\"mode\":\"paired\",\"phase\":0.5,\"backbuffer_"
@@ -521,6 +592,33 @@ struct State {
                  "FG backbuffer after generated Present");
               transfer(back.get(), ResidentFg::CurrentFinal, true);
               wrote = false;
+              // Bounded experimental spacing; do not add delay when Present
+              // already blocks. Subtract our own delay from the next interval
+              // estimate to avoid feedback.
+              double budget =
+                  std::min(double(config().pacingMs), sourceIntervalMs * .5);
+              double remaining = budget - ms(now() - generatedStart);
+              if (SUCCEEDED(extra) && remaining >= .5 && !pacingUnavailable) {
+                if (!pacingTimer) {
+                  // Windows 10 1803+ high-resolution timer; skip on older
+                  // systems.
+                  pacingTimer = CreateWaitableTimerExW(nullptr, nullptr, 0x2,
+                                                       TIMER_ALL_ACCESS);
+                  if (!pacingTimer) {
+                    pacingUnavailable = true;
+                    emit("pacing_unavailable", uid);
+                  }
+                }
+                if (pacingTimer) {
+                  LARGE_INTEGER due{};
+                  due.QuadPart = -int64_t(remaining * 10000);
+                  auto before = now();
+                  if (SetWaitableTimer(pacingTimer, &due, 0, nullptr, nullptr,
+                                       FALSE))
+                    WaitForSingleObject(pacingTimer, 20);
+                  previousPacingMs = ms(now() - before);
+                }
+              }
             }
           } else {
             history = false;
@@ -555,7 +653,9 @@ struct State {
     }
     // Exactly one logical backend call;
     // Paired mode adds one earlier generated call.
+    auto logicalStart = now();
     HRESULT result = backend();
+    logicalPresentMs = ms(now() - logicalStart);
     logical++;
 
     if (wrote && generatedOnly) {
@@ -595,6 +695,31 @@ struct State {
                ",\"ui_boundary_observed\":" +
                std::string(uiCopied ? "true" : "false"));
 
+    auto metrics = gpu ? gpu->takeCounters() : ResidentFg::Counters{};
+    emit(
+        "frame_metrics", uid,
+        "\"enabled\":" + std::string(!paused && !disabled ? "true" : "false") +
+            ",\"mode\":" + quote(generatedOnly ? "generated" : "paired") +
+            ",\"generated\":" + std::string(generatedFrame ? "true" : "false") +
+            ",\"captured\":" + std::string(captured ? "true" : "false") +
+            ",\"near_preserved\":" +
+            std::string(nearCopied ? "true" : "false") +
+            ",\"ui_boundary_observed\":" +
+            std::string(uiCopied ? "true" : "false") +
+            ",\"arrival_qpc\":" + std::to_string(arrival) +
+            ",\"host_work_ms\":" + std::to_string(ms(now() - arrival)) +
+            ",\"capture_ms\":" + std::to_string(captureMs) +
+            ",\"gpu_dispatch_ms\":" + std::to_string(metrics.dispatchMs) +
+            ",\"fence_wait_ms\":" + std::to_string(metrics.fenceMs) +
+            ",\"gpu_submissions\":" + std::to_string(metrics.submissions) +
+            ",\"generated_present_ms\":" + std::to_string(generatedPresentMs) +
+            ",\"logical_present_ms\":" + std::to_string(logicalPresentMs) +
+            ",\"pacing_wait_ms\":" + std::to_string(previousPacingMs) +
+            ",\"generated_present_start_qpc\":" +
+            std::to_string(generatedStart) + ",\"logical_present_start_qpc\":" +
+            std::to_string(logicalStart) + ",\"paired_start_gap_ms\":" +
+            std::to_string(generatedStart ? ms(logicalStart - generatedStart)
+                                          : 0));
     clearFrame();
     frame++;
     return result;

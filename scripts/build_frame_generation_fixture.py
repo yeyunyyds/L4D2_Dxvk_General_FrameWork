@@ -12,7 +12,8 @@ s=s.replace('LARGE_INTEGER frequency{}, start{}, stop{};', 'LARGE_INTEGER freque
 pos=s.index('void run(const Options& args)');s=s[:pos]+'#include "frame_generation_scene.h"\n\n'+s[pos:]
 s=s.replace('      hr(device->Reset(&params), "Reset");','      fgFixtureReset();\n      const HRESULT resetResult=device->Reset(&params);\n      ldb_fg::reset(device.get(),frame,resetResult);\n      hr(resetResult,"Reset");')
 a=s.index('    draw(device.get(), frame,');b=s.index('\n  }\n  capture.reset();',a)
-s=s[:a]+r'''    fgFixtureScene(device.get(),frame,params.BackBufferWidth,params.BackBufferHeight);
+s=s[:a]+r'''    if(ldb_fg::readEnv(L"LDB_FG_FIXTURE_CAPTURE_CLOCK")==L"1" && (frame==2||frame==7||frame==10)) Sleep(frame==7?21000:2300);
+    fgFixtureScene(device.get(),frame,params.BackBufferWidth,params.BackBufferHeight);
     uint32_t calls=0;
     bool special=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")!=L"normal" && !ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE").empty();
     bool failure=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"failure";

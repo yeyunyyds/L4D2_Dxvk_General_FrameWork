@@ -41,6 +41,20 @@ private:
 
   std::array<OwnedImage, SlotCount> images{};
 
+  bool recording = false, queryPending = false;
+  VkQueryPool timestamps{};
+  uint32_t timestampBits = 0;
+  double timestampPeriod = 0;
+  LARGE_INTEGER clockFrequency{};
+
+public:
+  struct Counters {
+    uint32_t submissions = 0;
+    double fenceMs = 0, dispatchMs = -1;
+  };
+
+private:
+  Counters counters;
   VkSampler sampler{};
   VkShaderModule shader{};
   VkDescriptorSetLayout setLayout{};
@@ -55,6 +69,11 @@ private:
   void *readbackMap = nullptr;
 
 #define FN(name) PFN_##name name = nullptr
+  FN(vkCreateQueryPool);
+  FN(vkDestroyQueryPool);
+  FN(vkCmdResetQueryPool);
+  FN(vkCmdWriteTimestamp);
+  FN(vkGetQueryPoolResults);
   FN(vkCreateImageView);
   FN(vkDestroyImageView);
   FN(vkCreateSampler);
@@ -108,6 +127,9 @@ private:
     image.layout = layout;
   }
   void begin() {
+    if (recording)
+      return;
+    recording = true;
     vkcheck(c.vkResetCommandPool(c.device, c.pool, 0), "FG command reset");
     vkcheck(c.vkResetFences(c.device, 1, &c.fence), "FG fence reset");
     VkCommandBufferBeginInfo b{};
@@ -117,6 +139,7 @@ private:
   }
   void end() {
     vkcheck(c.vkEndCommandBuffer(c.command), "FG end");
+    recording = false;
     VkSubmitInfo s{};
     s.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     s.commandBufferCount = 1;
@@ -126,9 +149,29 @@ private:
     c.interop->ReleaseSubmissionQueue();
     vkcheck(result, "FG submit");
     c.pending = true;
+    LARGE_INTEGER start{}, stop{};
+    QueryPerformanceCounter(&start);
     vkcheck(c.vkWaitForFences(c.device, 1, &c.fence, VK_TRUE, 5'000'000'000ull),
             "FG wait");
     c.pending = false;
+    QueryPerformanceCounter(&stop);
+    counters.submissions++;
+    counters.fenceMs += double(stop.QuadPart - start.QuadPart) * 1000.0 /
+                        clockFrequency.QuadPart;
+    if (queryPending) {
+      uint64_t ticks[2]{};
+      VkResult q = vkGetQueryPoolResults(c.device, timestamps, 0, 2,
+                                         sizeof(ticks), ticks, sizeof(uint64_t),
+                                         VK_QUERY_RESULT_64_BIT);
+      if (q == VK_SUCCESS) {
+        uint64_t mask = timestampBits == 64
+                            ? ~uint64_t(0)
+                            : ((uint64_t(1) << timestampBits) - 1);
+        counters.dispatchMs =
+            double((ticks[1] - ticks[0]) & mask) * timestampPeriod / 1e6;
+      }
+      queryPending = false;
+    }
   }
   void buffer(VkBuffer &buffer, VkDeviceMemory &memory, void *&mapped,
               VkDeviceSize bytes, VkBufferUsageFlags usage) {
@@ -151,6 +194,7 @@ public:
   uint32_t width = 0, height = 0;
   VkFormat depthFormat = VK_FORMAT_UNDEFINED, finalFormat = VK_FORMAT_UNDEFINED;
   explicit ResidentFg(ID3D9VkInteropDevice *interop) : c(interop) {
+    QueryPerformanceFrequency(&clockFrequency);
     auto gi = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(
         GetModuleHandleW(L"vulkan-1.dll"), "vkGetInstanceProcAddr"));
     auto get = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
@@ -159,6 +203,11 @@ public:
   name = reinterpret_cast<PFN_##name>(get(c.device, #name));                   \
   if (!name)                                                                   \
   throw std::runtime_error(#name " missing")
+    LOAD(vkCreateQueryPool);
+    LOAD(vkDestroyQueryPool);
+    LOAD(vkCmdResetQueryPool);
+    LOAD(vkCmdWriteTimestamp);
+    LOAD(vkGetQueryPoolResults);
     LOAD(vkCreateImageView);
     LOAD(vkDestroyImageView);
     LOAD(vkCreateSampler);
@@ -190,6 +239,8 @@ public:
       c.interop->ReleaseSubmissionQueue();
       c.pending = false;
     }
+    if (timestamps)
+      vkDestroyQueryPool(c.device, timestamps, nullptr);
     if (pipeline)
       vkDestroyPipeline(c.device, pipeline, nullptr);
     if (pipelineLayout)
@@ -251,6 +302,21 @@ public:
     if (c.family >= count ||
         !(families[c.family].queueFlags & VK_QUEUE_COMPUTE_BIT))
       throw std::runtime_error("FG queue lacks compute");
+    timestampBits = families[c.family].timestampValidBits;
+    VkPhysicalDeviceProperties properties{};
+    auto getProperties = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(
+        gi(c.instance, "vkGetPhysicalDeviceProperties"));
+    getProperties(c.physical, &properties);
+    timestampPeriod = properties.limits.timestampPeriod;
+    if (timestampBits && timestampPeriod > 0 &&
+        properties.limits.timestampComputeAndGraphics) {
+      VkQueryPoolCreateInfo q{};
+      q.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+      q.queryType = VK_QUERY_TYPE_TIMESTAMP;
+      q.queryCount = 2;
+      vkcheck(vkCreateQueryPool(c.device, &q, nullptr, &timestamps),
+              "FG timestamp pool");
+    }
     VkCommandPoolCreateInfo pool{};
     pool.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool.queueFamilyIndex = c.family;
@@ -416,7 +482,12 @@ public:
     transition(dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     end();
   }
-  void generate(const Params &params) {
+  Counters takeCounters() {
+    auto result = counters;
+    counters = {};
+    return result;
+  }
+  void generate(const Params &params, bool deferSubmit = false) {
     std::memcpy(uniformMap, &params, sizeof(params));
     VkMappedMemoryRange range{};
     range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -462,8 +533,19 @@ public:
     vkCmdBindPipeline(c.command, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
     vkCmdBindDescriptorSets(c.command, VK_PIPELINE_BIND_POINT_COMPUTE,
                             pipelineLayout, 0, 1, &set, 0, nullptr);
+    if (timestamps) {
+      vkCmdResetQueryPool(c.command, timestamps, 0, 2);
+      vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                          timestamps, 0);
+    }
     vkCmdDispatch(c.command, (width + 7) / 8, (height + 7) / 8, 1);
-    end();
+    if (timestamps) {
+      vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                          timestamps, 1);
+      queryPending = true;
+    }
+    if (!deferSubmit)
+      end();
   }
   void writeBack(const ImageInfo &destination, Slot source) {
     if (!matches(destination) || (destination.create.format != finalFormat) ||
