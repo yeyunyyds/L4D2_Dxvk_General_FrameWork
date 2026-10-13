@@ -47,8 +47,10 @@ def package(source, build_id, output):
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for name, data in entries.items(): archive.writestr(name, data)
         archive.writestr('capture-build.json', json.dumps(receipt, indent=2)+'\n')
-        archive.write(ROOT/'docs/research/ldb-host-capture.md', 'README.md')
-        archive.write(ROOT/'scripts/analyze_ldb_capture.py', 'scripts/analyze_ldb_capture.py')
+        archive.write(ROOT/'docs/research/capture-series.md', 'README.md')
+        archive.write(ROOT/'docs/research/ldb-host-capture.md', 'docs/host-capture.md')
+        for name in ['analyze_ldb_capture.py','analyze_capture_series.py','reproject_capture.py','capture_math.py']:
+            archive.write(ROOT/'scripts'/name,'scripts/'+name)
         archive.write(source/'LICENSE', 'licenses/Remix-LICENSE')
         archive.write(ROOT/'.research/sources/bridge/LICENSE', 'licenses/LDB-LICENSE')
         archive.write(ROOT/'.research/sources/dxvk/LICENSE', 'licenses/DXVK-LICENSE')

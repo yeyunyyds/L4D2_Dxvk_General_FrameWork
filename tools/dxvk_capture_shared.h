@@ -243,22 +243,27 @@ public:
     vkcheck(vkInvalidateMappedMemoryRanges(device, 1, &range), "vkInvalidateMappedMemoryRanges");
   }
 
-  void save(const std::filesystem::path& prefix) const {
+  void save(const std::filesystem::path& prefix, uint32_t stride=1) const {
+    if(!stride || stride>8) throw std::runtime_error("Invalid export stride");
+    const uint32_t outWidth=(width+stride-1)/stride, outHeight=(height+stride-1)/stride;
     std::ofstream color(std::filesystem::path(prefix.wstring() + L"-color.ppm"), std::ios::binary);
     std::ofstream depth(std::filesystem::path(prefix.wstring() + L"-depth.pgm"), std::ios::binary);
     std::ofstream raw(std::filesystem::path(prefix.wstring() + L"-depth.f32"), std::ios::binary);
     std::ofstream hdr;
     if (colorBytes == 8) hdr.open(std::filesystem::path(prefix.wstring() + L"-color.rgba16f"), std::ios::binary);
-    color << "P6\n" << width << ' ' << height << "\n255\n";
-    depth << "P5\n" << width << ' ' << height << "\n65535\n";
+    color << "P6\n" << outWidth << ' ' << outHeight << "\n255\n";
+    depth << "P5\n" << outWidth << ' ' << outHeight << "\n65535\n";
     auto bytes = static_cast<const uint8_t*>(mapped);
-    std::vector<char> rgb(size_t(width) * 3), pgm(size_t(width) * 2);
-    std::vector<float> values(width);
-    for (uint32_t y = 0; y < height; y++) {
+    std::vector<char> rgb(size_t(outWidth) * 3), pgm(size_t(outWidth) * 2);
+    std::vector<float> values(outWidth);
+    for (uint32_t oy = 0; oy < outHeight; oy++) {
+      uint32_t y=std::min(oy*stride+stride/2,height-1);
       const auto* row = bytes + size_t(y) * width * colorBytes;
-      if (colorBytes == 8) hdr.write(reinterpret_cast<const char*>(row), std::streamsize(width) * 8);
-      for (uint32_t x = 0; x < width; x++) {
-        const auto* rgba = row + size_t(x) * colorBytes;
+
+      for (uint32_t x = 0; x < outWidth; x++) {
+        uint32_t sx=std::min(x*stride+stride/2,width-1);
+        const auto* rgba = row + size_t(sx) * colorBytes;
+        if(colorBytes==8) hdr.write(reinterpret_cast<const char*>(rgba),8);
         if (colorBytes == 8) {
           for (size_t channel = 0; channel < 3; channel++) {
             uint16_t bits = 0; std::memcpy(&bits, rgba + channel * 2, 2);
@@ -269,7 +274,7 @@ public:
           rgb[size_t(x) * 3 + 1] = char(rgba[1]);
           rgb[size_t(x) * 3 + 2] = char(rgba[formats[0] == VK_FORMAT_B8G8R8A8_UNORM ? 0 : 2]);
         }
-        const auto* address = bytes + size_t(depthOffset) + (size_t(y) * width + x) * 4;
+        const auto* address = bytes + size_t(depthOffset) + (size_t(y) * width + sx) * 4;
         float value = 0;
         if (formats[1] == VK_FORMAT_D24_UNORM_S8_UINT) {
           uint32_t packed = 0; std::memcpy(&packed, address, 4);

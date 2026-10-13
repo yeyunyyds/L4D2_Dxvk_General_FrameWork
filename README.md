@@ -6,7 +6,7 @@
 
 已实现[独立 Host 采集原型](docs/research/host-capture.md)：颜色/深度像素与 Reset 已通过软件 Vulkan 及用户上传的 B580 实机日志检查。
 
-已编写 [LDB Host 诊断接入补丁](docs/research/ldb-host-capture.md)，支持游戏绘制边界、限量快照和进地图后手动触发。同一组件的真实 DXVK 测试场景已通过，Windows/MSVC Release 三件套已构建；用户游戏日志已验证颜色采集，世界深度尚未取得。本次补充 RGBA16F 原始导出与深度范围边界，以便重新采集。
+已编写 [LDB Host 诊断接入补丁](docs/research/ldb-host-capture.md)，支持游戏绘制边界、限量快照和进地图后手动触发。同一组件的真实 DXVK 测试场景已通过，Windows/MSVC Release 三件套已构建；用户游戏日志已验证颜色采集，世界深度尚未取得。HDR 实机日志已取得当前视角的场景深度和近景边界。本次将[连续帧、shader/常量和矩阵候选分析](docs/research/capture-series.md)合并进诊断包，游戏相机和运动矢量仍待确认。
 
 - [第一阶段研究结果](docs/research/phase1.md)：源码接入点、必要改动与验证证据。
 - [Windows / B580 验证步骤](docs/research/windows-validation.md)：GPU 探测与官方 FSR Vulkan 样例验收。

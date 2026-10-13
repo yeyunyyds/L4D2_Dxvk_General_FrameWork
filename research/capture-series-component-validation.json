@@ -1,0 +1,56 @@
+{
+  "status": "passed",
+  "unit_tests": 32,
+  "gpu_run": {
+    "status": "passed",
+    "run_id": "52f54f53156a4cf1a12e99cdc07f1adf",
+    "frames": 8,
+    "resets": 1,
+    "validation_level": "standalone_scene_color_depth_snapshot_readback",
+    "game_capture": "unrun",
+    "gpu_fg_execution": "unrun",
+    "vulkan_validation": "passed_no_reported_errors",
+    "observer_validation": {
+      "status": "passed",
+      "mode": "enabled",
+      "frames": 8,
+      "snapshots": 32,
+      "successful_resets": 1,
+      "exported_color_depth_pixels": "verified",
+      "device_and_swapchain_present": "exercised",
+      "l4d2_game_capture": "unrun",
+      "full_host_build": "unrun",
+      "hdr_values_and_depth_range": "verified"
+    },
+    "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+    "b580_validation": "unrun",
+    "exe_sha256": "63f508570960d74bc6f71e9c44226ac26392b6067d4b65f9e99f3c967ba3afeb",
+    "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+  },
+  "synthetic_reprojection": {
+    "status": "diagnostic_matrix_hypothesis",
+    "previous": "0-0-0",
+    "current": "1-0-0",
+    "mapping": {
+      "shader_sha256": "45f1858ae05ceb319ff0eaf7d5507e476a3070b3d6ed3f3d09bb88ecd8c05e43",
+      "register_start": 4,
+      "storage": "register_rows",
+      "evidence": "Synthetic screen-to-clip transform with known NDC X shift 0.01 per frame; not a game camera",
+      "pixel_center_offset": 0
+    },
+    "grid_points": 405,
+    "valid_points": 390,
+    "depth_consistent_points": 390,
+    "depth_tolerance": 0.001,
+    "motion_units": "current minus previous position in full render-surface pixels",
+    "camera_semantics_verified": false,
+    "world_motion_verified": false,
+    "limitations": [
+      "Sparse nearest-depth test; visibility, moving objects, jitter, matrix space and clean-world classification still need validation"
+    ]
+  },
+  "known_translation_pixels": 3.2,
+  "measured_median_dx": 3.1999969482421875,
+  "max_abs_dy": 5.684341886080802e-14,
+  "game_camera_and_b580": "unrun; awaiting user capture"
+}

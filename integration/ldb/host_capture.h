@@ -24,7 +24,7 @@ inline std::wstring env(const wchar_t* name) {
 struct Config {
   std::filesystem::path root;
   std::filesystem::path trigger;
-  uint32_t start = 180, frames = 2, snapshots = 8;
+  uint32_t start = 180, frames = 8, snapshots = 8, stride = 3;
   bool enabled = false;
   Config() noexcept {
     try {
@@ -39,9 +39,10 @@ struct Config {
         return uint32_t(n);
       };
       start = number(L"LDB_CAPTURE_START", start, 1000000);
-      frames = number(L"LDB_CAPTURE_FRAMES", frames, 8);
+      frames = number(L"LDB_CAPTURE_FRAMES", frames, 16);
       snapshots = number(L"LDB_CAPTURE_SNAPSHOTS", snapshots, 16);
-      enabled = frames > 0 && snapshots > 0;
+      stride = number(L"LDB_CAPTURE_STRIDE", stride, 8);
+      enabled = frames > 0 && snapshots > 0 && stride > 0;
     } catch (...) { enabled = false; }
   }
 };
@@ -58,28 +59,55 @@ struct State {
   uint32_t generation = 0, snapshots = 0, clearAttempts = 0, otherAttempts = 0, rangeAttempts = 0, presentAttempts = 0, events = 0;
   uint64_t lastSnapshotDraws = UINT64_MAX, lastColor = 0, lastDepth = 0;
   std::string lastPrefix;
-  uint64_t totalBytes = 0;
+  uint64_t totalBytes = 0, metadataBytes = 0, lastDrawSequence = UINT64_MAX;
+  uint32_t vsRegisters = 0, psRegisters = 0;
+  LARGE_INTEGER frequency{};
+  std::map<std::vector<uint8_t>, std::string> blobs;
   bool stopped = false;
   bool armed = false;
   std::filesystem::path directory;
   std::ofstream log;
   explicit State(IDirect3DDevice9* device) : deviceId(id(device)) {
     armed = config().trigger.empty();
+    if (!QueryPerformanceFrequency(&frequency)) throw std::runtime_error("QPC frequency unavailable");
+    D3DCAPS9 caps{};
+    if (SUCCEEDED(device->GetDeviceCaps(&caps))) { vsRegisters=std::min<uint32_t>(caps.MaxVertexShaderConst,256); psRegisters=((caps.PixelShaderVersion>>8)&255)>=3?224u:32u; }
     auto name = std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()) + L"-" + std::to_wstring(deviceId);
     directory = config().root / name;
     if (!std::filesystem::create_directories(directory)) throw std::runtime_error("Capture directory already exists");
     log.open(directory / "events.jsonl", std::ios::binary);
     if (!log) throw std::runtime_error("Cannot open capture log");
     emit("session", 0, "\"start_frame\":" + std::to_string(config().start) + ",\"frames_requested\":" + std::to_string(config().frames) +
+      ",\"capture_schema\":2,\"qpc_frequency\":" + std::to_string(frequency.QuadPart) + ",\"export_stride\":" + std::to_string(config().stride) +
       ",\"max_snapshots_per_frame\":" + std::to_string(config().snapshots) +
       ",\"diagnostic_gpu_waits\":true,\"semantic_labels\":\"unknown\",\"gpu_fg_execution\":\"unrun\"");
+  }
+  std::string store(const void* pointer, size_t bytes) {
+    if (!bytes || !pointer) return "null";
+    const auto* p=static_cast<const uint8_t*>(pointer);
+    std::vector<uint8_t> value(p,p+bytes);
+    auto found=blobs.find(value); if(found!=blobs.end()) return quote(found->second);
+    if(metadataBytes+bytes>64ull*1024*1024 || blobs.size()>=12000) throw std::runtime_error("Shader/state metadata budget exceeded");
+    auto name="state-"+std::to_string(blobs.size())+".bin";
+    std::ofstream output(directory/name,std::ios::binary);
+    output.write(reinterpret_cast<const char*>(pointer),std::streamsize(bytes)); output.close();
+    if(!output) throw std::runtime_error("Metadata write failed");
+    metadataBytes+=bytes; blobs.emplace(std::move(value),name); return quote(name);
+  }
+  template<class T> std::string shader(T* object) {
+    if(!object) return "null";
+    UINT bytes=0; hr(object->GetFunction(nullptr,&bytes),"GetFunction size");
+    if(!bytes || bytes>1024*1024 || bytes%4) throw std::runtime_error("Invalid shader bytecode size");
+    std::vector<uint8_t> data(bytes); hr(object->GetFunction(data.data(),&bytes),"GetFunction bytecode");
+    return store(data.data(),bytes);
   }
   bool active() const { return armed && !stopped && frame >= config().start && frame < uint64_t(config().start) + config().frames; }
   void emit(const char* event, uint32_t uid, const std::string& fields = {}) {
     if (sequence >= 100000 || log.tellp() > std::streampos(64ull * 1024 * 1024))
       throw std::runtime_error("Diagnostic event/log byte budget exceeded");
+    LARGE_INTEGER now{}; QueryPerformanceCounter(&now);
     log << "{\"event\":" << quote(event) << ",\"device_id\":" << deviceId << ",\"sequence\":" << sequence++
-      << ",\"frame\":" << frame << ",\"generation\":" << generation << ",\"uid\":" << uid;
+      << ",\"cpu_qpc\":" << now.QuadPart << ",\"frame\":" << frame << ",\"generation\":" << generation << ",\"uid\":" << uid;
     if (!fields.empty()) log << ',' << fields;
     log << "}\n"; log.flush();
     if (!log) throw std::runtime_error("Capture log write failed");
@@ -139,7 +167,9 @@ inline void snapshot(State& s, IDirect3DDevice9* device, const char* reason, uin
   s.emit("snapshot_candidate", uid, details);
   uint64_t pixels = uint64_t(color.create.extent.width) * color.create.extent.height;
   const bool hdrColor = color.create.format == VK_FORMAT_R16G16B16A16_SFLOAT;
-  uint64_t bytes = pixels * (hdrColor ? 17u : 9u) + 128;
+  uint32_t exportWidth=(color.create.extent.width+config().stride-1)/config().stride;
+  uint32_t exportHeight=(color.create.extent.height+config().stride-1)/config().stride;
+  uint64_t bytes = uint64_t(exportWidth)*exportHeight * (hdrColor ? 17u : 9u) + 128;
   if (color.create.extent.width != depth.create.extent.width || color.create.extent.height != depth.create.extent.height ||
       color.create.extent.width > 4096 || color.create.extent.height > 4096 || !pixels || s.totalBytes + bytes > 256ull * 1024 * 1024) {
     skip("Mismatched extent or capture byte/extent budget exceeded"); return;
@@ -178,7 +208,9 @@ inline void snapshot(State& s, IDirect3DDevice9* device, const char* reason, uin
   if (!interop->WaitForResource(colorSurface.get(), 0) || !interop->WaitForResource(depthSurface.get(), 0))
     throw std::runtime_error("DXVK restoration wait failed");
   auto name = std::to_string(s.frame) + "-" + std::to_string(s.generation) + "-" + std::to_string(s.snapshots);
-  capture.save(s.directory / name);
+  capture.save(s.directory / name, config().stride);
+  details += ",\"export\":{\"width\":"+std::to_string(exportWidth)+",\"height\":"+std::to_string(exportHeight)+
+    ",\"stride\":"+std::to_string(config().stride)+",\"offset\":"+std::to_string(config().stride/2)+"},\"last_draw_sequence\":"+std::to_string(s.lastDrawSequence);
   s.lastSnapshotDraws = s.draws; s.lastColor = id(colorSurface.get()); s.lastDepth = id(depthSurface.get()); s.lastPrefix = name;
   s.totalBytes += bytes; s.snapshots++;
   details += ",\"color_preview\":" + quote(hdrColor ? "reinhard_linear_no_gamma" : "unorm_rgb") +
@@ -231,12 +263,37 @@ inline void draw(IDirect3DDevice9* device, const char* name, uint32_t uid, HRESU
     if (s.events++ >= 12000) return;
     Com<IDirect3DSurface9> rt, ds;
     Com<IDirect3DVertexShader9> vs; Com<IDirect3DPixelShader9> ps;
+    Com<IDirect3DVertexDeclaration9> declaration;
+    DWORD fvf=0; HRESULT fvfh=device->GetFVF(&fvf);
+    HRESULT declh=device->GetVertexDeclaration(declaration.put());
+    std::array<D3DVERTEXELEMENT9,65> elements{}; UINT elementCount=UINT(elements.size());
+    if(SUCCEEDED(declh)&&declaration.get()) declh=declaration->GetDeclaration(elements.data(),&elementCount);
+    else elementCount=0;
+    if(elementCount>elements.size()) {declh=E_FAIL;elementCount=0;}
     HRESULT rh = device->GetRenderTarget(0,rt.put()), dh = device->GetDepthStencilSurface(ds.put());
     HRESULT vh = device->GetVertexShader(vs.put()), ph = device->GetPixelShader(ps.put());
     D3DVIEWPORT9 v{}; HRESULT viewport = device->GetViewport(&v);
     DWORD z = 0, zw = 0, blend = 0;
     HRESULT zh = device->GetRenderState(D3DRS_ZENABLE,&z), zwh = device->GetRenderState(D3DRS_ZWRITEENABLE,&zw), bh = device->GetRenderState(D3DRS_ALPHABLENDENABLE,&blend);
-    s.emit("draw",uid,"\"api\":"+quote(name)+",\"hresult\":"+std::to_string(uint32_t(hresult))+",\"primitives\":"+std::to_string(primitives)+
+    std::vector<float> vf(size_t(s.vsRegisters)*4), pf(size_t(s.psRegisters)*4);
+    std::array<int,64> vi{},pi{}; std::array<BOOL,16> vb{},pb{}; std::array<D3DMATRIX,3> transforms{};
+    HRESULT vfh=s.vsRegisters?device->GetVertexShaderConstantF(0,vf.data(),s.vsRegisters):E_FAIL;
+    HRESULT pfh=s.psRegisters?device->GetPixelShaderConstantF(0,pf.data(),s.psRegisters):E_FAIL;
+    HRESULT vih=device->GetVertexShaderConstantI(0,vi.data(),16), pih=device->GetPixelShaderConstantI(0,pi.data(),16);
+    HRESULT vbh=device->GetVertexShaderConstantB(0,vb.data(),16), pbh=device->GetPixelShaderConstantB(0,pb.data(),16);
+    HRESULT wh=device->GetTransform(D3DTS_WORLD,&transforms[0]), viewh=device->GetTransform(D3DTS_VIEW,&transforms[1]), projh=device->GetTransform(D3DTS_PROJECTION,&transforms[2]);
+    auto blob=[&](HRESULT h,const void* p,size_t bytes){return SUCCEEDED(h)?s.store(p,bytes):std::string("null");};
+    std::string state="\"state\":{\"fvf\":"+std::to_string(fvf)+",\"fvf_hresult\":"+std::to_string(uint32_t(fvfh))+
+      ",\"vertex_declaration\":"+blob(declh,elements.data(),size_t(elementCount)*sizeof(D3DVERTEXELEMENT9))+
+      ",\"vs_shader\":"+s.shader(vs.get())+",\"ps_shader\":"+s.shader(ps.get())+
+      ",\"vs_f32\":"+blob(vfh,vf.data(),vf.size()*4)+",\"ps_f32\":"+blob(pfh,pf.data(),pf.size()*4)+
+      ",\"vs_i32\":"+blob(vih,vi.data(),sizeof(vi))+",\"ps_i32\":"+blob(pih,pi.data(),sizeof(pi))+
+      ",\"vs_bool32\":"+blob(vbh,vb.data(),sizeof(vb))+",\"ps_bool32\":"+blob(pbh,pb.data(),sizeof(pb))+
+      ",\"legacy_transforms\":"+((SUCCEEDED(wh)&&SUCCEEDED(viewh)&&SUCCEEDED(projh))?s.store(transforms.data(),sizeof(transforms)):"null")+
+      ",\"vs_registers\":"+std::to_string(s.vsRegisters)+",\"ps_registers\":"+std::to_string(s.psRegisters)+
+      ",\"vertex_mode\":"+quote(vs.get()?"programmable":"fixed_function")+"}";
+    if(SUCCEEDED(hresult)) s.lastDrawSequence=s.sequence;
+    s.emit("draw",uid,state+",\"api\":"+quote(name)+",\"hresult\":"+std::to_string(uint32_t(hresult))+",\"primitives\":"+std::to_string(primitives)+
       ",\"draw_index\":"+std::to_string(s.draws)+",\"color_id\":"+std::to_string(id(rt.get()))+",\"depth_id\":"+std::to_string(id(ds.get()))+
       ",\"vertex_shader_id\":"+std::to_string(id(vs.get()))+",\"pixel_shader_id\":"+std::to_string(id(ps.get()))+
       ",\"viewport\":"+viewportJson(v)+",\"z_enable\":"+std::to_string(z)+",\"z_write\":"+std::to_string(zw)+",\"alpha_blend\":"+std::to_string(blend)+
@@ -263,7 +320,7 @@ inline void afterPresent(IDirect3DDevice9* device, uint32_t uid, HRESULT hresult
     }
     if (s.active()) s.emit("present_result",uid,"\"hresult\":"+std::to_string(uint32_t(hresult))+",\"snapshots\":"+std::to_string(s.snapshots));
     // An attempted Present defines an observation frame, even if it failed.
-    s.frame++; s.draws=0; s.segmentDraws=0; s.snapshots=0; s.clearAttempts=0; s.otherAttempts=0; s.rangeAttempts=0; s.presentAttempts=0; s.lastSnapshotDraws=UINT64_MAX; s.lastPrefix.clear(); s.events=0;
+    s.frame++; s.draws=0; s.segmentDraws=0; s.snapshots=0; s.clearAttempts=0; s.otherAttempts=0; s.rangeAttempts=0; s.presentAttempts=0; s.lastSnapshotDraws=UINT64_MAX; s.lastPrefix.clear(); s.lastDrawSequence=UINT64_MAX; s.events=0;
     if (s.frame >= uint64_t(config().start)+config().frames) {
       s.emit("completed",uid,"\"game_capture\":\"observed_dispatcher\",\"semantic_labels\":\"unknown\",\"gpu_fg_execution\":\"unrun\""); s.stopped=true;
     }

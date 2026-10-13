@@ -44,7 +44,7 @@ def smoke(args):
     environment["LD_LIBRARY_PATH"] = str(runtime / "root/usr/lib/x86_64-linux-gnu/wine/x86_64-unix") + ":" + str(runtime / "root/usr/lib/x86_64-linux-gnu")
     if getattr(args, "observer", None) in ("enabled", "waiting", "triggered"):
         environment.update(LDB_CAPTURE_DIR="Z:" + str(directory / "observer").replace("/", "\\"),
-                           LDB_CAPTURE_START="0", LDB_CAPTURE_FRAMES=str(args.frames), LDB_CAPTURE_SNAPSHOTS="6" if getattr(args, "hdr_scene", False) else "3")
+                           LDB_CAPTURE_START="0", LDB_CAPTURE_FRAMES=str(args.frames), LDB_CAPTURE_STRIDE=str(getattr(args,"stride",1)), LDB_CAPTURE_SNAPSHOTS="6" if getattr(args, "hdr_scene", False) else "3")
         if getattr(args, "hdr_scene", False): environment["LDB_FIXTURE_HDR"] = "1"
         if args.observer == "waiting":
             environment["LDB_CAPTURE_TRIGGER"] = "Z:" + str(directory / "not-created.trigger").replace("/", "\\")
@@ -133,6 +133,7 @@ if __name__ == "__main__":
     parser.add_argument("--depth-format", choices=("auto", "d32", "d24"), default="auto")
     parser.add_argument("--validation", action="store_true")
     parser.add_argument("--negative-case", choices=("wrong-arch",))
+    parser.add_argument("--stride",type=int,choices=range(1,9),default=1)
     parser.add_argument("--hdr-scene", action="store_true")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))

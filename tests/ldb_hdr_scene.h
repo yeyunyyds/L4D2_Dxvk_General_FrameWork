@@ -14,8 +14,16 @@ void hdrScene(IDirect3DDevice9* device, uint32_t frame, uint32_t width, uint32_t
   const DWORD code[] = {0xffff0200,0x02000001,0x800f0800,0xa0e40000,0x0000ffff}; // ps_2_0 mov oC0,c0
   hr(device->CreatePixelShader(code,shader.put()), "HDR pixel shader");
   hr(device->SetPixelShader(shader.get()), "HDR bind shader");
-  hr(device->SetFVF(D3DFVF_XYZRHW), "HDR FVF");
-  hr(device->SetVertexShader(nullptr), "HDR fixed vertex shader");
+  Com<IDirect3DVertexShader9> vertexShader;
+  const DWORD vertexCode[]={0xfffe0200,0x0200001f,0x80000000,0x900f0000,0x03000014,0xc00f0000,0x90e40000,0xa0e40004,0x0000ffff};
+  hr(device->CreateVertexShader(vertexCode,vertexShader.put()),"HDR real VS");
+  Com<IDirect3DVertexDeclaration9> declaration;
+  const D3DVERTEXELEMENT9 elements[]={{0,0,D3DDECLTYPE_FLOAT4,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_POSITION,0},D3DDECL_END()};
+  hr(device->CreateVertexDeclaration(elements,declaration.put()),"HDR declaration");
+  hr(device->SetVertexDeclaration(declaration.get()),"HDR bind declaration");
+  hr(device->SetVertexShader(vertexShader.get()),"HDR bind VS");
+  const std::array<float,16> screenToClip{2.0f/float(width),0,0,-1+0.01f*float(frame),0,-2.0f/float(height),0,1,0,0,1,0,0,0,0,1};
+  hr(device->SetVertexShaderConstantF(4,screenToClip.data(),4),"HDR screen projection");
   hr(device->SetRenderState(D3DRS_ZENABLE,D3DZB_TRUE), "HDR ZENABLE");
   hr(device->SetRenderState(D3DRS_ZWRITEENABLE,TRUE), "HDR ZWRITE");
   hr(device->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESS), "HDR ZFUNC");
@@ -32,6 +40,13 @@ void hdrScene(IDirect3DDevice9* device, uint32_t frame, uint32_t width, uint32_t
     ldb_capture::draw(device,"HDR DrawPrimitiveUP",frame,result,1);
     hr(result,"HDR Draw");
   };
+  const std::array<float,16> matrix{1,0,0,float(frame),0,2,0,0,0,0,3,0,0,0,0,1};
+  hr(device->SetVertexShaderConstantF(12,matrix.data(),4),"State fixture constants");
+  Com<IDirect3DStateBlock9> block;
+  hr(device->CreateStateBlock(D3DSBT_ALL,block.put()),"State fixture capture");
+  const std::array<float,16> zero{};
+  hr(device->SetVertexShaderConstantF(12,zero.data(),4),"State fixture perturb");
+  hr(block->Apply(),"State fixture restore");
   triangle(0.25f,{4.0f,0.5f,0.25f,1.0f});
   D3DVIEWPORT9 nearView{0,0,width,height,0,0.1f};
   ldb_capture::viewportBefore(device,&nearView,frame);
@@ -44,4 +59,5 @@ void hdrScene(IDirect3DDevice9* device, uint32_t frame, uint32_t width, uint32_t
   ldb_capture::boundary(device,"SetRenderTarget",frame);
   hr(device->SetRenderTarget(0,original.get()), "HDR restore RT");
   hr(device->SetPixelShader(nullptr), "HDR restore pixel shader");
+  hr(device->SetVertexShader(nullptr), "HDR restore vertex shader");
 }

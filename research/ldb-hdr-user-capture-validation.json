@@ -1,0 +1,167 @@
+{
+  "uploaded_archive": "19864-19508171-2145014217216.7z",
+  "archive_sha256": "09fbd93936befbbaca2fa8c1466e1544acef15fb22c9b7754f9f27788f041d51",
+  "device": "Intel(R) Arc(TM) B580 Graphics",
+  "capture_complete": true,
+  "frames": 1,
+  "draws": 240,
+  "present_hresult": 0,
+  "snapshots": [
+    {
+      "prefix": "0-0-0",
+      "reason": "SetRenderTarget",
+      "color_format": 97,
+      "depth_format": 129,
+      "size": [
+        1920,
+        1200
+      ],
+      "depth_min": 0.9564821720123291,
+      "depth_max": 0.9974937438964844,
+      "finite_pixels": 2304000,
+      "non_clear_pixels": 2304000,
+      "unique_depth_values": 263475,
+      "files_sha256": {
+        "color.ppm": "6704d275cb5fe5664dcfe03869503dfb6c5ab4a5e30e69de4ca142a81fd4ed22",
+        "depth.pgm": "7dcac7420340bde954235e3d5257af3ddadab34a509974c89ab8273165aee58b",
+        "depth.f32": "f2a660269303bffe96cf3024d592713954441286867889aecdbce77a2a613114",
+        "color.rgba16f": "579021fd67d6bc19b390c9d38c134ecc00e8a04dc70e30c9fbce374127150349"
+      },
+      "hdr_rgb_min": 0.0039825439453125,
+      "hdr_rgb_max": 1.3193359375,
+      "hdr_values_above_one": 15,
+      "hdr_finite": true
+    },
+    {
+      "prefix": "0-0-1",
+      "reason": "SetRenderTarget",
+      "color_format": 97,
+      "depth_format": 129,
+      "size": [
+        1920,
+        1200
+      ],
+      "depth_min": 0.09004486352205276,
+      "depth_max": 0.9974937438964844,
+      "finite_pixels": 2304000,
+      "non_clear_pixels": 2304000,
+      "unique_depth_values": 286297,
+      "files_sha256": {
+        "color.ppm": "1f09ce919df180a4b807e69b3454bac02f715472964f1345cddcd965afb9c662",
+        "depth.pgm": "98825c7b05c81d3ba133fe7d8b2cbea6a915f1b1732c6e00bff85b11ec899b01",
+        "depth.f32": "31b5dcb5b745397cdd538b56e022dbbe5939ee07e3ba4aee1611d4020501fccf",
+        "color.rgba16f": "1897f2a78f9240572da85edbf8fd19474ff5db6fadea060feef76bcf2fbc2641"
+      },
+      "hdr_rgb_min": 0.0,
+      "hdr_rgb_max": 3.83984375,
+      "hdr_values_above_one": 176486,
+      "hdr_finite": true
+    },
+    {
+      "prefix": "0-0-2",
+      "reason": "Clear",
+      "color_format": 44,
+      "depth_format": 129,
+      "size": [
+        1920,
+        1200
+      ],
+      "depth_min": 1.0,
+      "depth_max": 1.0,
+      "finite_pixels": 2304000,
+      "non_clear_pixels": 0,
+      "unique_depth_values": 1,
+      "files_sha256": {
+        "color.ppm": "06ecc82ce8ba6bce8125ba8552a4b6ffddfefd63566886770faa294531dbe9a5",
+        "depth.pgm": "18078ad225752b26722b5f1ea42fe9454265cdea8f18ce0d2bbf4bb85397be60",
+        "depth.f32": "0af5f636a3a5049ccbcb8047bddf642762b48655a9d2a01127d84f5f2ad4a968"
+      }
+    },
+    {
+      "prefix": "0-0-3",
+      "reason": "Present",
+      "color_format": 44,
+      "depth_format": 129,
+      "size": [
+        1920,
+        1200
+      ],
+      "depth_min": 1.0,
+      "depth_max": 1.0,
+      "finite_pixels": 2304000,
+      "non_clear_pixels": 0,
+      "unique_depth_values": 1,
+      "files_sha256": {
+        "color.ppm": "1b9d131d33ecc369f5271ffe398ceca574c9b2d9b57eac7d9a6227f3b7189d66",
+        "depth.pgm": "18078ad225752b26722b5f1ea42fe9454265cdea8f18ce0d2bbf4bb85397be60",
+        "depth.f32": "0af5f636a3a5049ccbcb8047bddf642762b48655a9d2a01127d84f5f2ad4a968"
+      }
+    }
+  ],
+  "depth_range_boundaries": [
+    {
+      "event": "depth_range_before",
+      "device_id": 2145014217216,
+      "sequence": 94,
+      "frame": 0,
+      "generation": 0,
+      "uid": 38202928,
+      "previous": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1200,
+        "min_z": 0,
+        "max_z": 1
+      },
+      "next": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1200,
+        "min_z": 0,
+        "max_z": 0.1
+      },
+      "snapshot_prefix": "0-0-0",
+      "semantic_label": "candidate_only"
+    }
+  ],
+  "depth_change": {
+    "pixels": 90563,
+    "fraction": 0.03930685763888889,
+    "unchanged_fraction": 0.9606931423611111,
+    "all_changed_depth_below_0_1": true,
+    "changed_depth_range": [
+      0.09004486352205276,
+      0.09626806527376175
+    ],
+    "mask_bounds_xy": [
+      781,
+      730,
+      1241,
+      1199
+    ]
+  },
+  "visual_observation": "First HDR image depicts the floor/scene without the later pistol and hands. Second adds that near viewmodel; depth change silhouette corresponds to those additions. Existing foreground body/clothing geometry can remain in the first image, so it is not certified as a universally clean world-only pass.",
+  "conclusion": "Nonconstant scene depth and a near-viewmodel boundary are supported for this one captured view; late backbuffer depth remains all 1.0. HDR floats above one are preserved.",
+  "skips": [
+    {
+      "event": "snapshot_skipped",
+      "device_id": 2145014217216,
+      "sequence": 151,
+      "frame": 0,
+      "generation": 0,
+      "uid": 38203230,
+      "reason": "SetRenderTarget",
+      "message": "Mismatched extent or capture byte/extent budget exceeded"
+    }
+  ],
+  "limits": [
+    "One frame and one view only; no cross-frame camera/motion verification",
+    "No Reset event in this capture",
+    "No validation-layer activation evidence in uploaded logs",
+    "Depth is normalized device depth, not linear eye-space distance",
+    "Not proof of a universally HUD/viewmodel-free world pass across maps/models",
+    "Frame generation not executed"
+  ]
+}
