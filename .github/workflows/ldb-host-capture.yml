@@ -27,16 +27,21 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force ci-logs | Out-Null
+          function Invoke-Logged {
+            param([string]$Name, [string]$Command)
+            $log = "ci-logs\$Name.log"
+            & cmd.exe /d /c "$Command > $log 2>&1"
+            $result = $LASTEXITCODE
+            if (Test-Path $log) { Get-Content -Encoding UTF8 $log }
+            if ($result -ne 0) { throw "$Name failed: $result" }
+          }
           Start-Transcript -Path native-build.log
           try {
-            python scripts/prepare_research.py
-            if ($LASTEXITCODE -ne 0) { throw 'Research dependency preparation failed' }
-            python scripts/prepare_ldb_capture.py
-            if ($LASTEXITCODE -ne 0) { throw 'Pinned LDB capture source preparation failed' }
-            python -m unittest discover -s tests -v
-            if ($LASTEXITCODE -ne 0) { throw 'Capture evidence tests failed' }
-            & powershell.exe -NoProfile -File scripts/build_ldb_capture.ps1
-            if ($LASTEXITCODE -ne 0) { throw 'Native build or package verification failed' }
+            Invoke-Logged 'prepare-research' 'python scripts/prepare_research.py'
+            Invoke-Logged 'prepare-host' 'python scripts/prepare_ldb_capture.py'
+            Invoke-Logged 'tests' 'python -m unittest discover -s tests -v'
+            Invoke-Logged 'native-build' 'powershell.exe -NoProfile -File scripts/build_ldb_capture.ps1'
           } finally { Stop-Transcript }
       - name: Prepare build status ZIP
         if: always()

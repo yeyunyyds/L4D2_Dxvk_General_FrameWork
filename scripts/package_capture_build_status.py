@@ -23,6 +23,8 @@ with zipfile.ZipFile(out / 'ldb-host-capture-build-status.zip', 'w', zipfile.ZIP
     archive.writestr('status.json', json.dumps(status, indent=2) + '\n')
     log = ROOT / 'native-build.log'
     if log.is_file(): archive.write(log, 'native-build.log')
+    for path in sorted((ROOT / 'ci-logs').glob('*.log')):
+        archive.write(path, 'ci-logs/' + path.name)
     for path in sorted((ROOT / '.research/ldb-capture-source').glob('bridge/_captureRelease_*/meson-logs/*.txt')):
         archive.write(path, path.relative_to(ROOT / '.research/ldb-capture-source').as_posix())
 print(json.dumps(status, indent=2))
