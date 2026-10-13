@@ -174,7 +174,7 @@
   ],
   "source_sha256": {
     "integration/ldb/frame_generation.h": "1c78e1254af68cb244dd4266873f76d1ca034dfa86673c8c555f304ddacb8346",
-    "tools/resident_frame_generator.h": "876ed4a8d9e78e2fd7cdc2cbd2531091d7ce3ef563761b25aa966e71d49e4d28",
+    "tools/resident_frame_generator.h": "d23453fd819055bfa82a002bd5e8892b083d09f46df3982a18dbd8b6c93ecb95",
     "tools/frame_generate_spirv.h": "81550aa60ff2afa034a1269aba9575d9267cee296fb54d218cde97d8fc714b13",
     "shaders/frame_generate.comp": "d639b3df000d52637cb43d8087d6d6fe886bb7dfc90ac92a69db97558b6eb211"
   },
@@ -182,7 +182,8 @@
     "Wine/Mesa tests do not establish B580 performance or display FPS.",
     "Tests before final fixture identity differ by capture clock/test flags and added near/UI metadata only; image algorithm and command batching are unchanged.",
     "Dynamic preservation is a conservative fallback, not object motion interpolation.",
-    "A timer budget is not a hard latency bound; actual scheduler delay is logged."
+    "A timer budget is not a hard latency bound; actual scheduler delay is logged.",
+    "Final revision moves command recording state changes to safe success/reset points; generation and injected backend failure fixtures pass. Vulkan command allocation/recording failures are not injected."
   ],
   "final_session_analysis": {
     "successful_generated_presents": 14,
@@ -372,5 +373,49 @@
         "mode": "paired"
       }
     ]
-  }
+  },
+  "final_command_buffer_state_checks": [
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "f057e8ba1aa64a17882c88aec44fe4e5",
+      "frames": 16,
+      "backend_calls": 28,
+      "actual_present_calls": 27,
+      "generated_backbuffers_verified": 12,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 6,
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "7b5be167e0d2aca561a2b8bc5d512fad3f3ead1c1d9bcc45290c21c3def02c6c",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "e0dadc4600944fdfb47baa7af17103ab",
+      "frames": 16,
+      "backend_calls": 16,
+      "actual_present_calls": 16,
+      "generated_backbuffers_verified": 14,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 6,
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "7b5be167e0d2aca561a2b8bc5d512fad3f3ead1c1d9bcc45290c21c3def02c6c",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    }
+  ]
 }

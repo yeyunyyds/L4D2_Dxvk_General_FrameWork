@@ -129,17 +129,17 @@ private:
   void begin() {
     if (recording)
       return;
-    recording = true;
     vkcheck(c.vkResetCommandPool(c.device, c.pool, 0), "FG command reset");
     vkcheck(c.vkResetFences(c.device, 1, &c.fence), "FG fence reset");
     VkCommandBufferBeginInfo b{};
     b.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     b.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkcheck(c.vkBeginCommandBuffer(c.command, &b), "FG begin");
+    recording = true;
   }
   void end() {
-    vkcheck(c.vkEndCommandBuffer(c.command), "FG end");
     recording = false;
+    vkcheck(c.vkEndCommandBuffer(c.command), "FG end");
     VkSubmitInfo s{};
     s.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     s.commandBufferCount = 1;
