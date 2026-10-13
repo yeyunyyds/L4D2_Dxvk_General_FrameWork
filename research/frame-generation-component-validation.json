@@ -119,5 +119,6 @@
   "game_b580_frame_generation": "unrun; next user acceptance",
   "production_pacing": "unimplemented; extra Present not guaranteed monitor FPS",
   "foreground_handling": "current-pixel masks; not independent RGBA layers",
-  "earlier_run_note": "Initial normal/preview/D24/off runs preceded capture-budget/logging additions; shader and image/presentation algorithm unchanged. Final fixture partial/failure runs use current runtime."
+  "earlier_run_note": "Initial normal/preview/D24/off runs preceded capture-budget/logging additions; shader and image/presentation algorithm unchanged. Final fixture partial/failure runs use current runtime.",
+  "real_captured_b580_matrix_pairs_accepted": 21
 }
