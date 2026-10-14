@@ -625,8 +625,11 @@ struct State {
               generatedFrame = false;
               emit(
                   "frame_rejected", uid,
-                  "\"reason\":\"invalid_scene_coverage\",\"invalid_scene_"
-                  "ratio\":" +
+                  "\"reason\":" +
+                      quote(quality.rejectReason(uint64_t(gpu->width) *
+                                                 gpu->height)) +
+                      ",\"invalid_scene_"
+                      "ratio\":" +
                       std::to_string(quality.invalidSceneRatio()) +
                       ",\"invalid_pixels\":" + std::to_string(quality.invalid) +
                       ",\"total_pixels\":" + std::to_string(quality.total) +
@@ -769,6 +772,15 @@ struct State {
             ",\"quality_rejected\":" +
             std::string(qualityRejected ? "true" : "false") +
             ",\"quality_total_pixels\":" + std::to_string(quality.total) +
+            ",\"foreground_pixels\":" + std::to_string(quality.foreground) +
+            ",\"near_colour_pixels\":" + std::to_string(quality.nearColour) +
+            ",\"near_depth_pixels\":" + std::to_string(quality.nearDepth) +
+            ",\"ui_pixels\":" + std::to_string(quality.ui) +
+            ",\"scene_reprojected_pixels\":" +
+            std::to_string(quality.reprojected) + ",\"foreground_ratio\":" +
+            std::to_string(quality.foregroundRatio()) +
+            ",\"scene_reprojection_ratio\":" +
+            std::to_string(quality.sceneReprojectionRatio()) +
             ",\"invalid_scene_ratio\":" +
             std::to_string(quality.invalidSceneRatio()) +
             ",\"near_preserved\":" +

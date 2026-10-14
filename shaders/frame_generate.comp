@@ -25,25 +25,34 @@ bool locate(uint matrix,vec4 clip,out vec2 xy,out float z) {
  v.xyz/=v.w;xy=vec2((v.x+1)*float(p.flags.x)/2,(1-v.y)*float(p.flags.y)/2);z=v.z;
  return inside(xy);
 }
-bool foreground(vec2 xy,bool previous) {
+uint foregroundSources(vec2 xy,bool previous) {
+ uint sources=0u;
  uint f=previous?p.flags.w:p.flags.z;
  if((f&8u)!=0u) {
   vec3 a=previous?sampleAt(previousNearBefore,xy).rgb:sampleAt(currentNearBefore,xy).rgb;
   vec3 b=previous?sampleAt(previousNearAfter,xy).rgb:sampleAt(currentNearAfter,xy).rgb;
   // Same-format before/after HDR snapshots: detect the actual colour draw,
   // including viewmodels with disabled depth writes and alpha materials.
-  if(any(greaterThan(abs(a-b),vec3(0.00001))))return true;
+  if(any(greaterThan(abs(a-b),vec3(0.00001))))sources|=4u;
  }
  if((f&1u)!=0u) {
   float d=previous?sampleAt(previousNear,xy).r:sampleAt(currentNear,xy).r;
-  if(d>=0&&d<=0.10001)return true;
+  if(d>=0&&d<=0.10001)sources|=1u;
  }
  if((f&2u)!=0u) {
   vec3 finalColor=previous?sampleAt(previousFinal,xy).rgb:sampleAt(currentFinal,xy).rgb;
   vec3 before=previous?sampleAt(previousUi,xy).rgb:sampleAt(currentUi,xy).rgb;
-  if(any(greaterThan(abs(finalColor-before),vec3(0.5/255))))return true;
+  if(any(greaterThan(abs(finalColor-before),vec3(0.5/255))))sources|=2u;
  }
- return false;
+ return sources;
+}
+bool foreground(vec2 xy,bool previous) {
+ uint f=previous?p.flags.w:p.flags.z;
+ uint sources=foregroundSources(xy,previous);
+ // Complete before/after colour is authoritative. A cleared near depth
+ // buffer can classify the entire scene as a viewmodel. Keep depth diagnostic
+ // counts, but do not OR that raw range into a valid colour mask.
+ return (sources & (((f&8u)!=0u)?6u:3u))!=0u;
 }
 bool foregroundEdge(vec2 xy) {
  if(foreground(xy,false))return true;
@@ -63,9 +72,10 @@ bool temporalChange(vec2 cx,vec2 px) {
  return changed>=2;
 }
 layout(set=0,binding=15,std430) buffer FrameQuality { uint counts[]; } quality;
-shared uvec3 groupCounts[64];
+shared uvec4 groupCounts[64];
+shared uvec4 sourceCounts[64];
 void main() {
- uint local=gl_LocalInvocationIndex;uvec3 cell=uvec3(0u);
+ uint local=gl_LocalInvocationIndex;uvec4 cell=uvec4(0u),sources=uvec4(0u);
  ivec2 xy=ivec2(gl_GlobalInvocationID.xy);
  if(all(lessThan(xy,ivec2(p.flags.xy)))) {
  vec2 screen=vec2(xy);vec4 fallback=sampleAt(currentFinal,screen),result=fallback;vec4 mark=vec4(1,0,0,1);
@@ -106,15 +116,19 @@ void main() {
  result.a=1;
  if((p.flags.z&4u)!=0u)result=result.bgra;
  imageStore(generated,xy,result);imageStore(classification,xy,mark);
+ uint raw=foregroundSources(screen,false);
+ sources=uvec4(uint((raw&4u)!=0u),uint((raw&1u)!=0u),uint((raw&2u)!=0u),0u);
  cell.x=1u;
+ if(mark.g>.5&&!(mark.r>.5&&mark.b<.5))cell.w=1u;
  if(mark.r>.5&&mark.g<.5&&mark.b<.5)cell.y=1u;
  if(mark.r>.5&&mark.g>.5&&mark.b<.5)cell.z=1u;
  }
- groupCounts[local]=cell;barrier();
- for(uint stride=32u;stride>0u;stride/=2u){if(local<stride)groupCounts[local]+=groupCounts[local+stride];barrier();}
+ groupCounts[local]=cell;sourceCounts[local]=sources;barrier();
+ for(uint stride=32u;stride>0u;stride/=2u){if(local<stride){groupCounts[local]+=groupCounts[local+stride];sourceCounts[local]+=sourceCounts[local+stride];}barrier();}
  if(local==0u) {
-  uint offset=(gl_WorkGroupID.y*gl_NumWorkGroups.x+gl_WorkGroupID.x)*4u;
+  uint offset=(gl_WorkGroupID.y*gl_NumWorkGroups.x+gl_WorkGroupID.x)*8u;
   quality.counts[offset]=groupCounts[0].x;quality.counts[offset+1u]=groupCounts[0].y;
-  quality.counts[offset+2u]=groupCounts[0].z;quality.counts[offset+3u]=0u;
+  quality.counts[offset+2u]=groupCounts[0].z;quality.counts[offset+3u]=groupCounts[0].w;
+  for(uint i=0u;i<4u;i++)quality.counts[offset+4u+i]=sourceCounts[0][i];
  }
 }

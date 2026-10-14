@@ -54,14 +54,35 @@ private:
 
 public:
   struct Quality {
-    uint32_t total = 0, invalid = 0, foreground = 0, reserved = 0;
+    uint32_t total = 0, invalid = 0, foreground = 0, reprojected = 0;
+    uint32_t nearColour = 0, nearDepth = 0, ui = 0, reserved = 0;
     double invalidSceneRatio() const {
       return total > foreground ? double(invalid) / double(total - foreground)
                                 : 0;
     }
+    double foregroundRatio() const {
+      return total ? double(foreground) / total : 0;
+    }
+    double sceneReprojectionRatio() const {
+      return total > foreground
+                 ? double(reprojected) / double(total - foreground)
+                 : 0;
+    }
+    const char *rejectReason(uint64_t expected) const {
+      if (total != expected ||
+          uint64_t(invalid) + foreground + reprojected > total ||
+          nearColour > total || nearDepth > total || ui > total)
+        return "invalid_quality_counts";
+      if (foregroundRatio() > .8)
+        return "excessive_foreground_coverage";
+      if (invalidSceneRatio() > .15)
+        return "invalid_scene_coverage";
+      if (sceneReprojectionRatio() < .05)
+        return "insufficient_scene_reprojection";
+      return nullptr;
+    }
     bool reject(uint64_t expected) const {
-      return total != expected || uint64_t(invalid) + foreground > total ||
-             invalidSceneRatio() > .15;
+      return rejectReason(expected) != nullptr;
     }
   };
   struct Counters {
@@ -448,7 +469,7 @@ public:
     vkcheck(vkCreateSampler(c.device, &sam, nullptr, &sampler), "FG sampler");
     buffer(uniform, uniformMemory, uniformMap, sizeof(Params),
            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    static_assert(sizeof(Quality) == 16, "FG quality ABI");
+    static_assert(sizeof(Quality) == 32, "FG quality ABI");
     VkBufferCreateInfo qb{};
     qb.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     qualityResultOffset =

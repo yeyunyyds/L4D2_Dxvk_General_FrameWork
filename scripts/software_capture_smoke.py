@@ -111,7 +111,7 @@ def smoke(args):
                     events=read_events(directory/"capture.jsonl")
                     if process.returncode!=0 or not events or events[-1]['event']!='completed':raise ValueError('FG fixture failed; inspect capture.jsonl')
                     selection=[e for e in events if e['event']=='near_fixture_selection']
-                    if len(selection)!=1 or selection[0]['mixed']!=(args.fg_near_case=='no_depth_and_rebind'):raise ValueError('Requested near fixture case not executed')
+                    if len(selection)!=1 or selection[0]['mixed']!=(args.fg_near_case!='normal'):raise ValueError('Requested near fixture case not executed')
                     presents=[e for e in events if e['event']=='fixture_present']
                     expected_generated=0 if args.fg_mode=='off' else args.frames-2-(2 if getattr(args,'fg_case','normal')!='normal' else 0)
                     expected=args.frames if args.fg_mode in ('off','generated') else args.frames+expected_generated
@@ -135,7 +135,7 @@ def smoke(args):
                         if not dispatch or any(x<0 for x in dispatch):raise ValueError('Fixture GPU timestamps unavailable')
                         normal=[e for e in metrics if e['generated'] and not e['captured']]
                         # scene, two near colour copies, depth, UI, final, combined compute/write, restore.
-                        expected_submissions=10 if getattr(args,'fg_near_case',None)=='no_depth_and_rebind' else 8
+                        expected_submissions=10 if getattr(args,'fg_near_case',None)!='normal' else 8
                         if not normal or any(e['gpu_submissions']!=expected_submissions for e in normal):raise ValueError('Combined dispatch/write submission not verified')
                         result['gpu_timestamps']='verified';result['combined_submission_count']=expected_submissions
                         if any(not e.get('near_colour_mask_valid') for e in metrics if e['generated']):raise ValueError('Near colour mask not validated')
@@ -151,9 +151,13 @@ def smoke(args):
                             elif event['event']=='frame_metrics' and event.get('quality_total_pixels'):
                                 if not init or event['quality_total_pixels']!=init['width']*init['height']:raise ValueError('GPU quality counter missed pixels')
                         rejects=[e for e in fgevents if e['event']=='frame_rejected']
-                        if args.fg_case=='quality':
+                        if args.fg_case in ('quality','mask_contamination'):
                             if [e['frame'] for e in rejects]!=[2,3] or any(not e.get('original_restored') or e.get('presented') for e in rejects):raise ValueError('Quality-rejected candidate was presented')
                         elif rejects:raise ValueError('Normal fixture was incorrectly rejected')
+                        if args.fg_case=='mask_contamination' and any(e['reason']!='excessive_foreground_coverage' for e in rejects):raise ValueError('Contamination rejection reason not validated')
+                        if args.fg_near_case=='depth_clear_zero':
+                            if any(e['near_depth_pixels']!=e['quality_total_pixels'] or e['foreground_ratio']>.3 or e['near_colour_pixels']==0 for e in metrics if e['generated']):raise ValueError('Cleared depth poisoned foreground mask')
+                            result['cleared_depth_diagnostic']='full_depth_coverage_while_foreground_stays_local'
                         result['whole_frame_quality']='verified';result['rejected_frames']=[e['frame'] for e in rejects]
                         result['fg_events']='verified';result['history_storage']='full_size_gpu'
                 else:
@@ -202,10 +206,10 @@ if __name__ == "__main__":
     parser.add_argument("--gpu-reproject", action="store_true")
     parser.add_argument("--fg-mode",choices=("paired","generated","off"))
     parser.add_argument("--fg-odd-extent",action="store_true")
-    parser.add_argument("--fg-near-case",choices=("normal","no_depth_and_rebind"),default="normal")
+    parser.add_argument("--fg-near-case",choices=("normal","no_depth_and_rebind","depth_clear_zero"),default="normal")
     parser.add_argument("--fg-auto-capture",action="store_true")
     parser.add_argument("--fg-pacing-ms",type=int,choices=range(9),default=0)
-    parser.add_argument("--fg-case",choices=("normal","partial","failure","quality"),default="normal")
+    parser.add_argument("--fg-case",choices=("normal","partial","failure","quality","mask_contamination"),default="normal")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))
     args = parser.parse_args()

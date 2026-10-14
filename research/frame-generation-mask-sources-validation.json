@@ -1,0 +1,157 @@
+{
+  "status": "passed_software_fixture",
+  "python_tests_passed": 43,
+  "gpu_runs": [
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "71cc91f7f18042de895a3c5221ef2c7b",
+      "frames": 16,
+      "backend_calls": 16,
+      "actual_present_calls": 16,
+      "generated_backbuffers_verified": 14,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 10,
+      "near_colour_mask": "verified_before_after_HDR",
+      "near_fixture_case": "depth_clear_zero",
+      "cleared_depth_diagnostic": "full_depth_coverage_while_foreground_stays_local",
+      "whole_frame_quality": "verified",
+      "rejected_frames": [],
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "efdcc91e1f94bac81f097c8bfa2c9241224da7265245e406164adcb3a1f7af4f",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "b9bd80597850488ab068587227f94c9f",
+      "frames": 16,
+      "backend_calls": 28,
+      "actual_present_calls": 28,
+      "generated_backbuffers_verified": 12,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 10,
+      "near_colour_mask": "verified_before_after_HDR",
+      "near_fixture_case": "no_depth_and_rebind",
+      "whole_frame_quality": "verified",
+      "rejected_frames": [
+        2,
+        3
+      ],
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "efdcc91e1f94bac81f097c8bfa2c9241224da7265245e406164adcb3a1f7af4f",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    },
+    {
+      "dynamic_pixels": "verified_actual_backbuffer",
+      "status": "passed",
+      "run_id": "35fb32610f024bd495424bfab8ce7e70",
+      "frames": 16,
+      "backend_calls": 16,
+      "actual_present_calls": 16,
+      "generated_backbuffers_verified": 12,
+      "ui_and_near_pixels": "verified_actual_backbuffer",
+      "gpu_fg_execution": "executed_fixture",
+      "game_capture": "unrun",
+      "gpu_timestamps": "verified",
+      "combined_submission_count": 8,
+      "near_colour_mask": "verified_before_after_HDR",
+      "near_fixture_case": "normal",
+      "whole_frame_quality": "verified",
+      "rejected_frames": [
+        2,
+        3
+      ],
+      "fg_events": "verified",
+      "history_storage": "full_size_gpu",
+      "vulkan_validation": "passed_no_reported_errors",
+      "platform": "Wine 10 / Mesa llvmpipe / Xvfb",
+      "b580_validation": "unrun",
+      "exe_sha256": "efdcc91e1f94bac81f097c8bfa2c9241224da7265245e406164adcb3a1f7af4f",
+      "backend_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+    }
+  ],
+  "depth_mask_counterfactual": {
+    "run_id": "3dc95f7888134c149e3ff9dd1305358e",
+    "only_change": "isolated_shader_restores_raw_depth_OR_even_with_valid_colour",
+    "expected_failure": "Generated midpoint fixture fails when all cleared-depth pixels are preserved",
+    "observed_native_error": [
+      "Generated image was not the expected midpoint in the actual backbuffer"
+    ],
+    "observed_rejection": {
+      "event": "frame_rejected",
+      "frame": 1,
+      "generation": 0,
+      "uid": 1,
+      "cpu_qpc": 258108863848,
+      "reason": "excessive_foreground_coverage",
+      "invalid_scene_ratio": 0.0,
+      "invalid_pixels": 0,
+      "total_pixels": 230400,
+      "foreground_pixels": 230400,
+      "original_restored": true,
+      "presented": false
+    }
+  },
+  "submitted_capture_degenerate_mask_replay": [
+    {
+      "frame": 15491,
+      "yellow_fraction": 0.9986015625,
+      "ui_changed_fraction": 0.05442578125,
+      "ui_changed_above_1": 0.05378125,
+      "ui_max": 244,
+      "ui_mean": 2.10937890625,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 15492,
+      "yellow_fraction": 0.99853125,
+      "ui_changed_fraction": 0.05443359375,
+      "ui_changed_above_1": 0.0538125,
+      "ui_max": 255,
+      "ui_mean": 2.1177174479166667,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 15493,
+      "yellow_fraction": 0.9985703125,
+      "ui_changed_fraction": 0.05446484375,
+      "ui_changed_above_1": 0.0538203125,
+      "ui_max": 255,
+      "ui_mean": 2.1611236979166666,
+      "ui_changed_non_yellow": 0
+    }
+  ],
+  "guards": {
+    "foreground_full_screen_limit": 0.8,
+    "invalid_scene_limit": 0.15,
+    "minimum_scene_reprojection_fraction": 0.05,
+    "statistics_readback_bytes": 32,
+    "colour_authoritative_when_complete": true,
+    "raw_near_depth_diagnostic_retained": true
+  },
+  "shader_sha256": {
+    "shaders/frame_generate.comp": "dfa73921e685f3fc74851479f82adb198d2820bdec9f555736aca2f7b3b92fe1",
+    "shaders/frame_quality.comp": "5b8ad38ee24fdeac75d282353a9a3d3d3b1379f0d873a911f5e630f434e6fc76"
+  },
+  "limits": [
+    "Exact B580 mask source remains unresolved until new split counters are exercised. Original archive contains neither near-depth nor near-HDR snapshots.",
+    "Removing depth OR fixes one demonstrated mechanism. Excessive near-colour contamination safely restores original; it is not complete near-layer semantic segmentation.",
+    "This revision is not yet accepted in B580 game.",
+    "No dynamic-object interpolation, complete disocclusion reconstruction or monitor display cadence claim."
+  ]
+}

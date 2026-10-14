@@ -84,8 +84,9 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   D3DVIEWPORT9 nearView{0, 0, width, height, 0, .1f};
   ldb_fg::viewport(device, &nearView, frame);
   hr(device->SetViewport(&nearView), "FG fixture near");
-  bool mixedNear =
-      ldb_fg::readEnv(L"LDB_FG_FIXTURE_NEAR_CASE") == L"no_depth_and_rebind";
+  bool mixedNear = ldb_fg::readEnv(L"LDB_FG_FIXTURE_NEAR_CASE") != L"normal";
+  bool zeroDepth =
+      ldb_fg::readEnv(L"LDB_FG_FIXTURE_NEAR_CASE") == L"depth_clear_zero";
   if (frame == 0)
     std::cout << "{\"event\":\"near_fixture_selection\",\"mixed\":"
               << (mixedNear ? "true" : "false") << ",\"env_size\":"
@@ -94,13 +95,25 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   if (mixedNear) {
     // A real near pass may clear before drawing and repeat a target boundary.
     ldb_fg::boundary(device, frame);
-    HRESULT clear = device->Clear(0, nullptr, D3DCLEAR_ZBUFFER, 0, 1, 0);
+    HRESULT clear = device->Clear(0, nullptr, D3DCLEAR_ZBUFFER, 0,
+                                  zeroDepth ? 0.f : 1.f, 0);
     ldb_fg::clear(device, frame, clear);
     hr(clear, "FG fixture near clear");
     hr(device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE),
        "FG fixture near no depth writes");
+    if (zeroDepth)
+      hr(device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE),
+         "FG fixture zero depth test");
   }
   projection(0);
+  bool contaminated =
+      ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"mask_contamination" &&
+      (frame == 2 || frame == 3);
+  if (contaminated) {
+    hr(device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE),
+       "FG fixture colour contamination z");
+    quad(0, 0, float(width), float(height), .02f, {.12f, .21f, .34f, 1});
+  }
   quad(.72f * width, .7f * height, .9f * width, .95f * height, .05f,
        {.9f, .9f, .08f, 1});
   if (mixedNear) {
@@ -162,11 +175,15 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
              x * 4;
     return std::array<int, 3>{p[2], p[1], p[0]};
   };
+  bool contaminated =
+      ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"mask_contamination" &&
+      (frame == 2 || frame == 3);
+  auto originalBackground = rgb(uint32_t(width * .4f), uint32_t(height * .4f));
   auto nearColor = rgb(uint32_t(width * .8f), uint32_t(height * .8f));
   auto ui = rgb(20, 20);
   auto dynamic =
       rgb(uint32_t(width * (.61f + .01f * frame)), uint32_t(height * .43f));
-  if (ldb_fg::readEnv(L"LDB_FG_FIXTURE_NEAR_CASE") == L"no_depth_and_rebind") {
+  if (ldb_fg::readEnv(L"LDB_FG_FIXTURE_NEAR_CASE") != L"normal") {
     uint32_t stripeStart = uint32_t(width * .74f);
     for (uint32_t i = 0; i < 16; i++) {
       auto pixel = rgb(stripeStart + i * 4 + 2, uint32_t(height * .8f));
@@ -191,18 +208,23 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   read->UnlockRect();
   if (qualityCase && frame == 3 && redPixels > uint32_t(width * .15f) + 3)
     throw std::runtime_error("Quality fallback duplicated scene geometry");
-  if (!(qualityCase && frame == 2) &&
+  if (!contaminated && !(qualityCase && frame == 2) &&
       (dynamic[0] > 35 || (frame % 2 ? (dynamic[1] < 220 || dynamic[2] > 65)
                                      : (dynamic[1] > 35 || dynamic[2] < 220))))
     throw std::runtime_error(
         "Changing object was blended or camera-warped instead of preserved");
   float expected = .2f * width +
                    .01f * float(width) * (float(frame) - (generated ? .5f : 0));
-  if (qualityCase && frame == 2)
+  if (contaminated || (qualityCase && frame == 2))
     expected = float(width);
   if (std::abs(float(edge) - expected) > 2)
     throw std::runtime_error("Generated image was not the expected midpoint in "
                              "the actual backbuffer");
+  if (contaminated && (std::abs(originalBackground[0] - 31) > 2 ||
+                       std::abs(originalBackground[1] - 54) > 2 ||
+                       std::abs(originalBackground[2] - 87) > 2))
+    throw std::runtime_error(
+        "Contaminated near mask did not preserve original backbuffer");
   if (nearColor[0] < 220 || nearColor[1] < 220 || nearColor[2] > 30)
     throw std::runtime_error(
         "Near weapon pixels were altered by frame generation");
