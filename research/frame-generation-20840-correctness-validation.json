@@ -1,0 +1,995 @@
+{
+  "upload": "fg-20840-976406-1371537021312.7z",
+  "upload_sha256": "6b8e858d711c6d694d264ccf5e11210e865a2071f6c03a3a6721ca6288f3fa73",
+  "overall_correctness": "not_accepted_near_mask_false_positive_and_degenerate_generated_frames",
+  "platform": {
+    "event": "gpu_initialized",
+    "frame": 9106,
+    "generation": 0,
+    "uid": 0,
+    "cpu_qpc": 10384365852,
+    "width": 1920,
+    "height": 1200,
+    "physical_device": "Intel(R) Arc(TM) B580 Graphics"
+  },
+  "session_duration_seconds": 190.8355155,
+  "log_complete": true,
+  "successful_generated_presents": 8762,
+  "generated_by_mode": {
+    "generated": 8762
+  },
+  "logical_presents": 35158,
+  "errors": [],
+  "mode_changes": [
+    {
+      "event": "mode",
+      "frame": 18779,
+      "generation": 0,
+      "uid": 57617578,
+      "cpu_qpc": 11115425859,
+      "enabled": false,
+      "mode": "generated"
+    }
+  ],
+  "whole_frame_guard": {
+    "rejected_candidates": 896,
+    "ratio_range": [
+      0.150936,
+      1.0
+    ],
+    "all_logged_original_restored_and_not_presented": true,
+    "gpu_quality_total_pixels": [
+      2304000
+    ],
+    "captured_rejected_candidates": [
+      {
+        "frame": 9334,
+        "invalid_scene_ratio": 0.585524,
+        "foreground_pixels": 218109,
+        "original_restored": true,
+        "presented": false
+      },
+      {
+        "frame": 12446,
+        "invalid_scene_ratio": 0.429218,
+        "foreground_pixels": 218267,
+        "original_restored": true,
+        "presented": false
+      },
+      {
+        "frame": 15494,
+        "invalid_scene_ratio": 0.501947,
+        "foreground_pixels": 375629,
+        "original_restored": true,
+        "presented": false
+      },
+      {
+        "frame": 18219,
+        "invalid_scene_ratio": 0.338881,
+        "foreground_pixels": 225309,
+        "original_restored": true,
+        "presented": false
+      }
+    ],
+    "evidence_limit": "B580 log records successful restoration path; uploaded candidate images are saved before rejection and do not directly capture monitor output."
+  },
+  "mask_false_positive": {
+    "frames": [
+      15491,
+      15492,
+      15493
+    ],
+    "samples": [
+      {
+        "pixel_check": {
+          "frame": 15491,
+          "yellow_pixels": 255642,
+          "yellow_changed": 0,
+          "yellow_max": 0,
+          "total_changed": 204,
+          "mean_difference": 0.0030794270833333333
+        },
+        "ui_check": {
+          "frame": 15491,
+          "yellow_fraction": 0.9986015625,
+          "ui_changed_fraction": 0.05442578125,
+          "ui_changed_above_1": 0.05378125,
+          "ui_max": 244,
+          "ui_mean": 2.10937890625,
+          "ui_changed_non_yellow": 0
+        },
+        "frame_metrics": {
+          "event": "frame_metrics",
+          "frame": 15491,
+          "generation": 0,
+          "uid": 43137690,
+          "cpu_qpc": 10837458290,
+          "enabled": true,
+          "mode": "generated",
+          "generated": true,
+          "captured": true,
+          "quality_rejected": false,
+          "quality_total_pixels": 2304000,
+          "invalid_scene_ratio": 0.096396,
+          "near_preserved": true,
+          "near_colour_mask_valid": true,
+          "near_draws": 18,
+          "ui_boundary_observed": true,
+          "arrival_qpc": 10833680277,
+          "host_work_ms": 377.7651,
+          "capture_ms": 359.1696,
+          "gpu_dispatch_ms": 0.145208,
+          "fence_wait_ms": 37.129,
+          "gpu_submissions": 16,
+          "generated_present_ms": 0.0,
+          "logical_present_ms": 0.0149,
+          "pacing_wait_ms": 0.0,
+          "generated_present_start_qpc": 0,
+          "logical_present_start_qpc": 10837304829,
+          "paired_start_gap_ms": 0.0
+        }
+      },
+      {
+        "pixel_check": {
+          "frame": 15492,
+          "yellow_pixels": 255624,
+          "yellow_changed": 0,
+          "yellow_max": 0,
+          "total_changed": 225,
+          "mean_difference": 0.004580729166666667
+        },
+        "ui_check": {
+          "frame": 15492,
+          "yellow_fraction": 0.99853125,
+          "ui_changed_fraction": 0.05443359375,
+          "ui_changed_above_1": 0.0538125,
+          "ui_max": 255,
+          "ui_mean": 2.1177174479166667,
+          "ui_changed_non_yellow": 0
+        },
+        "frame_metrics": {
+          "event": "frame_metrics",
+          "frame": 15492,
+          "generation": 0,
+          "uid": 43141464,
+          "cpu_qpc": 10841092986,
+          "enabled": true,
+          "mode": "generated",
+          "generated": true,
+          "captured": true,
+          "quality_rejected": false,
+          "quality_total_pixels": 2304000,
+          "invalid_scene_ratio": 0.040611,
+          "near_preserved": true,
+          "near_colour_mask_valid": true,
+          "near_draws": 18,
+          "ui_boundary_observed": true,
+          "arrival_qpc": 10837516705,
+          "host_work_ms": 357.6136,
+          "capture_ms": 355.4666,
+          "gpu_dispatch_ms": 0.150729,
+          "fence_wait_ms": 38.6906,
+          "gpu_submissions": 16,
+          "generated_present_ms": 0.0,
+          "logical_present_ms": 0.0083,
+          "pacing_wait_ms": 0.0,
+          "generated_present_start_qpc": 0,
+          "logical_present_start_qpc": 10841085381,
+          "paired_start_gap_ms": 0.0
+        }
+      },
+      {
+        "pixel_check": {
+          "frame": 15493,
+          "yellow_pixels": 255634,
+          "yellow_changed": 0,
+          "yellow_max": 0,
+          "total_changed": 204,
+          "mean_difference": 0.0037291666666666667
+        },
+        "ui_check": {
+          "frame": 15493,
+          "yellow_fraction": 0.9985703125,
+          "ui_changed_fraction": 0.05446484375,
+          "ui_changed_above_1": 0.0538203125,
+          "ui_max": 255,
+          "ui_mean": 2.1611236979166666,
+          "ui_changed_non_yellow": 0
+        },
+        "frame_metrics": {
+          "event": "frame_metrics",
+          "frame": 15493,
+          "generation": 0,
+          "uid": 43145238,
+          "cpu_qpc": 10844913858,
+          "enabled": true,
+          "mode": "generated",
+          "generated": true,
+          "captured": true,
+          "quality_rejected": false,
+          "quality_total_pixels": 2304000,
+          "invalid_scene_ratio": 0.078003,
+          "near_preserved": true,
+          "near_colour_mask_valid": true,
+          "near_draws": 18,
+          "ui_boundary_observed": true,
+          "arrival_qpc": 10841158524,
+          "host_work_ms": 375.5131,
+          "capture_ms": 355.6283,
+          "gpu_dispatch_ms": 0.15724,
+          "fence_wait_ms": 39.8901,
+          "gpu_submissions": 16,
+          "generated_present_ms": 0.0,
+          "logical_present_ms": 0.0077,
+          "pacing_wait_ms": 0.0,
+          "generated_present_start_qpc": 0,
+          "logical_present_start_qpc": 10844729009,
+          "paired_start_gap_ms": 0.0
+        }
+      }
+    ],
+    "near_component_implicated": "Combined near/UI mask covers >99.85% while UI differences cover ~5.44%; scene must be falsely protected by near-depth or near-colour component.",
+    "exact_component": "Unresolved: near-depth and before/after HDR snapshots are not included in this archive.",
+    "accepted_but_degenerate": true
+  },
+  "weapon_samples": [
+    {
+      "frame": 12443,
+      "selection": "blue_weapon_in_bounded_roi_eroded_1px",
+      "pixels": 2212,
+      "yellow": 2212,
+      "changed": 0,
+      "max_difference": 0
+    },
+    {
+      "frame": 12444,
+      "selection": "blue_weapon_in_bounded_roi_eroded_1px",
+      "pixels": 2315,
+      "yellow": 2315,
+      "changed": 0,
+      "max_difference": 0
+    },
+    {
+      "frame": 12445,
+      "selection": "blue_weapon_in_bounded_roi_eroded_1px",
+      "pixels": 2166,
+      "yellow": 2166,
+      "changed": 0,
+      "max_difference": 0
+    }
+  ],
+  "weapon_sample_total_pixels": 6693,
+  "protected_pixel_checks": [
+    {
+      "frame": 9331,
+      "yellow_pixels": 14674,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 175188,
+      "mean_difference": 6.7143893229166665
+    },
+    {
+      "frame": 9332,
+      "yellow_pixels": 14678,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 184648,
+      "mean_difference": 8.5543984375
+    },
+    {
+      "frame": 9333,
+      "yellow_pixels": 14677,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 175744,
+      "mean_difference": 6.766216145833333
+    },
+    {
+      "frame": 9334,
+      "yellow_pixels": 24264,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 80912,
+      "mean_difference": 7.336481770833333
+    },
+    {
+      "frame": 12443,
+      "yellow_pixels": 26049,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 167873,
+      "mean_difference": 4.015923177083334
+    },
+    {
+      "frame": 12444,
+      "yellow_pixels": 26426,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 149044,
+      "mean_difference": 2.4358802083333333
+    },
+    {
+      "frame": 12445,
+      "yellow_pixels": 26145,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 161062,
+      "mean_difference": 3.23306640625
+    },
+    {
+      "frame": 12446,
+      "yellow_pixels": 24254,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 123714,
+      "mean_difference": 10.440447916666667
+    },
+    {
+      "frame": 15491,
+      "yellow_pixels": 255642,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 204,
+      "mean_difference": 0.0030794270833333333
+    },
+    {
+      "frame": 15492,
+      "yellow_pixels": 255624,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 225,
+      "mean_difference": 0.004580729166666667
+    },
+    {
+      "frame": 15493,
+      "yellow_pixels": 255634,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 204,
+      "mean_difference": 0.0037291666666666667
+    },
+    {
+      "frame": 15494,
+      "yellow_pixels": 41717,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 106095,
+      "mean_difference": 11.841536458333334
+    },
+    {
+      "frame": 18215,
+      "yellow_pixels": 44910,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 122940,
+      "mean_difference": 2.7119908854166668
+    },
+    {
+      "frame": 18216,
+      "yellow_pixels": 44963,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 111045,
+      "mean_difference": 2.2629075520833335
+    },
+    {
+      "frame": 18217,
+      "yellow_pixels": 45007,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 111544,
+      "mean_difference": 2.2909505208333334
+    },
+    {
+      "frame": 18219,
+      "yellow_pixels": 25058,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "total_changed": 145109,
+      "mean_difference": 13.320921875
+    }
+  ],
+  "ui_pixel_checks": [
+    {
+      "frame": 9331,
+      "yellow_fraction": 0.0573203125,
+      "ui_changed_fraction": 0.053703125,
+      "ui_changed_above_1": 0.0529765625,
+      "ui_max": 210,
+      "ui_mean": 2.4958515625,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 9332,
+      "yellow_fraction": 0.0573359375,
+      "ui_changed_fraction": 0.0536953125,
+      "ui_changed_above_1": 0.05294140625,
+      "ui_max": 214,
+      "ui_mean": 2.4978450520833335,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 9333,
+      "yellow_fraction": 0.05733203125,
+      "ui_changed_fraction": 0.05369140625,
+      "ui_changed_above_1": 0.05291796875,
+      "ui_max": 217,
+      "ui_mean": 2.509239583333333,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 9334,
+      "yellow_fraction": 0.09478125,
+      "ui_changed_fraction": 0.05372265625,
+      "ui_changed_above_1": 0.052984375,
+      "ui_max": 233,
+      "ui_mean": 2.6190911458333335,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 12443,
+      "yellow_fraction": 0.10175390625,
+      "ui_changed_fraction": 0.04884375,
+      "ui_changed_above_1": 0.0483515625,
+      "ui_max": 239,
+      "ui_mean": 2.14541015625,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 12444,
+      "yellow_fraction": 0.1032265625,
+      "ui_changed_fraction": 0.04887890625,
+      "ui_changed_above_1": 0.04837109375,
+      "ui_max": 255,
+      "ui_mean": 2.1494622395833334,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 12445,
+      "yellow_fraction": 0.10212890625,
+      "ui_changed_fraction": 0.04887890625,
+      "ui_changed_above_1": 0.04841015625,
+      "ui_max": 255,
+      "ui_mean": 2.1699661458333335,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 12446,
+      "yellow_fraction": 0.0947421875,
+      "ui_changed_fraction": 0.048765625,
+      "ui_changed_above_1": 0.04823828125,
+      "ui_max": 232,
+      "ui_mean": 1.9909427083333333,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 15491,
+      "yellow_fraction": 0.9986015625,
+      "ui_changed_fraction": 0.05442578125,
+      "ui_changed_above_1": 0.05378125,
+      "ui_max": 244,
+      "ui_mean": 2.10937890625,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 15492,
+      "yellow_fraction": 0.99853125,
+      "ui_changed_fraction": 0.05443359375,
+      "ui_changed_above_1": 0.0538125,
+      "ui_max": 255,
+      "ui_mean": 2.1177174479166667,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 15493,
+      "yellow_fraction": 0.9985703125,
+      "ui_changed_fraction": 0.05446484375,
+      "ui_changed_above_1": 0.0538203125,
+      "ui_max": 255,
+      "ui_mean": 2.1611236979166666,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 15494,
+      "yellow_fraction": 0.16295703125,
+      "ui_changed_fraction": 0.05384375,
+      "ui_changed_above_1": 0.05341015625,
+      "ui_max": 233,
+      "ui_mean": 2.1785729166666665,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 18215,
+      "yellow_fraction": 0.1754296875,
+      "ui_changed_fraction": 0.05357421875,
+      "ui_changed_above_1": 0.0529453125,
+      "ui_max": 198,
+      "ui_mean": 2.091630208333333,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 18216,
+      "yellow_fraction": 0.17563671875,
+      "ui_changed_fraction": 0.053578125,
+      "ui_changed_above_1": 0.05298046875,
+      "ui_max": 197,
+      "ui_mean": 2.0930651041666666,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 18217,
+      "yellow_fraction": 0.17580859375,
+      "ui_changed_fraction": 0.05358203125,
+      "ui_changed_above_1": 0.05295703125,
+      "ui_max": 214,
+      "ui_mean": 2.0925729166666667,
+      "ui_changed_non_yellow": 0
+    },
+    {
+      "frame": 18219,
+      "yellow_fraction": 0.0978828125,
+      "ui_changed_fraction": 0.0542421875,
+      "ui_changed_above_1": 0.0534921875,
+      "ui_max": 255,
+      "ui_mean": 2.186390625,
+      "ui_changed_non_yellow": 0
+    }
+  ],
+  "sparse_static_scene_checks": {
+    "method": "Independent grayscale 13x13 normalized-correlation template matching in sampled images, stable green-classified candidates; excludes low-texture/ambiguous/small-motion matches. Pixel size is 3 original render pixels. Camera geometry approximates screen midpoint for small per-frame motion. This is sparse image evidence, not exact matrix, temporal display or dynamic-motion verification.",
+    "frames": [
+      {
+        "frame": 9331,
+        "points": [
+          {
+            "current_xy": [
+              360,
+              80
+            ],
+            "previous_offset": [
+              -2.023362822830677,
+              0.8409905135631561
+            ],
+            "generated_offset": [
+              -0.09031324833631516,
+              -1.318976640701294
+            ],
+            "previous_ncc": 0.9612423777580261,
+            "generated_ncc": 0.9459856152534485,
+            "midpoint_error_pixels": 1.9684211373759115,
+            "phase_ratio": -0.1929722525257876
+          },
+          {
+            "current_xy": [
+              450,
+              105
+            ],
+            "previous_offset": [
+              -2.011064972728491,
+              0.7188684046268463
+            ],
+            "generated_offset": [
+              -0.7568504512310028,
+              0.2764877676963806
+            ],
+            "previous_ncc": 0.9162909984588623,
+            "generated_ncc": 0.9048967957496643,
+            "midpoint_error_pixels": 0.26215046369154227,
+            "phase_ratio": 0.37728033561062163
+          }
+        ]
+      },
+      {
+        "frame": 9332,
+        "points": [
+          {
+            "current_xy": [
+              360,
+              155
+            ],
+            "previous_offset": [
+              -2.921480543911457,
+              0.16007357835769653
+            ],
+            "generated_offset": [
+              -0.7987338751554489,
+              0.10721804946660995
+            ],
+            "previous_ncc": 0.9467376470565796,
+            "generated_ncc": 0.9215561747550964,
+            "midpoint_error_pixels": 0.6625641782614876,
+            "phase_ratio": 0.2745868805874756
+          },
+          {
+            "current_xy": [
+              330,
+              180
+            ],
+            "previous_offset": [
+              -4.967516899108887,
+              -0.9877730840817094
+            ],
+            "generated_offset": [
+              -0.03410797193646431,
+              -0.018767278641462326
+            ],
+            "previous_ncc": 0.9084630608558655,
+            "generated_ncc": 0.9424310326576233,
+            "midpoint_error_pixels": 2.4953007387782287,
+            "phase_ratio": 0.00732770650676319
+          },
+          {
+            "current_xy": [
+              240,
+              230
+            ],
+            "previous_offset": [
+              -2.049966599792242,
+              -1.022201905027032
+            ],
+            "generated_offset": [
+              -0.010781718418002129,
+              0.011528043076395988
+            ],
+            "previous_ncc": 0.9674176573753357,
+            "generated_ncc": 0.9900848269462585,
+            "midpoint_error_pixels": 1.140940802541498,
+            "phase_ratio": 0.001966393023147623
+          }
+        ]
+      },
+      {
+        "frame": 9333,
+        "points": [
+          {
+            "current_xy": [
+              420,
+              205
+            ],
+            "previous_offset": [
+              -2.0023486358113587,
+              -0.942033939063549
+            ],
+            "generated_offset": [
+              -0.9898474402725697,
+              -0.11475422233343124
+            ],
+            "previous_ncc": 0.9291512966156006,
+            "generated_ncc": 0.9577029943466187,
+            "midpoint_error_pixels": 0.3564427628641464,
+            "phase_ratio": 0.42683182726892605
+          }
+        ]
+      },
+      {
+        "frame": 12443,
+        "points": [
+          {
+            "current_xy": [
+              330,
+              130
+            ],
+            "previous_offset": [
+              8.391514599323273,
+              0.9865048360079527
+            ],
+            "generated_offset": [
+              6.696842342615128,
+              0.20418381690979004
+            ],
+            "previous_ncc": 0.9083113670349121,
+            "generated_ncc": 0.9481859803199768,
+            "midpoint_error_pixels": 2.5177345070964527,
+            "phase_ratio": 0.7899918539982669
+          },
+          {
+            "current_xy": [
+              180,
+              155
+            ],
+            "previous_offset": [
+              13.020314643159509,
+              0.013101393356919289
+            ],
+            "generated_offset": [
+              5.758871868252754,
+              0.018963037058711052
+            ],
+            "previous_ncc": 0.9567688703536987,
+            "generated_ncc": 0.964091956615448,
+            "midpoint_error_pixels": 0.7513879813880917,
+            "phase_ratio": 0.4422999963037993
+          },
+          {
+            "current_xy": [
+              420,
+              155
+            ],
+            "previous_offset": [
+              11.893509097397327,
+              1.0309046786278486
+            ],
+            "generated_offset": [
+              3.8161112666130066,
+              0.06149248778820038
+            ],
+            "previous_ncc": 0.9824216365814209,
+            "generated_ncc": 0.9572874307632446,
+            "midpoint_error_pixels": 2.178467429706948,
+            "phase_ratio": 0.3189087969103229
+          },
+          {
+            "current_xy": [
+              210,
+              180
+            ],
+            "previous_offset": [
+              11.506984412670135,
+              -0.05497324839234352
+            ],
+            "generated_offset": [
+              5.850816681981087,
+              -0.004563420545309782
+            ],
+            "previous_ncc": 0.9466261863708496,
+            "generated_ncc": 0.976016640663147,
+            "midpoint_error_pixels": 0.09998763336228852,
+            "phase_ratio": 0.5084481511889152
+          },
+          {
+            "current_xy": [
+              210,
+              230
+            ],
+            "previous_offset": [
+              10.975457767024636,
+              -1.0218878164887428
+            ],
+            "generated_offset": [
+              5.674871206283569,
+              -0.8182008117437363
+            ],
+            "previous_ncc": 0.9891047477722168,
+            "generated_ncc": 0.9037794470787048,
+            "midpoint_error_pixels": 0.3597624962669638,
+            "phase_ratio": 0.5194885490411035
+          }
+        ]
+      },
+      {
+        "frame": 12444,
+        "points": [
+          {
+            "current_xy": [
+              330,
+              130
+            ],
+            "previous_offset": [
+              -2.238218456506729,
+              0.9503234140574932
+            ],
+            "generated_offset": [
+              1.0387680940330029,
+              0.11679665744304657
+            ],
+            "previous_ncc": 0.9642611742019653,
+            "generated_ncc": 0.9550391435623169,
+            "midpoint_error_pixels": 2.187432295364212,
+            "phase_ratio": -0.37444512205696745
+          },
+          {
+            "current_xy": [
+              360,
+              155
+            ],
+            "previous_offset": [
+              -4.32722744345665,
+              0.025175396353006363
+            ],
+            "generated_offset": [
+              -0.5982998311519623,
+              0.013253691606223583
+            ],
+            "previous_ncc": 0.9375550746917725,
+            "generated_ncc": 0.9741873145103455,
+            "midpoint_error_pixels": 1.5653140322563255,
+            "phase_ratio": 0.13827715194044476
+          }
+        ]
+      },
+      {
+        "frame": 12445,
+        "points": [
+          {
+            "current_xy": [
+              330,
+              130
+            ],
+            "previous_offset": [
+              3.3737073838710785,
+              1.028342679142952
+            ],
+            "generated_offset": [
+              -1.9697697646915913,
+              0.9880148936063051
+            ],
+            "previous_ncc": 0.9656146168708801,
+            "generated_ncc": 0.9361661672592163,
+            "midpoint_error_pixels": 3.687197149225425,
+            "phase_ratio": -0.4525470168962602
+          },
+          {
+            "current_xy": [
+              120,
+              180
+            ],
+            "previous_offset": [
+              7.207833722233772,
+              0.10639187693595886
+            ],
+            "generated_offset": [
+              3.457454890012741,
+              0.1642008125782013
+            ],
+            "previous_ncc": 0.9209683537483215,
+            "generated_ncc": 0.9469517469406128,
+            "midpoint_error_pixels": 0.18377483792929222,
+            "phase_ratio": 0.47991186634869704
+          },
+          {
+            "current_xy": [
+              150,
+              180
+            ],
+            "previous_offset": [
+              6.8296685963869095,
+              -0.04697431996464729
+            ],
+            "generated_offset": [
+              3.4500528275966644,
+              0.05260098725557327
+            ],
+            "previous_ncc": 0.9900389313697815,
+            "generated_ncc": 0.9917139410972595,
+            "midpoint_error_pixels": 0.08384361015259675,
+            "phase_ratio": 0.5050798300048622
+          },
+          {
+            "current_xy": [
+              210,
+              180
+            ],
+            "previous_offset": [
+              6.429680824279785,
+              0.1665152758359909
+            ],
+            "generated_offset": [
+              3.0949042961001396,
+              0.08054094761610031
+            ],
+            "previous_ncc": 0.939564049243927,
+            "generated_ncc": 0.9738926291465759,
+            "midpoint_error_pixels": 0.11996688016655888,
+            "phase_ratio": 0.4813480573412387
+          },
+          {
+            "current_xy": [
+              270,
+              205
+            ],
+            "previous_offset": [
+              5.117973953485489,
+              0.3585655987262726
+            ],
+            "generated_offset": [
+              2.474537193775177,
+              0.08552274852991104
+            ],
+            "previous_ncc": 0.9477569460868835,
+            "generated_ncc": 0.9709359407424927,
+            "midpoint_error_pixels": 0.1261852327949599,
+            "phase_ratio": 0.48230275409133266
+          },
+          {
+            "current_xy": [
+              540,
+              205
+            ],
+            "previous_offset": [
+              8.991698106750846,
+              2.0615432374179363
+            ],
+            "generated_offset": [
+              4.425694853067398,
+              1.0370105132460594
+            ],
+            "previous_ncc": 0.9959308505058289,
+            "generated_ncc": 0.9938347935676575,
+            "midpoint_error_pixels": 0.07043107003236161,
+            "phase_ratio": 0.49273866843569347
+          },
+          {
+            "current_xy": [
+              210,
+              230
+            ],
+            "previous_offset": [
+              5.314606338739395,
+              -0.14873501658439636
+            ],
+            "generated_offset": [
+              2.6233275830745697,
+              -0.1629338264465332
+            ],
+            "previous_ncc": 0.972419261932373,
+            "generated_ncc": 0.9604106545448303,
+            "midpoint_error_pixels": 0.09485954446186516,
+            "phase_ratio": 0.4940781480046886
+          }
+        ]
+      },
+      {
+        "frame": 18215,
+        "points": []
+      },
+      {
+        "frame": 18216,
+        "points": []
+      },
+      {
+        "frame": 18217,
+        "points": [
+          {
+            "current_xy": [
+              180,
+              205
+            ],
+            "previous_offset": [
+              -2.325984537601471,
+              0.006421464495360851
+            ],
+            "generated_offset": [
+              -0.2068050503730774,
+              0.006841639522463083
+            ],
+            "previous_ncc": 0.9490140080451965,
+            "generated_ncc": 0.9864756464958191,
+            "midpoint_error_pixels": 0.9561941121822807,
+            "phase_ratio": 0.08891820162435408
+          },
+          {
+            "current_xy": [
+              360,
+              205
+            ],
+            "previous_offset": [
+              2.3845212161540985,
+              -0.10248050093650818
+            ],
+            "generated_offset": [
+              0.1589806228876114,
+              -0.051062095910310745
+            ],
+            "previous_ncc": 0.9006538987159729,
+            "generated_ncc": 0.9621223211288452,
+            "midpoint_error_pixels": 1.0332800005478338,
+            "phase_ratio": 0.06746762695525964
+          }
+        ]
+      }
+    ],
+    "acceptance": "Mixed phase results; does not establish globally correct midpoint interpolation."
+  },
+  "next_implementation": [
+    "Separate source attribution for near-depth, near-colour and UI masks; identify or invalidate contaminated near stages.",
+    "Add meaningful scene coverage validation so almost-all-protected candidates are classified as original fallback, not successful interpolation.",
+    "Use existing software fixtures for near-stage full-screen contamination and depth clears before another bundled game acceptance test."
+  ],
+  "limits": [
+    "Mask preservation does not prove mask accuracy or complete weapon/hand coverage.",
+    "No dynamic object midpoint motion or monitor frame delivery acceptance.",
+    "16 saved candidates include 4 rejected candidates; rejected PPMs must not be treated as displayed generated frames.",
+    "Capture work takes roughly 350 ms per saved frame and can perturb motion; sparse phase results are not a controlled temporal test.",
+    "Exact package fingerprint is not present in this archive; quality fields establish that the guard-capable revision was exercised."
+  ]
+}
