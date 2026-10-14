@@ -13,6 +13,7 @@
       "sparse_paths": [
         "sdk/include",
         "sdk/src/backends/vk",
+        "sdk/src/backends/shared",
         "sdk/src/components/frameinterpolation",
         "sdk/src/components/opticalflow",
         "sdk/src/components/fsr3upscaler",

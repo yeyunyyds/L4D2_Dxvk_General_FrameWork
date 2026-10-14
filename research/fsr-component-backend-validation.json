@@ -1,0 +1,822 @@
+{
+  "status": "passed_component_software_vulkan_validation_only",
+  "base_framework_commit": "53779f3d1bb0dc7913182513b7e4f365b9342519",
+  "sdk_commit": "c6efa6bf7f2027b3ec94f28578bb5965eabb9e55",
+  "profile": "FP32 SDR full-resolution MV conventional-depth unjittered; no SDK swapchain proxy",
+  "host_adaptations": [
+    "Linux opaque context capacity for 4-byte wchar_t",
+    "Require all memory flags; prefer invisible local heap, fall back to visible local heap",
+    "KHR memory requirements entry point resolves to Vulkan 1.1 core alias"
+  ],
+  "algorithm_shaders_modified": false,
+  "upstream_cache_modified": false,
+  "build": {
+    "exe_sha256": "e88113a85e7918c29b5f930848aefbf7d3ca2bf07b2db82c8676112aabfd4984",
+    "project_source_hashes": {
+      "scripts/build_fsr_vulkan.py": "ad3506fb2d44b450232f846a24bc46050b6dca4ebe0cf33fe49c5d9ac6f39c3f",
+      "tools/fsr_sdk_portability.h": "5eb5500f70dd70c44e3eb930c2b2e4ce72215d41a7c4f26470e9f54f06bd31fc",
+      "tools/fsr_sdk_support.cpp": "8af46f651d01c517a5d3b678c5b8b944b07e76d1837e80930a500ce2e95c1bdc",
+      "tools/fsr_component_backend.h": "0a38fcca0f19c706cbc56f3ddad01270e0b2fd3faad8f613b6627fe239ab9ea1",
+      "tools/fsr_vulkan_smoke.cpp": "673631dfc8bfb1c7dc462d5f1293c150b7d8ecaae9cd7032de735b9faadf5461",
+      "integration/ldb/fsr_camera.h": "d2bbd642a562bae3df82a620f3f18bc8e7a44ab9451cbaa679dda71cfe79f11b"
+    },
+    "generated_backend_sha256": "aaabf8fb037e5b5d355ae5dd248092ebc1a305a52bcb91f3f81b5109a318fd0d",
+    "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+    "shader_compile_and_spirv_validation": {
+      "passed": 18,
+      "failed": 0
+    },
+    "shader_hashes": [
+      {
+        "effect": "frameinterpolation",
+        "pass": 9,
+        "sha256": "3a836eb716b4d5a7a492c89041c285fcfc455151f7fb5b7d3d710c465c2f43a4"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 7,
+        "sha256": "fe7d0a2c460f657393ec364965279ca4894a8a570f01e044b4bde61a9238893e"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 10,
+        "sha256": "d8b71a2c21168902cfde46ff2c8804c2385a6eed76c08a3b0e813c0c07fe7b8b"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 5,
+        "sha256": "98b6620cae3a486e55677458bf2b321717a18717ed1fa12d134680dc2dd4dd03"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 3,
+        "sha256": "43a5b69680078e8cb97bf5b9b87c5707130b9754182457d68a986e5e60831faf"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 8,
+        "sha256": "32d88cde8bd5fa722fd60e016909c722f3d7a15d6d7a3714218372d5ed7a2dfd"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 4,
+        "sha256": "f47b00f20a313e6bc26e925872b85b0c66b7b152fa11f46550f04794986b6f15"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 6,
+        "sha256": "0aff333f9f045eab99bd0362918d7e50d20cf28c48be0d36964913a9205e4b65"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 0,
+        "sha256": "0b8e57023aa082900ee0fe7985b8770bf2f81af9435055ceea4e71e6f85dc2dd"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 2,
+        "sha256": "ec4403d96b0b0d3482d6813ede2e06eeff0b13f89ec9a38bcdfc945353f1ae3a"
+      },
+      {
+        "effect": "frameinterpolation",
+        "pass": 1,
+        "sha256": "ff8a54a76fa4819d9f9da83d9b1fe1862d01d7c2d28ff66ac195cef05d9b333d"
+      },
+      {
+        "effect": "opticalflow",
+        "pass": 1,
+        "sha256": "ffa80c22418de52590cbab1f59ae3d6d46e0c5734951a90759783cb3f1950b03"
+      },
+      {
+        "effect": "opticalflow",
+        "pass": 4,
+        "sha256": "898b1ed78a4846048590e3dd9957e62734a092a9f4588b8fff90ef73434f1e6d"
+      },
+      {
+        "effect": "opticalflow",
+        "pass": 3,
+        "sha256": "f163329cf20a3f6c2658ec74ac08910717632f614ce6e9a81a2c18b4b5113eb2"
+      },
+      {
+        "effect": "opticalflow",
+        "pass": 5,
+        "sha256": "a61a4dfeb52a8a1205df42caf33f2829461c9b2f8cd1871df4f7bd1fc1b2e35b"
+      },
+      {
+        "effect": "opticalflow",
+        "pass": 2,
+        "sha256": "95bcf01f7b04fb23d45b626a3eb1373cddf525d782d08477eee3746450120ebe"
+      },
+      {
+        "effect": "opticalflow",
+        "pass": 0,
+        "sha256": "6fad7bd4a3b69afcb0d72e07f3d9aaf8e139aa42403c826604bc65c2cb86b748"
+      },
+      {
+        "effect": "opticalflow",
+        "pass": 6,
+        "sha256": "e6b1addc9d0424fb1cf8a3a3eb04df089c1973a782e6396956713b347be7c1f2"
+      }
+    ]
+  },
+  "gpu": {
+    "device": "llvmpipe (LLVM 19.1.7, 256 bits)",
+    "validation": "KHRONOS core + synchronization, mandatory",
+    "validation_errors": 0,
+    "source_frames": 24,
+    "component_context_cycles": 3,
+    "moving_midpoint_frames": 10,
+    "stationary_cycle_frames": 8,
+    "explicit_reset_frames": 6,
+    "frame_id_gap_resets": 3,
+    "hudless_composition_frames": 8,
+    "hud_pixels_checked_unchanged": 5120,
+    "max_object_centroid_error_pixels": 0,
+    "object_silhouette_check": "area 2304 +/- 24 pixels; bounding box each edge within 1 pixel",
+    "frames": [
+      {
+        "cycle": 0,
+        "frame": 0,
+        "source_frame": 0,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 87.5,
+        "centroid_y": 75.5,
+        "expected_x": 87.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 0,
+        "frame": 1,
+        "source_frame": 1,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2791,
+        "centroid_x": 91.5,
+        "centroid_y": 77.5,
+        "expected_x": 91.5,
+        "expected_y": 77.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 0,
+        "frame": 2,
+        "source_frame": 2,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2791,
+        "centroid_x": 99.5,
+        "centroid_y": 81.5,
+        "expected_x": 99.5,
+        "expected_y": 81.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 0,
+        "frame": 3,
+        "source_frame": 3,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2792,
+        "centroid_x": 107.5,
+        "centroid_y": 85.5,
+        "expected_x": 107.5,
+        "expected_y": 85.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 0,
+        "frame": 4,
+        "source_frame": 4,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 157.5,
+        "centroid_y": 75.5,
+        "expected_x": 157.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 0,
+        "frame": 5,
+        "source_frame": 5,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2791,
+        "centroid_x": 161.5,
+        "centroid_y": 77.5,
+        "expected_x": 161.5,
+        "expected_y": 77.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 0,
+        "frame": 6,
+        "source_frame": 8,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 173.5,
+        "centroid_y": 83.5,
+        "expected_x": 173.5,
+        "expected_y": 83.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 0,
+        "frame": 7,
+        "source_frame": 9,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2792,
+        "centroid_x": 177.5,
+        "centroid_y": 85.5,
+        "expected_x": 177.5,
+        "expected_y": 85.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 1,
+        "frame": 0,
+        "source_frame": 0,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 87.5,
+        "centroid_y": 75.5,
+        "expected_x": 87.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 1,
+        "frame": 1,
+        "source_frame": 1,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 87.5,
+        "centroid_y": 75.5,
+        "expected_x": 87.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 1,
+        "frame": 2,
+        "source_frame": 2,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 87.5,
+        "centroid_y": 75.5,
+        "expected_x": 87.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 1,
+        "frame": 3,
+        "source_frame": 3,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 87.5,
+        "centroid_y": 75.5,
+        "expected_x": 87.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 1,
+        "frame": 4,
+        "source_frame": 4,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 157.5,
+        "centroid_y": 75.5,
+        "expected_x": 157.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 1,
+        "frame": 5,
+        "source_frame": 5,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 157.5,
+        "centroid_y": 75.5,
+        "expected_x": 157.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 1,
+        "frame": 6,
+        "source_frame": 8,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 157.5,
+        "centroid_y": 75.5,
+        "expected_x": 157.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 1,
+        "frame": 7,
+        "source_frame": 9,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 157.5,
+        "centroid_y": 75.5,
+        "expected_x": 157.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 2,
+        "frame": 0,
+        "source_frame": 0,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 87.5,
+        "centroid_y": 75.5,
+        "expected_x": 87.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 2,
+        "frame": 1,
+        "source_frame": 1,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2791,
+        "centroid_x": 91.5,
+        "centroid_y": 77.5,
+        "expected_x": 91.5,
+        "expected_y": 77.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 2,
+        "frame": 2,
+        "source_frame": 2,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2791,
+        "centroid_x": 99.5,
+        "centroid_y": 81.5,
+        "expected_x": 99.5,
+        "expected_y": 81.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 2,
+        "frame": 3,
+        "source_frame": 3,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2792,
+        "centroid_x": 107.5,
+        "centroid_y": 85.5,
+        "expected_x": 107.5,
+        "expected_y": 85.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 2,
+        "frame": 4,
+        "source_frame": 4,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 157.5,
+        "centroid_y": 75.5,
+        "expected_x": 157.5,
+        "expected_y": 75.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 2,
+        "frame": 5,
+        "source_frame": 5,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2791,
+        "centroid_x": 161.5,
+        "centroid_y": 77.5,
+        "expected_x": 161.5,
+        "expected_y": 77.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 2,
+        "frame": 6,
+        "source_frame": 8,
+        "reset": true,
+        "object_pixels": 2304,
+        "different_pixels": 0,
+        "centroid_x": 173.5,
+        "centroid_y": 83.5,
+        "expected_x": 173.5,
+        "expected_y": 83.5,
+        "midpoint_error_pixels": 0
+      },
+      {
+        "cycle": 2,
+        "frame": 7,
+        "source_frame": 9,
+        "reset": false,
+        "object_pixels": 2304,
+        "different_pixels": 2792,
+        "centroid_x": 177.5,
+        "centroid_y": 85.5,
+        "expected_x": 177.5,
+        "expected_y": 85.5,
+        "midpoint_error_pixels": 0
+      }
+    ]
+  },
+  "controls": [
+    {
+      "case": "functional",
+      "exit_code": 0,
+      "expected_failure": false,
+      "expected_error": null,
+      "passed": true,
+      "stderr": ""
+    },
+    {
+      "case": "negative-current",
+      "exit_code": 1,
+      "expected_failure": true,
+      "expected_error": "Official generated object failed independent midpoint check",
+      "passed": true,
+      "stderr": "Official generated object failed independent midpoint check\n"
+    },
+    {
+      "case": "negative-format",
+      "exit_code": 1,
+      "expected_failure": true,
+      "expected_error": "FSR resource contract mismatch",
+      "passed": true,
+      "stderr": "FSR resource contract mismatch\n"
+    }
+  ],
+  "camera_math": {
+    "positive": 12,
+    "negative": 8,
+    "status": "passed"
+  },
+  "historical_capture_camera_parse": {
+    "source": "research/capture-series-user-validation.json",
+    "source_sha256": "0f6ab665adc801bd100ff4d343d2abe06dbbd1aab47f297c29150c508d74a3d9",
+    "matrices": 24,
+    "passed": 24,
+    "results": [
+      {
+        "index": 0,
+        "near": 0.799977,
+        "far": 928942,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3441.75,
+          -1903.33,
+          1345.63
+        ]
+      },
+      {
+        "index": 1,
+        "near": 0.799977,
+        "far": 928942,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3441.75,
+          -1903.33,
+          1345.63
+        ]
+      },
+      {
+        "index": 2,
+        "near": 0.799977,
+        "far": 928942,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3441.75,
+          -1903.33,
+          1345.63
+        ]
+      },
+      {
+        "index": 3,
+        "near": 0.799977,
+        "far": 928942,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3441.75,
+          -1903.33,
+          1345.63
+        ]
+      },
+      {
+        "index": 4,
+        "near": 0.799977,
+        "far": 928942,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3441.75,
+          -1903.33,
+          1345.63
+        ]
+      },
+      {
+        "index": 5,
+        "near": 0.799977,
+        "far": 928942,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3441.75,
+          -1903.33,
+          1345.63
+        ]
+      },
+      {
+        "index": 6,
+        "near": 0.799977,
+        "far": 928942,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3441.75,
+          -1903.33,
+          1345.63
+        ]
+      },
+      {
+        "index": 7,
+        "near": 0.799977,
+        "far": 928942,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3441.75,
+          -1903.33,
+          1345.63
+        ]
+      },
+      {
+        "index": 8,
+        "near": 7.00001,
+        "far": 996831,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3391.13,
+          -1859.02,
+          1344.48
+        ]
+      },
+      {
+        "index": 9,
+        "near": 7.00001,
+        "far": 996831,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3391.13,
+          -1859.02,
+          1344.48
+        ]
+      },
+      {
+        "index": 10,
+        "near": 7.00001,
+        "far": 996831,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3391.13,
+          -1859.02,
+          1344.48
+        ]
+      },
+      {
+        "index": 11,
+        "near": 6.99987,
+        "far": 991290,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3391.13,
+          -1859.02,
+          1344.48
+        ]
+      },
+      {
+        "index": 12,
+        "near": 6.99994,
+        "far": 995881,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3391.13,
+          -1859.02,
+          1344.48
+        ]
+      },
+      {
+        "index": 13,
+        "near": 6.99992,
+        "far": 991502,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3391.13,
+          -1859.02,
+          1344.48
+        ]
+      },
+      {
+        "index": 14,
+        "near": 7.00006,
+        "far": 996175,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3391.13,
+          -1859.02,
+          1344.48
+        ]
+      },
+      {
+        "index": 15,
+        "near": 6.99996,
+        "far": 994682,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3391.13,
+          -1859.02,
+          1344.48
+        ]
+      },
+      {
+        "index": 16,
+        "near": 6.99996,
+        "far": 993030,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3287.59,
+          -1848.77,
+          1344.17
+        ]
+      },
+      {
+        "index": 17,
+        "near": 6.99996,
+        "far": 993030,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3287.59,
+          -1848.77,
+          1344.17
+        ]
+      },
+      {
+        "index": 18,
+        "near": 6.99996,
+        "far": 993030,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3287.59,
+          -1848.77,
+          1344.17
+        ]
+      },
+      {
+        "index": 19,
+        "near": 6.99996,
+        "far": 993030,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3291.44,
+          -1848.78,
+          1343.94
+        ]
+      },
+      {
+        "index": 20,
+        "near": 6.99996,
+        "far": 993030,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3303.3,
+          -1848.8,
+          1345.29
+        ]
+      },
+      {
+        "index": 21,
+        "near": 6.99996,
+        "far": 993030,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3320.62,
+          -1848.83,
+          1345.86
+        ]
+      },
+      {
+        "index": 22,
+        "near": 6.99996,
+        "far": 993030,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3341.48,
+          -1848.87,
+          1343.9
+        ]
+      },
+      {
+        "index": 23,
+        "near": 6.99996,
+        "far": 993030,
+        "vertical_fov_radians": 1.40634,
+        "position": [
+          -3363.49,
+          -1848.92,
+          1343.61
+        ]
+      }
+    ],
+    "scope": "Parseability only; near plane differs across capture groups, huge far plane is ill-conditioned. View identity and precise engine parameters remain unverified."
+  },
+  "python_regressions": {
+    "passed": 43,
+    "failed": 0
+  },
+  "artifacts": {
+    "local_run": ".research/fsr-vulkan/runs/195f7e41ad7645cba5910db72f807e0f",
+    "ppm_sha256": {
+      "0-0-current.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "0-0-generated.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "0-1-current.ppm": "47d2eda9e53621b286b5331fd14d786d201c3008728af57e0a27ea64d2ea8ae3",
+      "0-1-generated.ppm": "f483f57d96340bb24bdad08ba6a6016468a647a9c3a2109d358259d4a8743ed0",
+      "0-2-current.ppm": "66343154a8b0b95765f4c894471c9a09503d3317be57bbff530005e7fd42d664",
+      "0-2-generated.ppm": "2a8389dae45fd6cee7ba0fabe0bda8d644035f1804909e6a7763024a8f366449",
+      "0-3-current.ppm": "08cc82667cc8433b9e4217dc77f36b9db644f14d37e3d64fc5a809213b53d7b1",
+      "0-3-generated.ppm": "6086bd6b9ac93deb1594c6e46f76e248d4de4202687aa79f318557b4a1a4a4e6",
+      "0-4-current.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "0-4-generated.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "0-5-current.ppm": "a80628545cb955ef70326454a425d7a344699a95bdf5363b380b63080e58199e",
+      "0-5-generated.ppm": "b407fe1ed87dfbb323b704aa372d52a29c80d174e9dae305b2e5e94ae003ae53",
+      "0-6-current.ppm": "eb4e7365d66f5fd8a2a2584503ca2bd2b7b7dc9ea31ac5ebed45e87d51f6a8af",
+      "0-6-generated.ppm": "eb4e7365d66f5fd8a2a2584503ca2bd2b7b7dc9ea31ac5ebed45e87d51f6a8af",
+      "0-7-current.ppm": "bfe26b1c0afa9c227d5e3328c1a880087c5dff0dc2325f8bf15da35f9195892c",
+      "0-7-generated.ppm": "4186a348766000ec75c8015cd110d93305774f7cc23f4e58afa0708f782f3c7e",
+      "1-0-current.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "1-0-generated.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "1-1-current.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "1-1-generated.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "1-2-current.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "1-2-generated.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "1-3-current.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "1-3-generated.ppm": "0e9a5e7e71b26a5d6d44c59671582626cd13fb5bdfa5a1549285d4a0b55566ad",
+      "1-4-current.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "1-4-generated.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "1-5-current.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "1-5-generated.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "1-6-current.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "1-6-generated.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "1-7-current.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "1-7-generated.ppm": "da4cb6a183e9bca9f11e980844e1b2a6203bf7fe5fd3a50c648f716074625842",
+      "2-0-current.ppm": "a6661673b78fbea61c5e3e640bb06b958b2afa70b90705ae2b581f93ef2e15fc",
+      "2-0-generated.ppm": "a6661673b78fbea61c5e3e640bb06b958b2afa70b90705ae2b581f93ef2e15fc",
+      "2-1-current.ppm": "f30441f652bda80a73f87e940481366ad13236e01ba287962ea5652b0276c3aa",
+      "2-1-generated.ppm": "4734208d600daed20f12d8c6873b956490743fb3c3ab79363d17ba3a90bac30d",
+      "2-2-current.ppm": "7135586521845bdbb1dcf04e3075f47911470434dfeaf10f151efbaaaf6bea2b",
+      "2-2-generated.ppm": "46bc8ffb84d355d727338e654730c35802d2617f4c01a5fd36e59e1cafe6cbb1",
+      "2-3-current.ppm": "35bd0a1c1103ba4486705af7b64b7d319d69656d1556415a7f8a522bd53316fa",
+      "2-3-generated.ppm": "cb4f172d87d16b6160bd41dd138bfaefdbad1bce05e74f7499ac682b1d342b87",
+      "2-4-current.ppm": "b2c6cdd71f46b1039fc6c3bce4fba057706b5a57c724d3a02c9b1371afbbf713",
+      "2-4-generated.ppm": "b2c6cdd71f46b1039fc6c3bce4fba057706b5a57c724d3a02c9b1371afbbf713",
+      "2-5-current.ppm": "f7109e2e1f051df9de3305c52df65e4f231cace2499349bab0216427e885240c",
+      "2-5-generated.ppm": "b3ef387fe6e120cbe501fbed21d74c2b813ba05734413354242b1d5edd9822ed",
+      "2-6-current.ppm": "97f805db7c89fd93277743f806935f2987a85e11dc61f8c341980894870912b0",
+      "2-6-generated.ppm": "97f805db7c89fd93277743f806935f2987a85e11dc61f8c341980894870912b0",
+      "2-7-current.ppm": "21b925245d18977d44703ffbff76190656db1dc3316cbc56d9d850a8938c7c98",
+      "2-7-generated.ppm": "9dadf24efeaa3701ebf34ee3ed89478af1bd6acc859e18af1c10010c4065f1a1"
+    }
+  },
+  "limitations": [
+    "Software Vulkan execution is not Arc B580 validation",
+    "Windows FSR backend build and Host game integration unrun; game remains on previous custom prototype",
+    "Known fixture motion vectors and HUD layers are not game-derived dynamic model vectors or full game layer separation",
+    "No new engine hooks or CPU skinning/fixed-function conversion; no game threading mode changes",
+    "No swapchain proxy, display pacing, actual monitor output or FPS benefit validated",
+    "Fixture CPU uploads, full readbacks and per-frame waits are test-only",
+    "Current component profile is FP32 SDR RGBA8 full-resolution MV unjittered finite conventional depth",
+    "Download ZIP unchanged"
+  ]
+}
