@@ -1,0 +1,562 @@
+{
+  "upload": "fg-184-14591328-2597882607616.7z",
+  "upload_sha256": "0a8bd049869e5d3ef1bc2458d417192653bed2252ac688925611e0fd143d6d05",
+  "overall_correctness": "not_accepted_local_dynamic_effect_pose_stitching",
+  "log_complete": true,
+  "gpu": [
+    {
+      "event": "gpu_initialized",
+      "frame": 3157,
+      "generation": 0,
+      "uid": 0,
+      "cpu_qpc": 146588976608,
+      "width": 1920,
+      "height": 1200,
+      "physical_device": "Intel(R) Arc(TM) B580 Graphics"
+    }
+  ],
+  "session_seconds": 190.6116133,
+  "successful_generated_presents": 2998,
+  "logical_presents": 6928,
+  "errors": [],
+  "generated_by_mode": {
+    "generated": 2998
+  },
+  "saved_candidates": 24,
+  "saved_accepted_candidates": 19,
+  "saved_rejected_candidates": 5,
+  "motion_execution": {
+    "generated_frames_with_nonzero_motion": 2997,
+    "generated_frames_total": 2998,
+    "motion_pixels_min_median_max": [
+      0,
+      30315.0,
+      267038
+    ],
+    "interpretation": "Matching is exercised. Motion classification can include camera/raster residuals; counts do not establish correct object motion or midpoint geometry."
+  },
+  "previous_surface_fill": {
+    "sampled_orange_pixels_in_accepted_candidates": 6306,
+    "interpretation": "Previous-only surface path is exercised, not proof of general disocclusion correctness."
+  },
+  "guard": {
+    "rejected_count": 755,
+    "reasons": {
+      "invalid_scene_coverage": 236,
+      "excessive_foreground_coverage": 519
+    },
+    "all_logged_restored_and_not_presented": true
+  },
+  "protected_pixels": {
+    "sampled_yellow_pixels": 1134696,
+    "changed": 0,
+    "max_difference": 0,
+    "ui_changes_outside_yellow": 0
+  },
+  "weapon_samples": {
+    "method": "Visually reviewed bounded pink/bright gun-and-hand colour ROIs, eroded one sampled pixel. Coarse pink selection included pink pickup guns on the floor; those world pixels were excluded after inspection. These are selected interior checks, not full semantic coverage of all accessories.",
+    "pixels": 37888,
+    "non_yellow": 0,
+    "max_difference": 0,
+    "samples": [
+      {
+        "frame": 3720,
+        "selection": "pink_gun",
+        "pixels": 787,
+        "yellow": 787,
+        "changed_above_1": 0,
+        "max_difference": 0,
+        "roi": [
+          330,
+          240,
+          480,
+          395
+        ]
+      },
+      {
+        "frame": 3721,
+        "selection": "pink_gun",
+        "pixels": 2005,
+        "yellow": 2005,
+        "changed_above_1": 0,
+        "max_difference": 0,
+        "roi": [
+          330,
+          240,
+          480,
+          395
+        ]
+      },
+      {
+        "frame": 3722,
+        "selection": "pink_gun",
+        "pixels": 1934,
+        "yellow": 1934,
+        "changed_above_1": 0,
+        "max_difference": 0,
+        "roi": [
+          330,
+          240,
+          480,
+          395
+        ]
+      },
+      {
+        "frame": 3723,
+        "selection": "pink_gun",
+        "pixels": 1233,
+        "yellow": 1233,
+        "changed_above_1": 0,
+        "max_difference": 0,
+        "roi": [
+          330,
+          240,
+          480,
+          395
+        ]
+      },
+      {
+        "frame": 4647,
+        "selection": "bright_gun_hand",
+        "pixels": 6020,
+        "yellow": 6020,
+        "changed_above_1": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 4648,
+        "selection": "bright_gun_hand",
+        "pixels": 6021,
+        "yellow": 6021,
+        "changed_above_1": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 4649,
+        "selection": "bright_gun_hand",
+        "pixels": 5829,
+        "yellow": 5829,
+        "changed_above_1": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 5256,
+        "selection": "bright_gun_hand",
+        "pixels": 4795,
+        "yellow": 4795,
+        "changed_above_1": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 5257,
+        "selection": "bright_gun_hand",
+        "pixels": 4706,
+        "yellow": 4706,
+        "changed_above_1": 0,
+        "max_difference": 0
+      },
+      {
+        "frame": 5258,
+        "selection": "bright_gun_hand",
+        "pixels": 4558,
+        "yellow": 4558,
+        "changed_above_1": 0,
+        "max_difference": 0
+      }
+    ]
+  },
+  "local_dynamic_effect_failure": {
+    "strongest_frame": 6504,
+    "other_inspected_frame": 6507,
+    "observed": "Character overhead ring is locally distorted. Different parts use red current-screen fallback, cyan current camera warp, and limited matching; the combined result stitches incompatible local poses.",
+    "frame_metrics": [
+      {
+        "event": "frame_metrics",
+        "frame": 6504,
+        "generation": 0,
+        "uid": 28156916,
+        "cpu_qpc": 147694754570,
+        "enabled": true,
+        "mode": "generated",
+        "generated": true,
+        "captured": true,
+        "quality_rejected": false,
+        "quality_total_pixels": 2304000,
+        "foreground_pixels": 547570,
+        "near_colour_pixels": 441843,
+        "near_depth_pixels": 354501,
+        "ui_pixels": 182618,
+        "motion_interpolated_pixels": 41729,
+        "scene_reprojected_pixels": 1483566,
+        "foreground_ratio": 0.237661,
+        "scene_reprojection_ratio": 0.844649,
+        "invalid_scene_ratio": 0.103776,
+        "near_preserved": true,
+        "near_colour_mask_valid": true,
+        "near_draws": 23,
+        "ui_boundary_observed": true,
+        "arrival_qpc": 147690650228,
+        "host_work_ms": 410.4151,
+        "capture_ms": 352.2838,
+        "gpu_dispatch_ms": 30.842812,
+        "fence_wait_ms": 69.0316,
+        "gpu_submissions": 14,
+        "generated_present_ms": 0.0,
+        "logical_present_ms": 0.0076,
+        "pacing_wait_ms": 0.0,
+        "generated_present_start_qpc": 0,
+        "logical_present_start_qpc": 147694498052,
+        "paired_start_gap_ms": 0.0
+      },
+      {
+        "event": "frame_metrics",
+        "frame": 6507,
+        "generation": 0,
+        "uid": 28173039,
+        "cpu_qpc": 147707592141,
+        "enabled": true,
+        "mode": "generated",
+        "generated": true,
+        "captured": true,
+        "quality_rejected": false,
+        "quality_total_pixels": 2304000,
+        "foreground_pixels": 499959,
+        "near_colour_pixels": 387154,
+        "near_depth_pixels": 330550,
+        "ui_pixels": 182425,
+        "motion_interpolated_pixels": 8188,
+        "scene_reprojected_pixels": 1643016,
+        "foreground_ratio": 0.216996,
+        "scene_reprojection_ratio": 0.910742,
+        "invalid_scene_ratio": 0.072749,
+        "near_preserved": true,
+        "near_colour_mask_valid": true,
+        "near_draws": 23,
+        "ui_boundary_observed": true,
+        "arrival_qpc": 147703363979,
+        "host_work_ms": 422.7971,
+        "capture_ms": 356.919,
+        "gpu_dispatch_ms": 62.132446,
+        "fence_wait_ms": 99.2064,
+        "gpu_submissions": 14,
+        "generated_present_ms": 0.0,
+        "logical_present_ms": 0.0082,
+        "pacing_wait_ms": 0.0,
+        "generated_present_start_qpc": 0,
+        "logical_present_start_qpc": 147707578148,
+        "paired_start_gap_ms": 0.0
+      }
+    ],
+    "sample_region_checks": [
+      {
+        "frame": 6504,
+        "selection": "bright_neutral_ring_interiors_visually_bounded",
+        "pixels": 1170,
+        "classes": {
+          "red": 441,
+          "cyan": 163,
+          "blue": 32,
+          "purple": 14
+        },
+        "changed_above_1": 682,
+        "max_difference": 149
+      },
+      {
+        "frame": 6505,
+        "selection": "bright_neutral_ring_interiors_visually_bounded",
+        "pixels": 991,
+        "classes": {
+          "red": 30,
+          "cyan": 911,
+          "blue": 0,
+          "purple": 2
+        },
+        "changed_above_1": 18,
+        "max_difference": 3
+      },
+      {
+        "frame": 6506,
+        "selection": "bright_neutral_ring_interiors_visually_bounded",
+        "pixels": 1411,
+        "classes": {
+          "red": 96,
+          "cyan": 1310,
+          "blue": 0,
+          "purple": 1
+        },
+        "changed_above_1": 4,
+        "max_difference": 11
+      },
+      {
+        "frame": 6507,
+        "selection": "bright_neutral_ring_interiors_visually_bounded",
+        "pixels": 1861,
+        "classes": {
+          "red": 205,
+          "cyan": 1653,
+          "blue": 0,
+          "purple": 0
+        },
+        "changed_above_1": 3,
+        "max_difference": 3
+      }
+    ],
+    "region_selection_limit": "Bright neutral region includes ring and some adjacent bright character detail; not a complete semantic segmentation.",
+    "global_guard_limitation": "Frame 6504 invalid_scene_ratio is 0.103776, below the 0.15 threshold, and candidate is presented. A global area guard misses a salient local failure.",
+    "draw_level_cause": "Unknown without actual material/depth/draw attribution; disabled depth writes or transparent/billboard effects are hypotheses, not established facts."
+  },
+  "pixel_checks": [
+    {
+      "frame": 3207,
+      "yellow_pixels": 17209,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2121,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 80333
+    },
+    {
+      "frame": 3208,
+      "yellow_pixels": 17202,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2112,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 79978
+    },
+    {
+      "frame": 3209,
+      "yellow_pixels": 17210,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 1927,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 79167
+    },
+    {
+      "frame": 3210,
+      "yellow_pixels": 17100,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2993,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 78341
+    },
+    {
+      "frame": 3720,
+      "yellow_pixels": 41774,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 22226,
+      "orange_pixels": 7,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 186338
+    },
+    {
+      "frame": 3721,
+      "yellow_pixels": 45124,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 22274,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 182933
+    },
+    {
+      "frame": 3722,
+      "yellow_pixels": 46185,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 24597,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 174411
+    },
+    {
+      "frame": 3723,
+      "yellow_pixels": 51667,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 15948,
+      "orange_pixels": 9,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 165404
+    },
+    {
+      "frame": 4647,
+      "yellow_pixels": 49346,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2646,
+      "orange_pixels": 251,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 148248
+    },
+    {
+      "frame": 4648,
+      "yellow_pixels": 49133,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2735,
+      "orange_pixels": 266,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 149538
+    },
+    {
+      "frame": 4649,
+      "yellow_pixels": 48962,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2358,
+      "orange_pixels": 366,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 150899
+    },
+    {
+      "frame": 4650,
+      "yellow_pixels": 46949,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 882,
+      "orange_pixels": 207,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 128983
+    },
+    {
+      "frame": 5256,
+      "yellow_pixels": 51072,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 3187,
+      "orange_pixels": 2251,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 171869
+    },
+    {
+      "frame": 5257,
+      "yellow_pixels": 51063,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2911,
+      "orange_pixels": 486,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 166313
+    },
+    {
+      "frame": 5258,
+      "yellow_pixels": 51101,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2764,
+      "orange_pixels": 179,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 163352
+    },
+    {
+      "frame": 5259,
+      "yellow_pixels": 50744,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 2286,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 140643
+    },
+    {
+      "frame": 5897,
+      "yellow_pixels": 60434,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 4825,
+      "orange_pixels": 2244,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 166061
+    },
+    {
+      "frame": 5898,
+      "yellow_pixels": 60458,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 1654,
+      "orange_pixels": 595,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 128103
+    },
+    {
+      "frame": 5899,
+      "yellow_pixels": 59945,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 1296,
+      "orange_pixels": 1134,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 111709
+    },
+    {
+      "frame": 5900,
+      "yellow_pixels": 59632,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 38,
+      "orange_pixels": 57,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 91583
+    },
+    {
+      "frame": 6504,
+      "yellow_pixels": 60777,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 4587,
+      "orange_pixels": 247,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 158838
+    },
+    {
+      "frame": 6505,
+      "yellow_pixels": 64634,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 945,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 63873
+    },
+    {
+      "frame": 6506,
+      "yellow_pixels": 61507,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 965,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 64183
+    },
+    {
+      "frame": 6507,
+      "yellow_pixels": 55468,
+      "yellow_changed": 0,
+      "yellow_max": 0,
+      "blue_pixels": 906,
+      "orange_pixels": 0,
+      "ui_changed_outside_yellow": 0,
+      "changed_pixels": 62362
+    }
+  ],
+  "next_focus": [
+    "Build a deterministic ring/thin-line dynamic overlay regression from these observations.",
+    "Enforce local confidence and coherent fallback at effect/depth/motion boundaries.",
+    "Keep weapon/UI preservation and whole-frame safety regressions."
+  ],
+  "limits": [
+    "Successful Present calls do not prove display cadence or FPS benefit.",
+    "No claim that nonzero motion counts imply true object motion or reliable organic deformation.",
+    "Five saved rejected candidates are computed PPMs, not displayed generated frames.",
+    "Capture stalls perturb timing and movement; no controlled performance or temporal-delivery benchmark.",
+    "Exact binary fingerprint is absent; new motion telemetry and classifications identify the revision family."
+  ]
+}
