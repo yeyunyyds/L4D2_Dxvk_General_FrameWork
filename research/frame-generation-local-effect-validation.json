@@ -338,5 +338,30 @@
     "Dark, coloured, thick or complex-depth effects may escape the guard.",
     "Submitted captures lack scene depth; exact guard eligibility of uploaded frame 6504 cannot be replayed offline.",
     "No full dynamic interpolation, monitor cadence or FPS benefit acceptance."
-  ]
+  ],
+  "uploaded_colour_only_check": {
+    "method": "PPM stride 3. Uses one sampled-pixel neighbourhood (3 full pixels) rather than shader 2 full pixels, omits unavailable depth. This checks presence of a possible signal, not exact shader eligibility or B580 acceptance.",
+    "samples": [
+      {
+        "frame": 6504,
+        "colour_only_coarse_hits_whole_image": 341,
+        "colour_only_coarse_hits_ring_roi": 73
+      },
+      {
+        "frame": 6505,
+        "colour_only_coarse_hits_whole_image": 0,
+        "colour_only_coarse_hits_ring_roi": 0
+      },
+      {
+        "frame": 6506,
+        "colour_only_coarse_hits_whole_image": 1,
+        "colour_only_coarse_hits_ring_roi": 0
+      },
+      {
+        "frame": 6507,
+        "colour_only_coarse_hits_whole_image": 0,
+        "colour_only_coarse_hits_ring_roi": 0
+      }
+    ]
+  }
 }

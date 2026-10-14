@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "framework_commit": "32e91f1fd02a96653287b0e6f46a438ca4151aa3",
+  "download_branch_commit": "adafa488e1fd974d9f2053c865f45a00d38d3ca5",
+  "ci": {
+    "framework_commit": "32e91f1fd02a96653287b0e6f46a438ca4151aa3",
+    "run_id": "38524268703",
+    "run_attempt": "1",
+    "native_build_outcome": "success",
+    "package_sha256": "80d0a8ac5534910322a1c7d8cf1fd74a360b3b1d32ff03a8b344c771ee369cc6",
+    "l4d2_game_capture": "unrun",
+    "b580_integrated_capture": "unrun",
+    "gpu_fg_execution": "unrun"
+  },
+  "build_id": "ldb-capture-dev+646c74b9b8d461c8",
+  "zip_bytes": 1483810,
+  "zip_sha256": "80d0a8ac5534910322a1c7d8cf1fd74a360b3b1d32ff03a8b344c771ee369cc6",
+  "binaries_sha256": {
+    "bin/dxvk_d3d9.dll": "e80ec42769fe911058c2d5be4a448f9bf817d4df77cdd7d0bffdab06eabbc470",
+    "bin/.l4d2bridge/L4D2Bridge64.exe": "3d16c0738299fd93a0c8407a0a59bee0d02f1e59b76169fe5f3eead6ca927f87",
+    "bin/.l4d2bridge/L4D2Bridge32.exe": "5bd736ac6ca33005763c2a93d378d59fb1f9a66d97bcc10707e3848cb6875359"
+  },
+  "source_receipt": "matches_independently_prepared_pinned_source",
+  "bundled_scripts_readme_shader": "match_source",
+  "shader_spirv_in_native_host": "matches_validated_binary",
+  "native_architectures": "x86_DLL_x64_Host_x86_Host_LARGEADDRESSAWARE",
+  "python_tests_passed": 43,
+  "cpp_math_windows": "compiled_and_executed",
+  "immutable_https_download": "verified_matching_sha256",
+  "zip_only_branch": [
+    "downloads/host-capture-windows-x64.zip",
+    "downloads/ldb-host-capture-build-status.zip",
+    "downloads/ldb-host-capture-dev.zip"
+  ],
+  "b580_new_revision_game_test": "unrun",
+  "limits": [
+    "Thin-effect local risk restores originals in two-mode GPU fixtures; heuristic B580 acceptance remains unrun.",
+    "No monitor display FPS or end-to-end input latency claim."
+  ]
+}
