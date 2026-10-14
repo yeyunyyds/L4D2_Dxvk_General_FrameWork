@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "framework_commit": "9f7fa658cf56c615705b3af8bc1a95d6d56281bb",
+  "download_branch_commit": "fd627f0851f678bdd4cb3a12a3b17990dde75997",
+  "ci": {
+    "framework_commit": "9f7fa658cf56c615705b3af8bc1a95d6d56281bb",
+    "run_id": "38500381768",
+    "run_attempt": "1",
+    "native_build_outcome": "success",
+    "package_sha256": "75f2f67a6c8a6074c43df44e207a9e660cd2085d73125f81e9f48f2e9fee05d2",
+    "l4d2_game_capture": "unrun",
+    "b580_integrated_capture": "unrun",
+    "gpu_fg_execution": "unrun"
+  },
+  "build_id": "ldb-capture-dev+6aaf2db49287dba0",
+  "zip_bytes": 1471603,
+  "zip_sha256": "75f2f67a6c8a6074c43df44e207a9e660cd2085d73125f81e9f48f2e9fee05d2",
+  "binaries_sha256": {
+    "bin/dxvk_d3d9.dll": "85a74320f4bcaa937baeff4acb89b6c0ac4f21ef008509e8c9c92f0b2051fff8",
+    "bin/.l4d2bridge/L4D2Bridge64.exe": "cc11de4240aacca8300882b35bd8547f1e2b0f673aa31d534788410bb299bdff",
+    "bin/.l4d2bridge/L4D2Bridge32.exe": "1032b5a7ed3503a41e8165b069d228a7303d559ed02056be292f4e5fa3281487"
+  },
+  "source_receipt": "matches_independently_prepared_pinned_source",
+  "bundled_scripts_readme_shader": "match_source",
+  "shader_spirv_in_native_host": "matches_validated_binary",
+  "native_architectures": "x86_DLL_x64_Host_x86_Host_LARGEADDRESSAWARE",
+  "python_tests_passed": 43,
+  "cpp_math_windows": "compiled_and_executed",
+  "immutable_https_download": "verified_matching_sha256",
+  "zip_only_branch": [
+    "downloads/host-capture-windows-x64.zip",
+    "downloads/ldb-host-capture-build-status.zip",
+    "downloads/ldb-host-capture-dev.zip"
+  ],
+  "b580_new_revision_game_test": "unrun",
+  "limits": [
+    "B580 archive exposes near mask false positives. Colour-authoritative coverage and degenerate candidate guards await game acceptance.",
+    "No monitor display FPS or end-to-end input latency claim."
+  ]
+}

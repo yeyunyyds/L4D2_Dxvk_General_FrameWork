@@ -153,5 +153,27 @@
     "Removing depth OR fixes one demonstrated mechanism. Excessive near-colour contamination safely restores original; it is not complete near-layer semantic segmentation.",
     "This revision is not yet accepted in B580 game.",
     "No dynamic-object interpolation, complete disocclusion reconstruction or monitor display cadence claim."
-  ]
+  ],
+  "all_scene_temporal_fallback_test": {
+    "status": "passed_custom_all_scene_temporal_change_fixture",
+    "run_id": "d23090a6ea834919a02973bfd147776e",
+    "native_exit_code": 0,
+    "fixture_only_changes": [
+      "Fill world scene with alternating colours before the near pass; current and previous disagree across almost the entire scene.",
+      "Expect candidates to restore current original; actual backbuffer colour, near texture and UI are checked."
+    ],
+    "actual_backend_calls": 16,
+    "rejected_candidates": 14,
+    "rejection_reason": "insufficient_scene_reprojection",
+    "scene_reprojection_fraction_range": [
+      0.006032,
+      0.006789
+    ],
+    "all_originals_restored": true,
+    "generated_presents": 0,
+    "vulkan_validation": "passed_no_reported_errors",
+    "exe_sha256": "ce37382db78427018623f5110891c81f7596bd3994dcc9d22701a4c3e0c6a688",
+    "generic_smoke_result": "Normal-scene smoke deliberately expects generated Presents and reports Wrong real Present call count; custom validation requires sixteen originals and zero generated submissions.",
+    "b580_game": "unrun"
+  }
 }
