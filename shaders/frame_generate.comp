@@ -9,7 +9,7 @@ layout(set=0,binding=5) uniform sampler2D previousUi;
 layout(set=0,binding=6) uniform sampler2D currentFinal;
 layout(set=0,binding=7) uniform sampler2D previousFinal;
 layout(set=0,binding=8,rgba8) writeonly uniform image2D generated;
-layout(set=0,binding=9,std140) uniform Parameters { vec4 rows[20];uvec4 flags;vec4 thresholds; } p;
+layout(set=0,binding=9,std140) uniform Parameters { vec4 rows[24];uvec4 flags;vec4 thresholds; } p;
 layout(set=0,binding=10,rgba8) writeonly uniform image2D classification;
 layout(set=0,binding=11) uniform sampler2D currentNearBefore;
 layout(set=0,binding=12) uniform sampler2D currentNearAfter;
@@ -71,6 +71,81 @@ bool temporalChange(vec2 cx,vec2 px) {
  }
  return changed>=2;
 }
+vec4 clipAt(vec2 xy,float z) {
+ return vec4(2*xy.x/float(p.flags.x)-1,1-2*xy.y/float(p.flags.y),z,1);
+}
+float sourceDepth(vec2 xy,bool previous) {
+ return previous?sampleAt(previousDepth,xy).r:sampleAt(currentDepth,xy).r;
+}
+bool sceneDepth(float z){return z>.2&&z<.999999&&!isnan(z)&&!isinf(z);}
+bool gatherDepth(vec2 screen,bool previous,out vec2 source,out float midZ) {
+ midZ=sourceDepth(screen,previous);if(!sceneDepth(midZ))return false;
+ uint fromMid=previous?1u:0u,toMid=previous?5u:2u;float expected;
+ for(int i=0;i<3;i++) {
+  if(!locate(fromMid,clipAt(screen,midZ),source,expected))return false;
+  float actual=sourceDepth(source,previous);if(!sceneDepth(actual))return false;
+  vec4 mid=project(toMid,clipAt(source,actual));if(mid.w<=1e-8)return false;
+  midZ=mid.z/mid.w;
+ }
+ if(!locate(fromMid,clipAt(screen,midZ),source,expected))return false;
+ return abs(sourceDepth(source,previous)-expected)<=p.thresholds.x&&!foreground(source,previous);
+}
+vec3 sourceColour(vec2 xy,bool previous) {
+ return previous?sampleAt(previousFinal,xy).rgb:sampleAt(currentFinal,xy).rgb;
+}
+bool cameraOther(vec2 source,bool previous,out vec2 other,out float z) {
+ vec4 mid=project(previous?5u:2u,clipAt(source,sourceDepth(source,previous)));
+ return locate(previous?0u:1u,mid,other,z);
+}
+float patchScore(vec2 source,vec2 other,bool previous,float expectedDepth) {
+ if(!inside(other+vec2(-2))||!inside(other+vec2(2))||foreground(other,!previous)||
+    !sceneDepth(sourceDepth(other,!previous))||abs(sourceDepth(other,!previous)-expectedDepth)>.002)return 1;
+ float sum=0;
+ for(int y=-2;y<=2;y+=2)for(int x=-2;x<=2;x+=2) {
+  vec2 off=vec2(x,y);
+  sum+=dot(abs(sourceColour(source+off,previous)-sourceColour(other+off,!previous)),vec3(1.0/27.0));
+ }
+ return sum;
+}
+bool matchPatch(vec2 source,bool previous,out vec2 other) {
+ if(!inside(source-vec2(2))||!inside(source+vec2(2))||foreground(source,previous))return false;
+ vec2 predicted;float expected;
+ if(!cameraOther(source,previous,predicted,expected))return false;
+ vec3 centre=sourceColour(source,previous);float contrast=0;
+ for(int y=-2;y<=2;y+=2)for(int x=-2;x<=2;x+=2)
+  contrast+=dot(abs(sourceColour(source+vec2(x,y),previous)-centre),vec3(1.0/27.0));
+ if(contrast<.02)return false; // flat/ambiguous surfaces have no trusted motion.
+ float best=1,second=1;vec2 bestPoint=predicted;
+ for(int y=-8;y<=8;y+=2)for(int x=-8;x<=8;x+=2) {
+  vec2 point=predicted+vec2(x,y);float score=patchScore(source,point,previous,expected);
+  if(score<best){if(distance(point,bestPoint)>3)second=min(second,best);best=score;bestPoint=point;}
+  else if(distance(point,bestPoint)>3)second=min(second,score);
+ }
+ vec2 coarse=bestPoint;
+ for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++) {
+  vec2 point=coarse+vec2(x,y);float score=patchScore(source,point,previous,expected);
+  if(score<best){best=score;bestPoint=point;}
+ }
+ if(best>.025||second-best<.003||distance(bestPoint,predicted)<.75||
+    any(greaterThan(abs(bestPoint-predicted),vec2(8))))return false;
+ other=bestPoint;return true;
+}
+bool motionSample(vec2 screen,vec2 seed,bool previous,out vec4 colour,out float midDepth) {
+ vec2 a=seed,b,midxy;float mz;
+ for(int i=0;i<2;i++) {
+  if(!matchPatch(a,previous,b))return false;
+  vec2 am,bm;float az,bz;
+  if(!locate(previous?5u:2u,clipAt(a,sourceDepth(a,previous)),am,az)||
+     !locate(previous?2u:5u,clipAt(b,sourceDepth(b,!previous)),bm,bz))return false;
+  midxy=(am+bm)*.5;mz=(az+bz)*.5;
+  if(i==0)a+=screen-midxy;
+ }
+ if(distance(midxy,screen)>1.0)return false;
+ vec2 roundtrip;if(!matchPatch(b,!previous,roundtrip)||distance(roundtrip,a)>1.25)return false;
+ colour=vec4((sourceColour(a,previous)+sourceColour(b,!previous))*.5,1);
+ midDepth=mz;return true;
+}
+
 layout(set=0,binding=15,std430) buffer FrameQuality { uint counts[]; } quality;
 shared uvec4 groupCounts[64];
 shared uvec4 sourceCounts[64];
@@ -83,43 +158,60 @@ void main() {
  if(foregroundEdge(screen)){mark=vec4(1,1,0,1);}
  else {
   float z=texelFetch(currentDepth,xy,0).r;vec2 cx,px;float cz,pz;
-  if(z>=0.999999) {
+  vec2 currentSeed,previousSeed;float currentZ,previousZ;
+  bool currentValid=gatherDepth(screen,false,currentSeed,currentZ);
+  bool previousValid=gatherDepth(screen,true,previousSeed,previousZ);
+  if(z>=0.999999&&!currentValid&&!previousValid) {
    bool c=locate(3u,vec4(ndc,1,1),cx,cz);bool a=locate(4u,vec4(ndc,1,1),px,pz);
    c=c&&sampleAt(currentDepth,cx).r>=0.999999&&!foreground(cx,false);
    a=a&&sampleAt(previousDepth,px).r>=0.999999&&!foreground(px,true);
    if(c){result=sampleAt(currentFinal,cx);if(a)result=(result+sampleAt(previousFinal,px))*0.5;mark=vec4(1,1,1,1);}
-  } else if(z>0.2&&!isnan(z)&&!isinf(z)) {
-   float midZ=z;bool c=false;
-   for(int i=0;i<3;i++) {
-    c=locate(0u,vec4(ndc,midZ,1),cx,cz);if(!c)break;
-    float actual=sampleAt(currentDepth,cx).r;if(actual<=0.2||actual>=0.999999){c=false;break;}
-    vec2 cndc=vec2(2*cx.x/float(p.flags.x)-1,1-2*cx.y/float(p.flags.y));
-    vec4 m=project(2u,vec4(cndc,actual,1));if(m.w<=1e-8){c=false;break;}midZ=m.z/m.w;
+  } else {
+   bool have=currentValid||previousValid;
+   float midZ=currentValid?currentZ:previousZ;
+   if(previousValid&&(!currentValid||previousZ<currentZ))midZ=previousZ;
+   bool c=false,a=false,currentProjection=false;
+   if(have) {
+    currentProjection=c=locate(0u,clipAt(screen,midZ),cx,cz);
+    c=c&&sceneDepth(sourceDepth(cx,false))&&abs(sourceDepth(cx,false)-cz)<=p.thresholds.x&&!foreground(cx,false);
+    a=locate(1u,clipAt(screen,midZ),px,pz);
+    a=a&&sceneDepth(sourceDepth(px,true))&&abs(sourceDepth(px,true)-pz)<=p.thresholds.x&&!foreground(px,true);
    }
-   c=c&&locate(0u,vec4(ndc,midZ,1),cx,cz);
-   if(c) {
-    float actual=sampleAt(currentDepth,cx).r;
-    c=actual>0.2&&actual<0.999999&&abs(actual-cz)<=p.thresholds.x&&!foreground(cx,false);
+   bool changed=c&&a&&temporalChange(cx,px);
+   bool moved=false;vec4 motionColour;float motionZ;
+   if((p.flags.z&16u)!=0u&&(!c||!a||changed||patchScore(cx,px,false,pz)>.01)) {
+    if(currentValid)moved=motionSample(screen,currentSeed,false,motionColour,motionZ);
+    vec4 oldMotion;float oldZ;
+    if(previousValid&&motionSample(screen,previousSeed,true,oldMotion,oldZ)&&(!moved||oldZ<motionZ)) {
+     moved=true;motionColour=oldMotion;motionZ=oldZ;
+    }
+    // A matched object cannot overwrite a closer static surface.
+    if(moved&&have&&motionZ>midZ+p.thresholds.x)moved=false;
    }
-   bool a=locate(1u,vec4(ndc,midZ,1),px,pz);
-   if(a){float actual=sampleAt(previousDepth,px).r;a=actual>0.2&&actual<0.999999&&abs(actual-pz)<=p.thresholds.x&&!foreground(px,true);}
-   if(c) {
+   if(moved){result=motionColour;mark=vec4(0,0,1,1);}
+   else if(c) {
     result=sampleAt(currentFinal,cx);mark=vec4(0,1,1,1);
     if(a) {
      vec4 old=sampleAt(previousFinal,px);
-     if(!temporalChange(cx,px)&&all(lessThanEqual(abs(old.rgb-result.rgb),vec3(p.thresholds.y)))){result=(result+old)*0.5;mark=vec4(0,1,0,1);}
-     else {result=fallback;mark=vec4(1,0,1,1);}
+     if(!changed&&all(lessThanEqual(abs(old.rgb-result.rgb),vec3(p.thresholds.y)))){result=(result+old)*.5;mark=vec4(0,1,0,1);}
+     else{result=fallback;mark=vec4(1,0,1,1);}
     }
+   } else if(a&&currentProjection&&sceneDepth(sourceDepth(cx,false))&&sourceDepth(cx,false)<cz-p.thresholds.x) {
+    // Previous-only static geometry is trusted when a closer current surface
+    // occludes its projection. A farther current depth can mean a moving or
+    // disappearing object; never leave that previous object as a ghost.
+    result=sampleAt(previousFinal,px);mark=vec4(1,.5,0,1);
    }
   }
+
  }
  result.a=1;
  if((p.flags.z&4u)!=0u)result=result.bgra;
  imageStore(generated,xy,result);imageStore(classification,xy,mark);
  uint raw=foregroundSources(screen,false);
- sources=uvec4(uint((raw&4u)!=0u),uint((raw&1u)!=0u),uint((raw&2u)!=0u),0u);
+ sources=uvec4(uint((raw&4u)!=0u),uint((raw&1u)!=0u),uint((raw&2u)!=0u),uint(mark.r<.5&&mark.g<.5&&mark.b>.5));
  cell.x=1u;
- if(mark.g>.5&&!(mark.r>.5&&mark.b<.5))cell.w=1u;
+ if((mark.g>.5&&!(mark.r>.5&&mark.b<.5))||(mark.r<.5&&mark.g<.5&&mark.b>.5)||(mark.r>.5&&mark.g>.1&&mark.g<.75&&mark.b<.5))cell.w=1u;
  if(mark.r>.5&&mark.g<.5&&mark.b<.5)cell.y=1u;
  if(mark.r>.5&&mark.g>.5&&mark.b<.5)cell.z=1u;
  }

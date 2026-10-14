@@ -51,6 +51,17 @@ int main() {
       w += rows[60 + i] * v[i];
     }
     check(std::abs(x / w - .2) < 1e-6, "sky received camera translation");
+    std::array<float, 96> extended{};
+    check(frameTransforms(a, b, extended),
+          "previous-to-mid transform unavailable");
+    for (size_t r = 0; r < 4; r++)
+      for (size_t c = 0; c < 4; c++) {
+        double value = 0;
+        for (size_t k = 0; k < 4; k++)
+          value += double(extended[16 + r * 4 + k]) * extended[80 + k * 4 + c];
+        check(std::abs(value - (r == c ? 1.0 : 0.0)) < 1e-5,
+              "previous depth mapping roundtrip failed");
+      }
     Matrix ortho{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
         orthoMoved = ortho;
     orthoMoved[3] = .4f;

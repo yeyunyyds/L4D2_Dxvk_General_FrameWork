@@ -27,7 +27,7 @@ public:
   };
 
   struct Params {
-    std::array<float, 80> rows{};
+    std::array<float, 96> rows{};
     std::array<uint32_t, 4> flags{};
     std::array<float, 4> thresholds{.0002f, .16f, 0, 0};
   };
@@ -55,7 +55,7 @@ private:
 public:
   struct Quality {
     uint32_t total = 0, invalid = 0, foreground = 0, reprojected = 0;
-    uint32_t nearColour = 0, nearDepth = 0, ui = 0, reserved = 0;
+    uint32_t nearColour = 0, nearDepth = 0, ui = 0, motion = 0;
     double invalidSceneRatio() const {
       return total > foreground ? double(invalid) / double(total - foreground)
                                 : 0;
@@ -71,7 +71,8 @@ public:
     const char *rejectReason(uint64_t expected) const {
       if (total != expected ||
           uint64_t(invalid) + foreground + reprojected > total ||
-          nearColour > total || nearDepth > total || ui > total)
+          nearColour > total || nearDepth > total || ui > total ||
+          motion > reprojected)
         return "invalid_quality_counts";
       if (foregroundRatio() > .8)
         return "excessive_foreground_coverage";
@@ -333,7 +334,7 @@ public:
     }
   }
   void initialize(uint32_t w, uint32_t h, VkFormat depth, VkFormat color) {
-    static_assert(sizeof(Params) == 352, "FG uniform ABI");
+    static_assert(sizeof(Params) == 416, "FG uniform ABI");
     if (!w || !h || w > 4096 || h > 4096 || uint64_t(w) * h > 4096ull * 2160)
       throw std::runtime_error("FG extent budget");
     if ((color != VK_FORMAT_B8G8R8A8_UNORM &&

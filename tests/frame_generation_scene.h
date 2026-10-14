@@ -46,8 +46,16 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   struct Vertex {
     float x, y, z, w;
   };
+  bool occlusionCase = ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"occlusion";
+  bool perspectiveScene = occlusionCase;
   auto quad = [&](float x0, float y0, float x1, float y1, float z,
                   std::array<float, 4> color) {
+    if (perspectiveScene) {
+      x0 = z * x0 + .5f * width * (1 - z);
+      x1 = z * x1 + .5f * width * (1 - z);
+      y0 = z * y0 + .5f * height * (1 - z);
+      y1 = z * y1 + .5f * height * (1 - z);
+    }
     Vertex vertices[] = {
         {x0, y0, z, 1}, {x1, y0, z, 1}, {x0, y1, z, 1}, {x1, y1, z, 1}};
     hr(device->SetPixelShaderConstantF(0, color.data(), 1), "FG fixture color");
@@ -61,6 +69,11 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
     ldb_camera::Matrix m{2.f / width, 0, 0, -1 + shift, 0, -2.f / height,
                          0,           1, 0, 0,          1, 0,
                          0,           0, 0, 1};
+    if (perspectiveScene) {
+      m[11] = -.1f;
+      m[14] = 1;
+      m[15] = 0;
+    }
     hr(device->SetVertexShaderConstantF(4, m.data(), 4),
        "FG fixture projection");
   };
@@ -71,9 +84,11 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   hr(device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE), "FG fixture blend");
   hr(device->BeginScene(), "FG fixture begin");
   bool qualityCase = ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"quality";
-  projection(qualityCase && frame == 2 ? 1.8f : .02f * frame);
-  quad(-.1f * width, .15f * height, 1.1f * width, float(height), .75f,
-       {.08f, .3f, .12f, 1});
+  projection(qualityCase && frame == 2 ? 3.4f : .02f * frame);
+  quad((qualityCase ? -10.f : -.1f) * width,
+       (qualityCase ? -10.f : .15f) * height,
+       (qualityCase ? 10.f : 1.1f) * width, (qualityCase ? 10.f : 1.f) * height,
+       .75f, {.08f, .3f, .12f, 1});
   quad(.2f * width, .2f * height, .35f * width, .65f * height, .5f,
        {.9f, .05f, .03f, 1});
   float objectShift = frame % 2 ? .025f * width : 0;
@@ -81,6 +96,23 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
        .55f * height, .4f,
        frame % 2 ? std::array<float, 4>{.1f, .9f, .2f, 1}
                  : std::array<float, 4>{.1f, .1f, .9f, 1});
+  if (ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"motion") {
+    float objectX = .38f * width + (frame % 2 ? 6.f : 0.f);
+    float objectY = .72f * height + (frame % 2 ? 4.f : 0.f);
+    for (uint32_t ty = 0; ty < 10; ty++)
+      for (uint32_t tx = 0; tx < 12; tx++) {
+        uint32_t hash = (tx + ty * 17u) * 747796405u + 2891336453u;
+        hash = ((hash >> ((hash >> 28u) + 4u)) ^ hash) * 277803737u;
+        hash = (hash >> 22u) ^ hash;
+        std::array<float, 4> color{float(40 + (hash & 127u)) / 255.f,
+                                   float(40 + ((hash >> 8) & 127u)) / 255.f,
+                                   float(40 + ((hash >> 16) & 127u)) / 255.f,
+                                   1};
+        quad(objectX + tx * 4, objectY + ty * 4, objectX + (tx + 1) * 4,
+             objectY + (ty + 1) * 4, .35f, color);
+      }
+  }
+  perspectiveScene = false;
   D3DVIEWPORT9 nearView{0, 0, width, height, 0, .1f};
   ldb_fg::viewport(device, &nearView, frame);
   hr(device->SetViewport(&nearView), "FG fixture near");
@@ -178,6 +210,11 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
   bool contaminated =
       ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"mask_contamination" &&
       (frame == 2 || frame == 3);
+  bool occlusionCase = ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"occlusion";
+  float occlusionRight =
+      .35f * width + .02f * width * (float(frame) - (generated ? .5f : 0.f));
+  auto revealedBackground =
+      rgb(uint32_t(occlusionRight + 2), uint32_t(height * .4f));
   auto originalBackground = rgb(uint32_t(width * .4f), uint32_t(height * .4f));
   auto nearColor = rgb(uint32_t(width * .8f), uint32_t(height * .8f));
   auto ui = rgb(20, 20);
@@ -205,21 +242,63 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
       redPixels++;
     }
   }
+  if (!occlusionCase && !contaminated && !(qualityCase && frame == 2)) {
+    for (uint32_t x = uint32_t(width * .5f); x < uint32_t(width * .92f); x++) {
+      auto old = rgb(x, uint32_t(height * .4f));
+      bool ghost = frame % 2 ? (old[0] < 40 && old[1] < 40 && old[2] > 220)
+                             : (old[0] < 40 && old[1] > 220 && old[2] < 65);
+      if (ghost) {
+        read->UnlockRect();
+        throw std::runtime_error("Previous dynamic object left a ghost");
+      }
+    }
+  }
+  if (ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"motion") {
+    float objectX = .38f * width +
+                    .01f * width * (float(frame) - (generated ? .5f : 0.f)) +
+                    (generated ? 3.f : (frame % 2 ? 6.f : 0.f));
+    for (uint32_t ty = 2; ty < 8; ty++)
+      for (uint32_t tx = 2; tx < 10; tx++) {
+        uint32_t hash = (tx + ty * 17u) * 747796405u + 2891336453u;
+        hash = ((hash >> ((hash >> 28u) + 4u)) ^ hash) * 277803737u;
+        hash = (hash >> 22u) ^ hash;
+        auto pixel = rgb(uint32_t(objectX + tx * 4 + 2),
+                         uint32_t(.72f * height +
+                                  (generated ? 2.f : (frame % 2 ? 4.f : 0.f)) +
+                                  ty * 4 + 2));
+        if (std::abs(pixel[0] - int(40 + (hash & 127u))) > 2 ||
+            std::abs(pixel[1] - int(40 + ((hash >> 8) & 127u))) > 2 ||
+            std::abs(pixel[2] - int(40 + ((hash >> 16) & 127u))) > 2) {
+          read->UnlockRect();
+          throw std::runtime_error(
+              "Textured moving object is not at the midpoint");
+        }
+      }
+  }
   read->UnlockRect();
   if (qualityCase && frame == 3 && redPixels > uint32_t(width * .15f) + 3)
     throw std::runtime_error("Quality fallback duplicated scene geometry");
-  if (!contaminated && !(qualityCase && frame == 2) &&
+  if (!occlusionCase && !contaminated && !(qualityCase && frame == 2) &&
       (dynamic[0] > 35 || (frame % 2 ? (dynamic[1] < 220 || dynamic[2] > 65)
                                      : (dynamic[1] > 35 || dynamic[2] < 220))))
     throw std::runtime_error(
         "Changing object was blended or camera-warped instead of preserved");
   float expected = .2f * width +
                    .01f * float(width) * (float(frame) - (generated ? .5f : 0));
+  if (occlusionCase)
+    expected =
+        .2f * width + .02f * width * (float(frame) - (generated ? .5f : 0.f));
   if (contaminated || (qualityCase && frame == 2))
     expected = float(width);
   if (std::abs(float(edge) - expected) > 2)
     throw std::runtime_error("Generated image was not the expected midpoint in "
                              "the actual backbuffer");
+  if (occlusionCase &&
+      (revealedBackground[0] > 35 || revealedBackground[1] < 65 ||
+       revealedBackground[1] > 90 || revealedBackground[2] > 45 ||
+       std::abs(float(redPixels) - .15f * width) > 3))
+    throw std::runtime_error(
+        "Parallax occlusion edge mixed the source camera poses");
   if (contaminated && (std::abs(originalBackground[0] - 31) > 2 ||
                        std::abs(originalBackground[1] - 54) > 2 ||
                        std::abs(originalBackground[2] - 87) > 2))

@@ -120,8 +120,10 @@ inline bool midpoint(const Matrix &previous, const Matrix &current, Matrix &mid,
   std::array<double, 16> inv{};
   return inverse(mid, inv);
 }
+template <size_t N>
 inline bool frameTransforms(const Matrix &previous, const Matrix &current,
-                            std::array<float, 80> &rows) {
+                            std::array<float, N> &rows) {
+  static_assert(N == 80 || N == 96, "FG camera row ABI");
   Matrix mid{}, m{};
   Vector origin{};
   bool perspective = false;
@@ -163,6 +165,12 @@ inline bool frameTransforms(const Matrix &previous, const Matrix &current,
     for (size_t n = 3; n < 5; n++)
       for (size_t i = 0; i < 16; i++)
         rows[n * 16 + i] = (i % 5 == 0) ? 1.f : 0.f;
+
+  if constexpr (N == 96) {
+    if (!transform(mid, previous, m))
+      return false;
+    std::copy(m.begin(), m.end(), rows.begin() + 80);
+  }
 
   for (float x : rows)
     if (!std::isfinite(x))

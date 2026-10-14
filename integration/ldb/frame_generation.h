@@ -579,7 +579,7 @@ struct State {
             uint32_t flags =
                 (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
                 (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u) |
-                (nearColourCopied ? 8u : 0u);
+                (nearColourCopied ? 8u : 0u) | 16u;
             params.flags = {gpu->width, gpu->height, flags, previousFlags};
             bool captureDue =
                 config().autoCapture
@@ -742,7 +742,7 @@ struct State {
       previousColor = sceneColor;
       previousDepth = sceneDepth;
       previousFlags = (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
-                      (nearColourCopied ? 8u : 0u);
+                      (nearColourCopied ? 8u : 0u) | 16u;
       gpu->advance();
       history = true;
     } else
@@ -776,7 +776,8 @@ struct State {
             ",\"near_colour_pixels\":" + std::to_string(quality.nearColour) +
             ",\"near_depth_pixels\":" + std::to_string(quality.nearDepth) +
             ",\"ui_pixels\":" + std::to_string(quality.ui) +
-            ",\"scene_reprojected_pixels\":" +
+            ",\"motion_interpolated_pixels\":" +
+            std::to_string(quality.motion) + ",\"scene_reprojected_pixels\":" +
             std::to_string(quality.reprojected) + ",\"foreground_ratio\":" +
             std::to_string(quality.foregroundRatio()) +
             ",\"scene_reprojection_ratio\":" +

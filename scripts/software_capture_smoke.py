@@ -113,13 +113,13 @@ def smoke(args):
                     selection=[e for e in events if e['event']=='near_fixture_selection']
                     if len(selection)!=1 or selection[0]['mixed']!=(args.fg_near_case!='normal'):raise ValueError('Requested near fixture case not executed')
                     presents=[e for e in events if e['event']=='fixture_present']
-                    expected_generated=0 if args.fg_mode=='off' else args.frames-2-(2 if getattr(args,'fg_case','normal')!='normal' else 0)
+                    expected_generated=0 if args.fg_mode=='off' else args.frames-2-(2 if getattr(args,'fg_case','normal') in ('partial','failure','quality','mask_contamination') else 0)
                     expected=args.frames if args.fg_mode in ('off','generated') else args.frames+expected_generated
                     if len(presents)!=expected:raise ValueError('Wrong real Present call count')
                     generated=sum(e['generated_verified'] for e in presents)
                     if generated!=expected_generated:raise ValueError('Generated backbuffer pixels not verified')
-                    if not all(e.get('dynamic_preserved') for e in presents):raise ValueError('Changing object pixels not verified')
-                    result={'dynamic_pixels':'verified_actual_backbuffer','status':'passed','run_id':directory.name,'frames':args.frames,'backend_calls':len(presents),'actual_present_calls':len(presents)-(1 if getattr(args,'fg_case','normal')=='failure' else 0),'generated_backbuffers_verified':generated,'ui_and_near_pixels':'verified_actual_backbuffer','gpu_fg_execution':'executed_fixture' if generated else 'disabled','game_capture':'unrun'}
+                    if args.fg_case!='occlusion' and not all(e.get('dynamic_preserved') for e in presents):raise ValueError('Changing object pixels not verified')
+                    result={'dynamic_pixels':('not_exercised_in_parallax_case' if args.fg_case=='occlusion' else 'verified_actual_backbuffer'),'status':'passed','run_id':directory.name,'frames':args.frames,'backend_calls':len(presents),'actual_present_calls':len(presents)-(1 if getattr(args,'fg_case','normal')=='failure' else 0),'generated_backbuffers_verified':generated,'ui_and_near_pixels':'verified_actual_backbuffer','gpu_fg_execution':'executed_fixture' if generated else 'disabled','game_capture':'unrun'}
                     if getattr(args,'fg_case','normal')=='failure' and not any(e['event']=='fixture_failure' and e.get('hresult_preserved') for e in events):raise ValueError('Original backend failure not preserved')
                     if args.fg_mode=='off':
                         if (directory/'fg').exists():raise ValueError('Disabled FG created state/output')
@@ -158,6 +158,10 @@ def smoke(args):
                         if args.fg_near_case=='depth_clear_zero':
                             if any(e['near_depth_pixels']!=e['quality_total_pixels'] or e['foreground_ratio']>.3 or e['near_colour_pixels']==0 for e in metrics if e['generated']):raise ValueError('Cleared depth poisoned foreground mask')
                             result['cleared_depth_diagnostic']='full_depth_coverage_while_foreground_stays_local'
+                        if args.fg_case=='motion':
+                            if not all(e['motion_interpolated_pixels']>0 for e in metrics if e['generated']):raise ValueError('GPU object motion not exercised')
+                            result['textured_object_motion']='verified_midpoint_in_actual_backbuffer'
+                        if args.fg_case=='occlusion':result['parallax_occlusion']='verified_revealed_background_and_occluder_width_in_actual_backbuffer'
                         result['whole_frame_quality']='verified';result['rejected_frames']=[e['frame'] for e in rejects]
                         result['fg_events']='verified';result['history_storage']='full_size_gpu'
                 else:
@@ -190,6 +194,9 @@ def smoke(args):
             subprocess.run([str(server), "-k"], env=environment, timeout=5, check=False, capture_output=True)
             display.terminate()
             display.wait(timeout=5)
+            # Each run owns a fresh ~770 MB Wine prefix. Retain evidence,
+            # but release this reproducible cache after its server exits.
+            shutil.rmtree(prefix, ignore_errors=True)
     (directory / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({**result, "directory": str(directory)}, indent=2))
     return 0 if result["status"] in ("passed", "expected_failure") else 1
@@ -209,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("--fg-near-case",choices=("normal","no_depth_and_rebind","depth_clear_zero"),default="normal")
     parser.add_argument("--fg-auto-capture",action="store_true")
     parser.add_argument("--fg-pacing-ms",type=int,choices=range(9),default=0)
-    parser.add_argument("--fg-case",choices=("normal","partial","failure","quality","mask_contamination"),default="normal")
+    parser.add_argument("--fg-case",choices=("normal","partial","failure","quality","mask_contamination","motion","occlusion"),default="normal")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))
     args = parser.parse_args()
