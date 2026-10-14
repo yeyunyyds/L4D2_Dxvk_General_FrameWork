@@ -113,7 +113,7 @@ def smoke(args):
                     selection=[e for e in events if e['event']=='near_fixture_selection']
                     if len(selection)!=1 or selection[0]['mixed']!=(args.fg_near_case!='normal'):raise ValueError('Requested near fixture case not executed')
                     presents=[e for e in events if e['event']=='fixture_present']
-                    expected_generated=0 if args.fg_mode=='off' else args.frames-2-(2 if getattr(args,'fg_case','normal') in ('partial','failure','quality','mask_contamination') else 0)
+                    expected_generated=0 if args.fg_mode=='off' or args.fg_case=='thin_effect' else args.frames-2-(2 if getattr(args,'fg_case','normal') in ('partial','failure','quality','mask_contamination') else 0)
                     expected=args.frames if args.fg_mode in ('off','generated') else args.frames+expected_generated
                     if len(presents)!=expected:raise ValueError('Wrong real Present call count')
                     generated=sum(e['generated_verified'] for e in presents)
@@ -131,9 +131,9 @@ def smoke(args):
                         if not any(e['event']=='history_invalidated' and e.get('reason')=='reset' for e in fgevents):raise ValueError('FG Reset invalidation unobserved')
                         metrics=[e for e in fgevents if e['event']=='frame_metrics']
                         if len(metrics)!=args.frames:raise ValueError('Missing per-frame telemetry')
-                        dispatch=[e['gpu_dispatch_ms'] for e in metrics if e['generated']]
+                        dispatch=[e['gpu_dispatch_ms'] for e in metrics if e['generated'] or e['quality_rejected']]
                         if not dispatch or any(x<0 for x in dispatch):raise ValueError('Fixture GPU timestamps unavailable')
-                        normal=[e for e in metrics if e['generated'] and not e['captured']]
+                        normal=[e for e in metrics if (e['generated'] or e['quality_rejected']) and not e['captured']]
                         # scene, two near colour copies, depth, UI, final, combined compute/write, restore.
                         expected_submissions=10 if getattr(args,'fg_near_case',None)!='normal' else 8
                         if not normal or any(e['gpu_submissions']!=expected_submissions for e in normal):raise ValueError('Combined dispatch/write submission not verified')
@@ -153,6 +153,10 @@ def smoke(args):
                         rejects=[e for e in fgevents if e['event']=='frame_rejected']
                         if args.fg_case in ('quality','mask_contamination'):
                             if [e['frame'] for e in rejects]!=[2,3] or any(not e.get('original_restored') or e.get('presented') for e in rejects):raise ValueError('Quality-rejected candidate was presented')
+                        elif args.fg_case=='thin_effect':
+                            if len(rejects)!=args.frames-2 or any(e['reason']!='unsafe_thin_effect' or not e['original_restored'] or e['presented'] for e in rejects):raise ValueError('Thin effect rejection not verified')
+                            if any(not e['local_effect_risk'] or e['motion_interpolated_pixels']>e['scene_reprojected_pixels'] for e in metrics if e['quality_rejected']):raise ValueError('Tagged local risk corrupts motion count')
+                            result['thin_effect']='verified_original_ring_in_actual_backbuffer_before_present'
                         elif rejects:raise ValueError('Normal fixture was incorrectly rejected')
                         if args.fg_case=='mask_contamination' and any(e['reason']!='excessive_foreground_coverage' for e in rejects):raise ValueError('Contamination rejection reason not validated')
                         if args.fg_near_case=='depth_clear_zero':
@@ -164,6 +168,7 @@ def smoke(args):
                         if args.fg_case=='occlusion':result['parallax_occlusion']='verified_revealed_background_and_occluder_width_in_actual_backbuffer'
                         result['whole_frame_quality']='verified';result['rejected_frames']=[e['frame'] for e in rejects]
                         result['fg_events']='verified';result['history_storage']='full_size_gpu'
+                        if args.fg_case=='thin_effect':result['gpu_fg_execution']='computed_then_rejected_for_local_risk'
                 else:
                     result = analyze(read_events(directory / "capture.jsonl"), directory.name, process.returncode)
             if args.validation:
@@ -216,7 +221,7 @@ if __name__ == "__main__":
     parser.add_argument("--fg-near-case",choices=("normal","no_depth_and_rebind","depth_clear_zero"),default="normal")
     parser.add_argument("--fg-auto-capture",action="store_true")
     parser.add_argument("--fg-pacing-ms",type=int,choices=range(9),default=0)
-    parser.add_argument("--fg-case",choices=("normal","partial","failure","quality","mask_contamination","motion","occlusion"),default="normal")
+    parser.add_argument("--fg-case",choices=("normal","partial","failure","quality","mask_contamination","motion","occlusion","thin_effect"),default="normal")
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--observer", choices=("enabled", "disabled", "waiting", "triggered"))
     args = parser.parse_args()

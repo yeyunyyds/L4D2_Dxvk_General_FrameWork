@@ -776,8 +776,11 @@ struct State {
             ",\"near_colour_pixels\":" + std::to_string(quality.nearColour) +
             ",\"near_depth_pixels\":" + std::to_string(quality.nearDepth) +
             ",\"ui_pixels\":" + std::to_string(quality.ui) +
+            ",\"local_effect_risk\":" +
+            std::string(quality.localEffectRisk() ? "true" : "false") +
             ",\"motion_interpolated_pixels\":" +
-            std::to_string(quality.motion) + ",\"scene_reprojected_pixels\":" +
+            std::to_string(quality.motionPixels()) +
+            ",\"scene_reprojected_pixels\":" +
             std::to_string(quality.reprojected) + ",\"foreground_ratio\":" +
             std::to_string(quality.foregroundRatio()) +
             ",\"scene_reprojection_ratio\":" +

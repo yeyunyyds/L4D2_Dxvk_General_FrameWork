@@ -56,6 +56,8 @@ public:
   struct Quality {
     uint32_t total = 0, invalid = 0, foreground = 0, reprojected = 0;
     uint32_t nearColour = 0, nearDepth = 0, ui = 0, motion = 0;
+    uint32_t motionPixels() const { return motion & 0x7fffffffu; }
+    bool localEffectRisk() const { return (motion & 0x80000000u) != 0; }
     double invalidSceneRatio() const {
       return total > foreground ? double(invalid) / double(total - foreground)
                                 : 0;
@@ -72,8 +74,10 @@ public:
       if (total != expected ||
           uint64_t(invalid) + foreground + reprojected > total ||
           nearColour > total || nearDepth > total || ui > total ||
-          motion > reprojected)
+          motionPixels() > reprojected)
         return "invalid_quality_counts";
+      if (localEffectRisk())
+        return "unsafe_thin_effect";
       if (foregroundRatio() > .8)
         return "excessive_foreground_coverage";
       if (invalidSceneRatio() > .15)

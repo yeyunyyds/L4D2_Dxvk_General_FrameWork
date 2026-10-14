@@ -146,11 +146,27 @@ bool motionSample(vec2 screen,vec2 seed,bool previous,out vec4 colour,out float 
  midDepth=mz;return true;
 }
 
+// Conservative detector, not material/semantic classification: unstable bright
+// thin colour features on locally flat scene depth lack reliable geometry.
+bool unsafeThinEffect(vec2 screen,vec4 candidate,vec4 current) {
+ if(min(current.r,min(current.g,current.b))<.72||max(current.r,max(current.g,current.b))-min(current.r,min(current.g,current.b))>.10)return false;
+ if(dot(abs(candidate.rgb-current.rgb),vec3(1.0/3.0))<.08||dot(abs(sourceColour(screen,true)-current.rgb),vec3(1.0/3.0))<.08)return false;
+ if(!inside(screen-vec2(2))||!inside(screen+vec2(2)))return false;
+ float depth=sourceDepth(screen,false);if(!sceneDepth(depth))return false;
+ int bright=0;
+ for(int y=-2;y<=2;y+=2)for(int x=-2;x<=2;x+=2) {
+  vec2 point=screen+vec2(x,y);float z=sourceDepth(point,false);
+  if(!sceneDepth(z)||abs(z-depth)>p.thresholds.x)return false;
+  vec3 rgb=sourceColour(point,false);if(min(rgb.r,min(rgb.g,rgb.b))>.72&&max(rgb.r,max(rgb.g,rgb.b))-min(rgb.r,min(rgb.g,rgb.b))<.10)bright++;
+ }
+ return bright>=2&&bright<=5;
+}
 layout(set=0,binding=15,std430) buffer FrameQuality { uint counts[]; } quality;
 shared uvec4 groupCounts[64];
 shared uvec4 sourceCounts[64];
+shared uint localRisks[64];
 void main() {
- uint local=gl_LocalInvocationIndex;uvec4 cell=uvec4(0u),sources=uvec4(0u);
+ uint local=gl_LocalInvocationIndex;uvec4 cell=uvec4(0u),sources=uvec4(0u);uint risk=0u;
  ivec2 xy=ivec2(gl_GlobalInvocationID.xy);
  if(all(lessThan(xy,ivec2(p.flags.xy)))) {
  vec2 screen=vec2(xy);vec4 fallback=sampleAt(currentFinal,screen),result=fallback;vec4 mark=vec4(1,0,0,1);
@@ -205,9 +221,10 @@ void main() {
   }
 
  }
+ if(!(mark.r>.5&&mark.g>.5&&mark.b<.5)&&unsafeThinEffect(screen,result,fallback))risk=1u;
  result.a=1;
  if((p.flags.z&4u)!=0u)result=result.bgra;
- imageStore(generated,xy,result);imageStore(classification,xy,mark);
+ imageStore(generated,xy,result);imageStore(classification,xy,risk!=0u?vec4(1,.5,1,1):mark);
  uint raw=foregroundSources(screen,false);
  sources=uvec4(uint((raw&4u)!=0u),uint((raw&1u)!=0u),uint((raw&2u)!=0u),uint(mark.r<.5&&mark.g<.5&&mark.b>.5));
  cell.x=1u;
@@ -215,12 +232,13 @@ void main() {
  if(mark.r>.5&&mark.g<.5&&mark.b<.5)cell.y=1u;
  if(mark.r>.5&&mark.g>.5&&mark.b<.5)cell.z=1u;
  }
- groupCounts[local]=cell;sourceCounts[local]=sources;barrier();
- for(uint stride=32u;stride>0u;stride/=2u){if(local<stride){groupCounts[local]+=groupCounts[local+stride];sourceCounts[local]+=sourceCounts[local+stride];}barrier();}
+ groupCounts[local]=cell;sourceCounts[local]=sources;localRisks[local]=risk;barrier();
+ for(uint stride=32u;stride>0u;stride/=2u){if(local<stride){groupCounts[local]+=groupCounts[local+stride];sourceCounts[local]+=sourceCounts[local+stride];localRisks[local]|=localRisks[local+stride];}barrier();}
  if(local==0u) {
   uint offset=(gl_WorkGroupID.y*gl_NumWorkGroups.x+gl_WorkGroupID.x)*8u;
   quality.counts[offset]=groupCounts[0].x;quality.counts[offset+1u]=groupCounts[0].y;
   quality.counts[offset+2u]=groupCounts[0].z;quality.counts[offset+3u]=groupCounts[0].w;
   for(uint i=0u;i<4u;i++)quality.counts[offset+4u+i]=sourceCounts[0][i];
+  quality.counts[offset+7u]|=localRisks[0]!=0u?0x80000000u:0u;
  }
 }

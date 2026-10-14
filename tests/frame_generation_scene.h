@@ -112,6 +112,29 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
              objectY + (ty + 1) * 4, .35f, color);
       }
   }
+  if (ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"thin_effect") {
+    hr(device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE),
+       "Thin effect no depth writes");
+    hr(device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE),
+       "Thin effect alpha");
+    hr(device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA),
+       "Thin effect src blend");
+    hr(device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA),
+       "Thin effect dst blend");
+    float cx = .43f * width + (frame % 2 ? 20.f : 0.f),
+          cy = .76f * height + (frame % 2 ? 6.f : 0.f);
+    for (int i = 0; i < 120; i++) {
+      double angle = 6.283185307179586 * i / 120;
+      float x = cx + 24.f * float(std::cos(angle)),
+            y = cy + 24.f * float(std::sin(angle));
+      quad(x - 1.5f, y - 1.5f, x + 1.5f, y + 1.5f, .35f,
+           {.95f, .95f, .95f, .85f});
+    }
+    hr(device->SetRenderState(D3DRS_ZWRITEENABLE, TRUE),
+       "Thin effect restore depth writes");
+    hr(device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE),
+       "Thin effect restore blend");
+  }
   perspectiveScene = false;
   D3DVIEWPORT9 nearView{0, 0, width, height, 0, .1f};
   ldb_fg::viewport(device, &nearView, frame);
@@ -250,6 +273,20 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
       if (ghost) {
         read->UnlockRect();
         throw std::runtime_error("Previous dynamic object left a ghost");
+      }
+    }
+  }
+  if (ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"thin_effect") {
+    float cx = .43f * width + .01f * width * frame + (frame % 2 ? 20.f : 0.f),
+          cy = .76f * height + (frame % 2 ? 6.f : 0.f);
+    for (int i = 0; i < 24; i++) {
+      double angle = 6.283185307179586 * i / 24;
+      auto point = rgb(uint32_t(cx + 24.f * float(std::cos(angle))),
+                       uint32_t(cy + 24.f * float(std::sin(angle))));
+      if (point[0] < 190 || point[1] < 190 || point[2] < 190) {
+        read->UnlockRect();
+        throw std::runtime_error(
+            "Thin ring mixed camera poses instead of restoring original");
       }
     }
   }

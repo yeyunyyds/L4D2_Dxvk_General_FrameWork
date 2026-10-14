@@ -18,7 +18,7 @@ s=s[:a]+r'''    if(ldb_fg::readEnv(L"LDB_FG_FIXTURE_CAPTURE_CLOCK")==L"1" && (fr
     bool special=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"partial" || ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"failure";
     bool quality=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"quality" || ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"mask_contamination";
     bool failure=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"failure";
-    bool generatedExpected=ldb_fg::config().enabled && frame!=0 && int(frame)!=args.resetFrame && !((special||quality)&&(frame==2||frame==3));
+    bool generatedExpected=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")!=L"thin_effect" && ldb_fg::config().enabled && frame!=0 && int(frame)!=args.resetFrame && !((special||quality)&&(frame==2||frame==3));
     Com<IDirect3DSwapChain9> chain;
     if(frame%2)hr(device->GetSwapChain(0,chain.put()),"FG fixture swapchain");
     HRESULT result=ldb_fg::present(device.get(),frame,[&](){

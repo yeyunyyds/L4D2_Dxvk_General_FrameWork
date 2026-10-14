@@ -4,11 +4,12 @@ layout(set=0,binding=9,std140) uniform Parameters { vec4 rows[24];uvec4 flags;ve
 layout(set=0,binding=15,std430) buffer FrameQuality { uint counts[]; } quality;
 shared uvec4 sums[64];
 shared uvec4 sources[64];
+shared uint risks[64];
 void main() {
  uint groups=((p.flags.x+7u)/8u)*((p.flags.y+7u)/8u);
- uint id=gl_LocalInvocationIndex;uvec4 sum=uvec4(0u),src=uvec4(0u);
- for(uint i=id;i<groups;i+=64u)for(uint j=0u;j<4u;j++){sum[j]+=quality.counts[i*8u+j];src[j]+=quality.counts[i*8u+4u+j];}
- sums[id]=sum;sources[id]=src;barrier();
- for(uint stride=32u;stride>0u;stride/=2u){if(id<stride){sums[id]+=sums[id+stride];sources[id]+=sources[id+stride];}barrier();}
- if(id==0u){uint offset=groups*8u;for(uint j=0u;j<4u;j++){quality.counts[offset+j]=sums[0][j];quality.counts[offset+4u+j]=sources[0][j];}}
+ uint id=gl_LocalInvocationIndex;uvec4 sum=uvec4(0u),src=uvec4(0u);uint risk=0u;
+ for(uint i=id;i<groups;i+=64u){for(uint j=0u;j<4u;j++){sum[j]+=quality.counts[i*8u+j];src[j]+=quality.counts[i*8u+4u+j] & (j==3u?0x7fffffffu:0xffffffffu);}risk|=quality.counts[i*8u+7u]&0x80000000u;}
+ sums[id]=sum;sources[id]=src;risks[id]=risk;barrier();
+ for(uint stride=32u;stride>0u;stride/=2u){if(id<stride){sums[id]+=sums[id+stride];sources[id]+=sources[id+stride];risks[id]|=risks[id+stride];}barrier();}
+ if(id==0u){uint offset=groups*8u;for(uint j=0u;j<4u;j++){quality.counts[offset+j]=sums[0][j];quality.counts[offset+4u+j]=sources[0][j]|(j==3u?risks[0]:0u);}}
 }
