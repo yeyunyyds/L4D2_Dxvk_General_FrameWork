@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/rt-runtime-package.yml
       - tools/runtime_imports.py
+      - tools/repackage_rt_product.py
   workflow_dispatch:
 permissions:
   contents: write
@@ -46,13 +47,44 @@ jobs:
           assert digest(runtime/'d3d9.dll') == '21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7'
           assert digest(runtime/'rt-runtime-smoke.exe') == '16313c79783afe6251e82cc2b121393553d894394dc9c6cab4f7421032942b4d'
           print('Pinned compiled product restored; no C++ build performed')
+      - name: Build genuine pinned Vulkan loader prerequisite
+        id: loader
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Start-Transcript -Path .research/vulkan-loader-build.log -Force
+          try {
+            & git clone --depth 1 --branch v1.4.313 https://github.com/KhronosGroup/Vulkan-Loader.git .research/vulkan-loader
+            if ($LASTEXITCODE -ne 0) { throw 'Loader checkout failed' }
+            & git clone --depth 1 --branch v1.4.313 https://github.com/KhronosGroup/Vulkan-Headers.git .research/vulkan-headers
+            if ($LASTEXITCODE -ne 0) { throw 'Headers checkout failed' }
+            if ((& git -C .research/vulkan-loader rev-parse HEAD) -ne 'fb78607414e154c7a5c01b23177ba719c8a44909') { throw 'Loader pin differs' }
+            if ((& git -C .research/vulkan-headers rev-parse HEAD) -ne '409c16be502e39fe70dd6fe2d9ad4842ef2c9a53') { throw 'Headers pin differs' }
+            $install = Join-Path (Get-Location) '.research/vulkan-headers-install'
+            & cmake -S .research/vulkan-headers -B .research/vulkan-headers-build -A x64 "-DCMAKE_INSTALL_PREFIX=$install" -DVULKAN_HEADERS_ENABLE_TESTS=OFF
+            if ($LASTEXITCODE -ne 0) { throw 'Headers configuration failed' }
+            & cmake --build .research/vulkan-headers-build --config Release --target install
+            if ($LASTEXITCODE -ne 0) { throw 'Headers install failed' }
+            & cmake -S .research/vulkan-loader -B .research/vulkan-loader-build -A x64 "-DCMAKE_PREFIX_PATH=$install" "-DVULKAN_HEADERS_INSTALL_DIR=$install" -DBUILD_TESTS=OFF -DBUILD_WERROR=ON
+            if ($LASTEXITCODE -ne 0) { throw 'Loader configuration failed' }
+            & cmake --build .research/vulkan-loader-build --config Release --target vulkan --parallel 3
+            if ($LASTEXITCODE -ne 0) { throw 'Loader build failed' }
+          } finally { Stop-Transcript }
+      - name: Repair and verify the shipped package using existing runtime binaries
+        id: repair
+        shell: powershell
+        run: |
+          & cmd.exe /d /c 'python tools/repackage_rt_product.py --loader .research/vulkan-loader-build/loader/Release/vulkan-1.dll > .research/rt-repackage.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content .research/rt-repackage.log
+          if ($result -ne 0) { throw 'Native repaired package verification failed' }
       - name: Inspect PE dependency graph and independent loads
         shell: python
         run: |
           import ctypes, json, pathlib, subprocess, sys
           sys.path.insert(0, 'tools')
           from runtime_imports import analyze
-          runtime = pathlib.Path('.research/rt-package-check/cache/runtime').resolve()
+          runtime = pathlib.Path('.research/rt-package-repaired/cache/runtime').resolve()
           report = analyze(runtime)
           report['build_commit'] = '9c3b2f860095d4e75e283d24dd9a54c0343554ec'
           report['dll_loads'] = {}
@@ -65,11 +97,15 @@ jobs:
                   report['dll_loads'][name] = {'result': 'timeout'}
           pathlib.Path('runtime-imports.json').write_text(json.dumps(report, indent=2)+'\n')
           print(json.dumps(report['missing_ordinary'], indent=2))
+          assert not report['missing_ordinary'], report['missing_ordinary']
+          assert all(x.get('exit_code') == 0 for x in report['dll_loads'].values()), report['dll_loads']
       - name: Publish development dependency evidence
         if: always()
         shell: python
         env:
           RT_DEPENDENCY_OUTCOME: ${{ steps.dependencies.outcome }}
+          RT_LOADER_OUTCOME: ${{ steps.loader.outcome }}
+          RT_REPAIR_OUTCOME: ${{ steps.repair.outcome }}
         run: |
           import json, os, pathlib, zipfile
           path=pathlib.Path('.research/dist/rt-runtime-dependencies-status.zip')
@@ -77,9 +113,15 @@ jobs:
           with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED) as z:
               p=pathlib.Path('runtime-imports.json')
               if p.is_file(): z.write(p,p.name)
-              z.writestr('status.json',json.dumps({'schema':1,'commit':os.environ['GITHUB_SHA'],'restoration':os.environ['RT_DEPENDENCY_OUTCOME'],'scope':'dependency_load_diagnostic','gpu_execution':'unrun'}))
+              for name in ['.research/vulkan-loader-build.log','.research/rt-repackage.log','.research/dist/rt-prerequisites/package-validation.json','.research/dist/rt-prerequisites/publish-index.json']:
+                  p=pathlib.Path(name)
+                  if p.is_file(): z.write(p,p.name)
+              z.writestr('status.json',json.dumps({'schema':1,'commit':os.environ['GITHUB_SHA'],'restoration':os.environ['RT_DEPENDENCY_OUTCOME'],'loader_build':os.environ['RT_LOADER_OUTCOME'],'package_repair':os.environ['RT_REPAIR_OUTCOME'],'scope':'dependency_load_diagnostic','gpu_execution':'unrun'}))
           import subprocess, sys
           subprocess.run([sys.executable,'scripts/publish_rt_build_status.py','--package',str(path)],check=True)
+      - name: Publish verified launcher and all dependency ZIPs atomically
+        if: steps.repair.outcome == 'success' && success()
+        run: python scripts/publish_rt_build_status.py --packages-directory .research/dist/rt-prerequisites
       - uses: actions/upload-artifact@v4
         if: always()
         with:
