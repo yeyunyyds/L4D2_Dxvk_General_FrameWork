@@ -62,7 +62,8 @@
         "LDB 1.3.2 review and separate RT baseline",
         "Matched custom runtime source identified",
         "Hook reference and API review",
-        "Native observer Bridge build"
+        "Native observer Bridge build",
+        "Native MSVC x86 SDK candidate ABI extraction (not game ABI validation)"
       ],
       "remaining_parts": [
         "Version-checked Source queue ABI and game hooks",
@@ -90,10 +91,12 @@
         "Owned frame/view/draw protocol and resource epochs",
         "DeviceBridge handshake and observation patch",
         "Cross-frame, reset and lifetime execution cases",
-        "Bounded developer suite coordinator and trace analyzer"
+        "Bounded developer suite coordinator and trace analyzer",
+        "Pinned SDK queue callback with owned packets/COM lease and cancel/Reset handling",
+        "Native x86 SDK queue/COM/Host fixture: 512 overlap frames plus 2 recovery frames"
       ],
       "remaining_parts": [
-        "Actual Source queue callback and producer/consumer linkage",
+        "Actual game hook/context binding and queue insertion beside real render commands",
         "Actual game multithreading/order evidence",
         "User game launch/replay and final collection pipeline"
       ]
@@ -108,12 +111,20 @@
       "gates": [
         "G2"
       ],
-      "status": "planned",
+      "status": "incomplete",
       "deliverables": [
         "Actual selected-runtime RT probe",
         "Static opaque world and view boundaries",
         "R0/R1/R2 package",
         "Combined batch A analysis"
+      ],
+      "completed_parts": [
+        "Standalone API 0.6.4 static scene diagnostic implemented and natively compiled; GPU execution unrun"
+      ],
+      "remaining_parts": [
+        "Matching runtime full build and B580 execution",
+        "Current-game static world conversion",
+        "R0/R1/R2 combined package A"
       ]
     },
     {

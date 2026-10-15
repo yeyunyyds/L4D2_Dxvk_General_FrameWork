@@ -35,5 +35,34 @@
       "url": "https://github.com/alliedmodders/hl2sdk/blob/2a31cd007b2d7d2f964dc093eedcf7a812cf9dd6/public/tier1/refcount.h",
       "sha256": "6340d301b2fbd97737311a52f244d0021a6292b051dc0e2fe3a4513663015562"
     }
-  ]
+  ],
+  "compiled_sdk_candidates": {
+    "native_build_commit": "1e4fac2a93db50bdea1acca253a31b2f985746d2",
+    "compiler": "MSVC 14.29 x86",
+    "methods": {
+      "GetCallQueue": {
+        "vtable_byte_offset": 584,
+        "vtable_slot": 146
+      },
+      "GetRenderContext": {
+        "vtable_byte_offset": 380,
+        "vtable_slot": 95
+      },
+      "GetMatrix4": {
+        "vtable_byte_offset": 120,
+        "vtable_slot": 30
+      },
+      "GetMatrix3": {
+        "vtable_byte_offset": 116,
+        "vtable_slot": 29
+      }
+    },
+    "assembly_sha256": "558fd427a5cc1454de40dad514e0d1a05d524cecd0fad2cb10cb86643df307a1"
+  },
+  "compat_get_render_context_slot": 96,
+  "sdk_get_render_context_matches_compat": false,
+  "callback_implementation": "integration/rt/rt_source_queue.h",
+  "callback_development_execution": "pass",
+  "evidence": "research/rt-source-queue-validation.json",
+  "compat_get_render_context_call_sites": "commented out; slot 96 is a partial declaration, not a verified game binding"
 }

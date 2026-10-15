@@ -12,7 +12,7 @@ mod 与该 runtime 的 API 均为 0.6.4，Bridge 为 0.6.5，22 个接口函数�
 
 已提取 7 个关键 Hook 的固定源码模式和模块归属，未把旧静态 RVA 当作当前游戏可用地址。参考 `IMatRenderContext` 只定义了部分矩阵方法，没有完整 `GetCallQueue` ABI。该槽位和 queued mesh 的布局仍未确定；当前没有向游戏安装猜测的队列 Hook，也没有关闭游戏线程来绕过它。完整证据见 [源码审查](../../research/rt-source-audit.json)。
 
-另外固定了 AlliedModders `hl2sdk/l4d2` 的 [专用 SDK 参考](../../research/rt-source-queue-sdk.json)。它定义了 `GetCallQueue` 和 functor 的引用计数／执行／取消规则，可用于下一步绑定；尚未把 SDK 接口视为当前游戏模块的 ABI 验收结果。
+另外固定了 AlliedModders `hl2sdk/l4d2` 的 [专用 SDK 参考](../../research/rt-source-queue-sdk.json)，并已实现直接使用其 `CFunctor`／`ICallQueue` 的有序回调。原生 x86 的 512 帧回调／COM／Host 开发用例通过；实际游戏 Hook 仍未安装。编译提取的 SDK `GetRenderContext` 为第 95 槽，而参考 mod 的部分接口声明为第 96 槽（调用点已被注释），不能直接把完整 SDK 当作游戏 ABI。最新证据与边界见 [队列回调与静态诊断](rt-source-queue.md)。
 
 ## 协议与 Device 接入
 
@@ -72,6 +72,7 @@ python -m unittest discover -s tests -v
 
 ```text
 python scripts/prepare_rt_bridge.py
+python scripts/prepare_rt_source_sdk.py
 powershell.exe -NoProfile -File scripts/build_rt_foundation.ps1
 ```
 
