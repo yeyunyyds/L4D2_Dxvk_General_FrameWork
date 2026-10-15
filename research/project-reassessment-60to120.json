@@ -11,7 +11,8 @@
     "baseline_test_resolution": [
       1920,
       1200
-    ]
+    ],
+    "acceptance_priority": "Maintain 60 real frames with FG enabled in high-pressure scenes; then verify 120 display pacing and image quality."
   },
   "observed": {
     "gpu": "Intel Arc B580",
@@ -47,7 +48,7 @@
   "route_recommendations": [
     {
       "route": "Native rendering at 120 if target scenes sustain it",
-      "priority": "first choice for current raster game when feasible",
+      "priority": "conditional only; not the default for the user-reported high-pressure scenes",
       "condition": "Earlier user-reported 350-400 source FPS must still hold in target scenes; display supports target refresh."
     },
     {
@@ -128,5 +129,15 @@
     "Steam product page was blocked by the environment destination policy; no price/latest-version claim is made.",
     "The archived lsfg-vk README is third-party context for a Windows Lossless Scaling app, not a B580 performance or quality validation."
   ],
-  "no_new_runtime_experiment": "This review uses existing repository code, prior user captures and read-only public documentation."
+  "no_new_runtime_experiment": "This review uses existing repository code, prior user captures and read-only public documentation.",
+  "user_baseline_clarification": {
+    "normal_source_fps_approx": 300,
+    "high_pressure_source_fps_range": [
+      60,
+      80
+    ],
+    "requested_goal": "Limit source rendering to 60 and sustain 120 paced output in high-pressure scenes",
+    "bottleneck": "CPU versus GPU not established",
+    "implication": "Native 120 is not a supported default recommendation for these high-pressure scenes."
+  }
 }
