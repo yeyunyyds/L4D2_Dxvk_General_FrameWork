@@ -85,9 +85,12 @@ jobs:
           with zipfile.ZipFile(package) as z:
               manifest = json.loads(z.read('preflight-manifest.json'))
           report = []
+          import os
+          event = json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text(encoding='utf-8'))
+          repository_private = event.get('repository', {}).get('private')
           for part in manifest['payloads']:
               url = f'https://raw.githubusercontent.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/{PAYLOAD_REF}/downloads/{part["name"]}'
-              item = {'name':part['name'],'url':url,'expected_size':part['size']}
+              item = {'name':part['name'],'url':url,'expected_size':part['size'],'repository_private':repository_private}
               try:
                   with urllib.request.urlopen(urllib.request.Request(url, headers={'Range':'bytes=0-0'}), timeout=30) as r:
                       item.update(status=r.status,content_range=r.headers.get('Content-Range'),first_byte_hex=r.read(1).hex())
