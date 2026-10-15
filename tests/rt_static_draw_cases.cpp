@@ -25,6 +25,12 @@ void conversionAndRestore() {
   }, report);
   require(SUCCEEDED(result) && draws == 1 && report.code == Code::Applied && report.converted, "static draw failed");
   require(device.restored() && device.leasesReleased() && !device.foreign, "static state/ref leak");
+  // Windows can derive a nonzero FVF for a manually created declaration. It
+  // still needs that exact declaration back, rather than another FVF object.
+  device.declaration.fvf = D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2;
+  device.SetVertexDeclaration(&device.declaration);
+  execute(&device, &snapshot, D3DPT_TRIANGLELIST, false, true, [] { return S_OK; }, report);
+  require(device.restored() && device.leasesReleased(), "FVF-compatible manual declaration identity lost");
   // Restore FVF binding as an FVF binding, not an arbitrary declaration.
   device.SetFVF(D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2);
   const auto oldFvf = device.currentFvf;
@@ -66,7 +72,7 @@ void rejectionPreservesDraw() {
 }
 
 void failuresRestoreAndRemainVisible() {
-  for (unsigned at = 1; at <= 13; ++at) {
+  for (unsigned at = 1; at <= 12; ++at) {
     rt_test::Graphics device; device.failGet = at; auto snapshot = rt_test::snapshot(); Report report;
     unsigned draws = 0;
     execute(&device, &snapshot, D3DPT_TRIANGLELIST, false, true, [&] { ++draws; return S_OK; }, report);
@@ -183,7 +189,12 @@ void systemD3D9State() {
   require(oldFvf == restoredFvf, "system D3D9 FVF restore mismatch");
   Ref<IDirect3DVertexDeclaration9> actual;
   check(device.value->GetVertexDeclaration(&actual.value));
-  require(actual.value == declaration.value, "system D3D9 declaration restore mismatch");
+  const GUID unknown{0, 0, 0, {0xc0, 0, 0, 0, 0, 0, 0, 0x46}};
+  Ref<IUnknown> expectedIdentity, actualIdentity;
+  check(declaration.value->QueryInterface(unknown, reinterpret_cast<void**>(&expectedIdentity.value)));
+  check(actual.value->QueryInterface(unknown, reinterpret_cast<void**>(&actualIdentity.value)));
+  std::cout << "NULLREF original_fvf=" << oldFvf << " restored_fvf=" << restoredFvf << "\n";
+  require(expectedIdentity.value == actualIdentity.value, "system D3D9 declaration COM identity restore mismatch");
   std::cout << "RT static-world system D3D9 NULLREF: PASS (state/draw only, GPU RT unrun, ptr_bits=" << 8 * sizeof(void*) << ")\n";
 }
 

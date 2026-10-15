@@ -15,6 +15,7 @@ struct Shader final : IDirect3DVertexShader9 {
 };
 struct Declaration final : IDirect3DVertexDeclaration9 {
   ULONG refs = 1;
+  DWORD fvf = 0;
   HRESULT result = S_OK;
   std::array<D3DVERTEXELEMENT9, 5> elements{{
     {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
@@ -122,10 +123,12 @@ struct Graphics {
   HRESULT SetVertexDeclaration(IDirect3DVertexDeclaration9* value) {
     if (value) { value->AddRef(); }
     if (currentDeclaration) { currentDeclaration->Release(); }
-    currentDeclaration = value; currentFvf = 0; return operation(true);
+    currentDeclaration = value;
+    currentFvf = value == &declaration ? declaration.fvf : value == &ffp ? ffp.fvf : 0;
+    return operation(true);
   }
   HRESULT SetFVF(DWORD value) {
-    SetVertexDeclarationWithoutOperation(&ffp); currentFvf = value; return operation(true);
+    ffp.fvf = value; SetVertexDeclarationWithoutOperation(&ffp); currentFvf = value; return operation(true);
   }
   void SetVertexDeclarationWithoutOperation(IDirect3DVertexDeclaration9* value) {
     value->AddRef(); currentDeclaration->Release(); currentDeclaration = value;
@@ -134,7 +137,7 @@ struct Graphics {
     transforms[index(type)] = *value; return operation(true);
   }
   bool restored() const {
-    return currentShader == &shader && currentDeclaration == &declaration && !currentFvf &&
+    return currentShader == &shader && currentDeclaration == &declaration && currentFvf == declaration.fvf &&
       transforms[0].m[3][0] == 100 && transforms[1].m[3][0] == 200 && transforms[2].m[3][0] == 300;
   }
   bool leasesReleased() const { return shader.refs == 2 && declaration.refs == 2 && ffp.refs == 1 && buffer.refs == 2; }

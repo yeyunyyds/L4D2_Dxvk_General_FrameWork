@@ -48,7 +48,6 @@ template<class Device> class Scope final {
   Ref<IDirect3DVertexShader9> m_shader;
   Ref<IDirect3DVertexDeclaration9> m_declaration;
   Ref<IDirect3DVertexBuffer9> m_buffer;
-  DWORD m_fvf = 0;
   D3DMATRIX m_world{}, m_view{}, m_projection{};
   bool m_dirty = false;
   Report m_report;
@@ -118,7 +117,7 @@ public:
     if (!m_buffer.value || stride != 40 || frequency != 1 || offset % 4) {
       m_report.code = Code::Layout; return;
     }
-    if (!capture(device->GetVertexShader(&m_shader.value)) || !capture(device->GetFVF(&m_fvf)) ||
+    if (!capture(device->GetVertexShader(&m_shader.value)) ||
         !capture(device->GetTransform(D3DTS_WORLD, &m_world)) ||
         !capture(device->GetTransform(D3DTS_VIEW, &m_view)) ||
         !capture(device->GetTransform(D3DTS_PROJECTION, &m_projection))) { return; }
@@ -148,8 +147,10 @@ public:
     restore(m_device->SetTransform(D3DTS_WORLD, &m_world));
     restore(m_device->SetTransform(D3DTS_VIEW, &m_view));
     restore(m_device->SetTransform(D3DTS_PROJECTION, &m_projection));
-    if (m_fvf) { restore(m_device->SetFVF(m_fvf)); }
-    else { restore(m_device->SetVertexDeclaration(m_declaration.value)); }
+    // FVF is derived from the declaration, not an independent binding. Setting
+    // an equivalent FVF can select another COM declaration object on Windows.
+    // Restore the original declaration, including when it came from SetFVF.
+    restore(m_device->SetVertexDeclaration(m_declaration.value));
     restore(m_device->SetVertexShader(m_shader.value));
     if (FAILED(m_report.restore)) { m_report.code = Code::RestoreFailed; }
   }
