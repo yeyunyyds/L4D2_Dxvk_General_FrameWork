@@ -1,0 +1,87 @@
+name: Diagnose and package existing RT runtime product
+on:
+  push:
+    branches: [ldb-host-capture]
+    paths:
+      - .github/workflows/rt-runtime-package.yml
+      - tools/runtime_imports.py
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rt-runtime-9c3b2f860095d4e75e283d24dd9a54c0343554ec
+          run-id: 38816862204
+          github-token: ${{ github.token }}
+          path: .research/rt-existing-product
+      - name: Verify and extract existing product without rebuilding
+        id: dependencies
+        shell: python
+        run: |
+          import json, pathlib, sys, zipfile
+          sys.path.insert(0, 'scripts')
+          from rt_preflight import ensure_runtime, digest, relative
+          base = pathlib.Path('.research/rt-existing-product')
+          candidates = list(base.rglob('rt-preflight-dev.zip'))
+          assert len(candidates) == 1, candidates
+          package = candidates[0]
+          extracted = pathlib.Path('.research/rt-package-check').resolve()
+          with zipfile.ZipFile(package) as archive:
+              for info in archive.infolist(): relative(info.filename)
+              archive.extractall(extracted)
+          manifest = json.loads((extracted / 'preflight-manifest.json').read_text())
+          assert manifest['build_commit'] == '9c3b2f860095d4e75e283d24dd9a54c0343554ec'
+          assert manifest['runtime_commit'] == 'b73eb23053aa50d3787b0c6c8b4b8ae49962880e'
+          runtime = ensure_runtime(extracted, manifest, package.parent.resolve())
+          assert digest(runtime/'d3d9.dll') == '21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7'
+          assert digest(runtime/'rt-runtime-smoke.exe') == '16313c79783afe6251e82cc2b121393553d894394dc9c6cab4f7421032942b4d'
+          print('Pinned compiled product restored; no C++ build performed')
+      - name: Inspect PE dependency graph and independent loads
+        shell: python
+        run: |
+          import ctypes, json, pathlib, subprocess, sys
+          sys.path.insert(0, 'tools')
+          from runtime_imports import analyze
+          runtime = pathlib.Path('.research/rt-package-check/cache/runtime').resolve()
+          report = analyze(runtime)
+          report['build_commit'] = '9c3b2f860095d4e75e283d24dd9a54c0343554ec'
+          report['dll_loads'] = {}
+          for name in ['d3d9.dll', 'NRC_Vulkan.dll', 'NvLowLatencyVk.dll', 'libxess.dll', 'GFSDK_Aftermath_Lib.x64.dll', 'usd.dll']:
+              script = 'import ctypes; ctypes.WinDLL(' + repr(str(runtime/name)) + ', winmode=0x1100); print("LOAD_PASS")'
+              try:
+                  p = subprocess.run([sys.executable, '-I', '-c', script], capture_output=True, text=True, timeout=20)
+                  report['dll_loads'][name] = {'exit_code': p.returncode, 'stdout': p.stdout, 'stderr': p.stderr}
+              except subprocess.TimeoutExpired:
+                  report['dll_loads'][name] = {'result': 'timeout'}
+          pathlib.Path('runtime-imports.json').write_text(json.dumps(report, indent=2)+'\n')
+          print(json.dumps(report['missing_ordinary'], indent=2))
+      - name: Publish development dependency evidence
+        if: always()
+        shell: python
+        env:
+          RT_DEPENDENCY_OUTCOME: ${{ steps.dependencies.outcome }}
+        run: |
+          import json, os, pathlib, zipfile
+          path=pathlib.Path('.research/dist/rt-runtime-dependencies-status.zip')
+          path.parent.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED) as z:
+              p=pathlib.Path('runtime-imports.json')
+              if p.is_file(): z.write(p,p.name)
+              z.writestr('status.json',json.dumps({'schema':1,'commit':os.environ['GITHUB_SHA'],'restoration':os.environ['RT_DEPENDENCY_OUTCOME'],'scope':'dependency_load_diagnostic','gpu_execution':'unrun'}))
+          import subprocess, sys
+          subprocess.run([sys.executable,'scripts/publish_rt_build_status.py','--package',str(path)],check=True)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rt-runtime-dependencies-${{ github.sha }}
+          path: .research/dist/rt-runtime-dependencies-status.zip
