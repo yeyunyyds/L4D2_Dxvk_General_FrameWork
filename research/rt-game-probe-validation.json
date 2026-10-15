@@ -1,0 +1,392 @@
+{
+  "schema": 1,
+  "date_utc": "2026-10-15",
+  "scope": "read_only_collector_native_fixture_not_game_binding",
+  "native_build_commit": "6662925e3a556809751559884733916d4a54bc60",
+  "status_archive_sha256": "9f16cc99622e357d26d1ad81662b2e15227ee24a96a92d4e041193383503f9ac",
+  "native_outcome": "success",
+  "files_sha256": {
+    "scripts/rt_game_probe.py": "ad59732f76720b44eadffc96c9651eae867fad89fb23cb916e35277083f1648f",
+    "tests/test_rt_game_probe.py": "5a7a07b3dec3ff20669767e558d91a0cfc4f664a9b27c6621a9d7da093ba186f",
+    "tests/rt_game_probe_fixture.cpp": "f09537039f5b6e0710b13212e6c117e9d099c68fe2cc2b569e39d7df58240571",
+    "compile.log": "d5a67448f3e9e95c1bdce868403ad2217247d30250d5a29eda057b1c98499dbd",
+    "game-probe-fixture.exe": "f923903b5edecf4747ac3e560aab9e0b250ab00471836588b8a5317d277a2b98",
+    "game-probe.json": "c65568e1b6beb286e87b9fef6ebc7664b5019586c81dc3b11f19de141998372e",
+    "native.log": "4086c41ccab3b4ca9a41ca6622ef7e3c512466952b3d0cfa7627f5a76a6f2b7d"
+  },
+  "local_python_suite": {
+    "tests": 68,
+    "passed": 67,
+    "skipped": 1,
+    "skipped_reason": "Windows x86 live fixture requires native runner"
+  },
+  "native_probe_suite": {
+    "tests": 12,
+    "passed": 11,
+    "skipped": 1,
+    "skipped_reason": "Linux-only unavailable-path check"
+  },
+  "native_evidence": {
+    "schema": 1,
+    "result": "pass",
+    "scope": "external_x64_reader_x86_fixture_not_game_binding",
+    "expected": {
+      "pid": 5092,
+      "base": 1966080,
+      "vtable_rva": 90500,
+      "first_rva": 4096,
+      "registry_rva": 118788
+    },
+    "module": {
+      "machine": "i386",
+      "mapped_size": 139264,
+      "timestamp": 1792091187,
+      "base_address": 1966080,
+      "read_errors": [],
+      "sections": [
+        {
+          "name": ".text",
+          "rva": 4096,
+          "size": 82623,
+          "flags": 1610612768,
+          "mapped_sha256": "91885956fc029ee6b1ad923fcecf687fbbd7c31651f7aa08d6e0f36a3e9ecaad"
+        },
+        {
+          "name": ".rdata",
+          "rva": 90112,
+          "size": 28234,
+          "flags": 1073741888,
+          "mapped_sha256": "246e9f2c9cc6316830550ded394c251dfb70803b00880c457a177cef5ce59702"
+        },
+        {
+          "name": ".data",
+          "rva": 118784,
+          "size": 4868,
+          "flags": 3221225536,
+          "mapped_sha256": "b9df0a2f1c9c3a198e0ccba2a884585c4a7d49f160ae379fafc035ca7efe80b2"
+        },
+        {
+          "name": ".fptable",
+          "rva": 126976,
+          "size": 128,
+          "flags": 3221225536,
+          "mapped_sha256": null
+        },
+        {
+          "name": ".reloc",
+          "rva": 131072,
+          "size": 4344,
+          "flags": 1107296320,
+          "mapped_sha256": null
+        }
+      ],
+      "hook_candidates": [],
+      "rtti": {
+        "ProbeContext": {
+          "result": "candidates",
+          "candidates": [
+            {
+              "vtable_rva": 90500,
+              "locator_rva": 113472,
+              "type_descriptor_rva": 121068,
+              "object_offset": 0,
+              "candidate_slots": {
+                "0": {
+                  "target_rva": 4096,
+                  "in_module_executable": true,
+                  "first_32_bytes": "b811000000c3ccccccccccccccccccccb81d000000c3cccccccccccccccccccc",
+                  "code_window": {
+                    "window_rva": 4096,
+                    "target_offset": 0,
+                    "bytes": "b811000000c3ccccccccccccccccccccb81d000000c3ccccccccccccccccccccb892000000c3ccccccccccccccccccccb800d01f00c3ccccccccccccccccccccb820d91f00c3cccccccccccccccccccc5356576a00ff1504601f008b3d00d01f008bd88b372bf3ff1500601f006a00b904d01f002bfb2bcb516a00566a00576a"
+                  },
+                  "semantics_verified": false
+                },
+                "1": {
+                  "target_rva": 4112,
+                  "in_module_executable": true,
+                  "first_32_bytes": "b81d000000c3ccccccccccccccccccccb892000000c3cccccccccccccccccccc",
+                  "code_window": {
+                    "window_rva": 4112,
+                    "target_offset": 0,
+                    "bytes": "b81d000000c3ccccccccccccccccccccb892000000c3ccccccccccccccccccccb800d01f00c3ccccccccccccccccccccb820d91f00c3cccccccccccccccccccc5356576a00ff1504601f008b3d00d01f008bd88b372bf3ff1500601f006a00b904d01f002bfb2bcb516a00566a00576a00535068a8611f00e8230000006a01e8"
+                  },
+                  "semantics_verified": false
+                },
+                "2": {
+                  "target_rva": 4128,
+                  "in_module_executable": true,
+                  "first_32_bytes": "b892000000c3ccccccccccccccccccccb800d01f00c3cccccccccccccccccccc",
+                  "code_window": {
+                    "window_rva": 4128,
+                    "target_offset": 0,
+                    "bytes": "b892000000c3ccccccccccccccccccccb800d01f00c3ccccccccccccccccccccb820d91f00c3cccccccccccccccccccc5356576a00ff1504601f008b3d00d01f008bd88b372bf3ff1500601f006a00b904d01f002bfb2bcb516a00566a00576a00535068a8611f00e8230000006a01e8842f000050e8f833000083c430e8a835"
+                  },
+                  "semantics_verified": false
+                }
+              }
+            }
+          ],
+          "truncated": false,
+          "selected_game_slot": null,
+          "interface_binding_verified": false
+        }
+      },
+      "material_system_registry": {
+        "result": "candidates",
+        "candidates": [
+          {
+            "name": "VMaterialSystem079",
+            "entry_rva": 118788,
+            "factory_rva": 4144,
+            "factory_first_32_bytes": "b800d01f00c3ccccccccccccccccccccb820d91f00c3cccccccccccccccccccc",
+            "factory_code_window": {
+              "window_rva": 4144,
+              "target_offset": 0,
+              "bytes": "b800d01f00c3ccccccccccccccccccccb820d91f00c3cccccccccccccccccccc5356576a00ff1504601f008b3d00d01f008bd88b372bf3ff1500601f006a00b904d01f002bfb2bcb516a00566a00576a00535068a8611f00e8230000006a01e8842f000050e8f833000083c430e8a835000033c983f8715f0f95c15e8bc15bc3"
+            },
+            "getter_shape": "mov_eax_immediate_ret",
+            "object_rva": 118784,
+            "vtable_rva": 90500,
+            "candidate_slots": {
+              "95": {
+                "target_rva": null,
+                "first_32_bytes": null,
+                "code_window": null,
+                "semantics_verified": false
+              },
+              "96": {
+                "target_rva": null,
+                "first_32_bytes": null,
+                "code_window": null,
+                "semantics_verified": false
+              }
+            },
+            "interface_binding_verified": false
+          }
+        ],
+        "truncated": false
+      }
+    },
+    "missing_game_modules": {
+      "schema": 1,
+      "scope": "read_only_game_binding_candidates",
+      "execution": "incomplete",
+      "reference_mod_commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "reference_audit_sha256": "8893e5c3dd3a71a016702c3ecf9485819d7fb27724124a5c9a52d1f31be260cf",
+      "collector_sha256": "ad59732f76720b44eadffc96c9651eae867fad89fb23cb916e35277083f1648f",
+      "sdk_candidate_manifest_sha256": "2a50c05ddd3d9f6117bc3324c72a0ac8fcefdec9b3bc73962df2c9d49864a4b4",
+      "hook_install_allowed": false,
+      "game_queue_execution": "unrun",
+      "b580_rt": "unrun",
+      "snapshot_atomic": false,
+      "modules": [
+        {
+          "name": "client.dll",
+          "result": "unavailable",
+          "error": "Module missing or ambiguous"
+        },
+        {
+          "name": "engine.dll",
+          "result": "unavailable",
+          "error": "Module missing or ambiguous"
+        },
+        {
+          "name": "materialsystem.dll",
+          "result": "unavailable",
+          "error": "Module missing or ambiguous"
+        },
+        {
+          "name": "shaderapidx9.dll",
+          "result": "unavailable",
+          "error": "Module missing or ambiguous"
+        }
+      ],
+      "process": {
+        "pid": 5092,
+        "creation_filetime": 134365647932061991,
+        "alive": true
+      },
+      "module_list_stable": true,
+      "process_after": {
+        "pid": 5092,
+        "creation_filetime": 134365647932061991,
+        "alive": true
+      }
+    },
+    "game_queue_execution": "unrun"
+  },
+  "corrected_cases": [
+    "WOW64 combined module lists may duplicate identical module identities.",
+    "SNAPMODULE32 alone can omit the executable; retain both lists and coalesce exact identities."
+  ],
+  "unrun": [
+    "Current L4D2 module/interface ABI",
+    "Actual engine hook installation",
+    "Actual Source queue and multithreading",
+    "B580 RT and game image correctness",
+    "High-pressure real-60 performance",
+    "Combined user package A"
+  ],
+  "full_foundation_regression": {
+    "status_archive_sha256": "87d4f782c8e98a893a8f6151bbd9e3e51fa0fa73e324ec58ca1206f0f7940b3f",
+    "status": {
+      "schema": 1,
+      "commit": "6662925e3a556809751559884733916d4a54bc60",
+      "native_outcome": "success",
+      "scope": "Bridge + COM/protocol/Host foundation, not game hooks or GPU RT",
+      "game_queue_execution": "unrun",
+      "b580_rt": "unrun",
+      "binaries": {
+        "development/x64/L4D2Bridge64.exe": "d59bd0333e2b6df4e5024b5acb06fda01c12570760685b1c0acd5b0657d219c1",
+        "development/x86/d3d9.dll": "faab183b06fd992d759d8a17f83cb290b9d22fa003d378c616aeac6b602d9a9e"
+      },
+      "sdk_queue_development_execution": "pass",
+      "game_binding_probe_native_execution": "pass",
+      "artifact_validation": "pass",
+      "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+    },
+    "compiled_build_id": "ldb-rt-observer+e9d0e9e24977f24a",
+    "release_binaries_verified": true,
+    "trace_files": [
+      "checks/x64/trace/rt-host-8060-190.bin",
+      "checks/x86/source-trace/rt-host-7476-192.bin",
+      "checks/x86/source-trace/rt-host-7476-194.bin",
+      "checks/x86/trace/rt-host-8188-190.bin"
+    ],
+    "offline_trace_analysis": [
+      {
+        "schema": 1,
+        "scope": "metadata_transport_observer_only",
+        "result": "pass",
+        "errors": [],
+        "packets": 22,
+        "labelled_draws": 4,
+        "successful_presents": 4,
+        "unlabelled_presents": 1,
+        "skipped_metadata_packets": 2,
+        "presented_metadata_frame_ids": [
+          1,
+          2,
+          5,
+          6
+        ],
+        "events": {
+          "0": 1,
+          "1": 22,
+          "2": 4,
+          "3": 4,
+          "4": 2,
+          "5": 5,
+          "6": 1,
+          "8": 1,
+          "10": 2
+        },
+        "consumer_thread": 5604,
+        "qpc_frequency": 10000000,
+        "source_game_queue": "unrun",
+        "image_quality": "unrun",
+        "b580_rt": "unrun",
+        "performance_acceptance": "unrun",
+        "trace_sha256": "cb8f9a5c9616d3a1185149d04a6bd2a383ae60a51b75976a66c7addfc3d38ebc"
+      },
+      {
+        "schema": 1,
+        "scope": "metadata_transport_observer_only",
+        "result": "pass",
+        "errors": [],
+        "packets": 14,
+        "labelled_draws": 2,
+        "successful_presents": 2,
+        "unlabelled_presents": 0,
+        "skipped_metadata_packets": 0,
+        "presented_metadata_frame_ids": [
+          1,
+          5
+        ],
+        "events": {
+          "0": 1,
+          "1": 14,
+          "2": 2,
+          "3": 2,
+          "4": 2,
+          "5": 2,
+          "8": 1
+        },
+        "consumer_thread": 1336,
+        "qpc_frequency": 10000000,
+        "source_game_queue": "unrun",
+        "image_quality": "unrun",
+        "b580_rt": "unrun",
+        "performance_acceptance": "unrun",
+        "trace_sha256": "d88d08c6c46ec8bfe135cf13b15724e98da9ee404da53891a47ae810b15a0d51"
+      },
+      {
+        "schema": 1,
+        "scope": "metadata_transport_observer_only",
+        "result": "pass",
+        "errors": [],
+        "packets": 3073,
+        "labelled_draws": 512,
+        "successful_presents": 512,
+        "unlabelled_presents": 0,
+        "skipped_metadata_packets": 0,
+        "events": {
+          "0": 1,
+          "1": 3073,
+          "2": 512,
+          "3": 512,
+          "5": 512,
+          "8": 1
+        },
+        "consumer_thread": 1336,
+        "qpc_frequency": 10000000,
+        "source_game_queue": "unrun",
+        "image_quality": "unrun",
+        "b580_rt": "unrun",
+        "performance_acceptance": "unrun",
+        "trace_sha256": "ca2c53f567d3a27b0ba1abf8f51854dcfc70e5dfd93f1d7553e205d5b9d5c22a",
+        "consecutive_presented_frame_ids_verified": {
+          "first": 1,
+          "last": 512,
+          "count": 512
+        }
+      },
+      {
+        "schema": 1,
+        "scope": "metadata_transport_observer_only",
+        "result": "pass",
+        "errors": [],
+        "packets": 22,
+        "labelled_draws": 4,
+        "successful_presents": 4,
+        "unlabelled_presents": 1,
+        "skipped_metadata_packets": 2,
+        "presented_metadata_frame_ids": [
+          1,
+          2,
+          5,
+          6
+        ],
+        "events": {
+          "0": 1,
+          "1": 22,
+          "2": 4,
+          "3": 4,
+          "4": 2,
+          "5": 5,
+          "6": 1,
+          "8": 1,
+          "10": 2
+        },
+        "consumer_thread": 568,
+        "qpc_frequency": 10000000,
+        "source_game_queue": "unrun",
+        "image_quality": "unrun",
+        "b580_rt": "unrun",
+        "performance_acceptance": "unrun",
+        "trace_sha256": "07a6186f220a10f744d8e33cf094bffc7427d21a44b309498d18d3c16041483f"
+      }
+    ]
+  }
+}
