@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <string>
 
 namespace ldb_rt_host {
 

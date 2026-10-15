@@ -2,6 +2,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstddef>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -9,6 +10,7 @@
 #include <memory>
 #include <set>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace ldb_rt {
