@@ -190,6 +190,7 @@ class Stream {
   Header m_identity{};
   uint64_t m_sequence = 0, m_frame = 0, m_draw = 0, m_consumer = 0;
   bool m_ready = false, m_inFrame = false, m_endedFrame = false, m_mainSeen = false;
+  bool m_allowFrameGap = false;
   std::vector<View> m_views;
   std::set<uint64_t> m_viewIds;
   std::map<uint64_t, ResourceRef> m_resources;
@@ -248,11 +249,14 @@ public:
         if (!r.end() || h.frame || h.view) { return Error::Order; }
         m_views.clear(); m_viewIds.clear(); m_resources.clear(); m_versions.clear(); m_pending.reset();
         m_inFrame = false; m_endedFrame = false; m_mainSeen = false; m_identity = h;
+        m_allowFrameGap = true;
       } else if (h.kind == Kind::BeginFrame) {
-        if (!r.end() || m_inFrame || m_endedFrame || h.view || m_frame == UINT64_MAX || h.frame != m_frame + 1) {
+        if (!r.end() || m_inFrame || m_endedFrame || h.view || m_frame == UINT64_MAX ||
+            (m_allowFrameGap ? h.frame <= m_frame : h.frame != m_frame + 1)) {
           return Error::Order;
         }
         m_frame = h.frame; m_draw = 0; m_mainSeen = false; m_inFrame = true; m_viewIds.clear();
+        m_allowFrameGap = false;
       } else if (h.kind == Kind::BeginView) {
         if (!frameIdentity(h) || !h.view || m_pending || m_views.size() >= 16 || m_viewIds.size() >= 256 || m_viewIds.count(h.view)) {
           return Error::Order;

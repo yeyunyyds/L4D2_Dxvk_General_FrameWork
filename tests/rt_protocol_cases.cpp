@@ -63,6 +63,8 @@ void malformed() {
     check(f.stream.apply(bad.data(), bad.size(), 77) != Error::Ok, "malformed header accepted");
     check(f.stream.sequence() == 1, "rejection consumed sequence");
   }
+  auto gap = b; gap[80] += 2;
+  check(f.stream.apply(gap.data(), gap.size(), 77) == Error::Sequence, "sequence gap accepted");
   check(f.stream.apply(b.data(), b.size(), 78) == Error::Thread, "wrong consumer accepted");
   check(f.stream.apply(b.data(), b.size(), 77) == Error::Ok, "valid retry rejected");
 }
@@ -132,6 +134,14 @@ void lifetimesAndBudget() {
   check(f.stream.apply(b.data(), b.size(), 77) == Error::Identity, "old generation accepted");
   ++f.h.map; f.send(Kind::ChangeMap);
   retained.reset(); check(!f.stream.retainedBytes(), "resource retention leaked");
+
+  Fixture recovery; recovery.setup(); auto beforeReset = recovery.draw(); recovery.end();
+  ++recovery.h.generation; recovery.h.sequence += 3;
+  b = recovery.packet(Kind::Reset);
+  check(recovery.stream.apply(b.data(), b.size(), 77) == Error::Sequence, "gap allowed without physical reset barrier");
+  check(recovery.stream.apply(b.data(), b.size(), 77, true) == Error::Ok, "physical reset could not resynchronize skipped metadata");
+  recovery.setup(5); auto afterReset = recovery.draw(5); recovery.end(5);
+  check(beforeReset->header.generation == 1 && afterReset->header.generation == 2, "recovery reused old epoch");
 }
 
 void overlappingFrames() {

@@ -47,8 +47,9 @@ int main() {
     const auto menuUid = ++device.uid;
     ldb_rt_host::draw(id, menuUid); ldb_rt_host::drawResult(id, menuUid, S_OK);
     ldb_rt_host::present(id, ++device.uid, S_OK);
-    for (uint64_t frame = 1; frame <= 4; ++frame) {
-      if (frame == 3) {
+    for (uint64_t ordinal = 1; ordinal <= 4; ++ordinal) {
+      const uint64_t frame = ordinal <= 2 ? ordinal : ordinal + 2;
+      if (ordinal == 3) {
         ldb_rt_host::reset(id, ++device.uid, E_FAIL);
         require(FAILED(send(Kind::BeginFrame, {}, frame)), "lost-device metadata was consumed");
         ++h.generation;
