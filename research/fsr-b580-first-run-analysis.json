@@ -1,0 +1,296 @@
+{
+  "schema": 1,
+  "user_report": "This run can enter a map; previous startup crash did not reproduce",
+  "run": "fg-3412-10688546-2391651034944",
+  "duration_seconds": 165.8427911,
+  "gpu": "Intel Arc B580",
+  "driver": "Intel Corporation 101.8531.0",
+  "extent": [
+    1920,
+    1200
+  ],
+  "installed_binaries_match_published_package": {
+    "bin/.l4d2bridge/LDBFsrBackend64.dll": "8b5953617c2ecbafee933de9f3ca7a11e3a384e97c055463a6836a061941f91d",
+    "bin/.l4d2bridge/d3d9vk_x64.dll": "48faff88a57553ef24f6db33eba933ff544eb894b29d7298d79dbac25f656920",
+    "bin/dxvk_d3d9.dll": "b44c8e63de36238120db4bcc786bf5313aafbdb9aee4a885a0fe108c19243a3c",
+    "bin/.l4d2bridge/L4D2Bridge64.exe": "c6c2b98832b5684b4d825450c315c18e25fc97076108fb037015d5a704076ccd",
+    "bin/.l4d2bridge/L4D2Bridge32.exe": "ce3bb62ae66dfbad8ae77fb5e843cbc203db1c8baeb5c391ce80b31a7b728077"
+  },
+  "source_framework_commit": "bdd54c168085c1188cfc209d289612750fd897a2",
+  "event_counts": {
+    "session": 1,
+    "frame_fallback": 17,
+    "logical_present": 337,
+    "frame_metrics": 10018,
+    "gpu_initialized": 2,
+    "fsr_history_primed": 2,
+    "fsr_dispatch": 224,
+    "frame_rejected": 3328,
+    "fsr_skipped": 3278,
+    "capture": 24,
+    "generated_present": 174,
+    "history_invalidated": 2,
+    "mode": 3,
+    "summary": 1
+  },
+  "logical_presents": 10018,
+  "backend_present_calls": 10030,
+  "successful_generated_presents": 174,
+  "generated_by_mode": {
+    "generated": 162,
+    "paired": 12
+  },
+  "fsr_dispatch_status": {
+    "1": 50,
+    "0": 174
+  },
+  "preflight_candidates": 3502,
+  "accepted_candidate_ratio": 0.04968589377498572,
+  "rejected_reasons": {
+    "fsr_history_warmup": 50,
+    "unsafe_thin_effect": 2466,
+    "invalid_scene_coverage": 53,
+    "excessive_foreground_coverage": 759
+  },
+  "captures": [
+    {
+      "frame": 4831,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.107735,
+      "invalid_scene_ratio": 0.000494
+    },
+    {
+      "frame": 4832,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.107657,
+      "invalid_scene_ratio": 0.000561
+    },
+    {
+      "frame": 4833,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.107646,
+      "invalid_scene_ratio": 0.000498
+    },
+    {
+      "frame": 4834,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "fsr_history_warmup",
+      "local_effect_risk": false,
+      "foreground_ratio": 0.109732,
+      "invalid_scene_ratio": 0.000739
+    },
+    {
+      "frame": 5558,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.082189,
+      "invalid_scene_ratio": 0.02943
+    },
+    {
+      "frame": 5559,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.082457,
+      "invalid_scene_ratio": 0.034918
+    },
+    {
+      "frame": 5560,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.082685,
+      "invalid_scene_ratio": 0.034214
+    },
+    {
+      "frame": 5561,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.082651,
+      "invalid_scene_ratio": 0.453458
+    },
+    {
+      "frame": 6095,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.104004,
+      "invalid_scene_ratio": 0.073756
+    },
+    {
+      "frame": 6096,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.101173,
+      "invalid_scene_ratio": 0.07757
+    },
+    {
+      "frame": 6097,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.101005,
+      "invalid_scene_ratio": 0.077308
+    },
+    {
+      "frame": 6098,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.104248,
+      "invalid_scene_ratio": 0.137754
+    },
+    {
+      "frame": 7097,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.100543,
+      "invalid_scene_ratio": 0.066036
+    },
+    {
+      "frame": 7098,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.10064,
+      "invalid_scene_ratio": 0.063191
+    },
+    {
+      "frame": 7099,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.101704,
+      "invalid_scene_ratio": 0.074383
+    },
+    {
+      "frame": 7100,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.104043,
+      "invalid_scene_ratio": 0.18101
+    },
+    {
+      "frame": 9585,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.113459,
+      "invalid_scene_ratio": 0.078275
+    },
+    {
+      "frame": 9586,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.112639,
+      "invalid_scene_ratio": 0.026003
+    },
+    {
+      "frame": 9587,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.111243,
+      "invalid_scene_ratio": 0.0418
+    },
+    {
+      "frame": 9588,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.124931,
+      "invalid_scene_ratio": 0.479792
+    },
+    {
+      "frame": 9740,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.119484,
+      "invalid_scene_ratio": 0.048852
+    },
+    {
+      "frame": 9741,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.132202,
+      "invalid_scene_ratio": 0.05237
+    },
+    {
+      "frame": 9742,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.164671,
+      "invalid_scene_ratio": 0.055718
+    },
+    {
+      "frame": 9743,
+      "generated_presented": false,
+      "rejected": true,
+      "reject_reason": "unsafe_thin_effect",
+      "local_effect_risk": true,
+      "foreground_ratio": 0.215867,
+      "invalid_scene_ratio": 0.487425
+    }
+  ],
+  "fg_errors": [],
+  "session_complete": true,
+  "bridge_shutdown": "both Client and Host log successful cleanup",
+  "log_hashes": {
+    "fg-3412-10688546-2391651034944/fg-events.jsonl": "8d4fee2e4ae309a310da9e99484cc4e82fdbaa7e46af8c8eb6b5af51d10f2e6f",
+    "bridge64.log": "72465a5a4b3133fc640508db95dde9373df560ae07e204bb3b8b7327a953e564",
+    "L4D2Bridge64_d3d9.log": "3cc89a4bfac79ce94cf7955451fa48c76c4a4e7f0ee8b31ce12b6f3321c39494",
+    "bridge32.log": "6781bf8851bbb4aa48d664debe060a1c60313cc194e26ecec93181cb537bb2aa",
+    "startup-info.txt": "675e43026ec636810d9b7c4505bd6ed3cc14c73ac1727470377703c294adb83a"
+  },
+  "findings": [
+    "Official FSR executes on the B580 and reaches successful generated Present calls. This is a functional milestone, not image-quality acceptance.",
+    "3278 candidates skipped the SDK because legacy preflight rejected them; 50 additional SDK dispatches were history warmup, leaving 174 accepted output frames out of 3502 candidates.",
+    "Thin-feature heuristic is the largest rejection source (2466), followed by excessive foreground coverage (759), invalid scene coverage (53), and history warmup (50). Ordinary bright scene details may trigger the thin-feature heuristic; classification needs audit.",
+    "All 24 captured candidate images were rejected and not presented as generated frames. They cannot validate displayed FSR output quality.",
+    "The same five published binaries were installed. Diagnostic launchers did not replace them; previous startup crashes remain unexplained.",
+    "Existing candidates and masks suffice to investigate over-rejection before requesting another user capture."
+  ],
+  "limitations": [
+    "No monitor delivery, FPS benefit, latency or general image-quality acceptance claim.",
+    "Warmup events reflect continuity reset after skipped input; current preflight can keep SDK history from staying continuous.",
+    "Successful run does not prove previous startup crash fixed."
+  ]
+}
