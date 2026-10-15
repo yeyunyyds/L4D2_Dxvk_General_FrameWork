@@ -185,6 +185,11 @@ class ProbeCases(unittest.TestCase):
                 start = target.identity()
                 self.assertTrue(start['alive'])
                 modules = target.modules()
+                output = os.environ.get('RT_GAME_PROBE_EVIDENCE')
+                if output:
+                    Path(output).write_text(json.dumps({'schema': 1, 'result': 'incomplete',
+                        'scope': 'external_x64_reader_x86_fixture_not_game_binding',
+                        'expected': expected, 'snapshot_modules': modules}, indent=2) + '\n')
                 own = [m for m in modules if m['name'] == executable.name.lower()]
                 self.assertEqual(len(own), 1, own)
                 own = own[0]
@@ -205,7 +210,6 @@ class ProbeCases(unittest.TestCase):
             self.assertEqual(report['execution'], 'incomplete')  # Not a game process.
             self.assertEqual(len(report['modules']), 4)
             self.assertTrue(all(m['result'] == 'unavailable' for m in report['modules']))
-            output = os.environ.get('RT_GAME_PROBE_EVIDENCE')
             if output:
                 Path(output).write_text(json.dumps({'schema': 1, 'result': 'pass',
                     'scope': 'external_x64_reader_x86_fixture_not_game_binding',

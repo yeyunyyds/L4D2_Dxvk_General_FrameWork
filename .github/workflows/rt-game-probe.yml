@@ -1,0 +1,62 @@
+name: Check RT game binding collector
+on:
+  push:
+    branches: [ldb-host-capture]
+    paths:
+      - scripts/rt_game_probe.py
+      - scripts/package_rt_game_probe_status.py
+      - tests/test_rt_game_probe.py
+      - tests/rt_game_probe_fixture.cpp
+      - .github/workflows/rt-game-probe.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rt-game-probe
+  cancel-in-progress: false
+jobs:
+  native:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - name: Preserve source line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile x86 target and check x64 collector
+        id: probe
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force ci-game-probe | Out-Null
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (!$vs) { throw 'MSVC installation missing' }
+          $vcvars = Join-Path $vs 'VC/Auxiliary/Build/vcvarsall.bat'
+          $command = 'call "' + $vcvars + '" x86 -vcvars_ver=14.29 && cl.exe /nologo /std:c++17 /EHsc /GR /W4 /WX /O2 /MT tests/rt_game_probe_fixture.cpp /Fe:ci-game-probe/game-probe-fixture.exe /Fo:ci-game-probe/fixture.obj > ci-game-probe/compile.log 2>&1'
+          & cmd.exe /d /c $command
+          $result = $LASTEXITCODE
+          Get-Content ci-game-probe/compile.log
+          if ($result -ne 0) { throw 'Fixture compilation failed' }
+          $env:RT_GAME_PROBE_FIXTURE = (Resolve-Path ci-game-probe/game-probe-fixture.exe).Path
+          $env:RT_GAME_PROBE_EVIDENCE = Join-Path (Resolve-Path ci-game-probe).Path 'game-probe.json'
+          & cmd.exe /d /c 'python tests/test_rt_game_probe.py -v > ci-game-probe/native.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content ci-game-probe/native.log
+          if ($result -ne 0) { throw 'Native collector checks failed' }
+      - name: Preserve check result
+        if: always()
+        env:
+          RT_PROBE_OUTCOME: ${{ steps.probe.outcome }}
+        run: python scripts/package_rt_game_probe_status.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rt-game-probe-${{ github.sha }}
+          path: .research/dist/rt-game-probe-build-status.zip
+          if-no-files-found: error
+      - name: Publish development evidence ZIP
+        if: always()
+        run: python scripts/publish_rt_build_status.py --package .research/dist/rt-game-probe-build-status.zip

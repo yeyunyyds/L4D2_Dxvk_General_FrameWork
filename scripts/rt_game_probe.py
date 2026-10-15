@@ -371,9 +371,9 @@ class WindowsProcess:
         snapshot = None
         # ERROR_BAD_LENGTH is documented for racing loader snapshots.
         for _ in range(4):
-            # The target contract is PE32. Combining both flags can enumerate
-            # its executable twice under WOW64; do not collect the x64 loader.
-            flags = 0x10 if ctypes.sizeof(ctypes.c_void_p) == 8 else 0x08
+            # Some WOW64 snapshots omit the EXE with SNAPMODULE32 alone.
+            # Retain both lists and coalesce only identical module identities.
+            flags = 0x18 if ctypes.sizeof(ctypes.c_void_p) == 8 else 0x08
             snapshot = self.api.CreateToolhelp32Snapshot(flags, self.pid)
             if snapshot != ctypes.c_void_p(-1).value:
                 break
