@@ -19,5 +19,6 @@ LDB 多线程 RT：接入前置检查
 本版三个大依赖使用已发布的固定提交地址，并在失败时尝试 GitHub 备用入口；小型 Vulkan loader 依赖随入口包提供。
 控制台会显示下载字节进度、错误、游戏 PID 和核心模块情况；详细信息保存在结果包的 progress.log、game-discovery.json 中。
 缺少材料/渲染模块时仍收集现有证据，不再仅因四个模块未齐而等待 180 秒。
+如果自动下载仍失败，可用浏览器打开 download-dependencies.html 中的文件页面，下载三个大依赖 ZIP 放在 run-test.cmd 旁边，不要解压，然后重跑。脚本仍会校验 SHA 和大小。
 脚本和依赖版本见 preflight-manifest.json；第三方声明见 licenses 和 python/LICENSE.txt。
 通过仅表示独立场景命中和颜色读回；B580 身份、图像、游戏队列、多线程与性能仍需分别审查。

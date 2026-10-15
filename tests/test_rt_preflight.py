@@ -101,6 +101,14 @@ class PreflightCases(unittest.TestCase):
         self.assertEqual(discovery['missing_core_modules'], [])
         self.assertIn({'name': 'different-renderer.dll'}, discovery['modules'])
 
+    def test_browser_downloads_beside_launcher_work_without_network(self):
+        manifest = self.fixture()
+        part = manifest['payloads'][0]
+        shutil.move(self.cache / part['name'], self.root / part['name'])
+        with patch('urllib.request.urlopen', side_effect=AssertionError('Unexpected network')):
+            runtime = runner.ensure_runtime(self.root, manifest, self.cache)
+        self.assertEqual((runtime / 'd3d9.dll').read_bytes(), b'fixed runtime')
+
     def test_detection_failure_preserves_related_process_names_in_zip(self):
         self.fixture()
         def absent(**kwargs):

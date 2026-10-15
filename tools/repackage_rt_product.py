@@ -5,6 +5,7 @@ the runtime DLL is never modified or rebuilt by this script.
 """
 
 import argparse
+import html
 import json
 import os
 from pathlib import Path
@@ -73,6 +74,11 @@ def repackage(candidate, loader, loader_source, headers_source, output):
             # Small loader payload ships inside the launcher; it never needs a
             # not-yet-published mutable-branch URL on a user's first run.
             archive.write(part, 'payloads/' + part.name)
+            links = ''.join('<li><a href="https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/'
+                            + p['ref'] + '/downloads/' + html.escape(p['name'], quote=True) + '">'
+                            + html.escape(p['name']) + '</a></li>' for p in manifest['payloads'] if p.get('ref'))
+            archive.writestr('download-dependencies.html', '<!doctype html><meta charset="utf-8"><title>Runtime dependencies</title>'
+                             '<p>自动下载失败时，用浏览器下载以下三个 ZIP，放到 run-test.cmd 旁边；不要解压，然后重跑。</p><ul>' + links + '</ul>')
             archive.writestr('preflight-manifest.json', json.dumps(manifest, indent=2)+'\n')
             archive.write(loader_source / 'LICENSE.txt', 'licenses/vulkan-loader/LICENSE.txt')
             # The loader also contains permissively licensed cJSON/dirent code.

@@ -7,6 +7,7 @@ already-running game, and only terminates the diagnostic process it created.
 import argparse
 import ctypes
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -66,7 +67,7 @@ def download_payload(path, part, notify=message):
                 temporary.replace(path)
                 notify('  Download verified (SHA256 and size).')
                 return
-            except (OSError, ValueError) as error:
+            except (OSError, ValueError, http.client.HTTPException) as error:
                 detail = f'{type(error).__name__}: {error}; URL={url}'
                 errors.append(detail)
                 notify('  Download failed: ' + detail)
@@ -125,8 +126,8 @@ def ensure_runtime(root, manifest, payload_cache=None, notify=message):
             raise ValueError('Invalid payload size')
         path = cache / name
         if not check_file(path, part):
-            bundled = root / 'payloads' / name
-            if check_file(bundled, part):
+            bundled = next((p for p in (root / 'payloads' / name, root / name) if check_file(p, part)), None)
+            if bundled is not None:
                 shutil.copyfile(bundled, path)
                 notify('Using bundled dependency: ' + name)
             else:
