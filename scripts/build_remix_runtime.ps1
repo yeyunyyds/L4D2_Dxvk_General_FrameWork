@@ -20,9 +20,18 @@ try {
   & cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT "/external:I$sourcePath/public/include" /external:W0 $smoke "/Fe:$checks/rt-runtime-smoke.exe" "/Fo:$checks/rt-runtime-smoke.obj" /link user32.lib
   if ($LASTEXITCODE -ne 0) { throw 'Static RT diagnostic compilation failed' }
   Write-Host 'RT static-scene diagnostic: COMPILED (GPU execution unrun)'
+  $negative = Join-Path $checks ('negative-' + [Guid]::NewGuid().ToString('N'))
+  & "$checks/rt-runtime-smoke.exe" "$env:SystemRoot/System32/d3d9.dll" $negative
+  $negativeExit = $LASTEXITCODE
+  $negativeStatus = Get-Content (Join-Path $negative 'status.json') -Raw | ConvertFrom-Json
+  $negativeEvents = Get-Content (Join-Path $negative 'events.jsonl') -Raw
+  if ($negativeExit -ne 1 -or $negativeStatus.result -ne 'fail' -or $negativeEvents -notmatch '"stage":"find_api","code":127') {
+    throw 'Diagnostic accepted the standard Windows D3D9 DLL or failed at an unexpected stage'
+  }
+  Write-Host 'RT static-scene diagnostic: STANDARD D3D9 REJECTION PASS (GPU execution unrun)'
   & meson setup _RtRelease --buildtype release --backend ninja -Denable_tracy=false -Ddownload_apics=false
   if ($LASTEXITCODE -ne 0) { throw 'Custom Remix dependency/configuration failed' }
-  & meson compile -C _RtRelease -j 3 copy_output
+  & meson compile -C _RtRelease -j 3
   if ($LASTEXITCODE -ne 0) { throw 'Custom Remix compilation failed' }
   & meson install -C _RtRelease --no-rebuild --tags output
   if ($LASTEXITCODE -ne 0) { throw 'Custom Remix dependency installation failed' }

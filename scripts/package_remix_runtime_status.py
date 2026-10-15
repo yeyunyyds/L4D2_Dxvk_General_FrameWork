@@ -32,6 +32,9 @@ if __name__ == '__main__':
     with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED) as archive:
         for log in sorted((ROOT / 'ci-remix-logs').glob('*.log')):
             archive.write(log, 'logs/' + log.name)
+        for path in sorted((source / 'checks').glob('negative-*/*')):
+            if path.is_file() and path.suffix in ('.json', '.jsonl'):
+                archive.write(path, 'checks/' + str(path.relative_to(source / 'checks')).replace('\\', '/'))
         receipt = source / 'rt-runtime-source.json'
         if receipt.exists():
             archive.write(receipt, receipt.name)
