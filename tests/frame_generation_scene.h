@@ -317,6 +317,23 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
             "Thin ring mixed camera poses instead of restoring original");
       }
     }
+    if (generated && dxvk_capture::ResidentFg::wantsFsr()) {
+      float oldX =
+          .43f * width + .01f * width * (frame - 1) + (frame % 2 ? 0.f : 20.f);
+      float oldY = .76f * height + (frame % 2 ? 0.f : 6.f);
+      for (int i = 0; i < 24; i++) {
+        double angle = 6.283185307179586 * i / 24;
+        float x = oldX + 24.f * float(std::cos(angle));
+        float y = oldY + 24.f * float(std::sin(angle));
+        if (std::abs(std::hypot(x - cx, y - cy) - 24.f) < 5.f)
+          continue;
+        auto point = rgb(uint32_t(x), uint32_t(y));
+        if (point[0] > 150 && point[1] > 150 && point[2] > 150) {
+          read->UnlockRect();
+          throw std::runtime_error("Previous thin ring left a bright ghost");
+        }
+      }
+    }
   }
   if (ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"motion") {
     float objectX = .38f * width +

@@ -96,6 +96,7 @@ struct State {
            sceneDepth = 0, previousColor = 0, previousDepth = 0;
 
   uint32_t generation = 0, captures = 0, captureLimit = 4, previousFlags = 0;
+  uint32_t acceptedCaptures = 0, rejectedCaptures = 0;
   bool scene = false, nearSeen = false, nearCopied = false, uiCopied = false,
        history = false, paused = false, generatedOnly = false, disabled = false;
 
@@ -148,6 +149,9 @@ struct State {
              ",\"motion_source\":" +
              quote(ResidentFg::wantsFsr() ? "camera_plus_bounded_patch"
                                           : "prototype_patch_matching") +
+             ",\"local_effect_policy\":" +
+             quote(ResidentFg::wantsFsr() ? "regional_current_and_previous"
+                                          : "whole_frame_rejection") +
              ",\"auto_capture\":" +
              std::string(config().autoCapture ? "true" : "false") +
              ",\"pacing_budget_ms\":" + std::to_string(config().pacingMs));
@@ -605,7 +609,20 @@ struct State {
                        ",\"backend\":\"fsr_official\"");
             }
 
-            if (captureDue) {
+            bool captureAllowed = true;
+            if (ResidentFg::wantsFsr()) {
+              quality = gpu->readQuality();
+              qualityRejected =
+                  fsrWarmup ||
+                  quality.reject(uint64_t(gpu->width) * gpu->height, true);
+              // Reserve most automatic evidence for output eligible for
+              // Present. Retain a smaller rejected sample to diagnose
+              // protective fallback.
+              if (config().autoCapture)
+                captureAllowed = qualityRejected ? rejectedCaptures < 8
+                                                 : acceptedCaptures < 24;
+            }
+            if (captureDue && captureAllowed) {
               auto captureStart = now();
               std::string prefix = std::to_string(frame);
               gpu->save(ResidentFg::Output,
@@ -620,11 +637,22 @@ struct State {
                 gpu->save(ResidentFg::CurrentUi,
                           directory / (prefix + "-before-ui.ppm"));
               captures++;
+              if (ResidentFg::wantsFsr()) {
+                if (qualityRejected)
+                  ++rejectedCaptures;
+                else
+                  ++acceptedCaptures;
+              }
               captured = true;
               captureMs = ms(now() - captureStart);
-              emit("capture", uid,
-                   "\"index\":" + std::to_string(captures) + ",\"mode\":" +
-                       quote(generatedOnly ? "generated" : "paired"));
+              emit(
+                  "capture", uid,
+                  "\"index\":" + std::to_string(captures) + ",\"mode\":" +
+                      quote(generatedOnly ? "generated" : "paired") +
+                      (ResidentFg::wantsFsr()
+                           ? ",\"quality_accepted\":" +
+                                 std::string(qualityRejected ? "false" : "true")
+                           : ""));
               if (config().autoCapture && --burstRemaining == 0) {
                 nextCapture = now() + frequency.QuadPart * 20;
                 burstRemaining = config().captures;
@@ -636,7 +664,8 @@ struct State {
 
             quality = gpu->readQuality();
             qualityRejected =
-                fsrWarmup || quality.reject(uint64_t(gpu->width) * gpu->height);
+                fsrWarmup || quality.reject(uint64_t(gpu->width) * gpu->height,
+                                            ResidentFg::wantsFsr());
             if (qualityRejected) {
               transfer(back.get(), ResidentFg::CurrentFinal, true);
               wrote = false;
@@ -644,10 +673,10 @@ struct State {
               emit(
                   "frame_rejected", uid,
                   "\"reason\":" +
-                      quote(fsrWarmup
-                                ? "fsr_history_warmup"
-                                : quality.rejectReason(uint64_t(gpu->width) *
-                                                       gpu->height)) +
+                      quote(fsrWarmup ? "fsr_history_warmup"
+                                      : quality.rejectReason(
+                                            uint64_t(gpu->width) * gpu->height,
+                                            ResidentFg::wantsFsr())) +
                       ",\"invalid_scene_"
                       "ratio\":" +
                       std::to_string(quality.invalidSceneRatio()) +

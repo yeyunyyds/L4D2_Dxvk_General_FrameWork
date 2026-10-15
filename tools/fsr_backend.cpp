@@ -316,24 +316,25 @@ struct Backend {
          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
         {sampler, borrowed(f.images[8], VK_FORMAT_R16G16B16A16_SFLOAT),
          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        infos[3],
         {VK_NULL_HANDLE, borrowed(f.images[6], VK_FORMAT_R8G8B8A8_UNORM),
          VK_IMAGE_LAYOUT_GENERAL}};
-    VkWriteDescriptorSet cw[7]{};
-    uint32_t bindings[] = {0, 1, 2, 3, 4, 6, 10};
-    for (uint32_t n = 0; n < 7; ++n) {
+    VkWriteDescriptorSet cw[8]{};
+    uint32_t bindings[] = {0, 1, 2, 3, 4, 5, 6, 10};
+    for (uint32_t n = 0; n < 8; ++n) {
       cw[n] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
       cw[n].dstSet = composeSet;
       cw[n].dstBinding = bindings[n];
       cw[n].descriptorCount = 1;
-      cw[n].descriptorType = n < 5 ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                             : n == 5 ? VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+      cw[n].descriptorType = n < 6 ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+                             : n == 6 ? VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
                                       : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      if (n == 6)
+      if (n == 7)
         cw[n].pBufferInfo = &ub;
       else
         cw[n].pImageInfo = &composite[n];
     }
-    vkUpdateDescriptorSets(device, 7, cw, 0, nullptr);
+    vkUpdateDescriptorSets(device, 8, cw, 0, nullptr);
     if (!initialized) {
       for (auto &i : images) {
         barrier(cmd, i.image, VK_IMAGE_LAYOUT_UNDEFINED,
@@ -414,7 +415,8 @@ int dispatch(void *context, VkCommandBuffer cmd, const LdbFsrFrame *frame,
   }
 }
 void destroy(void *context) { delete static_cast<Backend *>(context); }
-const LdbFsrApi api{1, sizeof(LdbFsrApi), create, dispatch, destroy};
+const LdbFsrApi api{LDB_FSR_API_VERSION, sizeof(LdbFsrApi), create, dispatch,
+                    destroy};
 } // namespace
 #ifdef _WIN32
 #define FSR_EXPORT __declspec(dllexport)
@@ -422,5 +424,5 @@ const LdbFsrApi api{1, sizeof(LdbFsrApi), create, dispatch, destroy};
 #define FSR_EXPORT
 #endif
 extern "C" FSR_EXPORT const LdbFsrApi *LdbFsrGetInterface(uint32_t version) {
-  return version == 1 ? &api : nullptr;
+  return version == LDB_FSR_API_VERSION ? &api : nullptr;
 }

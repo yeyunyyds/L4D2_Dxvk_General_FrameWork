@@ -19,13 +19,15 @@ set "LDB_GPU_REPROJECT=0"
 set "LDB_FG_ENABLE=1"
 set "LDB_FG_BACKEND=fsr"
 set "LDB_FG_MODE=generated"
-set "LDB_FG_LOG_DIR=%~dp0fg-results"
+set "LDB_FG_LOG_DIR=%~dp0fg-results\session-%RANDOM%-%RANDOM%"
 set "LDB_FG_CAPTURE_FRAMES=4"
 set "LDB_FG_HOTKEYS=1"
 set "LDB_FG_AUTO_CAPTURE=1"
 set "LDB_FG_PACING_MS=0"
 if not exist "%LDB_FG_LOG_DIR%" mkdir "%LDB_FG_LOG_DIR%"
 if not exist "%LDB_FG_LOG_DIR%" exit /b 1
+set "DXVK_LOG_PATH=%LDB_FG_LOG_DIR%"
+set "DXVK_LOG_LEVEL=info"
 echo Starts in generated-frame preview for image correctness.
 echo F8: enable/disable. F9: paired/generated preview.
 echo Automatic capture: delayed bursts throughout this session. No trigger file.

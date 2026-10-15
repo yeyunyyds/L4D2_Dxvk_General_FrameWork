@@ -21,10 +21,10 @@ def smoke(args):
     server = runtime / "root/usr/lib/wine/wineserver64"
     exe = args.exe.resolve() if getattr(args, "exe", None) else ROOT / ".research/bin/dxvk_host_capture.exe"
     backend = ROOT/'.research/fsr-dxvk/build/src/d3d9/d3d9.dll' if getattr(args,'fg_backend','custom')=='fsr' else runtime / "d3d9.dll"
-    profile_negative=args.negative_case=='fsr-profile'
+    profile_negative=args.negative_case in ('fsr-profile','fsr-abi')
     if profile_negative:
         if getattr(args,'fg_backend',None)!='fsr' or not getattr(args,'fg_mode',None):raise RuntimeError('FSR profile control requires --fg-backend fsr and --fg-mode')
-        backend=runtime/'d3d9.dll'
+        if args.negative_case=='fsr-profile':backend=runtime/'d3d9.dll'
     if not all(path.is_file() for path in (wine, exe, backend, runtime / "lvp.json")):
         raise RuntimeError("Run setup_software_runtime.sh and build_host_capture.py first")
     directory = runtime / "captures" / uuid.uuid4().hex
@@ -113,9 +113,10 @@ def smoke(args):
                 fgevents=read_events(folders[0]/'fg-events.jsonl') if len(folders)==1 else []
                 errors=[e for e in fgevents if e['event']=='fg_error']
                 if process.returncode!=0 or not events or events[-1]['event']!='completed' or len(presents)!=args.frames or any(e['generated_verified'] for e in presents):raise ValueError('Missing FSR profile did not preserve all original Presents')
-                if not errors or any('requires packaged DXVK' not in e['message'] for e in errors) or any(e['event']=='fsr_dispatch' for e in fgevents):raise ValueError('Missing profile did not block SDK dispatch')
+                expected_error='ABI mismatch' if args.negative_case=='fsr-abi' else 'requires packaged DXVK'
+                if not errors or any(expected_error not in e['message'] for e in errors) or any(e['event']=='fsr_dispatch' for e in fgevents):raise ValueError('Missing profile did not block SDK dispatch')
                 result={'status':'expected_failure','run_id':directory.name,'exit_code':0,
-                        'validation_level':'fsr_missing_profile_original_fallback','original_presents_verified':len(presents),
+                        'validation_level':'fsr_old_abi_original_fallback' if args.negative_case=='fsr-abi' else 'fsr_missing_profile_original_fallback','original_presents_verified':len(presents),
                         'backend_errors':errors,'gpu_fg_execution':'blocked_before_sdk_dispatch','game_capture':'unrun'}
             elif args.negative_case:
                 events = read_events(directory / "capture.jsonl")
@@ -131,7 +132,7 @@ def smoke(args):
                     selection=[e for e in events if e['event']=='near_fixture_selection']
                     if len(selection)!=1 or selection[0]['mixed']!=(args.fg_near_case!='normal'):raise ValueError('Requested near fixture case not executed')
                     presents=[e for e in events if e['event']=='fixture_present']
-                    expected_generated=0 if args.fg_mode=='off' or args.fg_case=='thin_effect' else args.frames-2-(2 if getattr(args,'fg_case','normal') in ('partial','failure','quality','mask_contamination') else 0)
+                    expected_generated=0 if args.fg_mode=='off' or (args.fg_case=='thin_effect' and args.fg_backend!='fsr') else args.frames-2-(2 if getattr(args,'fg_case','normal') in ('partial','failure','quality','mask_contamination') else 0)
                     if getattr(args,'fg_backend','custom')=='fsr' and args.fg_mode!='off' and args.fg_case in ('quality','mask_contamination'):expected_generated-=1
                     expected=args.frames if args.fg_mode in ('off','generated') else args.frames+expected_generated
                     if len(presents)!=expected:raise ValueError('Wrong real Present call count')
@@ -155,7 +156,7 @@ def smoke(args):
                         normal=[e for e in metrics if (e['generated'] or e['quality_rejected']) and not e['captured']]
                         # scene, two near colour copies, depth, UI, final, combined compute/write, restore.
                         expected_submissions=10 if getattr(args,'fg_near_case',None)!='normal' else 8
-                        if getattr(args,'fg_backend','custom')=='fsr':expected_submissions+=1 if args.fg_case=='thin_effect' else 2
+                        if getattr(args,'fg_backend','custom')=='fsr':expected_submissions+=2
                         if not normal or any(e['gpu_submissions']!=expected_submissions for e in normal):raise ValueError('Combined dispatch/write submission not verified')
                         result['gpu_timestamps']='verified';result['combined_submission_count']=expected_submissions
                         if getattr(args,'fg_backend','custom')=='fsr':
@@ -170,6 +171,14 @@ def smoke(args):
                             captures=[e for e in fgevents if e['event']=='capture']
                             if len(captures)<8 or min(e['frame'] for e in captures)<2:raise ValueError('Delayed periodic capture failed')
                             result['delayed_periodic_captures']=[e['frame'] for e in captures]
+                            if args.fg_backend=='fsr':
+                                accepted=sum(e.get('quality_accepted') is True for e in captures)
+                                rejected=sum(e.get('quality_accepted') is False for e in captures)
+                                if accepted+rejected!=len(captures) or accepted>24 or rejected>8:raise ValueError('Automatic evidence quotas or acceptance tags invalid')
+                                metric_by_frame={e['frame']:e for e in metrics}
+                                if any(e['quality_accepted']!= (not metric_by_frame[e['frame']]['quality_rejected']) for e in captures):raise ValueError('Capture acceptance tag disagrees with final quality result')
+                                if accepted<1:raise ValueError('Automatic capture failed to retain any accepted FSR output')
+                                result['automatic_capture_mix']={'accepted':accepted,'rejected':rejected}
                         init=None
                         for event in fgevents:
                             if event['event']=='gpu_initialized':init=event
@@ -180,8 +189,11 @@ def smoke(args):
                             expected_rejects=[2,3,4] if getattr(args,'fg_backend','custom')=='fsr' else [2,3]
                             if [e['frame'] for e in rejects]!=expected_rejects or any(not e.get('original_restored') or e.get('presented') for e in rejects):raise ValueError('Quality-rejected candidate was presented')
                         elif args.fg_case=='thin_effect':
-                            if len(rejects)!=args.frames-2 or any(e['reason']!='unsafe_thin_effect' or not e['original_restored'] or e['presented'] for e in rejects):raise ValueError('Thin effect rejection not verified')
-                            if any(not e['local_effect_risk'] or e['motion_interpolated_pixels']>e['scene_reprojected_pixels'] for e in metrics if e['quality_rejected']):raise ValueError('Tagged local risk corrupts motion count')
+                            if args.fg_backend=='fsr':
+                                if rejects or not all(e['local_effect_risk'] for e in metrics if e['generated']):raise ValueError('Regional protection did not maintain continuous generation during risk')
+                                result['regional_effect_protection']='verified_current_ring_no_previous_ghost_and_world_midpoint'
+                            elif len(rejects)!=args.frames-2 or any(e['reason']!='unsafe_thin_effect' or not e['original_restored'] or e['presented'] for e in rejects):raise ValueError('Thin effect rejection not verified')
+                            if any(not e['local_effect_risk'] or e['motion_interpolated_pixels']>e['scene_reprojected_pixels'] for e in metrics if e['quality_rejected'] or e['generated']):raise ValueError('Tagged local risk corrupts motion count')
                             result['thin_effect']='verified_original_ring_in_actual_backbuffer_before_present'
                         elif rejects:raise ValueError('Normal fixture was incorrectly rejected')
                         if args.fg_case=='mask_contamination' and any(e['reason']!='excessive_foreground_coverage' for e in rejects if e['frame'] in (2,3)):raise ValueError('Contamination rejection reason not validated')
@@ -202,7 +214,7 @@ def smoke(args):
                         if args.fg_case=='occlusion':result['parallax_occlusion']='verified_revealed_background_and_occluder_width_in_actual_backbuffer'
                         result['whole_frame_quality']='verified';result['rejected_frames']=[e['frame'] for e in rejects]
                         result['fg_events']='verified';result['history_storage']='full_size_gpu'
-                        if args.fg_case=='thin_effect':result['gpu_fg_execution']='computed_then_rejected_for_local_risk'
+                        if args.fg_case=='thin_effect' and args.fg_backend!='fsr':result['gpu_fg_execution']='computed_then_rejected_for_local_risk'
                 else:
                     result = analyze(read_events(directory / "capture.jsonl"), directory.name, process.returncode)
             if args.validation:
@@ -246,7 +258,7 @@ if __name__ == "__main__":
     parser.add_argument("--frames", type=int, default=60)
     parser.add_argument("--depth-format", choices=("auto", "d32", "d24"), default="auto")
     parser.add_argument("--validation", action="store_true")
-    parser.add_argument("--negative-case", choices=("wrong-arch","fsr-profile"))
+    parser.add_argument("--negative-case", choices=("wrong-arch","fsr-profile","fsr-abi"))
     parser.add_argument("--stride",type=int,choices=range(1,9),default=1)
     parser.add_argument("--hdr-scene", action="store_true")
     parser.add_argument("--gpu-reproject", action="store_true")

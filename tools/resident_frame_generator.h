@@ -85,13 +85,14 @@ public:
                  ? double(reprojected) / double(total - foreground)
                  : 0;
     }
-    const char *rejectReason(uint64_t expected) const {
+    const char *rejectReason(uint64_t expected,
+                             bool localRiskProtected = false) const {
       if (total != expected ||
           uint64_t(invalid) + foreground + reprojected > total ||
           nearColour > total || nearDepth > total || ui > total ||
           motionPixels() > reprojected)
         return "invalid_quality_counts";
-      if (localEffectRisk())
+      if (localEffectRisk() && !localRiskProtected)
         return "unsafe_thin_effect";
       if (foregroundRatio() > .8)
         return "excessive_foreground_coverage";
@@ -101,8 +102,8 @@ public:
         return "insufficient_scene_reprojection";
       return nullptr;
     }
-    bool reject(uint64_t expected) const {
-      return rejectReason(expected) != nullptr;
+    bool reject(uint64_t expected, bool localRiskProtected = false) const {
+      return rejectReason(expected, localRiskProtected) != nullptr;
     }
   };
   struct Counters {
@@ -719,7 +720,7 @@ public:
                   bool previousNear = false) {
     if (recording)
       end();
-    if (preflight && readQuality().reject(uint64_t(width) * height))
+    if (preflight && readQuality().reject(uint64_t(width) * height, true))
       return 2;
     if (!fsr) {
       auto loaded = std::make_unique<FsrLibrary>();
@@ -755,8 +756,8 @@ public:
             "FSR backend DLL missing or dependencies unavailable");
       auto get = reinterpret_cast<LdbFsrGetApi>(
           GetProcAddress(loaded->module, "LdbFsrGetInterface"));
-      loaded->api = get ? get(1) : nullptr;
-      if (!loaded->api || loaded->api->version != 1 ||
+      loaded->api = get ? get(LDB_FSR_API_VERSION) : nullptr;
+      if (!loaded->api || loaded->api->version != LDB_FSR_API_VERSION ||
           loaded->api->size != sizeof(LdbFsrApi))
         throw std::runtime_error("FSR backend ABI mismatch");
       char message[512]{};

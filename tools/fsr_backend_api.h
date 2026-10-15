@@ -2,6 +2,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <vulkan/vulkan.h>
+// Version 2 requires regional thin-feature protection before output is
+// accepted.
+inline constexpr uint32_t LDB_FSR_API_VERSION = 2;
 struct LdbFsrFrame {
   uint32_t size = sizeof(LdbFsrFrame), width = 0, height = 0, flags = 0;
   uint64_t frame = 0;

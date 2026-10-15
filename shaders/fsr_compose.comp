@@ -5,8 +5,27 @@ layout(binding=1) uniform sampler2D original;
 layout(binding=2) uniform sampler2D mask;
 layout(binding=3) uniform sampler2D previousNearBefore;
 layout(binding=4) uniform sampler2D previousNearAfter;
+layout(binding=5) uniform sampler2D previousColour;
 layout(binding=6,rgba8) uniform image2D outputColour;
 layout(binding=10,std140) uniform Params { vec4 rows[4];uvec4 flags; } p;
+ivec2 bounded(ivec2 q){return clamp(q,ivec2(0),ivec2(p.flags.xy)-1);}
+bool bright(vec3 c){return min(c.r,min(c.g,c.b))>.72&&max(c.r,max(c.g,c.b))-min(c.r,min(c.g,c.b))<.10;}
+bool thin(sampler2D source,ivec2 q){
+ if(!bright(texelFetch(source,bounded(q),0).rgb))return false;
+ int count=0;
+ for(int y=-2;y<=2;y+=2)for(int x=-2;x<=2;x+=2)
+  if(bright(texelFetch(source,bounded(q+ivec2(x,y)),0).rgb))count++;
+ return count>=2&&count<=5;
+}
+bool regionalRisk(ivec2 q){
+ // Cover the filter footprint around current risk marks and old thin features.
+ // The old footprint must restore current pixels too, or it leaves a ghost.
+ for(int y=-2;y<=2;y++)for(int x=-2;x<=2;x++){
+  ivec2 n=bounded(q+ivec2(x,y));vec3 m=texelFetch(mask,n,0).rgb;
+  if((m.r>.9&&m.g>.4&&m.g<.6&&m.b>.9)||thin(original,n)||thin(previousColour,n))return true;
+ }
+ return false;
+}
 void main(){
  ivec2 q=ivec2(gl_GlobalInvocationID.xy);if(any(greaterThanEqual(q,ivec2(p.flags.xy))))return;
  vec3 m=texelFetch(mask,q,0).rgb;vec4 c=texelFetch(generated,q,0);
@@ -19,7 +38,8 @@ void main(){
   contrast+=dot(abs(texelFetch(original,clamp(q+ivec2(x,y),ivec2(0),ivec2(p.flags.xy)-1),0).rgb-current.rgb),vec3(1.0/27.0));
  bool uncertain=(m.r>.9&&m.g<.1)||(m.r<.1&&m.g>.9&&m.b>.9);
  bool flatChange=uncertain&&contrast<.02&&any(greaterThan(abs(c.rgb-current.rgb),vec3(.12)));
- if((m.r>.9&&m.g>.9&&m.b<.1)||flatChange||previousNear)c=current;
+ bool localRisk=any(greaterThan(abs(c.rgb-current.rgb),vec3(.01)))&&regionalRisk(q);
+ if((m.r>.9&&m.g>.9&&m.b<.1)||flatChange||previousNear||localRisk)c=current;
  c.a=1;if((p.flags.z&2u)!=0u)c=c.bgra;
  imageStore(outputColour,q,c);
 }

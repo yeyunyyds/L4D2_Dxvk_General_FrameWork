@@ -24,6 +24,7 @@ def analyze(path):
     previous = None
     frequency = None
     backend = 'custom'
+    local_effect_policy = 'whole_frame_rejection'
     complete = False
     successful = 0
     extra_calls = 0
@@ -35,6 +36,7 @@ def analyze(path):
             if kind == 'session':
                 frequency = event['qpc_frequency']
                 backend = event.get('backend','custom')
+                local_effect_policy = event.get('local_effect_policy','whole_frame_rejection')
             elif kind == 'summary':
                 summaries.append(event)
                 complete = True
@@ -71,7 +73,7 @@ def analyze(path):
                 previous = (group, event)
     logical = summaries[-1]['logical_presents'] if summaries else None
     return dict(log=path.name, log_complete=complete, event_counts=dict(counts),
-                backend=backend, gpu_dispatch_scope='preflight_only' if backend.startswith('fsr') else 'generation',
+                backend=backend, local_effect_policy=local_effect_policy, gpu_dispatch_scope='preflight_only' if backend.startswith('fsr') else 'generation',
                 generated_by_mode=dict(by_mode), successful_generated_presents=successful,
                 backend_calls=logical+extra_calls if logical is not None else None,
                 summaries=summaries, errors=errors, mode_changes=changes, captures=captures,
