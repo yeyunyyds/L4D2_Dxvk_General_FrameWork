@@ -96,10 +96,13 @@ void failuresRestoreAndRemainVisible() {
     rt_test::Graphics device; auto snapshot = rt_test::snapshot(); Report report;
     const auto result = execute(&device, &snapshot, D3DPT_TRIANGLELIST, false, true, [] { return E_FAIL; }, report);
     require(FAILED(result) && device.restored() && device.leasesReleased(), "physical draw failure leaked state");
-    try {
-      execute(&device, &snapshot, D3DPT_TRIANGLELIST, false, true, []() -> HRESULT { throw std::runtime_error("draw"); }, report);
-      require(false, "missing test exception");
-    } catch (const std::runtime_error&) { }
+    // Type erasure keeps the deliberately throwing callback from making the
+    // template's success path syntactically unreachable under MSVC /W4 /WX.
+    std::function<HRESULT()> throwingDraw = []() -> HRESULT { throw std::runtime_error("draw"); };
+    bool threw = false;
+    try { execute(&device, &snapshot, D3DPT_TRIANGLELIST, false, true, throwingDraw, report); }
+    catch (const std::runtime_error&) { threw = true; }
+    require(threw, "missing test exception");
     require(device.restored() && device.leasesReleased(), "exception leaked state");
   }
 }
