@@ -10,9 +10,10 @@
 
 - [第一阶段研究结果](docs/research/phase1.md)：源码接入点、必要改动与验证证据。
 - [官方 FSR 组件接入](docs/research/fsr-component-backend.md)：官方光流与插帧组件的移植和验证依据。
+- [FSR 区域保护修正](docs/research/fsr-regional-protection.md)：局部保留细亮区域，采集成功／拒绝候选并统一日志；本轮 B580 画质待验收。
 - [B580 首次 FSR 游戏运行](docs/research/fsr-b580-first-run.md)：174 次生成帧 Present 成功，但约 95% 候选被保护规则拒绝，画质尚未验收。
 - [地图加载诊断](docs/research/fsr-startup-diagnostics.md)：统一收集 Bridge、DXVK 与 FG 日志，包含关闭 FSR 的进程级对照。
-- [官方 FSR Host 接入](docs/research/fsr-host-integration.md)：实际 Present 接入、安装和一次综合测试。B580 已有游戏执行记录，整体画质验收待完成。 [集成验证记录](research/fsr-host-integration-validation.json) · [Windows 包校验](research/fsr-host-package-validation.json)。
+- [官方 FSR Host 接入](docs/research/fsr-host-integration.md)：实际 Present 接入、安装和一次综合测试。B580 已有游戏执行记录，整体画质验收待完成。 [集成验证记录](research/fsr-regional-validation.json) · [Windows 包校验](research/fsr-regional-package-validation.json)。
 - [Windows / B580 验证步骤](docs/research/windows-validation.md)：GPU 探测与官方 FSR Vulkan 样例验收。
 - [帧输入契约草案](docs/research/frame-input-contract.md)：深度、相机、运动矢量、HUD 与资源生命周期。
 - [固定研究版本](research/sources.lock.json)及[本轮验证记录](research/validation-2026-10-12.json)。
