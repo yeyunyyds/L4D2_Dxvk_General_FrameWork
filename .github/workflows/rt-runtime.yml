@@ -10,11 +10,6 @@ on:
       - scripts/build_remix_runtime.ps1
       - scripts/package_remix_runtime_status.py
       - scripts/package_rt_preflight.py
-      - scripts/rt_preflight.py
-      - scripts/rt_game_probe.py
-      - scripts/rt_suite.py
-      - integration/rt/preflight-readme.txt
-      - tests/test_rt_preflight.py
   workflow_dispatch:
 permissions:
   contents: write
