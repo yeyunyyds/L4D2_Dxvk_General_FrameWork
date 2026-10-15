@@ -24,6 +24,18 @@ MAX_IMAGE = 256 * 1024 * 1024
 MAX_SECTION = 64 * 1024 * 1024
 
 
+def unique_modules(entries):
+    """Coalesce identical Toolhelp aliases; preserve actual conflicting loads."""
+    result = {}
+    for entry in entries:
+        key = (entry['name'].casefold(), entry['path'].casefold(), entry['base'], entry['size'])
+        if key in result:
+            result[key]['snapshot_alias_count'] += 1
+        else:
+            result[key] = {**entry, 'snapshot_alias_count': 1}
+    return list(result.values())
+
+
 def u32(data, offset=0):
     return struct.unpack_from('<I', data, offset)[0]
 
@@ -132,6 +144,16 @@ class MappedImage:
         return any(s['flags'] & EXECUTE and s['data'] is not None and
                    s['rva'] <= rva < s['rva'] + s['size'] for s in self.sections)
 
+    def code_window(self, rva, before=32, after=128):
+        for section in self.sections:
+            if section['data'] is not None and section['flags'] & EXECUTE and \
+                    section['rva'] <= rva < section['rva'] + section['size']:
+                start = max(section['rva'], rva - before)
+                end = min(section['rva'] + section['size'], rva + after)
+                return {'window_rva': start, 'target_offset': rva - start,
+                        'bytes': self.data_at(start, end - start).hex()}
+        return None
+
     def pattern(self, pattern):
         found, truncated = [], False
         unavailable = False
@@ -148,7 +170,8 @@ class MappedImage:
                 'ambiguous' if len(found) > 1 or truncated else
                 'unique_candidate' if found else 'absent',
                 'match_count': len(found), 'count_truncated': truncated,
-                'match_rvas': found[:32], 'hook_install_allowed': False}
+                'match_rvas': found[:32], 'code_windows': [self.code_window(rva) for rva in found[:32]],
+                'hook_install_allowed': False}
 
     def occurrences(self, value):
         for section in self.sections:
@@ -198,6 +221,7 @@ class MappedImage:
                         methods[str(slot)] = {'target_rva': target if valid else None,
                                               'in_module_executable': valid,
                                               'first_32_bytes': code.hex() if code else None,
+                                              'code_window': self.code_window(target, before=0) if valid else None,
                                               'semantics_verified': False}
                     result.append({'vtable_rva': table, 'locator_rva': col,
                                    'type_descriptor_rva': td, 'object_offset': offset,
@@ -253,10 +277,12 @@ class MappedImage:
                             function = self.data_at(target, 32) if self.executable(target) else None
                             methods[str(slot)] = {'target_rva': target if function else None,
                                                   'first_32_bytes': function.hex() if function else None,
+                                                  'code_window': self.code_window(target, before=0) if function else None,
                                                   'semantics_verified': False}
                     result.append({'name': match.group()[:-1].decode('ascii'),
                                    'entry_rva': entry, 'factory_rva': factory - self.base,
                                    'factory_first_32_bytes': code.hex() if code else None,
+                                   'factory_code_window': self.code_window(factory - self.base, before=0),
                                    'getter_shape': getter_shape,
                                    'object_rva': object_address - self.base if valid else None,
                                    'vtable_rva': table_rva if valid else None,
@@ -345,7 +371,10 @@ class WindowsProcess:
         snapshot = None
         # ERROR_BAD_LENGTH is documented for racing loader snapshots.
         for _ in range(4):
-            snapshot = self.api.CreateToolhelp32Snapshot(0x08 | 0x10, self.pid)
+            # The target contract is PE32. Combining both flags can enumerate
+            # its executable twice under WOW64; do not collect the x64 loader.
+            flags = 0x10 if ctypes.sizeof(ctypes.c_void_p) == 8 else 0x08
+            snapshot = self.api.CreateToolhelp32Snapshot(flags, self.pid)
             if snapshot != ctypes.c_void_p(-1).value:
                 break
             if ctypes.get_last_error() != 24:
@@ -362,7 +391,7 @@ class WindowsProcess:
                 ok = self.api.Module32NextW(snapshot, ctypes.byref(entry))
             if ctypes.get_last_error() != 18:  # ERROR_NO_MORE_FILES
                 raise ctypes.WinError(ctypes.get_last_error())
-            return result
+            return unique_modules(result)
         finally:
             self.api.CloseHandle(snapshot)
 
@@ -404,7 +433,8 @@ def collect(pid, audit):
                 if len(candidates) != 1:
                     item['error'] = 'Module missing or ambiguous'; stable = False; continue
                 module = candidates[0]
-                item.update(path=module['path'], base_address=module['base'])
+                item.update(path=module['path'], base_address=module['base'],
+                            snapshot_alias_count=module['snapshot_alias_count'])
                 try:
                     item['file'] = file_identity(module['path'])
                     hooks = [h for h in audit['hook_references'] if MODULES[h['module']] == name]

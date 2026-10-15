@@ -10,7 +10,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from rt_game_probe import MappedImage, WindowsProcess, collect, file_identity, matches, pattern_bytes
+from rt_game_probe import MappedImage, WindowsProcess, collect, file_identity, matches, pattern_bytes, unique_modules
 
 BASE = 0x12340000
 
@@ -60,6 +60,15 @@ def image(data, missing=()):
 
 
 class ProbeCases(unittest.TestCase):
+    def test_identical_snapshot_aliases_merge_but_conflicting_modules_remain(self):
+        first = {'name': 'client.dll', 'path': 'C:\\Game\\client.dll', 'base': BASE, 'size': 4096}
+        alias = {**first, 'path': 'c:\\game\\CLIENT.DLL'}
+        conflict = {**first, 'base': BASE + 0x10000}
+        result = unique_modules([first, alias, conflict])
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['snapshot_alias_count'], 2)
+        self.assertEqual(result[1]['snapshot_alias_count'], 1)
+
     def test_patterns_are_bounded_and_validate_tokens(self):
         self.assertEqual(matches(b'aaaa', '61 61'), ([0, 1, 2], False))
         self.assertEqual(matches(b'aaaa', '? 61', 1), ([0], True))
@@ -72,8 +81,14 @@ class ProbeCases(unittest.TestCase):
         found = module.pattern('8B 43 ? 3B C7')
         self.assertEqual(found['result'], 'unique_candidate')
         self.assertEqual(found['match_rvas'], [0x1050])
+        window = found['code_windows'][0]
+        self.assertEqual(window['window_rva'] + window['target_offset'], 0x1050)
+        self.assertIn('8b43043bc7', window['bytes'])
         self.assertFalse(found['hook_install_allowed'])
         self.assertEqual(module.pattern('90 90 90')['result'], 'absent')
+        self.assertEqual(module.code_window(0x1000)['target_offset'], 0)
+        self.assertEqual(len(module.code_window(0x1fff)['bytes']) // 2, 33)
+        self.assertIsNone(module.code_window(0x2050))
 
     def test_ambiguous_pattern_cannot_select_reference_rva(self):
         data = fixture(); data[0x1080:0x1085] = data[0x1050:0x1055]
@@ -171,7 +186,7 @@ class ProbeCases(unittest.TestCase):
                 self.assertTrue(start['alive'])
                 modules = target.modules()
                 own = [m for m in modules if m['name'] == executable.name.lower()]
-                self.assertEqual(len(own), 1)
+                self.assertEqual(len(own), 1, own)
                 own = own[0]
                 self.assertEqual(own['base'], expected['base'])
                 module = MappedImage(target.read, own['base'], own['size'])
