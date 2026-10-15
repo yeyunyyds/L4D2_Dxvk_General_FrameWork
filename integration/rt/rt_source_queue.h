@@ -13,6 +13,8 @@ namespace ldb_rt {
 // One lane belongs to one Source material command stream. The caller must insert
 // callbacks beside the corresponding render commands on that SAME context.
 // This class does not discover game interfaces, install hooks, or change CVars.
+// The owning DLL must stay loaded until all SDK callback references are released;
+// stop() invalidates callbacks, but does not drain or flush the engine's queue.
 class SourceQueue final {
 public:
   struct Stats {
@@ -112,7 +114,10 @@ private:
   HRESULT enqueue(ICallQueue* queue, Header header, const Bytes& payload, bool recovery) {
     const auto state = m_state;
     const uint64_t token = state->token.load();
-    if (token & 1) { return state->lastError.load(); }
+    if (token & 1) {
+      const auto error = state->lastError.load();
+      return FAILED(error) ? error : HRESULT_FROM_WIN32(ERROR_CANCELLED);
+    }
     const auto& id = state->identity;
     if (header.session != id.session || header.run != id.run || header.device != id.device ||
         (header.kind == Kind::Reset && !recovery) || payload.size() > kMaxPacketBytes - kHeaderBytes) {

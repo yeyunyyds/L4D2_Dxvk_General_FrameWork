@@ -1,5 +1,6 @@
 """Add only the RT evidence ZIP to the download branch without a worktree."""
 
+import argparse
 import os
 from pathlib import Path
 import subprocess
@@ -11,7 +12,11 @@ def git(*args, **kwargs):
 
 
 if __name__ == '__main__':
-    package = Path('.research/dist/rt-foundation-build-status.zip')
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--package', type=Path, default=Path('.research/dist/rt-foundation-build-status.zip'))
+    package = parser.parse_args().package
+    if package.suffix.lower() != '.zip':
+        raise SystemExit('Only ZIP evidence can be published to the download branch')
     if not package.is_file():
         raise SystemExit('Missing status ZIP')
     subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)

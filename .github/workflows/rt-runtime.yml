@@ -1,0 +1,65 @@
+name: Build pinned L4D2 custom Remix runtime
+on:
+  push:
+    branches: [ldb-host-capture]
+    paths:
+      - .github/workflows/rt-runtime.yml
+      - integration/rt/baseline.json
+      - integration/rt/rt_runtime_smoke.cpp
+      - scripts/prepare_remix_runtime.py
+      - scripts/build_remix_runtime.ps1
+      - scripts/package_remix_runtime_status.py
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rt-runtime
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - name: Preserve pinned source line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install build tools
+        run: python -m pip install meson==1.8.2 ninja==1.11.1.1
+      - name: Prepare exact runtime source and submodules
+        id: prepare
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force ci-remix-logs | Out-Null
+          & cmd.exe /d /c 'python scripts/prepare_remix_runtime.py > ci-remix-logs/prepare.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content ci-remix-logs/prepare.log
+          if ($result -ne 0) { throw 'Custom Remix preparation failed' }
+      - name: Compile static diagnostic and Release runtime
+        id: native
+        shell: powershell
+        run: |
+          & cmd.exe /d /c 'powershell.exe -NoProfile -File scripts/build_remix_runtime.ps1 > ci-remix-logs/native.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content ci-remix-logs/native.log
+          if ($result -ne 0) { throw 'Custom Remix build failed' }
+      - name: Package build evidence
+        if: always()
+        env:
+          REMIX_PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
+          REMIX_BUILD_OUTCOME: ${{ steps.native.outcome }}
+        run: python scripts/package_remix_runtime_status.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rt-runtime-${{ github.sha }}
+          path: |
+            .research/dist/rt-runtime-build-status.zip
+            .research/rt-remix-runtime/_output/**/*.dll
+            .research/rt-remix-runtime/_output/usd/**
+          if-no-files-found: error
+      - name: Publish evidence ZIP
+        if: always()
+        run: python scripts/publish_rt_build_status.py --package .research/dist/rt-runtime-build-status.zip
