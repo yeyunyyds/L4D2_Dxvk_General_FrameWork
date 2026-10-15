@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "bridge_repository": "https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge.git",
+  "bridge_commit": "cafc0442446c502a0de0ebb52d5e73ccaae67516",
+  "bridge_version": "1.3.2",
+  "bridge_patch_sha256": "3d545d8aa5ca71641f3305f66c1859936dc5628a0519f0e68c348b6e03c8e6f4",
+  "upstream_repository": "https://github.com/NVIDIAGameWorks/dxvk-remix.git",
+  "upstream_commit": "9aa74f8dfad2188efbd0f717c64d9f8fa909787e",
+  "detours_repository": "https://github.com/microsoft/Detours.git",
+  "detours_commit": "ea6c4ae7f3f1b1772b8a7cda4199230b932f5a50",
+  "compat_repository": "https://github.com/xoxor4d/l4d2-rtx.git",
+  "compat_commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+  "runtime_repository": "https://github.com/xoxor4d/dxvk-remix.git",
+  "runtime_branch_reference": "game/l4d2_rebase1",
+  "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+  "runtime_selection": "source_candidate_not_runtime_validated",
+  "protocol_version": 1,
+  "source_queue_hook": "not_yet_implemented_or_game_validated",
+  "b580_rt": "unrun"
+}

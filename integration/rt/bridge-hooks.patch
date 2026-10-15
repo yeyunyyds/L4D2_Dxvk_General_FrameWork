@@ -1,0 +1,152 @@
+diff --git a/bridge/src/client/d3d9_device.cpp b/bridge/src/client/d3d9_device.cpp
+index 5a5a91b..2eea6fc 100644
+--- a/bridge/src/client/d3d9_device.cpp
++++ b/bridge/src/client/d3d9_device.cpp
+@@ -29,2 +29,5 @@
+ #include "d3d9_device.h"
++// NV-DXVK start: Owned metadata shares the Device command stream.
++#include "rt_client.h"
++// NV-DXVK end
+ #include "d3d9_lss.h"
+@@ -145,2 +148,7 @@ HRESULT Direct3DDevice9Ex_LSS<EnableSync>::QueryInterface(REFIID riid, LPVOID* p
+   }
++  if (riid == ldb_rt::kStreamGuid) {
++    try { *ppvObj = new ldb_rt::ClientStream<Direct3DDevice9Ex_LSS<EnableSync>>(this); }
++    catch (const std::bad_alloc&) { return E_OUTOFMEMORY; }
++    return S_OK;
++  }
+   return E_NOINTERFACE;
+@@ -148,2 +156,22 @@ HRESULT Direct3DDevice9Ex_LSS<EnableSync>::QueryInterface(REFIID riid, LPVOID* p
+
++template<bool EnableSync>
++HRESULT Direct3DDevice9Ex_LSS<EnableSync>::submitRtPacket(const void* bytes, uint32_t size, bool hello, uint32_t* commandUid) try {
++  BRIDGE_DEVICE_LOCKGUARD();
++  if (!gbBridgeRunning.load(std::memory_order_acquire)) { return D3DERR_DEVICELOST; }
++  uint32_t uid = 0;
++  {
++    ClientMessage c(hello ? Commands::LdbRt_Hello : Commands::LdbRt_Metadata, getId());
++    uid = static_cast<uint32_t>(c.get_uid());
++    c.send_data(size);
++    c.send_data(size, bytes);
++    if (!RESULT_SUCCESS(c.finish())) { return D3DERR_DEVICELOST; }
++  }
++  *commandUid = uid;
++  if (!hello) { return S_OK; }
++  WAIT_FOR_SERVER_RESPONSE("LdbRt_Hello", D3DERR_DEVICELOST, uid);
++  const HRESULT result = static_cast<HRESULT>(DeviceBridge::get_data());
++  DeviceBridge::pop_front();
++  return result;
++} catch (const BridgeReadFailure&) { return D3DERR_DEVICELOST; }
++
+ template<bool EnableSync>
+diff --git a/bridge/src/client/d3d9_device.h b/bridge/src/client/d3d9_device.h
+index 33ca519..a4ba8ef 100644
+--- a/bridge/src/client/d3d9_device.h
++++ b/bridge/src/client/d3d9_device.h
+@@ -103,2 +103,3 @@ public:
+   /*** IUnknown methods ***/
++  HRESULT submitRtPacket(const void* bytes, uint32_t size, bool hello, uint32_t* commandUid);
+   STDMETHOD(QueryInterface)(THIS_ REFIID riid, void** ppvObj);
+diff --git a/bridge/src/server/main.cpp b/bridge/src/server/main.cpp
+index 73dc9db..168f95d 100644
+--- a/bridge/src/server/main.cpp
++++ b/bridge/src/server/main.cpp
+@@ -40,2 +40,5 @@
+ #include "upload_safety.h"
++// NV-DXVK start: Metadata observation is ordered with Draw and Present.
++#include "rt_host.h"
++// NV-DXVK end
+
+@@ -507,2 +510,19 @@ void ProcessDeviceCommandQueue() {
+       switch (rpcHeader.command) {
++      case LdbRt_Hello:
++      case LdbRt_Metadata:
++      {
++        GET_RES(pD3DDevice, gpD3DDevices);
++        (void)pD3DDevice;
++        PULL_U(bytes);
++        const void* packet = nullptr;
++        PULL_DATA(bytes, packet);
++        const bool hello = rpcHeader.command == LdbRt_Hello;
++        const HRESULT result = bytes == packet_len && bytes <= ldb_rt::kMaxPacketBytes
++          ? ldb_rt_host::submit(rpcHeader.pHandle, packet, bytes, currentUID, hello) : E_INVALIDARG;
++        if (hello) {
++          ServerMessage response(Commands::Bridge_Response, currentUID);
++          response.send_data(result);
++        }
++        break;
++      }
+       case IDirect3D9Ex_CreateDeviceEx:
+@@ -725,2 +745,3 @@ void ProcessDeviceCommandQueue() {
+         const auto pD3DDevice = lookupHostHandle(gpD3DDevices, pD3DDeviceHandle);
++        ldb_rt_host::destroy(pD3DDeviceHandle);
+         safeDestroy(pD3DDevice, pD3DDeviceHandle);
+@@ -892,2 +913,3 @@ void ProcessDeviceCommandQueue() {
+           ? D3DERR_INVALIDCALL : l4d2_api_wait::backend([&]() { return pD3DDevice->Reset(&PresentationParameters); });
++        ldb_rt_host::reset(rpcHeader.pHandle, currentUID, hresult);
+         char message[768] {};
+@@ -929,2 +951,3 @@ void ProcessDeviceCommandQueue() {
+           ? D3DERR_INVALIDCALL : l4d2_api_wait::backend([&]() { return ((IDirect3DDevice9Ex*) pD3DDevice)->ResetEx(&PresentationParameters, pFullscreenDisplayMode); });
++        ldb_rt_host::reset(rpcHeader.pHandle, currentUID, hresult);
+         char message[768] {};
+@@ -965,2 +988,3 @@ void ProcessDeviceCommandQueue() {
+         const auto hresult = l4d2_api_wait::backend([&]() { return pD3DDevice->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion); });
++        ldb_rt_host::present(rpcHeader.pHandle, currentUID, hresult);
+         if (!SUCCEEDED(hresult)) {
+@@ -1620,3 +1644,5 @@ void ProcessDeviceCommandQueue() {
+         PULL_U(PrimitiveCount);
++        ldb_rt_host::draw(rpcHeader.pHandle, currentUID);
+         const auto hresult = pD3DDevice->DrawPrimitive(IN PrimitiveType, IN StartVertex, IN PrimitiveCount);
++        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
+         assert(SUCCEEDED(hresult));
+@@ -1635,3 +1661,5 @@ void ProcessDeviceCommandQueue() {
+         PULL_U(primCount);
++        ldb_rt_host::draw(rpcHeader.pHandle, currentUID);
+         const auto hresult = pD3DDevice->DrawIndexedPrimitive(IN Type, IN BaseVertexIndex, IN MinVertexIndex, IN NumVertices, IN startIndex, IN primCount);
++        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
+         assert(SUCCEEDED(hresult));
+@@ -1649,3 +1677,5 @@ void ProcessDeviceCommandQueue() {
+         PULL_U(VertexStreamZeroStride);
++        ldb_rt_host::draw(rpcHeader.pHandle, currentUID);
+         const auto hresult = pD3DDevice->DrawPrimitiveUP(IN PrimitiveType, IN PrimitiveCount, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
++        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
+         assert(SUCCEEDED(hresult));
+@@ -1670,3 +1700,5 @@ void ProcessDeviceCommandQueue() {
+
++        ldb_rt_host::draw(rpcHeader.pHandle, currentUID);
+         const auto hresult = pD3DDevice->DrawIndexedPrimitiveUP(IN PrimitiveType, IN MinVertexIndex, IN NumVertices, IN PrimitiveCount, IN pIndexData, IN IndexDataFormat, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
++        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
+         assert(SUCCEEDED(hresult));
+@@ -2091,2 +2123,9 @@ void ProcessDeviceCommandQueue() {
+         const auto hresult = l4d2_api_wait::backend([&]() { return pSwapChain->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion, dwFlags); });
++        IDirect3DDevice9* rtDevice = nullptr;
++        if (SUCCEEDED(pSwapChain->GetDevice(&rtDevice))) {
++          for (const auto& entry : gpD3DDevices) {
++            if (entry.second == rtDevice) { ldb_rt_host::present(entry.first, currentUID, hresult); break; }
++          }
++          rtDevice->Release();
++        }
+
+diff --git a/bridge/src/util/ipc_c32_message_queue.h b/bridge/src/util/ipc_c32_message_queue.h
+index feb2e70..d42b242 100644
+--- a/bridge/src/util/ipc_c32_message_queue.h
++++ b/bridge/src/util/ipc_c32_message_queue.h
+@@ -18,2 +18,3 @@ inline bool asynchronous(Commands::D3D9Command command) {
+   switch (command) {
++  case LdbRt_Metadata:
+   case IDirect3DDevice9Ex_SetRenderState:
+diff --git a/bridge/src/util/util_commands.h b/bridge/src/util/util_commands.h
+index 3507697..7e6a1a2 100644
+--- a/bridge/src/util/util_commands.h
++++ b/bridge/src/util/util_commands.h
+@@ -451,2 +451,5 @@ namespace Commands {
+     Bridge_TestReadbackRecovery = 0xff00,
++    // RT metadata uses explicit IDs below the transport marker range.
++    LdbRt_Hello = 0x1e10,
++    LdbRt_Metadata = 0x1e11,
+     // NV-DXVK end
+@@ -878,2 +881,4 @@ namespace Commands {
+   inline static std::string toString(const D3D9Command& command) {
++    if (command == LdbRt_Hello) { return "LdbRt_Hello"; }
++    if (command == LdbRt_Metadata) { return "LdbRt_Metadata"; }
+     return toName(command);
