@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "framework_commit": "bdd54c168085c1188cfc209d289612750fd897a2",
+  "native_build_outcome": "success",
+  "build_id": "ldb-capture-dev+45af4379beed2680",
+  "download_branch_commit": "511c69e28b588bb4a51db48f2407f3bd534b6298",
+  "package_sha256": "72661d0b8e2d4dc65ffe11b1364ec50320c2d78cea465f787e6875e5c6e0c905",
+  "binaries_sha256": {
+    "bin/.l4d2bridge/LDBFsrBackend64.dll": "8b5953617c2ecbafee933de9f3ca7a11e3a384e97c055463a6836a061941f91d",
+    "bin/.l4d2bridge/d3d9vk_x64.dll": "48faff88a57553ef24f6db33eba933ff544eb894b29d7298d79dbac25f656920",
+    "bin/dxvk_d3d9.dll": "b44c8e63de36238120db4bcc786bf5313aafbdb9aee4a885a0fe108c19243a3c",
+    "bin/.l4d2bridge/L4D2Bridge64.exe": "c6c2b98832b5684b4d825450c315c18e25fc97076108fb037015d5a704076ccd",
+    "bin/.l4d2bridge/L4D2Bridge32.exe": "ce3bb62ae66dfbad8ae77fb5e843cbc203db1c8baeb5c391ce80b31a7b728077"
+  },
+  "fsr_assets_commit": "68532c7b2931d09a2ed4ba368f108050d6b8feff",
+  "fsr_assets_archive_sha256": "01eba413df961301176b549abff1fb256634f9cd046bd76d4158a92229d30b9a",
+  "immutable_https_download": "verified_matching_sha256",
+  "zip_only_branch": [
+    "downloads/fsr-backend-windows-x64.zip",
+    "downloads/host-capture-windows-x64.zip",
+    "downloads/ldb-host-capture-build-status.zip",
+    "downloads/ldb-host-capture-dev.zip"
+  ],
+  "bundled_sources_and_scripts": "match_source",
+  "preflight_SPIRV_in_native_host": "verified",
+  "cpp_math_windows": "compiled_and_executed",
+  "native_python_tests": 47,
+  "native_host_targets": [
+    "Client x86",
+    "Host x64",
+    "Host x86 LARGEADDRESSAWARE"
+  ],
+  "fsr_and_dxvk_toolchain": "MinGW x64; not MSVC",
+  "b580_game_validation": "unrun",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/ldb-host-capture-dev.zip"
+}

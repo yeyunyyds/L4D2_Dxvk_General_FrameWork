@@ -10,7 +10,7 @@
 
 - [第一阶段研究结果](docs/research/phase1.md)：源码接入点、必要改动与验证证据。
 - [官方 FSR 组件接入](docs/research/fsr-component-backend.md)：官方光流与插帧组件的移植和验证依据。
-- [官方 FSR Host 接入](docs/research/fsr-host-integration.md)：实际 Present 接入、安装和一次综合测试。B580 游戏验收待完成。
+- [官方 FSR Host 接入](docs/research/fsr-host-integration.md)：实际 Present 接入、安装和一次综合测试。B580 游戏验收待完成。 [集成验证记录](research/fsr-host-integration-validation.json) · [Windows 包校验](research/fsr-host-package-validation.json)。
 - [Windows / B580 验证步骤](docs/research/windows-validation.md)：GPU 探测与官方 FSR Vulkan 样例验收。
 - [帧输入契约草案](docs/research/frame-input-contract.md)：深度、相机、运动矢量、HUD 与资源生命周期。
 - [固定研究版本](research/sources.lock.json)及[本轮验证记录](research/validation-2026-10-12.json)。
