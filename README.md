@@ -1,12 +1,14 @@
 # L4D2_Dxvk_General_FrameWork
 
-目标：在 L4D2 + DXVK + Intel Arc B580 环境实现插帧，随后评估光追。
+目标：在 L4D2 + DXVK + Intel Arc B580 环境研究光追与插帧。当前优先大量复用 l4d2-rtx，保留 Source 的多线程渲染能力。
+
+[多线程光追完整实施计划](docs/research/multithreaded-rt-implementation-plan.md)：重构有序帧／绘制数据和线程相关 Hook，沿用匹配 Remix 后端；默认把用户采集合并为 A（兼容性／静态 RT／队列）与 B（动态／画面／生命周期／性能）两批，每批一个入口、一个结果 ZIP。方案已保存，RT 接入和新测试工具待实现。
 
 [光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前尚无 B580 光追验收。
 
 具体体验目标：原生高压约 60～80 FPS 时，锁定 60 个真实帧，通过插帧稳定呈现 120 帧；以高压最低帧和实际送帧节奏验收。
 
-当前阶段是插帧研究，已提供实验包，尚未完成 B580 游戏插帧质量验收。
+内置插帧扩展暂缓，现有实验包保留，尚未完成 B580 游戏插帧质量验收；当前也尚无 B580 光追验收。
 
 [60→120 路线重评](docs/research/project-reassessment-60to120.md)：当前输入可信度、画质、GPU 预算与双呈现仍未达标。建议先验证成品方案是否满足目标；内置路线按明确门槛研发，停止仅围绕通过率小修。
 

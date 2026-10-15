@@ -1,0 +1,382 @@
+{
+  "schema": 1,
+  "date_utc": "2026-10-15",
+  "kind": "implementation_and_capture_plan",
+  "status": "planned_not_implemented",
+  "reviewed_project_commit": "e1a788161e0539cf33f40a5860c77c96f8bbe04e",
+  "documents": [
+    "docs/research/multithreaded-rt-implementation-plan.md",
+    "docs/research/rt-unified-capture-spec.md"
+  ],
+  "goal": {
+    "route": "Reuse l4d2-rtx game adaptation and a matching Remix runtime, refactoring thread-dependent execution.",
+    "hardware": "Intel Arc B580",
+    "source_frame_target": 60,
+    "future_display_frame_target": 120,
+    "internal_fg": "paused_for_this_route",
+    "rt_test_fg_enabled": false,
+    "scope": "Full tested gameplay RT coverage after an explicitly limited static milestone; no promised delivery date."
+  },
+  "requirements": [
+    "No forced mat_queue_mode=0 in a production RT profile.",
+    "Retain supported threaded particle/detail-prop and queued-rope paths; hiding objects is not validation.",
+    "Prove actual work and overlap, not just CVar values or total thread count.",
+    "Preserve correct Source queue order and subsequent DeviceBridge order independently.",
+    "Keep D3D9 state changes with the actual draw on its owner thread.",
+    "Own asynchronous metadata and dynamic resource versions through consumption and GPU completion as applicable.",
+    "Use IDs and versioned values across IPC, not raw COM pointers or Vulkan handles.",
+    "Validate correctness and performance independently; image readback windows cannot establish production FPS.",
+    "Keep the requested high-pressure 60-real-frame target when reporting failures.",
+    "One test entry point and one result ZIP per combined batch; no per-field upload rounds."
+  ],
+  "versions": {
+    "current_bridge_baseline": "9e3ee1292f901b0bb9352e36bba93a4cd5cfbda4",
+    "observed_bridge_remote_head": "cafc0442446c502a0de0ebb52d5e73ccaae67516",
+    "remote_head_observation_method": "git ls-remote https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge.git HEAD",
+    "remote_head_reviewed": false,
+    "remote_head_adopted": false,
+    "l4d2_rtx_reference": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+    "generic_remix_research_reference": "3bde35c3268fe16f4d8075acc7d27340abeb4277",
+    "selected_compatibility_tuple": null,
+    "matching_runtime_custom_render_state_support": "must_be_verified_in_P0"
+  },
+  "phases": [
+    {
+      "id": "P0",
+      "name": "Version tuple and hook boundaries",
+      "depends_on": [],
+      "gates": [
+        "G0"
+      ],
+      "status": "planned",
+      "deliverables": [
+        "Bridge update review",
+        "Matching mod/custom-RS/runtime/API tuple",
+        "Version-safe game hook and queue map",
+        "Independent RT build/package pipeline and reversible configuration"
+      ]
+    },
+    {
+      "id": "P1",
+      "name": "Ordered metadata and observation",
+      "depends_on": [
+        "P0"
+      ],
+      "gates": [
+        "G1"
+      ],
+      "status": "planned",
+      "deliverables": [
+        "Owned frame/view/draw contract",
+        "Device protocol handshake and queue ordering",
+        "Scoped render-state execution",
+        "Overlap/lifetime fixtures",
+        "Unified coordinator skeleton"
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "Static RT and combined batch A",
+      "depends_on": [
+        "P0",
+        "P1"
+      ],
+      "gates": [
+        "G2"
+      ],
+      "status": "planned",
+      "deliverables": [
+        "Actual selected-runtime RT probe",
+        "Static opaque world and view boundaries",
+        "R0/R1/R2 package",
+        "Combined batch A analysis"
+      ]
+    },
+    {
+      "id": "P3",
+      "name": "Dynamic geometry and special surfaces",
+      "depends_on": [
+        "P2"
+      ],
+      "gates": [
+        "G3"
+      ],
+      "status": "planned",
+      "deliverables": [
+        "Stable instances and deformed geometry",
+        "Survivor/infected/weapon/light adaptation",
+        "Particle/rope/detail threading",
+        "Alpha/transparency/water/decal/HUD coverage",
+        "Conditional GPU-skinning work if CPU budget requires it"
+      ]
+    },
+    {
+      "id": "P4",
+      "name": "Lifecycle and combined batch B",
+      "depends_on": [
+        "P3"
+      ],
+      "gates": [
+        "G4",
+        "G5"
+      ],
+      "status": "planned",
+      "deliverables": [
+        "Cache/update and completion-based lifetime",
+        "Map/reset/focus/crash coverage",
+        "R0/R1/R3 package",
+        "Separated quality and performance reports"
+      ]
+    },
+    {
+      "id": "P5",
+      "name": "Release candidate",
+      "depends_on": [
+        "P4"
+      ],
+      "gates": [
+        "G0",
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ],
+      "status": "planned",
+      "deliverables": [
+        "Targeted fixes and required regression",
+        "Repeatable matching package",
+        "Restore instructions and license notices",
+        "Explicit tested-scope acceptance record"
+      ]
+    }
+  ],
+  "gates": [
+    {
+      "id": "G0",
+      "name": "Compatible reproducible build and protocol",
+      "status": "unrun"
+    },
+    {
+      "id": "G1",
+      "name": "Ordered ownership and actual queued execution",
+      "status": "unrun"
+    },
+    {
+      "id": "G2",
+      "name": "Actual B580 RT and correct static queued scene",
+      "status": "unrun"
+    },
+    {
+      "id": "G3",
+      "name": "Dynamic/material/thread-path coverage",
+      "status": "unrun"
+    },
+    {
+      "id": "G4",
+      "name": "Image correctness and lifecycle",
+      "status": "unrun"
+    },
+    {
+      "id": "G5",
+      "name": "High-pressure real-60 budget and pacing",
+      "status": "unrun"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "R0",
+      "name": "raster_control",
+      "backend": "pinned_standard_DXVK",
+      "rt_state_changes": false,
+      "fg_enabled": false
+    },
+    {
+      "id": "R1",
+      "name": "hook_observer",
+      "backend": "same_as_R0",
+      "rt_state_changes": false,
+      "fg_enabled": false
+    },
+    {
+      "id": "R2",
+      "name": "rt_mt_static",
+      "backend": "selected_matching_Remix",
+      "coverage": "static_milestone_only",
+      "fg_enabled": false
+    },
+    {
+      "id": "R3",
+      "name": "rt_mt_full",
+      "backend": "selected_matching_Remix",
+      "coverage": "full_candidate_tested_scope",
+      "fg_enabled": false
+    }
+  ],
+  "batches": [
+    {
+      "id": "A",
+      "after_phases": [
+        "P0",
+        "P1",
+        "P2"
+      ],
+      "profiles": [
+        "R0",
+        "R1",
+        "R2"
+      ],
+      "includes": [
+        "Automatic feature/runtime/RT smoke checks",
+        "Shared recording and normal-speed replay",
+        "Thread/order and frame/mesh evidence",
+        "Static RT quality and preliminary cost"
+      ],
+      "result_zip_count": 1,
+      "status": "planned"
+    },
+    {
+      "id": "B",
+      "after_phases": [
+        "P3",
+        "P4"
+      ],
+      "profiles": [
+        "R0",
+        "R1",
+        "R3"
+      ],
+      "includes": [
+        "Current-version baseline and changed-path regression",
+        "Dynamic/material coverage",
+        "Native-resolution quality evidence",
+        "Separate normal-speed performance replay",
+        "Map/focus/resource-lifecycle and failure evidence"
+      ],
+      "result_zip_count": 1,
+      "status": "planned"
+    }
+  ],
+  "capture_contract": {
+    "status": "planned_not_available_in_old_fg_package",
+    "entry_point": "start_rt_suite.cmd",
+    "f8": "Start/end one gameplay recording; not a render-thread or FG toggle.",
+    "f9_required": false,
+    "trigger_file_required": false,
+    "runtime_profile_switch": "Process-start configuration; orderly coordinator restart when required.",
+    "runtime_dll_hot_swap": false,
+    "replay": "Verify game/mod support first; normal-speed replay with demo/map/tick/view identity. Fall back to labelled segments in the same suite if needed.",
+    "default_warmup_min_seconds": 15,
+    "warmup_also_requires": [
+      "valid_main_view",
+      "focus",
+      "map_ready",
+      "continuous_valid_frames",
+      "critical_resources_ready"
+    ],
+    "performance_min_valid_segment_seconds": 60,
+    "performance_readback_enabled": false,
+    "max_bursts_per_session": 8,
+    "real_frames_per_burst": 4,
+    "max_prioritized_native_resolution_bursts": 2,
+    "uncompressed_budget_mib": {
+      "session": 1024,
+      "images": 512,
+      "selected_geometry": 256,
+      "detailed_trace": 128,
+      "other_logs": 64
+    },
+    "overflow_policy": "Stop bounded detailed output, record exact omissions, preserve low-overhead counters and summary; missing required evidence cannot pass.",
+    "crash_policy": "Preserve partial session and exit diagnosis; no endless restart or repetition of a failing profile.",
+    "supplemental_runs": "Same suite and ZIP for missing object classes; mark unexercised paths.",
+    "extra_user_batches": "Only for missing decisive evidence or changed validated paths; no guarantee that unknown crashes resolve in exactly two batches."
+  },
+  "acceptance": {
+    "result_states": [
+      "pass",
+      "fail",
+      "unrun",
+      "not_exercised",
+      "unavailable",
+      "incomplete"
+    ],
+    "performance_frame_budget_ms": "1000/60",
+    "report_percentiles": [
+      "P50",
+      "P95",
+      "P99"
+    ],
+    "report_intervals": [
+      "main_view_real_frame",
+      "actual_present"
+    ],
+    "report_timing": [
+      "CPU_critical_path",
+      "queue_and_wait",
+      "GPU_AS_build_update",
+      "GPU_RT_if_measurable",
+      "GPU_denoise_if_measurable",
+      "GPU_total"
+    ],
+    "sustained_below_60": "fail_G5",
+    "average_fps_alone_sufficient": false,
+    "cpu_wait_is_gpu_time": false,
+    "software_runtime_proves_b580_rt": false,
+    "static_milestone_proves_full_game_rt": false,
+    "permanent_single_thread_fallback_allowed": false
+  },
+  "proposed_artifacts": {
+    "available": false,
+    "runtime_zip": "zip-host-capture/downloads/ldb-rt-mt-dev.zip",
+    "separate_build_status_zip": true,
+    "download_link_style": "GitHub blob file page after the file exists",
+    "zip_branch_contains_only_zips": true,
+    "preserve_old_fg_package": true,
+    "rt_build_requires_fsr_assets": false
+  },
+  "sources": [
+    {
+      "id": "compat-main",
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "url": "https://github.com/xoxor4d/l4d2-rtx/blob/1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e/src/components/modules/main_module.cpp",
+      "sha256": "efada8686f51c7c29218a68bfc7b3dd59b86788119e07ea1e1a89565103b982c"
+    },
+    {
+      "id": "compat-model",
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "url": "https://github.com/xoxor4d/l4d2-rtx/blob/1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e/src/components/modules/model_render.cpp",
+      "sha256": "ae3ae0a7b1826e082570fd09afb12d3a85ec88b13a5c954c76e523939cc9f04f"
+    },
+    {
+      "id": "compat-model-header",
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "url": "https://github.com/xoxor4d/l4d2-rtx/blob/1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e/src/components/modules/model_render.hpp",
+      "sha256": "8f3da4150cf31151f1526fcdcb86e9e2490e8ed28bd7eeeaec5fc386c3ad226e"
+    },
+    {
+      "id": "compat-remix-api",
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "url": "https://github.com/xoxor4d/l4d2-rtx/blob/1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e/src/components/modules/remix_api.cpp",
+      "sha256": "baa958b9caa3d5ecb77c341cfec7d4964c878a5014a816a761091d46d280afdf"
+    },
+    {
+      "id": "compat-license",
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "url": "https://github.com/xoxor4d/l4d2-rtx/blob/1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e/LICENSE",
+      "sha256": "653c2c3d890109a2195eed759e344195ea066cf691c2b88d22db78dade4365b8"
+    },
+    {
+      "id": "remix-extensions",
+      "commit": "3bde35c3268fe16f4d8075acc7d27340abeb4277",
+      "url": "https://github.com/NVIDIAGameWorks/dxvk-remix/blob/3bde35c3268fe16f4d8075acc7d27340abeb4277/src/dxvk/dxvk_extensions.h",
+      "sha256": "8818db953b80858122e74471743214485651a0ef92d2faea9b201e51eaa8c372"
+    }
+  ],
+  "validation_this_change": {
+    "scope": "Plan documents, JSON consistency, local links, source fingerprints, diff whitespace.",
+    "rt_implementation": "unrun_not_implemented",
+    "b580_hardware_rt": "unrun",
+    "game_multithreading": "unrun",
+    "new_test_launcher": "unrun_not_implemented"
+  }
+}
