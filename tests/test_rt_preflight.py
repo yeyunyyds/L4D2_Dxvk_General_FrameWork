@@ -1,13 +1,17 @@
 """Exercise dependency integrity, process timeouts and retained one-ZIP results."""
 
 import json
+import io
 import os
 from pathlib import Path
 import sys
+import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
+import urllib.error
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import rt_preflight as runner
@@ -55,6 +59,80 @@ class PreflightCases(unittest.TestCase):
                 runner.ensure_runtime(self.root, manifest, self.cache)
         self.assertFalse((self.root / 'cache/runtime/d3d9.dll').exists())
         self.assertFalse(list(self.cache.glob('*.download')))
+
+    def test_404_falls_back_to_github_and_keeps_pinned_revision_and_hash(self):
+        manifest = self.fixture()
+        part = manifest['payloads'][0]
+        part['ref'] = 'a' * 40
+        original = self.cache / part['name']
+        data = original.read_bytes()
+        original.unlink()
+        requests, messages = [], []
+        def get(request, **_):
+            requests.append(request.full_url)
+            if len(requests) == 1:
+                raise urllib.error.HTTPError(request.full_url, 404, 'Not Found', {}, None)
+            return io.BytesIO(data)
+        with patch('urllib.request.urlopen', side_effect=get):
+            runtime = runner.ensure_runtime(self.root, manifest, self.cache, notify=messages.append)
+        self.assertEqual((runtime / 'd3d9.dll').read_bytes(), b'fixed runtime')
+        self.assertEqual(len(requests), 2)
+        self.assertTrue(all('/' + 'a' * 40 + '/' in url for url in requests))
+        self.assertTrue(any('404' in text for text in messages))
+        self.assertTrue(any('100%' in text for text in messages))
+
+    def test_bundled_loader_payload_works_without_network(self):
+        manifest = self.fixture()
+        bundled = self.root / 'payloads'; bundled.mkdir()
+        part = manifest['payloads'][0]
+        shutil.move(self.cache / part['name'], bundled / part['name'])
+        with patch('urllib.request.urlopen', side_effect=AssertionError('Unexpected network')):
+            runtime = runner.ensure_runtime(self.root, manifest, self.cache)
+        self.assertEqual((runtime / 'd3d9.dll').read_bytes(), b'fixed runtime')
+
+    def test_game_without_renderer_is_collected_without_waiting_180_seconds(self):
+        discovery, messages = {}, []
+        with patch.object(runner, 'game_pids', return_value=[123]), \
+                patch.object(runner, 'WindowsProcess') as process, \
+                patch.object(runner.time, 'sleep', side_effect=AssertionError('Unexpected wait')):
+            process.return_value.__enter__.return_value.modules.return_value = [
+                {'name': 'client.dll'}, {'name': 'engine.dll'}, {'name': 'different-renderer.dll'}]
+            self.assertEqual(runner.wait_game(diagnostics=discovery, notify=messages.append), 123)
+        self.assertEqual(discovery['missing_core_modules'], [])
+        self.assertIn({'name': 'different-renderer.dll'}, discovery['modules'])
+
+    def test_detection_failure_preserves_related_process_names_in_zip(self):
+        self.fixture()
+        def absent(**kwargs):
+            kwargs['diagnostics']['related_processes'] = [{'exe': 'L4D2Bridge64.exe', 'pid': 50}]
+            raise TimeoutError('No left4dead2.exe detected')
+        with patch.object(runner, 'ensure_runtime', side_effect=OSError('HTTP Error 404')), \
+                patch.object(runner, 'wait_game', side_effect=absent):
+            report, archive = runner.run(self.root)
+        self.assertEqual(report['game_binding'], 'fail')
+        with zipfile.ZipFile(archive) as z:
+            self.assertIn('L4D2Bridge64.exe', z.read('game-discovery.json').decode())
+            progress = z.read('progress.log').decode()
+            self.assertIn('FAILED [runtime]: OSError: HTTP Error 404', progress)
+            self.assertIn('FAILED [game_binding]', progress)
+
+    @unittest.skipUnless(os.name == 'nt' and os.environ.get('RT_GAME_PROBE_FIXTURE'),
+                         'Requires native Windows x86 fixture')
+    def test_native_process_discovery_finds_running_x86_game_name(self):
+        executable = self.root / 'left4dead2.exe'
+        shutil.copyfile(os.environ['RT_GAME_PROBE_FIXTURE'], executable)
+        child = subprocess.Popen([str(executable)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        try:
+            ready = json.loads(child.stdout.readline())
+            discovery = {}
+            self.assertIn(ready['pid'], runner.game_pids(discovery))
+            self.assertIn({'pid': child.pid, 'exe': 'left4dead2.exe'}, discovery['related_processes'])
+            self.assertEqual(runner.wait_game(timeout=0.01, diagnostics=discovery), child.pid)
+            self.assertTrue(discovery['modules'])
+            self.assertIsNone(child.poll())
+        finally:
+            child.communicate('q', timeout=5)
+        self.assertEqual(child.returncode, 0)
 
     def test_unknown_or_traversing_member_is_rejected_before_write(self):
         manifest = self.fixture()

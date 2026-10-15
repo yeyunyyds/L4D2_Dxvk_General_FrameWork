@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
+import shutil
 import subprocess
 import sys
 import time
@@ -22,11 +23,56 @@ from rt_game_probe import WindowsProcess, collect
 from rt_suite import save, stop
 
 ROOT = Path(__file__).resolve().parents[1]
-PAYLOAD_BASE = ('https://raw.githubusercontent.com/yeyunyyds/'
-                'L4D2_Dxvk_General_FrameWork/zip-host-capture/downloads/')
 MAX_PART = 95 * 1024 * 1024
 MAX_UNPACKED = 3 * 1024 * 1024 * 1024
 MAX_RESULTS = 128 * 1024 * 1024
+
+
+def message(value):
+    print(value, flush=True)
+
+
+def download_payload(path, part, notify=message):
+    ref = part.get('ref', 'zip-host-capture')
+    if ref != 'zip-host-capture' and (len(ref) != 40 or any(c not in '0123456789abcdef' for c in ref)):
+        raise ValueError('Invalid dependency source revision')
+    location = 'yeyunyyds/L4D2_Dxvk_General_FrameWork/'
+    urls = [f'https://raw.githubusercontent.com/{location}{ref}/downloads/{part["name"]}',
+            f'https://github.com/{location}raw/{ref}/downloads/{part["name"]}']
+    temporary = path.with_suffix('.download')
+    errors = []
+    try:
+        for attempt, url in enumerate(urls, 1):
+            notify(f'Downloading {part["name"]} ({part["size"] / 1048576:.1f} MiB), source {attempt}/{len(urls)}: {url}')
+            try:
+                request = urllib.request.Request(url, headers={'User-Agent': 'LDB-RT-Preflight/2'})
+                with urllib.request.urlopen(request, timeout=30) as source, temporary.open('wb') as target:
+                    written, started = 0, time.monotonic()
+                    updated = started
+                    while True:
+                        data = source.read(256 * 1024)
+                        if not data:
+                            break
+                        written += len(data)
+                        now = time.monotonic()
+                        if written > part['size'] or now - started > 600:
+                            raise ValueError('Payload download exceeded size/time budget')
+                        target.write(data)
+                        if now - updated >= 2 or written == part['size']:
+                            notify(f'  {written / 1048576:.1f}/{part["size"] / 1048576:.1f} MiB ({100 * written / part["size"]:.0f}%)')
+                            updated = now
+                if not check_file(temporary, part):
+                    raise ValueError('Payload SHA256/size mismatch')
+                temporary.replace(path)
+                notify('  Download verified (SHA256 and size).')
+                return
+            except (OSError, ValueError) as error:
+                detail = f'{type(error).__name__}: {error}; URL={url}'
+                errors.append(detail)
+                notify('  Download failed: ' + detail)
+        raise ValueError('All dependency sources failed: ' + ' | '.join(errors))
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def digest(path):
@@ -50,7 +96,7 @@ def check_file(path, entry):
             path.stat().st_size == entry['size'] and digest(path) == entry['sha256'])
 
 
-def ensure_runtime(root, manifest, payload_cache=None):
+def ensure_runtime(root, manifest, payload_cache=None, notify=message):
     """Hash every dependency; download valid ZIP parts only when necessary."""
     if manifest.get('schema') != 1 or manifest.get('scope') != 'rt_prerequisites':
         raise ValueError('Unsupported prerequisite package')
@@ -65,6 +111,7 @@ def ensure_runtime(root, manifest, payload_cache=None):
     if total > MAX_UNPACKED or not {'d3d9.dll', 'rt-runtime-smoke.exe'} <= files.keys():
         raise ValueError('Invalid runtime file catalog')
     if all(check_file(runtime / name, entry) for name, entry in files.items()):
+        notify('Runtime files already verified; no download needed.')
         return runtime
     cache = payload_cache or root / 'cache/downloads'
     cache.mkdir(parents=True, exist_ok=True)
@@ -78,24 +125,15 @@ def ensure_runtime(root, manifest, payload_cache=None):
             raise ValueError('Invalid payload size')
         path = cache / name
         if not check_file(path, part):
-            temporary = path.with_suffix('.download')
-            print('Downloading runtime dependency bundle:', name, flush=True)
-            try:
-                with urllib.request.urlopen(PAYLOAD_BASE + name, timeout=30) as source, temporary.open('wb') as target:
-                    written, started = 0, time.monotonic()
-                    while True:
-                        data = source.read(256 * 1024)
-                        if not data:
-                            break
-                        written += len(data)
-                        if written > part['size'] or time.monotonic() - started > 600:
-                            raise ValueError('Payload download exceeded size/time budget')
-                        target.write(data)
-                if not check_file(temporary, part):
-                    raise ValueError('Payload SHA256/size mismatch')
-                temporary.replace(path)
-            finally:
-                temporary.unlink(missing_ok=True)
+            bundled = root / 'payloads' / name
+            if check_file(bundled, part):
+                shutil.copyfile(bundled, path)
+                notify('Using bundled dependency: ' + name)
+            else:
+                download_payload(path, part, notify)
+        else:
+            notify('Using verified cached dependency: ' + name)
+        notify('Extracting and verifying: ' + name)
         with zipfile.ZipFile(path) as archive:
             for info in archive.infolist():
                 relative(info.filename)
@@ -162,7 +200,7 @@ def run_owned(argv, directory, timeout=180, byte_limit=64 * 1024 * 1024):
     return entry
 
 
-def game_pids():
+def game_pids(diagnostics=None):
     """Enumerate processes without reading unrelated command lines."""
     from ctypes import wintypes as w
     class Entry(ctypes.Structure):
@@ -184,30 +222,55 @@ def game_pids():
         value = Entry(); value.dwSize = ctypes.sizeof(value)
         ok = api.Process32FirstW(handle, ctypes.byref(value))
         result = []
+        related = []
         while ok:
-            if value.exe.casefold() == 'left4dead2.exe':
+            name = value.exe.casefold()
+            if 'left4dead' in name or 'l4d2' in name or name == 'hl2.exe':
+                related.append({'pid': value.pid, 'exe': value.exe})
+            if name == 'left4dead2.exe':
                 result.append(value.pid)
             ok = api.Process32NextW(handle, ctypes.byref(value))
         if ctypes.get_last_error() != 18:
             raise ctypes.WinError(ctypes.get_last_error())
+        if diagnostics is not None:
+            diagnostics['related_processes'] = related
+            diagnostics['game_pids'] = result
         return result
     finally:
         api.CloseHandle(handle)
 
 
-def wait_game(timeout=180):
+def wait_game(timeout=180, diagnostics=None, notify=message):
     started = time.monotonic()
-    required = {'client.dll', 'engine.dll', 'materialsystem.dll', 'shaderapidx9.dll'}
+    diagnostics = diagnostics if diagnostics is not None else {}
+    core = {'client.dll', 'engine.dll'}
+    previous = None
+    pids = []
     while time.monotonic() - started < timeout:
-        pids = game_pids()
+        pids = game_pids(diagnostics)
+        diagnostics['elapsed_seconds'] = round(time.monotonic() - started, 2)
         if len(pids) > 1:
             raise OSError('More than one left4dead2.exe is running; target is ambiguous')
         if pids:
             with WindowsProcess(pids[0]) as process:
-                if required <= {m['name'] for m in process.modules()}:
+                modules = process.modules()
+                diagnostics['modules'] = modules
+                names = {m['name'] for m in modules}
+                diagnostics['missing_core_modules'] = sorted(core - names)
+                state = f'Found left4dead2.exe PID {pids[0]}; modules={len(modules)}; missing core={sorted(core - names)}'
+                if state != previous:
+                    notify(state); previous = state
+                if core <= names:
+                    notify('Reading game evidence. Missing renderer/material modules will be recorded, not treated as an unloaded map.')
                     return pids[0]
+        elif previous != 'absent':
+            notify('No left4dead2.exe found; waiting up to ' + str(timeout) + ' seconds. Related processes: ' + str(diagnostics.get('related_processes', [])))
+            previous = 'absent'
         time.sleep(0.5)
-    raise TimeoutError('Game modules not ready within 180 seconds; start L4D2 and load a map')
+    if pids:
+        notify('Core modules remain incomplete; collecting available evidence from PID ' + str(pids[0]))
+        return pids[0]
+    raise TimeoutError(f'No left4dead2.exe detected within {timeout} seconds; see game-discovery.json for related process names')
 
 
 def verify_load(runtime):
@@ -249,17 +312,27 @@ def run(root=ROOT, pid=None, payload_cache=None, verify_only=False):
               'runtime_preparation': 'unrun', 'runtime_smoke': 'unrun', 'game_binding': 'unrun',
               'game_rt': 'unrun', 'source_threading': 'unrun', 'performance': 'unrun',
               'b580_rt': 'unrun', 'verify_only': verify_only, 'errors': []}
+    def notify(value):
+        message(value)
+        with (directory / 'progress.log').open('a', encoding='utf-8') as output:
+            output.write(value + '\n')
+
+    def failure(stage, error):
+        detail = f'{type(error).__name__}: {error}'
+        report['errors'].append({'stage': stage, 'error': detail})
+        notify(f'FAILED [{stage}]: {detail}')
+
     try:
         manifest = json.loads((root / 'preflight-manifest.json').read_text(encoding='utf-8'))
         report['build_commit'] = manifest['build_commit']
         save(directory / 'package-manifest.json', manifest)
         try:
-            runtime = ensure_runtime(root, manifest, payload_cache)
+            runtime = ensure_runtime(root, manifest, payload_cache, notify=notify)
             report['runtime_preparation'] = 'pass'
             if verify_only:
                 report['runtime_load'] = verify_load(runtime)
             else:
-                print('Running static RT diagnostic (up to 180 seconds)...', flush=True)
+                notify('Running static RT diagnostic (up to 180 seconds)...')
                 stage = directory / 'runtime'
                 entry = run_owned([runtime / 'rt-runtime-smoke.exe', runtime / 'd3d9.dll', stage / 'smoke'], stage)
                 report['runtime_process'] = entry
@@ -268,6 +341,7 @@ def run(root=ROOT, pid=None, payload_cache=None, verify_only=False):
                 passed = (entry['execution'] == 'pass' and observed.get('result') == 'static_hit_and_color_readback'
                           and (stage / 'smoke/final-color.ppm').is_file())
                 report['runtime_smoke'] = 'static_hit_and_color_readback' if passed else 'fail'
+                notify('Static RT diagnostic: ' + report['runtime_smoke'])
                 # Verify the vendor observed by the actual runtime, not Windows' GPU list.
                 events = stage / 'smoke/events.jsonl'
                 adapters = [json.loads(line) for line in events.read_text().splitlines()
@@ -276,21 +350,25 @@ def run(root=ROOT, pid=None, payload_cache=None, verify_only=False):
                 # Intel vendor alone does not identify a B580. Preserve device ID for review.
                 report['b580_rt'] = 'pending_adapter_and_image_review' if passed else 'fail_or_unrun'
         except Exception as error:
-            report['errors'].append({'stage': 'runtime', 'error': str(error)})
+            failure('runtime', error)
             report['runtime_preparation'] = 'fail' if report['runtime_preparation'] != 'pass' else 'pass'
         if not verify_only:
+            discovery = {'explicit_pid': pid}
             try:
-                print('Reading loaded L4D2 modules; load a map if the game is not ready...', flush=True)
-                target = pid or wait_game()
+                notify('Checking the running L4D2 process and its modules...')
+                target = pid or wait_game(diagnostics=discovery, notify=notify)
                 audit = json.loads((root / 'research/rt-source-audit.json').read_text())
                 probe = collect(target, audit)
                 save(directory / 'game-binding.json', probe)
                 report['game_binding'] = probe['execution']
+                notify('Game evidence: ' + probe['execution'])
             except Exception as error:
-                report['errors'].append({'stage': 'game_binding', 'error': str(error)})
+                failure('game_binding', error)
                 report['game_binding'] = 'fail'
+            finally:
+                save(directory / 'game-discovery.json', discovery)
     except (Exception, KeyboardInterrupt) as error:
-        report['errors'].append({'stage': 'session', 'error': str(error) or type(error).__name__})
+        failure('session', error)
         report['collection'] = 'incomplete'
     finally:
         archive = pack_results(directory, report)
@@ -306,4 +384,5 @@ if __name__ == '__main__':
     result, archive = run(pid=args.pid, payload_cache=args.payload_cache, verify_only=args.verify_package)
     print('Result ZIP:', archive, flush=True)
     print('Runtime:', result['runtime_smoke'], '| Game evidence:', result['game_binding'], flush=True)
-    raise SystemExit(1 if result['errors'] or result['runtime_smoke'] == 'fail' or result['game_binding'] == 'fail' else 0)
+    raise SystemExit(1 if result['errors'] or result['collection'] != 'complete' or result['runtime_smoke'] == 'fail'
+                     or (not args.verify_package and result['game_binding'] != 'snapshot_collected') else 0)

@@ -6,6 +6,11 @@ on:
       - .github/workflows/rt-runtime-package.yml
       - tools/runtime_imports.py
       - tools/repackage_rt_product.py
+      - scripts/rt_preflight.py
+      - scripts/rt_game_probe.py
+      - scripts/rt_suite.py
+      - integration/rt/preflight-readme.txt
+      - tests/test_rt_preflight.py
   workflow_dispatch:
 permissions:
   contents: write
@@ -22,6 +27,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Check downloader and real x64-to-x86 process discovery
+        id: coordinator
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force .research/preflight-check | Out-Null
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (!$vs) { throw 'MSVC installation missing' }
+          $vcvars = Join-Path $vs 'VC/Auxiliary/Build/vcvarsall.bat'
+          $command = 'call "' + $vcvars + '" x86 -vcvars_ver=14.29 && cl.exe /nologo /std:c++17 /EHsc /GR /W4 /WX /O2 /MT tests/rt_game_probe_fixture.cpp /Fe:.research/preflight-check/game-probe-fixture.exe /Fo:.research/preflight-check/fixture.obj > .research/preflight-check/compile.log 2>&1'
+          & cmd.exe /d /c $command
+          $result = $LASTEXITCODE
+          Get-Content .research/preflight-check/compile.log
+          if ($result -ne 0) { throw 'Discovery fixture compilation failed' }
+          $env:RT_GAME_PROBE_FIXTURE = (Resolve-Path .research/preflight-check/game-probe-fixture.exe).Path
+          & cmd.exe /d /c 'python -m unittest discover -s tests -p test_rt_preflight.py -v > .research/preflight-check/tests.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content .research/preflight-check/tests.log
+          if ($result -ne 0) { throw 'Preflight checks failed' }
       - uses: actions/download-artifact@v4
         with:
           name: rt-runtime-9c3b2f860095d4e75e283d24dd9a54c0343554ec
@@ -50,6 +75,27 @@ jobs:
           assert digest(runtime/'d3d9.dll') == '21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7'
           assert digest(runtime/'rt-runtime-smoke.exe') == '16313c79783afe6251e82cc2b121393553d894394dc9c6cab4f7421032942b4d'
           print('Pinned compiled product restored; no C++ build performed')
+      - name: Check published payload URLs without repository credentials
+        shell: python
+        run: |
+          import json, pathlib, sys, urllib.request, zipfile
+          sys.path.insert(0, 'tools')
+          from repackage_rt_product import PAYLOAD_REF
+          package = next(pathlib.Path('.research/rt-existing-product').rglob('rt-preflight-dev.zip'))
+          with zipfile.ZipFile(package) as z:
+              manifest = json.loads(z.read('preflight-manifest.json'))
+          report = []
+          for part in manifest['payloads']:
+              url = f'https://raw.githubusercontent.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/{PAYLOAD_REF}/downloads/{part["name"]}'
+              item = {'name':part['name'],'url':url,'expected_size':part['size']}
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers={'Range':'bytes=0-0'}), timeout=30) as r:
+                      item.update(status=r.status,content_range=r.headers.get('Content-Range'),first_byte_hex=r.read(1).hex())
+              except Exception as error:
+                  item['error'] = f'{type(error).__name__}: {error}'
+              report.append(item)
+          pathlib.Path('.research/preflight-check/public-payload-urls.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report, indent=2))
       - name: Build genuine pinned Vulkan loader prerequisite
         id: loader
         shell: powershell
@@ -109,6 +155,7 @@ jobs:
           RT_DEPENDENCY_OUTCOME: ${{ steps.dependencies.outcome }}
           RT_LOADER_OUTCOME: ${{ steps.loader.outcome }}
           RT_REPAIR_OUTCOME: ${{ steps.repair.outcome }}
+          RT_COORDINATOR_OUTCOME: ${{ steps.coordinator.outcome }}
         run: |
           import json, os, pathlib, zipfile
           path=pathlib.Path('.research/dist/rt-runtime-dependencies-status.zip')
@@ -116,10 +163,10 @@ jobs:
           with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED) as z:
               p=pathlib.Path('runtime-imports.json')
               if p.is_file(): z.write(p,p.name)
-              for name in ['.research/vulkan-loader-build.log','.research/rt-repackage.log','.research/dist/rt-prerequisites/package-validation.json','.research/dist/rt-prerequisites/publish-index.json']:
+              for name in ['.research/vulkan-loader-build.log','.research/rt-repackage.log','.research/dist/rt-prerequisites/package-validation.json','.research/dist/rt-prerequisites/publish-index.json','.research/preflight-check/compile.log','.research/preflight-check/tests.log','.research/preflight-check/public-payload-urls.json']:
                   p=pathlib.Path(name)
                   if p.is_file(): z.write(p,p.name)
-              z.writestr('status.json',json.dumps({'schema':1,'commit':os.environ['GITHUB_SHA'],'restoration':os.environ['RT_DEPENDENCY_OUTCOME'],'loader_build':os.environ['RT_LOADER_OUTCOME'],'package_repair':os.environ['RT_REPAIR_OUTCOME'],'scope':'dependency_load_diagnostic','gpu_execution':'unrun'}))
+              z.writestr('status.json',json.dumps({'schema':1,'commit':os.environ['GITHUB_SHA'],'coordinator_tests':os.environ['RT_COORDINATOR_OUTCOME'],'restoration':os.environ['RT_DEPENDENCY_OUTCOME'],'loader_build':os.environ['RT_LOADER_OUTCOME'],'package_repair':os.environ['RT_REPAIR_OUTCOME'],'scope':'dependency_load_diagnostic','gpu_execution':'unrun'}))
           import subprocess, sys
           subprocess.run([sys.executable,'scripts/publish_rt_build_status.py','--package',str(path)],check=True)
       - name: Publish verified launcher and all dependency ZIPs atomically

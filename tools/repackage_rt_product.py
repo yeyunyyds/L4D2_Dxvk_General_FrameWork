@@ -20,6 +20,8 @@ from rt_preflight import digest, relative
 NATIVE_COMMIT = '9c3b2f860095d4e75e283d24dd9a54c0343554ec'
 LOADER_COMMIT = 'fb78607414e154c7a5c01b23177ba719c8a44909'
 HEADERS_COMMIT = '409c16be502e39fe70dd6fe2d9ad4842ef2c9a53'
+# All three large content-addressed payloads were published in this tree.
+PAYLOAD_REF = 'fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0'
 
 
 def repackage(candidate, loader, loader_source, headers_source, output):
@@ -42,6 +44,7 @@ def repackage(candidate, loader, loader_source, headers_source, output):
             if path.stat().st_size != part['size'] or digest(path) != part['sha256']:
                 raise ValueError('Existing dependency ZIP differs from native product')
             shutil.copyfile(path, output / path.name)
+            part['ref'] = PAYLOAD_REF
         temporary = output / 'loader.zip.tmp'
         with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED) as archive:
             archive.write(loader, 'vulkan-1.dll')
@@ -51,16 +54,25 @@ def repackage(candidate, loader, loader_source, headers_source, output):
         manifest['payloads'].append({'name': part.name, 'size': part.stat().st_size, 'sha256': sha})
         manifest['runtime_files']['vulkan-1.dll'] = {'sha256': digest(loader), 'size': loader.stat().st_size}
         manifest.update(build_commit=os.environ['GITHUB_SHA'], native_build_commit=NATIVE_COMMIT,
-                        code_commit=NATIVE_COMMIT,
+                        code_commit=os.environ['GITHUB_SHA'],
                         vulkan_loader={'repository': 'https://github.com/KhronosGroup/Vulkan-Loader.git',
                                        'commit': LOADER_COMMIT, 'headers_commit': HEADERS_COMMIT,
                                        'scope': 'app_local_standard_loader_not_gpu_driver'})
         primary = output / 'rt-preflight-dev.zip'
+        replacements = {name: ROOT / name for name in (
+            'scripts/rt_preflight.py', 'scripts/rt_game_probe.py', 'scripts/rt_suite.py',
+            'integration/rt/baseline.json', 'research/rt-source-audit.json', 'research/rt-source-queue-sdk.json')}
+        replacements['README.txt'] = ROOT / 'integration/rt/preflight-readme.txt'
         with zipfile.ZipFile(primary, 'w', zipfile.ZIP_DEFLATED) as archive:
             for info in original.infolist():
                 relative(info.filename)
-                if info.filename != 'preflight-manifest.json':
+                if info.filename != 'preflight-manifest.json' and info.filename not in replacements:
                     archive.writestr(info, original.read(info))
+            for name, source in replacements.items():
+                archive.write(source, name)
+            # Small loader payload ships inside the launcher; it never needs a
+            # not-yet-published mutable-branch URL on a user's first run.
+            archive.write(part, 'payloads/' + part.name)
             archive.writestr('preflight-manifest.json', json.dumps(manifest, indent=2)+'\n')
             archive.write(loader_source / 'LICENSE.txt', 'licenses/vulkan-loader/LICENSE.txt')
             # The loader also contains permissively licensed cJSON/dirent code.
@@ -81,6 +93,9 @@ def repackage(candidate, loader, loader_source, headers_source, output):
     extracted.mkdir()
     with zipfile.ZipFile(primary) as archive:
         archive.extractall(extracted)
+    for name, source in replacements.items():
+        if digest(extracted / name) != digest(source):
+            raise ValueError('Shipped coordinator differs from current source: ' + name)
     executed = subprocess.run([str(extracted / 'python/python.exe'), '-I',
                                str(extracted / 'scripts/rt_preflight.py'), '--verify-package',
                                '--payload-cache', str(output.resolve())], check=False, timeout=180)

@@ -34,3 +34,11 @@ native CI 会解压入口包，使用**包内 Python**执行 `--verify-package`�
 不需要 F8、F9、trigger 文件或规定动作。脚本只读游戏，不部署 DLL、不更改 CVar，也不关闭游戏。RT 窗口可能临时获得焦点。独立诊断超时 180 秒；游戏模块等待最多 180 秒。首次联网下载另计。
 
 RT 失败不跳过游戏证据，游戏读取失败不删除 RT 结果；日志／结果有大小上限，超限文件在 summary 中逐项列出并将采集标为 incomplete。只终止脚本自己创建的诊断进程树。`game_rt`、`source_threading`、`performance` 均保持 unrun；静态场景通过仍需核对实际 adapter ID 和图像，不能仅凭 Intel vendor ID 认定 B580 验收通过。
+
+## 首次用户检查的失败与入口修正
+
+`rt-preflight-20261015-163255-a87c254e.zip` 只有 summary 和包清单。runtime 下载返回 `HTTP Error 404: Not Found`，因此 GPU 测试完全没有执行；游戏模块等待 180 秒超时，但旧版未保存进程列表或已加载模块，不能据此推断用户未进图，也不能确定缺少哪个模块。
+
+修正版复用同一原生 runtime；三个大依赖绑定到已经发布并核对长度的固定提交 `fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0`，下载失败时尝试 GitHub 的另一入口，保持大小和 SHA 校验。小型 Vulkan loader 依赖随入口 ZIP 提供。控制台和 `progress.log` 记录进度、URL、具体异常及后续阶段；`game-discovery.json` 保留相关进程、PID 和实际模块列表。发现 Client/Engine 后立即采集；渲染或材料模块缺失由采集器单独记录，不再当作未进图的依据。没有找到目标时依然有等待上限。
+
+本机 RT 回归 41 项，其中 39 通过、2 项需要 Windows 而跳过。发布工作流还会用真实 x86 fixture（进程名 `left4dead2.exe`）验证 x64 进程发现，并使用最终包内 Python 校验并加载原生 DLL；额外从 Windows runner 无仓库凭据探测依赖 URL，区分本环境可访问与用户匿名下载可访问。测试结果不等于当前游戏模块 ABI 或 B580 光追通过。
