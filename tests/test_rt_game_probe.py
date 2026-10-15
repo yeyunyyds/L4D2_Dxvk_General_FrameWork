@@ -121,6 +121,33 @@ class ProbeCases(unittest.TestCase):
             with self.subTest(offset=offset), self.assertRaises(ValueError):
                 image(data)
 
+    def test_registry_candidate_without_rtti_or_factory_execution(self):
+        for indirect in (False, True):
+            with self.subTest(indirect=indirect):
+                data = fixture()
+                data[0x3108:0x3120] = b'\0' * 24  # RTTI was stripped.
+                name = b'VMaterialSystem079\0'
+                data[0x2800:0x2800 + len(name)] = name
+                put32(data, 0x3200, BASE + 0x1100, BASE + 0x2800, 0)
+                put32(data, 0x3300, BASE + 0x2404)
+                put32(data, 0x3400, BASE + 0x3300)
+                data[0x1100] = 0xa1 if indirect else 0xb8
+                put32(data, 0x1101, BASE + (0x3400 if indirect else 0x3300))
+                data[0x1105] = 0xc3
+                module = image(data)
+                self.assertEqual(module.rtti('CMatRenderContext', [146])['result'], 'unavailable')
+                candidate = module.interface_registry()['candidates'][0]
+                self.assertEqual(candidate['entry_rva'], 0x3200)
+                self.assertEqual(candidate['object_rva'], 0x3300)
+                self.assertEqual(candidate['vtable_rva'], 0x2404)
+                self.assertFalse(candidate['interface_binding_verified'])
+                self.assertFalse(candidate['candidate_slots']['95']['semantics_verified'])
+                # An unrecognized getter is retained for inspection, not followed.
+                data[0x1100] = 0xcc
+                candidate = image(data).interface_registry()['candidates'][0]
+                self.assertEqual(candidate['getter_shape'], 'unresolved')
+                self.assertIsNone(candidate['object_rva'])
+
     @unittest.skipIf(os.name == 'nt', 'Linux-only unavailable-path check')
     def test_non_windows_failure_keeps_unrun_boundaries(self):
         result = collect(1234, {'hook_references': []})
@@ -138,6 +165,7 @@ class ProbeCases(unittest.TestCase):
                                    stdout=subprocess.PIPE, text=True)
         try:
             expected = json.loads(process.stdout.readline())
+            self.assertEqual(expected['pid'], process.pid)
             with WindowsProcess(process.pid) as target:
                 start = target.identity()
                 self.assertTrue(start['alive'])
@@ -154,6 +182,10 @@ class ProbeCases(unittest.TestCase):
                 self.assertEqual(candidates[0]['candidate_slots']['0']['target_rva'], expected['first_rva'])
                 self.assertEqual(target.identity()['creation_filetime'], start['creation_filetime'])
                 self.assertEqual(file_identity(own['path']), file_identity(executable))
+                registry = module.interface_registry()
+                entry = [c for c in registry['candidates'] if c['entry_rva'] == expected['registry_rva']]
+                self.assertEqual(len(entry), 1)
+                self.assertEqual(entry[0]['vtable_rva'], expected['vtable_rva'])
             report = collect(process.pid, {'hook_references': []})
             self.assertEqual(report['execution'], 'incomplete')  # Not a game process.
             self.assertEqual(len(report['modules']), 4)

@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import struct
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -205,6 +206,67 @@ class MappedImage:
                 'candidates': result, 'truncated': truncated,
                 'selected_game_slot': None, 'interface_binding_verified': False}
 
+    def interface_registry(self):
+        """Collect SDK InterfaceReg layout candidates without calling factories.
+
+        Source's x86 entry is {factory, name, next}. Even matching this layout
+        and a simple getter body does not validate a live SDK/game ABI.
+        """
+        result = []
+        for section in self.sections:
+            if section['data'] is None or section['flags'] & EXECUTE:
+                continue
+            for match in re.finditer(rb'VMaterialSystem[0-9]{3}\0', section['data']):
+                name_rva = section['rva'] + match.start()
+                for pointer in self.occurrences(struct.pack('<I', self.base + name_rva)):
+                    entry = pointer - 4
+                    raw = self.data_at(entry, 12)
+                    if entry % 4 or raw is None:
+                        continue
+                    factory, _, next_entry = struct.unpack('<3I', raw)
+                    if not self.executable(factory - self.base):
+                        continue
+                    if next_entry and self.data_at(next_entry - self.base, 12) is None:
+                        continue
+                    code = self.data_at(factory - self.base, 32)
+                    object_address = None
+                    getter_shape = 'unresolved'
+                    # Only two complete, side-effect-free x86 return shapes.
+                    # Read their referenced value; never execute even these.
+                    if code and code[5:6] == b'\xc3':
+                        if code[0] == 0xb8:  # mov eax, imm32; ret
+                            getter_shape = 'mov_eax_immediate_ret'
+                            object_address = u32(code, 1)
+                        elif code[0] == 0xa1:  # mov eax, [imm32]; ret
+                            getter_shape = 'mov_eax_absolute_pointer_ret'
+                            value = self.data_at(u32(code, 1) - self.base, 4)
+                            object_address = u32(value) if value else None
+                    table = self.data_at(object_address - self.base, 4) if object_address else None
+                    table_rva = u32(table) - self.base if table else -1
+                    first = self.data_at(table_rva, 4)
+                    valid = first is not None and self.executable(u32(first) - self.base)
+                    methods = {}
+                    if valid:
+                        for slot in (95, 96):
+                            value = self.data_at(table_rva + slot * 4, 4)
+                            target = u32(value) - self.base if value else -1
+                            function = self.data_at(target, 32) if self.executable(target) else None
+                            methods[str(slot)] = {'target_rva': target if function else None,
+                                                  'first_32_bytes': function.hex() if function else None,
+                                                  'semantics_verified': False}
+                    result.append({'name': match.group()[:-1].decode('ascii'),
+                                   'entry_rva': entry, 'factory_rva': factory - self.base,
+                                   'factory_first_32_bytes': code.hex() if code else None,
+                                   'getter_shape': getter_shape,
+                                   'object_rva': object_address - self.base if valid else None,
+                                   'vtable_rva': table_rva if valid else None,
+                                   'candidate_slots': methods,
+                                   'interface_binding_verified': False})
+                    if len(result) == 32:
+                        return {'result': 'candidates', 'candidates': result, 'truncated': True}
+        return {'result': 'candidates' if result else 'unavailable',
+                'candidates': result, 'truncated': False}
+
     def evidence(self, hooks, classes):
         return {'machine': 'i386', 'mapped_size': self.size, 'timestamp': self.timestamp,
                 'base_address': self.base, 'read_errors': self.read_errors,
@@ -212,7 +274,8 @@ class MappedImage:
                              {'mapped_sha256': hashlib.sha256(s['data']).hexdigest()
                               if s['data'] is not None else None} for s in self.sections],
                 'hook_candidates': [{'symbol': h['symbol'], **self.pattern(h['pattern'])} for h in hooks],
-                'rtti': {name: self.rtti(name, slots) for name, slots in classes.items()}}
+                'rtti': {name: self.rtti(name, slots) for name, slots in classes.items()},
+                'material_system_registry': self.interface_registry() if classes else {'result': 'not_requested'}}
 
 
 class WindowsProcess:
@@ -325,7 +388,7 @@ def collect(pid, audit):
               'sdk_candidate_manifest_sha256': hashlib.sha256(
                   (ROOT / 'research/rt-source-queue-sdk.json').read_bytes()).hexdigest(),
               'hook_install_allowed': False, 'game_queue_execution': 'unrun',
-              'b580_rt': 'unrun', 'modules': []}
+              'b580_rt': 'unrun', 'snapshot_atomic': False, 'modules': []}
     try:
         with WindowsProcess(pid) as process:
             report['process'] = process.identity()

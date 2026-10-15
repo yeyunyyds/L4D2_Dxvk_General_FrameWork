@@ -64,7 +64,8 @@
         "Hook reference and API review",
         "Native observer Bridge build",
         "Native MSVC x86 SDK candidate ABI extraction (not game ABI validation)",
-        "Pinned custom Remix native x64 Release build and standard D3D9 diagnostic rejection"
+        "Pinned custom Remix native x64 Release build and standard D3D9 diagnostic rejection",
+        "Read-only current-module PE32/pattern/RTTI collector implemented; actual game binding remains unverified"
       ],
       "remaining_parts": [
         "Version-checked Source queue ABI and game hooks",
@@ -410,7 +411,7 @@
     }
   ],
   "validation_this_change": {
-    "scope": "Implemented foundation; see research/rt-foundation-validation.json for executed checks and native identity.",
+    "scope": "Native SDK queue evidence: research/rt-source-queue-validation.json; native full runtime build: research/rt-runtime-validation.json; current-game binding pending.",
     "rt_implementation": "metadata_observer_implemented_renderer_not_implemented",
     "b580_hardware_rt": "unrun",
     "game_multithreading": "unrun",
