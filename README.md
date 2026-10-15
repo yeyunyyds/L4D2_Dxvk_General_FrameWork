@@ -4,6 +4,8 @@
 
 当前阶段是插帧研究，已提供实验包，尚未完成 B580 游戏插帧质量验收。
 
+[60→120 路线重评](docs/research/project-reassessment-60to120.md)：当前输入可信度、画质、GPU 预算与双呈现仍未达标。建议先验证成品方案是否满足目标；内置路线按明确门槛研发，停止仅围绕通过率小修。
+
 已实现[独立 Host 采集原型](docs/research/host-capture.md)：颜色/深度像素与 Reset 已通过软件 Vulkan 及用户上传的 B580 实机日志检查。
 
 本版合并[可显示生成帧的相机插帧原型](docs/research/frame-generation-prototype.md)：全尺寸 GPU 历史、场景/武器/UI 阶段掩码、中间视角合成和真实 Present。武器/UI 保留当前帧，动态物体、透明边缘与帧节奏仍属原型限制。用户之前的 B580 GPU 重投影验证见[报告](docs/research/gpu-reprojection-user-results.md)。

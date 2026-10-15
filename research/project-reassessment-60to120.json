@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "review_date_client_timezone": "2026-10-14 America/Los_Angeles",
+  "reviewed_source_commit": "2c93add698d03fbbb6977fde23cf1ae4604c02a2",
+  "evaluated_binary_source_commit": "ee7d6f785df95d05255ae009689d12f79788fea0",
+  "target": {
+    "source_fps": 60,
+    "display_fps": 120,
+    "source_period_ms": 16.666666666666668,
+    "display_period_ms": 8.333333333333334,
+    "baseline_test_resolution": [
+      1920,
+      1200
+    ]
+  },
+  "observed": {
+    "gpu": "Intel Arc B580",
+    "run": "fg-20444-17160640-1833861227520",
+    "generated_present_successes": 1534,
+    "candidate_acceptance": 0.8146574614976102,
+    "quality_acceptance": "failed_visual_artifacts",
+    "tested_present_mode": "generated_preview_only",
+    "paired_120hz_delivery": "unverified",
+    "non_capture_generated_samples": 1521,
+    "legacy_preflight_gpu_ms_median": 20.629999,
+    "host_wrapper_ms_median": 31.8109,
+    "fence_wait_ms_median": 30.3752,
+    "source_arrival_interval_ms_median": 41.23225,
+    "independent_official_sdk_gpu_time": "not_measured"
+  },
+  "assessment": {
+    "hardware_component_execution": "demonstrated",
+    "trustworthy_real_game_inputs": "not_demonstrated",
+    "image_quality": "failed",
+    "current_60_source_fps_budget": "not_met_in_measured_conditions",
+    "correct_120hz_pacing": "not_demonstrated",
+    "end_to_end_latency": "unmeasured",
+    "difficulty": "higher delivery risk than ordinary SDK integration; plumbing progressed, core input/quality/scheduling gates remain",
+    "old_3_to_6_month_estimate": "withdrawn as a delivery schedule; no validated critical path or hardware performance baseline"
+  },
+  "architecture_observations": [
+    "Legacy candidate-generation/preflight includes image patch search before official FSR.",
+    "FSR input conversion performs another bounded image-matching pass, followed by official optical flow and FI, then custom composition.",
+    "Stage transfer and compute submit paths synchronously wait on GPU fences.",
+    "Raw SDK output and SDK depth/motion inputs were not included in current user evidence; final composed captures cannot locate the first faulty stage."
+  ],
+  "route_recommendations": [
+    {
+      "route": "Native rendering at 120 if target scenes sustain it",
+      "priority": "first choice for current raster game when feasible",
+      "condition": "Earlier user-reported 350-400 source FPS must still hold in target scenes; display supports target refresh."
+    },
+    {
+      "route": "Existing external image-based FG, e.g. Lossless Scaling/LSFG",
+      "priority": "first validation candidate if 60-source-to-120-display is the actual requirement",
+      "status": "not tested here on Windows/B580; commercial product current store details not verified",
+      "tradeoffs": [
+        "Avoids engine depth/motion reconstruction",
+        "Possible HUD/occlusion artifacts, capture constraints, GPU overhead and added latency",
+        "Must maintain 60 source FPS with FG enabled and verify real output pacing"
+      ]
+    },
+    {
+      "route": "Lean native Vulkan FSR integration",
+      "priority": "research path only, conditional on explicit acceptance gates",
+      "requires": [
+        "Isolated B580 SDK quality/performance baseline with known inputs",
+        "Static-scene depth/matrix/motion ground-truth check",
+        "Remove duplicate estimators and synchronous diagnostic design from production path",
+        "Proper pacing and independent source/generated/display measurements",
+        "Then dynamic models and near geometry"
+      ]
+    },
+    {
+      "route": "Switch to current XeSS-FG SDK",
+      "priority": "not a shortcut for this Vulkan project",
+      "verified_requirements": [
+        "DirectX 12",
+        "XeLL integration",
+        "Depth/motion/matrices and tagged resources"
+      ]
+    },
+    {
+      "route": "OptiScaler injection",
+      "priority": "not a direct D3D9/DXVK solution",
+      "verified_limit": "OptiFG described as experimental and DX12-only; existing supported upscaler input normally required"
+    },
+    {
+      "route": "Full RTX/Remix migration",
+      "priority": "separate ray-tracing objective, not a shortcut to 60-to-120 FG"
+    }
+  ],
+  "stop_or_pivot_gates": [
+    "If known-correct SDK workload cannot leave sufficient GPU/render headroom at target resolution, change configuration/backend/resolution before further engine integration.",
+    "If static-scene reprojection cannot be made trustworthy using identifiable camera/depth contracts, do not tune dynamic masks as a substitute.",
+    "Do not call generated-Present counts or acceptance ratios a 120Hz display acceptance."
+  ],
+  "sources": [
+    {
+      "name": "xess-guide-pinned",
+      "url": "https://raw.githubusercontent.com/intel/xess/de0fb9c1c510661c571164e1418ceca8101dab69/doc/xess_fg_developer_guide_english.md",
+      "sha256": "67ba86b2abcb701632309a51616d4e837324ea15d282c71a256228a351b5059a",
+      "bytes": 63272,
+      "status": "read"
+    },
+    {
+      "name": "optiscaler-pinned",
+      "url": "https://raw.githubusercontent.com/optiscaler/OptiScaler/fd6c2870ec420c74bd47a067a7a0b5ba2358e677/README.md",
+      "sha256": "bbeb7eab65b3c3d0ac95a59371f26182ea65e11050d91f103ef6584422cc82e6",
+      "bytes": 12380,
+      "status": "read"
+    },
+    {
+      "name": "lsfg-archive",
+      "url": "https://raw.githubusercontent.com/PancakeTAS/lsfg-vk/7113d7d02da9fc9df5cb3b03230d1f7de86f7056/README.md",
+      "sha256": "f3b91bfac7ae04147a255fe8e26bdb81d324030768389d8a7c3a35edc72ec526",
+      "bytes": 1764,
+      "status": "read"
+    },
+    {
+      "name": "fsr3-vulkan-pacing-and-inputs",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/blob/c6efa6bf7f2027b3ec94f28578bb5965eabb9e55/docs/techniques/super-resolution-interpolation.md",
+      "sha256": "b766dd7e3b937336429d0fe6a2fc6f024080cbfe6a402d1fa877920b9cfc9776",
+      "status": "read"
+    }
+  ],
+  "source_access_limits": [
+    "Steam product page was blocked by the environment destination policy; no price/latest-version claim is made.",
+    "The archived lsfg-vk README is third-party context for a Windows Lossless Scaling app, not a B580 performance or quality validation."
+  ],
+  "no_new_runtime_experiment": "This review uses existing repository code, prior user captures and read-only public documentation."
+}
