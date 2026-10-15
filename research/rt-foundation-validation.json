@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "date_utc": "2026-10-15",
+  "scope": "RT protocol/COM/Device observer/developer coordinator foundation; not a completed P0/P1 game integration.",
+  "native_build_commit": "bda1e2f5f03d5277df6c10190bb326dffb4332d1",
+  "bridge_commit": "cafc0442446c502a0de0ebb52d5e73ccaae67516",
+  "source_fingerprint": "a2284b053a7a9f8768480b2634196dfc40afea5a8843a1dad2920beec68fdc50",
+  "build_id": "ldb-rt-observer+a2284b053a7a9f87",
+  "source_inputs_sha256": {
+    "bridge-hooks.patch": "d593e1d44107ef6381f0a2c082a7bf1ee3fdaaee7e676fa0d4c4a4d21773a70e",
+    "rt_protocol.h": "179c755b927dd1667870a59e36100243f16ec017b5729d4f8c6fa21dbd7ea4fd",
+    "rt_bridge_api.h": "f3b2626817908909610a257a4268744e7f69eae89eb7549795109fc240568baa",
+    "rt_client.h": "6706a51fa0e57cae75d619dea1a1b32594bc737b73a701ff9ab6de86f3eb9ca1",
+    "rt_host.h": "c7dfb48a58b8324d56766fd0892f4dce20daf0499165cdddf9a6e588d9d94974"
+  },
+  "native_build": "pass",
+  "native_artifact_validation": "pass",
+  "binaries": {
+    "development/x64/L4D2Bridge64.exe": {
+      "sha256": "7e17c8c610b8025ff124593dcbe05f86f13ec8aab6c4e386d857f10437ecbb46",
+      "machine": "0x8664",
+      "release_cpp_command_count": 21
+    },
+    "development/x86/d3d9.dll": {
+      "sha256": "73c4ecbb5b075256674a30a9a7b08f77e637e4021563476f471e4ad6343829b8",
+      "machine": "0x14c",
+      "release_cpp_command_count": 49
+    }
+  },
+  "native_execution": {
+    "architectures": [
+      "x86",
+      "x64"
+    ],
+    "protocol_frames_per_arch": 3000,
+    "protocol_groups_per_arch": 5,
+    "host_frames_per_arch": 4,
+    "stdout_evidence": [
+      "overlapped_frames=1 rendered_frames=3000",
+      "RT protocol execution cases: PASS (5 groups)",
+      "RT COM/Host observer: PASS (4 frames, failed/successful Reset, ptr_bits=64)",
+      "overlapped_frames=1 rendered_frames=3000",
+      "RT protocol execution cases: PASS (5 groups)",
+      "RT COM/Host observer: PASS (4 frames, failed/successful Reset, ptr_bits=32)"
+    ]
+  },
+  "native_traces": {
+    "checks/x64/trace/rt-host-636-190.bin": {
+      "schema": 1,
+      "scope": "metadata_transport_observer_only",
+      "result": "pass",
+      "errors": [],
+      "packets": 22,
+      "labelled_draws": 4,
+      "successful_presents": 4,
+      "unlabelled_presents": 1,
+      "skipped_metadata_packets": 2,
+      "presented_metadata_frame_ids": [
+        1,
+        2,
+        5,
+        6
+      ],
+      "events": {
+        "0": 1,
+        "1": 22,
+        "2": 4,
+        "3": 4,
+        "4": 2,
+        "5": 5,
+        "6": 1,
+        "8": 1,
+        "10": 2
+      },
+      "consumer_thread": 2144,
+      "qpc_frequency": 10000000,
+      "source_game_queue": "unrun",
+      "image_quality": "unrun",
+      "b580_rt": "unrun",
+      "performance_acceptance": "unrun"
+    },
+    "checks/x86/trace/rt-host-5348-190.bin": {
+      "schema": 1,
+      "scope": "metadata_transport_observer_only",
+      "result": "pass",
+      "errors": [],
+      "packets": 22,
+      "labelled_draws": 4,
+      "successful_presents": 4,
+      "unlabelled_presents": 1,
+      "skipped_metadata_packets": 2,
+      "presented_metadata_frame_ids": [
+        1,
+        2,
+        5,
+        6
+      ],
+      "events": {
+        "0": 1,
+        "1": 22,
+        "2": 4,
+        "3": 4,
+        "4": 2,
+        "5": 5,
+        "6": 1,
+        "8": 1,
+        "10": 2
+      },
+      "consumer_thread": 2596,
+      "qpc_frequency": 10000000,
+      "source_game_queue": "unrun",
+      "image_quality": "unrun",
+      "b580_rt": "unrun",
+      "performance_acceptance": "unrun"
+    }
+  },
+  "linux_sanitizers": {
+    "status": "pass",
+    "sanitizers": [
+      "address",
+      "undefined"
+    ],
+    "stdout": "overlapped_frames=70 rendered_frames=3000\nRT protocol execution cases: PASS (5 groups)"
+  },
+  "mingw_x64_wine": {
+    "status": "pass",
+    "protocol_frames": 3000,
+    "host_trace": {
+      "schema": 1,
+      "scope": "metadata_transport_observer_only",
+      "result": "pass",
+      "errors": [],
+      "packets": 22,
+      "labelled_draws": 4,
+      "successful_presents": 4,
+      "unlabelled_presents": 1,
+      "skipped_metadata_packets": 2,
+      "presented_metadata_frame_ids": [
+        1,
+        2,
+        5,
+        6
+      ],
+      "events": {
+        "0": 1,
+        "1": 22,
+        "2": 4,
+        "3": 4,
+        "4": 2,
+        "5": 5,
+        "6": 1,
+        "8": 1,
+        "10": 2
+      },
+      "consumer_thread": 36,
+      "qpc_frequency": 10000000,
+      "source_game_queue": "unrun",
+      "image_quality": "unrun",
+      "b580_rt": "unrun",
+      "performance_acceptance": "unrun"
+    }
+  },
+  "python": {
+    "status": "pass",
+    "test_count": 56,
+    "new_coordinator_and_trace_tests": 9
+  },
+  "repeat_preparation_fingerprint": "pass",
+  "zip_sha256": "8e785fd20a5e636bef299d22069787a9dc6d4b3c85480f1bd174a8316027c32e",
+  "evidence_file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/rt-foundation-build-status.zip",
+  "evidence_zip_is_game_test_package": false,
+  "unrun": [
+    "Real cross-process D3D9 metadata execution",
+    "Source game queue callback and actual worker overlap",
+    "Game hook pattern uniqueness",
+    "Matching Remix runtime build/initialization",
+    "B580 hardware RT",
+    "Image quality",
+    "High-pressure real-60 budget",
+    "Game installation/launch/replay/RT hotkeys"
+  ],
+  "gate_status": {
+    "G0": "incomplete",
+    "G1": "incomplete",
+    "G2": "unrun",
+    "G3": "unrun",
+    "G4": "unrun",
+    "G5": "unrun"
+  }
+}

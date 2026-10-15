@@ -76,6 +76,7 @@ def audit():
         'compat_build': {'arch': 'x86', 'standard': 'C++20', 'system': 'Windows/VS2022 project generation'},
         'upstream_forced_thread_and_skin_settings': thread_settings,
         'source_queue': {'GetCallQueue_present_in_reference_context_vtable': 'GetCallQueue' in material_context,
+                         'l4d2_sdk_reference': 'research/rt-source-queue-sdk.json',
                          'known_context_methods': ['GetMatrix1', 'GetMatrix2'],
                          'GetCallQueue_slot_selected': None, 'queued_mesh_abi_verified': False,
                          'decision': 'Do not invent a slot or use static-RVA fallback. Establish a version-checked queue callback boundary before producing engine-labelled frames.'},

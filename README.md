@@ -2,7 +2,9 @@
 
 目标：在 L4D2 + DXVK + Intel Arc B580 环境研究光追与插帧。当前优先大量复用 l4d2-rtx，保留 Source 的多线程渲染能力。
 
-[多线程光追完整实施计划](docs/research/multithreaded-rt-implementation-plan.md)：重构有序帧／绘制数据和线程相关 Hook，沿用匹配 Remix 后端；默认把用户采集合并为 A（兼容性／静态 RT／队列）与 B（动态／画面／生命周期／性能）两批，每批一个入口、一个结果 ZIP。方案已保存，RT 接入和新测试工具待实现。
+[多线程光追完整实施计划](docs/research/multithreaded-rt-implementation-plan.md)：重构有序帧／绘制数据和线程相关 Hook，沿用匹配 Remix 后端；默认把用户采集合并为 A（兼容性／静态 RT／队列）与 B（动态／画面／生命周期／性能）两批，每批一个入口、一个结果 ZIP。
+
+[RT 接入基础进展](docs/research/rt-foundation.md)：已固定 LDB 1.3.2 和自定义 Remix 源码候选，实现有序协议、Device 通道观察与开发采集协调器；x86 client／x64 Host 原生构建和两种架构的执行用例通过。Source 队列 Hook、实际 RT 和综合包 A 尚未完成。
 
 [光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前尚无 B580 光追验收。
 

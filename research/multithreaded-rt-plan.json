@@ -2,7 +2,7 @@
   "schema": 1,
   "date_utc": "2026-10-15",
   "kind": "implementation_and_capture_plan",
-  "status": "planned_not_implemented",
+  "status": "foundation_implemented_game_and_rt_pending",
   "reviewed_project_commit": "e1a788161e0539cf33f40a5860c77c96f8bbe04e",
   "documents": [
     "docs/research/multithreaded-rt-implementation-plan.md",
@@ -33,12 +33,15 @@
     "current_bridge_baseline": "9e3ee1292f901b0bb9352e36bba93a4cd5cfbda4",
     "observed_bridge_remote_head": "cafc0442446c502a0de0ebb52d5e73ccaae67516",
     "remote_head_observation_method": "git ls-remote https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge.git HEAD",
-    "remote_head_reviewed": false,
-    "remote_head_adopted": false,
+    "remote_head_reviewed": true,
+    "remote_head_adopted": true,
     "l4d2_rtx_reference": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
     "generic_remix_research_reference": "3bde35c3268fe16f4d8075acc7d27340abeb4277",
     "selected_compatibility_tuple": null,
-    "matching_runtime_custom_render_state_support": "must_be_verified_in_P0"
+    "matching_runtime_custom_render_state_support": "must_be_verified_in_P0",
+    "runtime_source_candidate": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "runtime_repository": "https://github.com/xoxor4d/dxvk-remix.git",
+    "runtime_branch_reference": "game/l4d2_rebase1"
   },
   "phases": [
     {
@@ -48,12 +51,22 @@
       "gates": [
         "G0"
       ],
-      "status": "planned",
+      "status": "incomplete",
       "deliverables": [
         "Bridge update review",
         "Matching mod/custom-RS/runtime/API tuple",
         "Version-safe game hook and queue map",
         "Independent RT build/package pipeline and reversible configuration"
+      ],
+      "completed_parts": [
+        "LDB 1.3.2 review and separate RT baseline",
+        "Matched custom runtime source identified",
+        "Hook reference and API review",
+        "Native observer Bridge build"
+      ],
+      "remaining_parts": [
+        "Version-checked Source queue ABI and game hooks",
+        "Actual matching runtime binary initialization and build validation"
       ]
     },
     {
@@ -65,13 +78,24 @@
       "gates": [
         "G1"
       ],
-      "status": "planned",
+      "status": "incomplete",
       "deliverables": [
         "Owned frame/view/draw contract",
         "Device protocol handshake and queue ordering",
         "Scoped render-state execution",
         "Overlap/lifetime fixtures",
         "Unified coordinator skeleton"
+      ],
+      "completed_parts": [
+        "Owned frame/view/draw protocol and resource epochs",
+        "DeviceBridge handshake and observation patch",
+        "Cross-frame, reset and lifetime execution cases",
+        "Bounded developer suite coordinator and trace analyzer"
+      ],
+      "remaining_parts": [
+        "Actual Source queue callback and producer/consumer linkage",
+        "Actual game multithreading/order evidence",
+        "User game launch/replay and final collection pipeline"
       ]
     },
     {
@@ -155,12 +179,12 @@
     {
       "id": "G0",
       "name": "Compatible reproducible build and protocol",
-      "status": "unrun"
+      "status": "incomplete"
     },
     {
       "id": "G1",
       "name": "Ordered ownership and actual queued execution",
-      "status": "unrun"
+      "status": "incomplete"
     },
     {
       "id": "G2",
@@ -373,10 +397,10 @@
     }
   ],
   "validation_this_change": {
-    "scope": "Plan documents, JSON consistency, local links, source fingerprints, diff whitespace.",
-    "rt_implementation": "unrun_not_implemented",
+    "scope": "Implemented foundation; see research/rt-foundation-validation.json for executed checks and native identity.",
+    "rt_implementation": "metadata_observer_implemented_renderer_not_implemented",
     "b580_hardware_rt": "unrun",
     "game_multithreading": "unrun",
-    "new_test_launcher": "unrun_not_implemented"
+    "new_test_launcher": "developer_coordinator_implemented_game_launcher_pending"
   }
 }
