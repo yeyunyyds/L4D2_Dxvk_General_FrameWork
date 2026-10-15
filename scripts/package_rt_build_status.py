@@ -59,9 +59,10 @@ if __name__ == '__main__':
             if len(status['binaries']) != 2:
                 raise RuntimeError('Missing native client/Host binary')
             status['artifact_validation'] = 'pass'
-            queue_log = ROOT / 'ci-rt-logs/native.log'
-            if sdk_receipt.exists() and queue_log.exists() and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace'):
-                status['sdk_queue_development_execution'] = 'pass'
+        queue_log = ROOT / 'ci-rt-logs/native.log'
+        if (sdk_receipt.exists() and (source / 'checks-x86/source-queue.exe').exists() and queue_log.exists()
+                and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace')):
+            status['sdk_queue_development_execution'] = 'pass'
         archive.writestr('status.json', json.dumps(status, indent=2) + '\n')
         archive.writestr('README.txt', 'Development build evidence only. No Source game hook or Remix RT runtime is included.\nDo not install this ZIP as combined test package A.\n')
     print(output)

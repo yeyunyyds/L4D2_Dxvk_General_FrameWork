@@ -27,7 +27,7 @@ try {
       $sdk = (Resolve-Path (Join-Path $repo '.research/rt-sdk-source')).Path
       $queueCases = Join-Path $repo 'tests/rt_source_queue_cases.cpp'
       $abiCases = Join-Path $repo 'tests/rt_source_abi.cpp'
-      $sdkFlags = "/DWIN32 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE /external:I`"$sdk/public`" /external:I`"$sdk/common`" /external:W0"
+      $sdkFlags = "/DWIN32 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE /external:I`"$sdk/public`" /external:I`"$sdk/public/tier0`" /external:I`"$sdk/public/tier1`" /external:I`"$sdk/common`" /external:W0"
       $queueCommand = "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT $sdkFlags /I`"$include`" `"$queueCases`" /Fe:`"$dir/source-queue.exe`" /Fo:`"$dir/source-queue.obj`" /link uuid.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
         "`$env:LDB_RT_LOG_DIR = '$dir/source-trace'; & `"$dir/source-queue.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
         "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT $sdkFlags /c /FAs /Fa`"$dir/source-abi.asm`" /Fo:`"$dir/source-abi.obj`" `"$abiCases`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
