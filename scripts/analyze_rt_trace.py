@@ -22,6 +22,7 @@ def analyze(path):
     sequence = 0
     pending = None
     draws = {}
+    active_draw = None
     ended = None
     presented = []
     last_tick = 0
@@ -64,12 +65,12 @@ def analyze(path):
                 identity = key
                 if kind != 1:
                     errors.append('missing_hello')
-            if key != identity or not all(key) or not producer or seq != sequence + 1:
+            if key != identity or not all(key) or not gen or not map_id or not producer or seq != sequence + 1 or (kind == 1 and packets):
                 errors.append('packet_identity_or_sequence')
             if generation is not None:
-                if kind == 8 and gen != generation[0] + 1:
+                if kind == 8 and (gen != generation[0] + 1 or map_id != generation[1]):
                     errors.append('reset_generation')
-                elif kind == 10 and map_id != generation[1] + 1:
+                elif kind == 10 and (map_id != generation[1] + 1 or gen != generation[0]):
                     errors.append('map_generation')
                 elif kind not in (8, 10) and (gen, map_id) != generation:
                     errors.append('stale_generation')
@@ -77,7 +78,10 @@ def analyze(path):
             if kind == 5:
                 if pending is not None:
                     errors.append('metadata_draw_not_consumed')
-                pending = (frame, view, uid)
+                if len(payload) < 104 + 80:
+                    errors.append('truncated_draw_metadata'); continue
+                draw_id, = struct.unpack_from('<Q', payload, 104)
+                pending = (frame, view, uid, draw_id, gen, map_id)
             elif kind == 7:
                 ended = frame
             elif kind in (8, 10):
@@ -87,10 +91,14 @@ def analyze(path):
                         errors.append('metadata_reset_without_physical_reset')
                     saw_reset = False
         elif event == 2:
-            if pending is None or uid <= pending[2] or uid in draws:
+            if pending is None or uid == pending[2] or active_draw is not None:
                 errors.append('physical_draw_without_unique_preceding_metadata')
             else:
-                draws[uid] = {'frame': pending[0], 'view': pending[1], 'result': None}
+                key = (pending[0], pending[3], pending[4], pending[5])
+                if key in draws:
+                    errors.append('duplicate_draw_identity')
+                draws[key] = {'frame': pending[0], 'view': pending[1], 'result': None}
+                active_draw = (key, uid)
             pending = None
         elif event == 3:
             if len(payload) != 16:
@@ -111,10 +119,12 @@ def analyze(path):
             if len(payload) != 4:
                 errors.append('draw_result_payload'); continue
             hresult, = struct.unpack('<I', payload)
-            if uid in draws:
-                if draws[uid]['result'] is not None or hresult & 0x80000000:
+            if active_draw is not None:
+                key, expected_uid = active_draw
+                if uid != expected_uid or draws[key]['result'] is not None or hresult & 0x80000000:
                     errors.append('duplicate_or_failed_draw_result')
-                draws[uid]['result'] = hresult
+                draws[key]['result'] = hresult
+                active_draw = None
         elif event == 7:
             errors.append('host_rejected_metadata')
         elif event == 8:

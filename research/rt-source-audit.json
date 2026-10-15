@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "scope": "pinned_source_audit_not_hardware_or_game_execution",
+  "bridge_commit": "cafc0442446c502a0de0ebb52d5e73ccaae67516",
+  "previous_fg_bridge_unchanged": true,
+  "runtime_source_candidate": {
+    "repository": "https://github.com/xoxor4d/dxvk-remix.git",
+    "commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "branch_reference": "game/l4d2_rebase1",
+    "selection": "unvalidated_binary_tuple"
+  },
+  "custom_render_states_confirmed_in_decoder": [
+    42,
+    149,
+    150,
+    169,
+    177,
+    196,
+    197,
+    210,
+    211,
+    220
+  ],
+  "api": {
+    "mod": "0.6.4",
+    "runtime": "0.6.4",
+    "bridge": "0.6.5",
+    "interface_function_order_equal": true,
+    "function_count": 22,
+    "runtime_development_minor_version_check_observed": true,
+    "opaque_material_difference": "Bridge 0.6.5 appends four DLSS-control fields; runtime uses 0.6.4 prefix. Bridge has an explicit 0.6.4 caller conversion; actual runtime initialization and material calls remain unrun.",
+    "runtime_abi_execution": "unrun"
+  },
+  "compat_build": {
+    "arch": "x86",
+    "standard": "C++20",
+    "system": "Windows/VS2022 project generation"
+  },
+  "upstream_forced_thread_and_skin_settings": {
+    "mat_queue_mode": 0,
+    "r_threaded_particles": 0,
+    "r_threadeddetailprops": 0,
+    "r_queued_ropes": 0,
+    "mat_softwareskin": 1
+  },
+  "source_queue": {
+    "GetCallQueue_present_in_reference_context_vtable": false,
+    "known_context_methods": [
+      "GetMatrix1",
+      "GetMatrix2"
+    ],
+    "GetCallQueue_slot_selected": null,
+    "queued_mesh_abi_verified": false,
+    "decision": "Do not invent a slot or use static-RVA fallback. Establish a version-checked queue callback boundary before producing engine-labelled frames."
+  },
+  "hook_references": [
+    {
+      "symbol": "hk_addr__cviewrenderer_renderview",
+      "module": "CLIENT_MOD",
+      "pattern": "? ? 8B 50 ? FF D2 8B 0D ? ? ? ? E8 ? ? ? ? E8",
+      "byte_offset": 0,
+      "reference_static_rva": "0x1D7113",
+      "game_validation": "unrun",
+      "thread_role": "unknown_requires_trace",
+      "installed": false
+    },
+    {
+      "symbol": "kh_addr__cmeshdx8_renderpass_pre_draw",
+      "module": "RENDERER_MOD",
+      "pattern": "8B 43 ? 3B C7",
+      "byte_offset": 0,
+      "reference_static_rva": "0xBEFA",
+      "game_validation": "unrun",
+      "thread_role": "unknown_requires_trace",
+      "installed": false
+    },
+    {
+      "symbol": "kh_addr__cmeshdx8_renderpass_post_draw",
+      "module": "RENDERER_MOD",
+      "pattern": "56 51 50 FF D2",
+      "byte_offset": 0,
+      "reference_static_rva": "0xC05A",
+      "game_validation": "unrun",
+      "thread_role": "unknown_requires_trace",
+      "installed": false
+    },
+    {
+      "symbol": "hk_addr__render_spritecard_new",
+      "module": "CLIENT_MOD",
+      "pattern": "8B 8D ? ? ? ? ? ? 8B 40 ? 8D 95 ? ? ? ? 52 8B 95 ? ? ? ? 52 8B 95 ? ? ? ? 52 FF D0 8B 8D",
+      "byte_offset": 0,
+      "reference_static_rva": "0x3C9F1F",
+      "game_validation": "unrun",
+      "thread_role": "unknown_requires_trace",
+      "installed": false
+    },
+    {
+      "symbol": "hk_addr__rope_mgr_draw_render_cache",
+      "module": "CLIENT_MOD",
+      "pattern": "8B 8D ? ? ? ? ? ? 8B 52 ? 8D 85 ? ? ? ? 50 8B 85 ? ? ? ? 50 8B 45 ? 50 FF D2 8B 8D ? ? ? ? 89 9D ? ? ? ? 89 9D ? ? ? ? 89 5D ? 89 5D ? C7 85 ? ? ? ? ? ? ? ? 89 9D",
+      "byte_offset": 0,
+      "reference_static_rva": "0x93A3D",
+      "game_validation": "unrun",
+      "thread_role": "unknown_requires_trace",
+      "installed": false
+    },
+    {
+      "symbol": "hk_addr__on_map_load",
+      "module": "ENGINE_MOD",
+      "pattern": "8D 4F ? 33 D2",
+      "byte_offset": 0,
+      "reference_static_rva": "0xEE05C",
+      "game_validation": "unrun",
+      "thread_role": "unknown_requires_trace",
+      "installed": false
+    },
+    {
+      "symbol": "hk_addr__on_host_disconnect",
+      "module": "ENGINE_MOD",
+      "pattern": "8B EC 83 EC ? FF 15 ? ? ? ? 84 C0",
+      "byte_offset": 0,
+      "reference_static_rva": "0x192F11",
+      "game_validation": "unrun",
+      "thread_role": "unknown_requires_trace",
+      "installed": false
+    }
+  ],
+  "transport": {
+    "metadata_channel": "DeviceBridge",
+    "hello_opcode": "0x1e10",
+    "metadata_opcode": "0x1e11",
+    "packet_header_bytes": 104,
+    "version": 1,
+    "source_queue_order_proven_by_transport_only": false
+  },
+  "unrun": [
+    "Actual Source queue callback",
+    "Game hook pattern uniqueness",
+    "Matched runtime binary initialization",
+    "B580 RT",
+    "Image quality",
+    "High-pressure 60 FPS"
+  ],
+  "sources": [
+    {
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "path": "src/components/modules/main_module.cpp",
+      "sha256": "efada8686f51c7c29218a68bfc7b3dd59b86788119e07ea1e1a89565103b982c"
+    },
+    {
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "path": "src/game/l4d2.cpp",
+      "sha256": "f56b55c9892bfca8f0dd17be91b56de5a40fda9a44a3fcbdc8e3ed88a94c8db1"
+    },
+    {
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "path": "src/game/structs.hpp",
+      "sha256": "f3051eea297f0627dedc899f3a1fd8a14e67f6b272ac044b3853c8cf9ee5e728"
+    },
+    {
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "path": "README.md",
+      "sha256": "0bb5afacbf9623eaddb58b7cfdac08b72b554724451c4846ca3aae2c4c236ea5"
+    },
+    {
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "path": "premake5.lua",
+      "sha256": "1483ac62d5209c4f4fd3e532ea9045812bfcb139e4f1083803682398470ba381"
+    },
+    {
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "path": "deps/bridge_api/remix/remix_c.h",
+      "sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e"
+    },
+    {
+      "commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "path": "public/include/remix/remix_c.h",
+      "sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e"
+    },
+    {
+      "commit": "9aa74f8dfad2188efbd0f717c64d9f8fa909787e",
+      "path": "public/include/remix/remix_c.h",
+      "sha256": "87a09ec3f4dc9f914d3be10a0deddf7ede295b9fb2908547c6bf588540c97d24"
+    },
+    {
+      "commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "path": "src/d3d9/d3d9_rtx_utils.cpp",
+      "sha256": "fd9585b8a4bbbaba750a7e1c39157728e5403ba8071d00db8f92f04754235f78"
+    },
+    {
+      "commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "path": "src/dxvk/rtx_render/rtx_materials.h",
+      "sha256": "2fddaa1929f298e7076f60e1122cb710b5c051371a27f1550ffec7bcee406232"
+    },
+    {
+      "commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "path": "src/dxvk/rtx_render/rtx_remix_api.cpp",
+      "sha256": "74ba88e1887b30081c071d91b458681eab6ce71c05ead6ff94f348e0aca8fdea"
+    }
+  ]
+}
