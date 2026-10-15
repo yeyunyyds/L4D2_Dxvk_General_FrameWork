@@ -36,7 +36,7 @@ struct Fixture {
     check(stream.apply(b.data(), b.size(), consumer) == Error::Ok, "valid packet rejected");
   }
   void setup(uint64_t frame = 1, uint64_t version = 1) {
-    send(Kind::UpdateResource, resourcePayload(9, version, 1, {1, 2, 3, 4}));
+    send(Kind::ResourceUpdate, resourcePayload(9, version, 1, {1, 2, 3, 4}));
     send(Kind::BeginFrame, {}, frame); send(Kind::BeginView, cameraPayload(camera(float(frame))), frame, 100);
   }
   std::unique_ptr<DrawSnapshot> draw(uint64_t frame = 1, uint64_t version = 1) {
@@ -103,7 +103,7 @@ void invalidCameraAndBinding() {
   auto b = f.packet(Kind::Draw, drawPayload(geometry()), 1, 100);
   check(f.stream.apply(b.data(), b.size(), 77) == Error::Resource, "unknown binding accepted");
   --f.h.sequence;
-  f.send(Kind::UpdateResource, resourcePayload(9, 1, 1, {1}));
+  f.send(Kind::ResourceUpdate, resourcePayload(9, 1, 1, {1}));
   auto wrongVersion = geometry(2);
   b = f.packet(Kind::Draw, drawPayload(wrongVersion), 1, 100);
   check(f.stream.apply(b.data(), b.size(), 77) == Error::Resource, "stale version accepted");
@@ -112,19 +112,19 @@ void invalidCameraAndBinding() {
 void lifetimesAndBudget() {
   Fixture f(8); f.setup(); auto old = f.draw(); f.end();
   auto payload = resourcePayload(9, 2, 1, {5, 6, 7, 8});
-  f.send(Kind::UpdateResource, payload);
+  f.send(Kind::ResourceUpdate, payload);
   payload.assign(payload.size(), 0);
   check(old->resources[0]->data == Bytes({1, 2, 3, 4}), "old version overwritten");
   check(f.stream.retainedBytes() == 8, "retained memory not accounted");
-  auto b = f.packet(Kind::UpdateResource, resourcePayload(9, 3, 1, {9}));
+  auto b = f.packet(Kind::ResourceUpdate, resourcePayload(9, 3, 1, {9}));
   check(f.stream.apply(b.data(), b.size(), 77) == Error::Limit, "retained memory cap bypassed");
   --f.h.sequence; old.reset();
-  f.send(Kind::UpdateResource, resourcePayload(9, 3, 1, {9}));
+  f.send(Kind::ResourceUpdate, resourcePayload(9, 3, 1, {9}));
   f.send(Kind::RetireResource, retirePayload(9, 3));
-  b = f.packet(Kind::UpdateResource, resourcePayload(9, 1, 1, {2}));
+  b = f.packet(Kind::ResourceUpdate, resourcePayload(9, 1, 1, {2}));
   check(f.stream.apply(b.data(), b.size(), 77) == Error::Resource, "retired identity reused");
   --f.h.sequence;
-  f.send(Kind::UpdateResource, resourcePayload(9, 4, 1, {2}));
+  f.send(Kind::ResourceUpdate, resourcePayload(9, 4, 1, {2}));
   f.send(Kind::BeginFrame, {}, 2); f.send(Kind::BeginView, cameraPayload(camera(2)), 2, 100);
   auto retained = f.draw(2, 4);
   ++f.h.generation; f.send(Kind::Reset);
@@ -165,7 +165,7 @@ void overlappingFrames() {
     for (uint64_t frame = 1; frame <= frames; ++frame) {
       if (frame > 1 && frame % 32 == 0) { ++h.generation; emit(Kind::Reset); version = 0; }
       Bytes vertices{uint8_t(frame), uint8_t(frame >> 8)};
-      emit(Kind::UpdateResource, resourcePayload(9, ++version, 1, vertices));
+      emit(Kind::ResourceUpdate, resourcePayload(9, ++version, 1, vertices));
       vertices.assign(2, 0);
       emit(Kind::BeginFrame, {}, frame);
       auto c = camera(float(frame)); emit(Kind::BeginView, cameraPayload(c), frame, frame);

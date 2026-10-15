@@ -123,7 +123,7 @@ void postFrame(SourceQueue& lane, Queue* queue, Header h, uint64_t frame, uint64
   };
   Bytes vertices{uint8_t(frame), uint8_t(frame >> 8)};
   auto resource = resourcePayload(1, version, 1, vertices);
-  post(Kind::UpdateResource, resource); resource.assign(resource.size(), 0);
+  post(Kind::ResourceUpdate, resource); resource.assign(resource.size(), 0);
   post(Kind::BeginFrame, {}, frame);
   Camera camera; camera.width = 1920; camera.height = 1080; camera.nearPlane = 1; camera.farPlane = 10000;
   for (unsigned i = 0; i < 4; ++i) { camera.view[i * 5] = camera.projection[i * 5] = 1; }

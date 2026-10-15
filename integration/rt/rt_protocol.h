@@ -22,7 +22,7 @@ constexpr uint32_t kMaxPacketBytes = 1024 * 1024;
 constexpr uint32_t kMaxBindings = 32;
 
 enum class Kind : uint32_t {
-  Hello = 1, BeginFrame, BeginView, UpdateResource, Draw,
+  Hello = 1, BeginFrame, BeginView, ResourceUpdate, Draw,
   EndView, EndFrame, Reset, RetireResource, ChangeMap
 };
 enum class ViewKind : uint32_t { Main = 1, Sky, Weapon, Hud, Other };
@@ -276,7 +276,7 @@ public:
         if (c.kind == ViewKind::Main && (m_mainSeen || !m_views.empty())) { return Error::Order; }
         m_viewIds.insert(h.view); m_views.push_back({h.view, c});
         if (c.kind == ViewKind::Main) { m_mainSeen = true; }
-      } else if (h.kind == Kind::UpdateResource) {
+      } else if (h.kind == Kind::ResourceUpdate) {
         if (h.frame || h.view || m_pending) { return Error::Order; }
         const auto id = r.u64(), version = r.u64();
         const auto kind = r.u32(), length = r.u32();
