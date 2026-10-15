@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rt_protocol.h"
+#include "rt_static_draw.h"
 
 #include <windows.h>
 #include <filesystem>
@@ -16,7 +17,10 @@ struct Observer {
   size_t written = 0;
   uint64_t draws = 0, unlabelled = 0, presents = 0, rejected = 0;
   bool failed = false, needsReset = false, resetAvailable = false, truncated = false;
+  bool staticDiagnostic = false;
   explicit Observer(uint64_t device) {
+    wchar_t enabled[2]{};
+    staticDiagnostic = GetEnvironmentVariableW(L"LDB_RT_STATIC_DIAGNOSTIC", enabled, 2) == 1 && enabled[0] == L'1';
     wchar_t directory[32768];
     const auto n = GetEnvironmentVariableW(L"LDB_RT_LOG_DIR", directory, 32768);
     if (n && n < 32768) {
@@ -26,6 +30,10 @@ struct Observer {
       LARGE_INTEGER frequency; QueryPerformanceFrequency(&frequency);
       ldb_rt::Writer w; w.u64(uint64_t(frequency.QuadPart));
       record(0, 0, w.data.data(), uint32_t(w.data.size()));
+      if (staticDiagnostic) {
+        ldb_rt::Writer config; config.u32(1); config.u32(1);
+        record(12, 0, config.data.data(), uint32_t(config.data.size()));
+      }
     }
   }
   void record(uint32_t event, uint64_t uid, const void* bytes = nullptr, uint32_t size = 0) {
@@ -94,18 +102,48 @@ inline HRESULT submit(uint64_t device, const void* bytes, uint32_t size, uint32_
     return E_FAIL;
   }
 }
-inline void draw(uint64_t device, uint32_t uid) noexcept {
+inline std::unique_ptr<ldb_rt::DrawSnapshot> takeDraw(uint64_t device, uint32_t uid) noexcept {
   try {
     const auto it = observers().find(device);
-    if (it == observers().end()) { return; }
+    if (it == observers().end()) { return nullptr; }
     auto& s = *it->second;
-    if (s.failed || s.needsReset) { ++s.unlabelled; return; }
+    if (s.failed || s.needsReset) { ++s.unlabelled; return nullptr; }
     std::unique_ptr<ldb_rt::DrawSnapshot> snapshot;
     const auto error = s.stream.draw(uid, GetCurrentThreadId(), snapshot);
-    if (error == ldb_rt::Error::MissingDraw) { ++s.unlabelled; return; }
-    if (error != ldb_rt::Error::Ok) { s.failed = true; return; }
+    if (error == ldb_rt::Error::MissingDraw) { ++s.unlabelled; return nullptr; }
+    if (error != ldb_rt::Error::Ok) { s.failed = true; return nullptr; }
     ++s.draws; s.record(2, uid);
-  } catch (...) { }
+    return snapshot;
+  } catch (...) { return nullptr; }
+}
+inline void draw(uint64_t device, uint32_t uid) noexcept { (void)takeDraw(device, uid); }
+
+// Scope all D3D9 changes on the Host's real Draw owner, never a Source producer.
+// This is opt-in state diagnostic/conversion, not evidence that RT executed.
+template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t uid, Device* graphics,
+    D3DPRIMITIVETYPE type, bool userMemory, Draw&& physicalDraw) noexcept {
+  try {
+    auto snapshot = takeDraw(device, uid);
+    const auto it = observers().find(device);
+    const bool enabled = it != observers().end() && it->second->staticDiagnostic && !it->second->failed;
+    ldb_rt::static_draw::Report report;
+    HRESULT physical = E_ABORT;
+    bool called = false;
+    const HRESULT result = ldb_rt::static_draw::execute(graphics, snapshot.get(), type, userMemory, enabled, [&] {
+      called = true; physical = physicalDraw(); return physical;
+    }, report);
+    if (enabled && snapshot && snapshot->draw.categories == ldb_rt::kStaticOpaqueWorld) {
+      try {
+        ldb_rt::Writer payload;
+        payload.u32(1); payload.u32(static_cast<uint32_t>(report.code));
+        payload.u32(uint32_t(report.capture)); payload.u32(uint32_t(report.apply)); payload.u32(uint32_t(report.restore));
+        payload.u32(uint32_t(physical)); payload.u32(report.converted ? 1 : 0); payload.u32(called ? 1 : 0);
+        payload.u64(snapshot->header.frame); payload.u64(snapshot->header.view); payload.u64(snapshot->header.sequence);
+        it->second->record(11, uid, payload.data.data(), uint32_t(payload.data.size()));
+      } catch (...) { it->second->failed = true; }
+    }
+    return result;
+  } catch (...) { return E_FAIL; }
 }
 inline void present(uint64_t device, uint32_t uid, HRESULT result) noexcept {
   try {

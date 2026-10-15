@@ -93,31 +93,39 @@ index 73dc9db..168f95d 100644
          const auto hresult = l4d2_api_wait::backend([&]() { return pD3DDevice->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion); });
 +        ldb_rt_host::present(rpcHeader.pHandle, currentUID, hresult);
          if (!SUCCEEDED(hresult)) {
-@@ -1620,3 +1644,5 @@ void ProcessDeviceCommandQueue() {
+@@ -1620,3 +1644,6 @@ void ProcessDeviceCommandQueue() {
          PULL_U(PrimitiveCount);
-+        ldb_rt_host::draw(rpcHeader.pHandle, currentUID);
-         const auto hresult = pD3DDevice->DrawPrimitive(IN PrimitiveType, IN StartVertex, IN PrimitiveCount);
+-        const auto hresult = pD3DDevice->DrawPrimitive(IN PrimitiveType, IN StartVertex, IN PrimitiveCount);
++        const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, false, [&]() {
++          return pD3DDevice->DrawPrimitive(IN PrimitiveType, IN StartVertex, IN PrimitiveCount);
++        });
 +        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
          assert(SUCCEEDED(hresult));
-@@ -1635,3 +1661,5 @@ void ProcessDeviceCommandQueue() {
+@@ -1635,3 +1662,6 @@ void ProcessDeviceCommandQueue() {
          PULL_U(primCount);
-+        ldb_rt_host::draw(rpcHeader.pHandle, currentUID);
-         const auto hresult = pD3DDevice->DrawIndexedPrimitive(IN Type, IN BaseVertexIndex, IN MinVertexIndex, IN NumVertices, IN startIndex, IN primCount);
+-        const auto hresult = pD3DDevice->DrawIndexedPrimitive(IN Type, IN BaseVertexIndex, IN MinVertexIndex, IN NumVertices, IN startIndex, IN primCount);
++        const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, Type, false, [&]() {
++          return pD3DDevice->DrawIndexedPrimitive(IN Type, IN BaseVertexIndex, IN MinVertexIndex, IN NumVertices, IN startIndex, IN primCount);
++        });
 +        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
          assert(SUCCEEDED(hresult));
-@@ -1649,3 +1677,5 @@ void ProcessDeviceCommandQueue() {
+@@ -1649,3 +1679,6 @@ void ProcessDeviceCommandQueue() {
          PULL_U(VertexStreamZeroStride);
-+        ldb_rt_host::draw(rpcHeader.pHandle, currentUID);
-         const auto hresult = pD3DDevice->DrawPrimitiveUP(IN PrimitiveType, IN PrimitiveCount, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
+-        const auto hresult = pD3DDevice->DrawPrimitiveUP(IN PrimitiveType, IN PrimitiveCount, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
++        const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, true, [&]() {
++          return pD3DDevice->DrawPrimitiveUP(IN PrimitiveType, IN PrimitiveCount, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
++        });
 +        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
          assert(SUCCEEDED(hresult));
-@@ -1670,3 +1700,5 @@ void ProcessDeviceCommandQueue() {
+@@ -1670,3 +1703,6 @@ void ProcessDeviceCommandQueue() {
 
-+        ldb_rt_host::draw(rpcHeader.pHandle, currentUID);
-         const auto hresult = pD3DDevice->DrawIndexedPrimitiveUP(IN PrimitiveType, IN MinVertexIndex, IN NumVertices, IN PrimitiveCount, IN pIndexData, IN IndexDataFormat, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
+-        const auto hresult = pD3DDevice->DrawIndexedPrimitiveUP(IN PrimitiveType, IN MinVertexIndex, IN NumVertices, IN PrimitiveCount, IN pIndexData, IN IndexDataFormat, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
++        const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, true, [&]() {
++          return pD3DDevice->DrawIndexedPrimitiveUP(IN PrimitiveType, IN MinVertexIndex, IN NumVertices, IN PrimitiveCount, IN pIndexData, IN IndexDataFormat, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
++        });
 +        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
          assert(SUCCEEDED(hresult));
-@@ -2091,2 +2123,9 @@ void ProcessDeviceCommandQueue() {
+@@ -2091,2 +2127,9 @@ void ProcessDeviceCommandQueue() {
          const auto hresult = l4d2_api_wait::backend([&]() { return pSwapChain->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion, dwFlags); });
 +        IDirect3DDevice9* rtDevice = nullptr;
 +        if (SUCCEEDED(pSwapChain->GetDevice(&rtDevice))) {

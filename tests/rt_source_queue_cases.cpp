@@ -2,6 +2,7 @@
 #include "rt_source_queue.h"
 #include "rt_client.h"
 #include "rt_host.h"
+#include "rt_static_device.h"
 
 #include <condition_variable>
 #include <deque>
@@ -73,6 +74,8 @@ struct Device final : IUnknown {
   uint64_t frames = 0, overlap = 0;
   std::atomic<uint64_t> published{0};
   Stream mirror;
+  rt_test::Graphics graphics;
+  bool expectStatic = false;
   bool resetBarrier = false;
   explicit Device(uint64_t value) : id(value) {}
   ULONG STDMETHODCALLTYPE AddRef() override { return ++refs; }
@@ -102,7 +105,14 @@ struct Device final : IUnknown {
     require(snapshot->camera.view[12] == float(frame), "source used later camera");
     require(snapshot->resources[0]->data == Bytes({uint8_t(frame), uint8_t(frame >> 8)}), "source used later resource");
     if (published.load() > frame) { ++overlap; }
-    ldb_rt_host::draw(id, drawUid); ldb_rt_host::drawResult(id, drawUid, S_OK);
+    const auto result = ldb_rt_host::drawCommand(id, drawUid, &graphics, D3DPT_TRIANGLELIST, false, [&] {
+      if (expectStatic) {
+        require(!graphics.currentShader && graphics.transforms[1].m[3][0] == float(frame), "static scope used wrong frame/owner");
+      }
+      return S_OK;
+    });
+    require(SUCCEEDED(result) && graphics.restored() && graphics.leasesReleased() && !graphics.foreign, "static scope leaked into next draw");
+    ldb_rt_host::drawResult(id, drawUid, result);
   }
   void present(uint64_t expected) {
     uint64_t frame = 0;
@@ -131,6 +141,7 @@ void postFrame(SourceQueue& lane, Queue* queue, Header h, uint64_t frame, uint64
   auto payload = cameraPayload(camera);
   post(Kind::BeginView, payload, frame, 1); payload.assign(payload.size(), 0);
   DrawInfo draw; draw.id = 1; draw.instance = 7; draw.bindings.push_back({1, version});
+  draw.categories = kStaticOpaqueWorld;
   draw.transform[0] = draw.transform[5] = draw.transform[10] = 1;
   post(Kind::Draw, drawPayload(draw), frame, 1);
 }
@@ -199,7 +210,8 @@ void cancellationAndLimits() {
 
 void overlappingSourceFrames() {
   constexpr uint64_t frames = 512;
-  Device device(194);
+  SetEnvironmentVariableW(L"LDB_RT_STATIC_DIAGNOSTIC", L"1");
+  Device device(194); device.expectStatic = true;
   auto* api = new ClientStream<Device>(&device);
   {
     SourceQueue lane(api, identity(device.id)); api->Release();
@@ -237,6 +249,7 @@ void overlappingSourceFrames() {
   }
   require(device.refs.load() == 1, "overlapping source lease leaked");
   ldb_rt_host::destroy(device.id);
+  SetEnvironmentVariableW(L"LDB_RT_STATIC_DIAGNOSTIC", nullptr);
 }
 
 int main() {

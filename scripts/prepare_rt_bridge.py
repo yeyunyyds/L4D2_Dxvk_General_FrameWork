@@ -60,7 +60,7 @@ def prepare(output, bridge, upstream, detours):
     base_patch.unlink()
     inputs = {'bridge-hooks.patch': digest(hooks)}
     for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h']),
-                        ('server', ['rt_protocol.h', 'rt_host.h'])]:
+                        ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h'])]:
         for name in names:
             source = ROOT / 'integration/rt' / name
             shutil.copy2(source, output / 'bridge/src' / role / name)

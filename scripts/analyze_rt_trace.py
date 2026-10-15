@@ -30,6 +30,8 @@ def analyze(path):
     footer = None
     frequency = None
     saw_reset = False
+    static_requested = False
+    static_states = Counter()
     while offset < len(data):
         if len(data) - offset < RECORD.size:
             errors.append('truncated_record_header'); break
@@ -82,7 +84,8 @@ def analyze(path):
                 if len(payload) < 104 + 80:
                     errors.append('truncated_draw_metadata'); continue
                 draw_id, = struct.unpack_from('<Q', payload, 104)
-                pending = (frame, view, uid, draw_id, gen, map_id)
+                categories, = struct.unpack_from('<I', payload, 124)
+                pending = (frame, view, uid, draw_id, gen, map_id, seq, categories)
             elif kind == 7:
                 ended = frame
             elif kind in (8, 10):
@@ -98,7 +101,8 @@ def analyze(path):
                 key = (pending[0], pending[3], pending[4], pending[5])
                 if key in draws:
                     errors.append('duplicate_draw_identity')
-                draws[key] = {'frame': pending[0], 'view': pending[1], 'result': None}
+                draws[key] = {'frame': pending[0], 'view': pending[1], 'sequence': pending[6], 'result': None,
+                              'static_expected': static_requested and pending[7] == 1, 'static': None}
                 active_draw = (key, uid)
             pending = None
         elif event == 3:
@@ -124,6 +128,9 @@ def analyze(path):
                 key, expected_uid = active_draw
                 if uid != expected_uid or draws[key]['result'] is not None or hresult & 0x80000000:
                     errors.append('duplicate_or_failed_draw_result')
+                state = draws[key]['static']
+                if state is not None and hresult != state['result']:
+                    errors.append('static_physical_result_mismatch')
                 draws[key]['result'] = hresult
                 active_draw = None
         elif event == 6:
@@ -145,12 +152,34 @@ def analyze(path):
                 fields = PACKET.unpack_from(payload)
                 if fields[0] != 0x5452444c or fields[1] != 1 or fields[3] != len(payload) or tuple(fields[6:9]) != identity:
                     errors.append('invalid_skipped_packet')
+        elif event == 11:
+            if len(payload) != 56 or active_draw is None or not static_requested:
+                errors.append('static_diagnostic_payload_or_order'); continue
+            schema, code, capture, apply, restore, physical, converted, called, frame, view, seq = struct.unpack('<8I3Q', payload)
+            key, expected_uid = active_draw
+            draw = draws[key]
+            if (schema != 1 or not 2 <= code <= 10 or converted not in (0, 1) or called not in (0, 1) or
+                    draw['static'] is not None or not draw['static_expected'] or uid != expected_uid or
+                    (frame, view, seq) != (draw['frame'], draw['view'], draw['sequence'])):
+                errors.append('static_diagnostic_identity_or_duplicate')
+            if code == 9 and (not converted or not called) or code < 9 and converted:
+                errors.append('static_diagnostic_conversion_flags')
+            if any(x & 0x80000000 for x in (capture, apply, restore, physical)) or not called or code in (7, 8, 10):
+                errors.append('static_conversion_or_restore_failure')
+            static_states[code] += 1
+            draw['static'] = {'result': restore if restore & 0x80000000 else physical}
+        elif event == 12:
+            if payload != struct.pack('<II', 1, 1) or static_requested or packets:
+                errors.append('static_config_payload_or_order')
+            static_requested = True
         else:
             errors.append('unknown_trace_event')
     if not frequency or footer is None or not packets or not draws or not presented:
         errors.append('missing_required_trace_evidence')
     if pending is not None or ended is not None or any(d['result'] is None for d in draws.values()):
         errors.append('unfinished_frame_or_draw')
+    if any(d['static_expected'] and d['static'] is None for d in draws.values()):
+        errors.append('missing_static_draw_diagnostic')
     if footer:
         if footer[0] != len(draws) or footer[2] != len(presented) or footer[3] or footer[4] or footer[5]:
             errors.append('footer_counts_or_failure')
@@ -159,6 +188,12 @@ def analyze(path):
             'packets': packets, 'labelled_draws': len(draws), 'successful_presents': len(presented),
             'unlabelled_presents': events[6],
             'skipped_metadata_packets': events[10],
+            'static_draw_diagnostic': {
+                'requested': static_requested, 'events': sum(static_states.values()),
+                'converted_draws': static_states[9], 'outcome_codes': dict(sorted(static_states.items())),
+                'result': 'unrun' if not static_requested else 'fail' if errors else
+                          'not_exercised' if not static_states else 'pass' if set(static_states) == {9} else 'incomplete',
+                'gpu_rt': 'unrun'},
             'presented_metadata_frame_ids': presented, 'events': dict(sorted(events.items())),
             'consumer_thread': consumer, 'qpc_frequency': frequency,
             'source_game_queue': 'unrun', 'image_quality': 'unrun', 'b580_rt': 'unrun',

@@ -19,6 +19,7 @@ if __name__ == '__main__':
               'game_queue_execution': 'unrun', 'b580_rt': 'unrun', 'binaries': {},
               'sdk_queue_development_execution': 'unrun',
               'game_binding_probe_native_execution': 'unrun',
+              'static_draw_development_execution': 'unrun',
               'artifact_validation': 'unrun'}
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for file in sorted((ROOT / 'ci-rt-logs').glob('*.log')):
@@ -61,6 +62,9 @@ if __name__ == '__main__':
                 raise RuntimeError('Missing native client/Host binary')
             status['artifact_validation'] = 'pass'
         queue_log = ROOT / 'ci-rt-logs/native.log'
+        if (queue_log.exists() and queue_log.read_text(errors='replace').count('RT static-world scoped D3D9 methods: PASS') == 2
+                and all((source / ('checks-' + arch) / 'static-draw.exe').exists() for arch in ('x86', 'x64'))):
+            status['static_draw_development_execution'] = 'pass'
         if (sdk_receipt.exists() and (source / 'checks-x86/source-queue.exe').exists() and queue_log.exists()
                 and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace')):
             status['sdk_queue_development_execution'] = 'pass'

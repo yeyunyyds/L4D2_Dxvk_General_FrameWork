@@ -20,6 +20,7 @@ try {
     New-Item -ItemType Directory -Force $dir | Out-Null
     $protocol = Join-Path $repo 'tests/rt_protocol_cases.cpp'
     $hostCases = Join-Path $repo 'tests/rt_host_cases.cpp'
+    $staticCases = Join-Path $repo 'tests/rt_static_draw_cases.cpp'
     $include = Join-Path $repo 'integration/rt'
     $queueCommand = ''
     if ($arch -eq 'x86') {
@@ -41,6 +42,8 @@ try {
     $command = ". .\build_common.ps1; SetupVS -Platform $arch -VcVarsVer $VcVarsVer; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$protocol`" /Fe:`"$dir/protocol.exe`" /Fo:`"$dir/protocol.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/protocol.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$staticCases`" /Fe:`"$dir/static-draw.exe`" /Fo:`"$dir/static-draw.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& `"$dir/static-draw.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$hostCases`" /Fe:`"$dir/host.exe`" /Fo:`"$dir/host.obj`" /link uuid.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "`$env:LDB_RT_LOG_DIR = '$dir/trace'; & `"$dir/host.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       $queueCommand +
