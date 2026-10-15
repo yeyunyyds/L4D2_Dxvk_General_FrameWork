@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "date_utc": "2026-10-15",
+  "scope": "native_custom_runtime_build_and_negative_diagnostic_not_GPU_execution",
+  "native_build_commit": "d788ac3d08db4a7a927fdd5d14e1b1b82378359c",
+  "runtime_source": {
+    "schema": 1,
+    "repository": "https://github.com/xoxor4d/dxvk-remix.git",
+    "commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "branch_reference": "game/l4d2_rebase1",
+    "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+    "smoke_source_sha256": "34f3afa9f11abeabc5c0cf9eac6177a1752ce959f4996b8659361dc0e6cd574c",
+    "submodules": "ready",
+    "runtime_execution": "unrun",
+    "b580_rt": "unrun",
+    "submodule_status": [
+      " 3b70b3727edc9a151c113814129258c3423a771c include/MathLib/External/sse2neon (3b70b37)",
+      " 952f776f6573aafbb62ea717d871cd1d6816c387 include/vulkan (952f776)",
+      " ea6c4ae7f3f1b1772b8a7cda4199230b932f5a50 submodules/Detours (ea6c4ae)",
+      " e5a472fbdb996bc050029189cef3edd1398dda3a submodules/nrc (e5a472f)",
+      " d08488fcc82eef313b0464db37d2955709691e94 submodules/nvapi (d08488f)",
+      " 5041cfada111f01b6e1bf0321c8d6bf9ebb32de3 submodules/rtxcr (5041cfa)",
+      " 30431e9ff173473bb5b04190723779336ad92180 submodules/rtxdi (30431e9)",
+      " 677aeb1ebe8fe1250ab98180bcdc8e5fda4a7628 submodules/xess (677aeb1)"
+    ]
+  },
+  "status_archive_sha256": "359db1a62dcaaff4463051ef52104b7b2b3e0bded2479113a471f01547719e48",
+  "native_outcome": "success",
+  "artifact_validation": "pass",
+  "binaries": {
+    "rt-runtime-smoke.exe": {
+      "sha256": "8d7f2794c5f481c73252a0d1a5c28d4734597fc07fefb28766e73d016352a576",
+      "size": 291328,
+      "x64_pe": true,
+      "included": true
+    },
+    "d3d9.dll": {
+      "sha256": "6891aa1fde3fcb3b7c23de0176da0a55f3eaccf9901f49f3827e5761839eda1c",
+      "size": 210378240,
+      "x64_pe": true,
+      "included": false
+    }
+  },
+  "release_compile_validation": {
+    "result": "pass",
+    "all_commands": 278,
+    "cpp_commands": 275,
+    "all_cpp_O2_NDEBUG_no_DEBUGOPT": true,
+    "compile_commands_sha256": "181649391b3180be23743ac6b56b2da5849d95c1b1b20d817c97a0c800f96d23"
+  },
+  "native_log_markers": [
+    "RT static-scene diagnostic: COMPILED (GPU execution unrun)",
+    "RT static-scene diagnostic: STANDARD D3D9 REJECTION PASS (GPU execution unrun)",
+    "Pinned custom Remix: RELEASE BUILD PASS (B580 execution unrun)"
+  ],
+  "standard_d3d9_rejection": {
+    "result": "pass",
+    "expected_exit_code": 1,
+    "events": [
+      {
+        "stage": "load_runtime",
+        "code": 0
+      },
+      {
+        "stage": "find_api",
+        "code": 127
+      },
+      {
+        "failed_at": "find_api"
+      }
+    ]
+  },
+  "artifact_limits": [
+    "Status ZIP includes diagnostic executable but omits 210378240-byte runtime DLL.",
+    "Complete runtime and dependency tree are retained by the native CI artifact; status ZIP is not installable."
+  ],
+  "unrun": [
+    "Matching runtime API/GPU initialization",
+    "Bridge runtime binary tuple execution",
+    "B580 static-scene RT",
+    "Source game hooks and queue ABI",
+    "Game multithreading",
+    "Image quality and high-pressure real-60 performance",
+    "Combined user test package A"
+  ]
+}

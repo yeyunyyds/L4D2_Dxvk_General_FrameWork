@@ -1,6 +1,6 @@
 # L4D2 队列回调与静态场景诊断
 
-当前已通过原生 Windows 开发验证的是 **SDK 队列回调 → 生产 COM adapter → Host observer**，尚未安装 Source 游戏 Hook。静态场景程序已编译；GPU 实际执行单列为未验证。它们均不是综合测试包 A。
+当前已通过原生 Windows 开发验证的是 **SDK 队列回调 → 生产 COM adapter → Host observer**，尚未安装 Source 游戏 Hook。固定自定义 Remix runtime 的完整 x64 Release 与静态场景程序均已编译通过；GPU 实际执行单列为未验证。它们均不是综合测试包 A。
 
 ## 队列回调
 
@@ -62,6 +62,19 @@
 成功状态仅表示这个静态场景的预期命中和颜色读回；不等于 L4D2 世界转换、画质、线程或性能验收。异常退出、超时和无命中也必须保留进综合结果。程序没有 FG、F8／F9 或游戏安装功能。
 
 `prepare_remix_runtime.py` 与 `build_remix_runtime.ps1` 准备固定 runtime 及递归子模块，在原生 Windows 中编译诊断和完整 Release runtime。对应 workflow 将失败日志也发布到开发证据 ZIP；依赖文件不齐全的证据 ZIP 不能用于安装。
+
+原生提交 `d788ac3d08db4a7a927fdd5d14e1b1b82378359c` 的完整构建已成功；275 条 C++ 编译命令均为 O2／NDEBUG。诊断程序也通过了拒绝普通 Windows D3D9 DLL 的负面检查。该检查没有初始化 Remix 或执行 RT，详细证据见 [runtime 构建记录](../../research/rt-runtime-validation.json)。状态 ZIP 只包含小型诊断程序，210 MB 的 runtime DLL 与依赖保存在原生 CI artifact 中，不能把状态 ZIP 当作安装包。
+
+## 当前游戏的只读绑定检查
+
+`scripts/rt_game_probe.py` 接收目标 PID，将检查结果写入综合会话的子目录。它只申请查询／读取权限，读取实际映射的 PE32 模块；不注入代码，不执行游戏接口，也不修改 CVar。当前采集 `client.dll`、`engine.dll`、`shaderapidx9.dll` 和 `materialsystem.dll`：
+
+- 保存磁盘 SHA、映射地址／大小、时间戳和相关内存段 SHA；检查采集前后模块列表与进程存活状态。
+- 仅在可执行段查找七个固定参考特征，区分无匹配、唯一候选、多匹配和读取不全。旧 RVA 不作回退。
+- 若保留 MSVC x86 RTTI，收集材料系统／即时及排队 context 的虚表候选、对象偏移及候选槽指向的代码。RTTI 不存在时明确记为 unavailable。
+- 95／96／146 以及矩阵槽位均只输出候选，始终保留 `hook_install_allowed=false` 和 `semantics_verified=false`。唯一字节匹配或 RTTI 名称不能验证调用约定、函数边界、队列所属关系或线程角色。
+
+检查器会保留失败报告，已有会话目录拒绝覆盖。它将作为 A 的自动预检步骤；当前还没有游戏安装／启动协调器，不要求用户单独运行或再上传一次。Windows 原生开发检查使用独立 x86 fixture，由 x64 Python 外部读取，不能替代游戏绑定验证。
 
 用户验证仍按 [综合采集规格](rt-unified-capture-spec.md) 合入 A：不单独要求运行这个程序，再补传一轮文件。当前游戏 Hook／静态世界转换／用户协调器未完成，A 尚未发布。
 

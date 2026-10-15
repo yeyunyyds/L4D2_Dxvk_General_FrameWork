@@ -18,6 +18,7 @@ if __name__ == '__main__':
               'scope': 'Bridge + COM/protocol/Host foundation, not game hooks or GPU RT',
               'game_queue_execution': 'unrun', 'b580_rt': 'unrun', 'binaries': {},
               'sdk_queue_development_execution': 'unrun',
+              'game_binding_probe_native_execution': 'unrun',
               'artifact_validation': 'unrun'}
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for file in sorted((ROOT / 'ci-rt-logs').glob('*.log')):
@@ -63,6 +64,11 @@ if __name__ == '__main__':
         if (sdk_receipt.exists() and (source / 'checks-x86/source-queue.exe').exists() and queue_log.exists()
                 and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace')):
             status['sdk_queue_development_execution'] = 'pass'
+        probe = source / 'checks-x86/game-probe.json'
+        if probe.exists():
+            result = json.loads(probe.read_text())
+            if result.get('result') == 'pass' and result.get('scope') == 'external_x64_reader_x86_fixture_not_game_binding':
+                status['game_binding_probe_native_execution'] = 'pass'
         archive.writestr('status.json', json.dumps(status, indent=2) + '\n')
         archive.writestr('README.txt', 'Development build evidence only. No Source game hook or Remix RT runtime is included.\nDo not install this ZIP as combined test package A.\n')
     print(output)
