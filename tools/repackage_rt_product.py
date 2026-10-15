@@ -63,6 +63,16 @@ def repackage(candidate, loader, loader_source, headers_source, output):
                     archive.writestr(info, original.read(info))
             archive.writestr('preflight-manifest.json', json.dumps(manifest, indent=2)+'\n')
             archive.write(loader_source / 'LICENSE.txt', 'licenses/vulkan-loader/LICENSE.txt')
+            # The loader also contains permissively licensed cJSON/dirent code.
+            # Preserve the exact source copyright/license headers with the DLL.
+            notices = []
+            for path in sorted((loader_source / 'loader').rglob('*')):
+                if path.is_file() and path.suffix in ('.c', '.h', '.cpp', '.S', '.asm'):
+                    source = path.read_text(encoding='utf-8', errors='replace').lstrip()
+                    end = source.find('*/')
+                    if source.startswith('/*') and 0 <= end < 16384:
+                        notices.append(path.relative_to(loader_source).as_posix() + '\n' + source[:end+2])
+            archive.writestr('licenses/vulkan-loader/SOURCE-NOTICES.txt', '\n\n'.join(notices)+'\n')
             archive.write(headers_source / 'LICENSE.md', 'licenses/vulkan-headers/LICENSE.md')
             for path in (headers_source / 'LICENSES').iterdir():
                 if path.is_file():
