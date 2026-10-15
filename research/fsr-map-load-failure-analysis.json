@@ -1,0 +1,45 @@
+{
+  "user_report": "Cannot enter a map",
+  "runs": [
+    {
+      "run": "fg-12376-1686750-1777445611520",
+      "sha256": "868109627d2df9e4762848cd11bfc59b9b620d6e078b87bef993172eabfd6b3d",
+      "events": {
+        "session": 1,
+        "frame_fallback": 16,
+        "logical_present": 293,
+        "frame_metrics": 4746
+      },
+      "duration_seconds": 76.404,
+      "gpu_submissions": 0,
+      "generated_frames": 0,
+      "last_frame": 4745,
+      "has_summary": false
+    },
+    {
+      "run": "fg-13116-1599921-2123010910208",
+      "sha256": "baccf89331a7c0f156562fa6f2d118fc1f9a46df117293bd0c557bc0427659ba",
+      "events": {
+        "session": 1,
+        "frame_fallback": 16,
+        "logical_present": 289,
+        "frame_metrics": 4233
+      },
+      "duration_seconds": 69.865,
+      "gpu_submissions": 0,
+      "generated_frames": 0,
+      "last_frame": 4232,
+      "has_summary": false
+    }
+  ],
+  "finding": "No recognized world scene, GPU initialization or FSR dispatch in either log; root cause undetermined. Bridge and DXVK logs absent.",
+  "required_next_evidence": "Unified startup logs; failure appearance/error text",
+  "b580_fsr_game_acceptance": "not_reached",
+  "diagnostic_package": {
+    "download_commit": "ba0f35dea7a66b6fa31a91b8c8d27e670ecddbee",
+    "sha256": "acd2fd282077f47ede21d4730cd5eb9415b1ce2af3da81b8871ea79882988f9b",
+    "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/fg-startup-diagnostics.zip",
+    "binary_changes": false,
+    "batch_launcher_on_Windows": "unrun"
+  }
+}
