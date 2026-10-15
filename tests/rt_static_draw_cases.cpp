@@ -104,10 +104,91 @@ void failuresRestoreAndRemainVisible() {
   }
 }
 
+// Actual Windows D3D9 COM/state roundtrip when NULLREF is present. It performs
+// no rasterization or RT, and cannot substitute for Remix/B580 validation.
+void systemD3D9State() {
+  const auto unavailable = [](const char* stage, HRESULT result) {
+    std::cout << "RT static-world system D3D9 NULLREF: UNAVAILABLE (" << stage << ", hr="
+      << uint32_t(result) << ", GPU RT unrun, ptr_bits=" << 8 * sizeof(void*) << ")\n";
+  };
+  struct Library {
+    HMODULE module = LoadLibraryExW(L"d3d9.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    ~Library() { if (module) { FreeLibrary(module); } }
+  } library;
+  if (!library.module) { unavailable("load", HRESULT_FROM_WIN32(GetLastError())); return; }
+  const auto address = GetProcAddress(library.module, "Direct3DCreate9");
+  using Create = IDirect3D9* (WINAPI*)(UINT);
+  Create create = nullptr;
+  static_assert(sizeof(create) == sizeof(address), "Windows function address");
+  std::memcpy(&create, &address, sizeof(create));
+  if (!create) { unavailable("export", E_NOINTERFACE); return; }
+  Ref<IDirect3D9> d3d; d3d.value = create(D3D_SDK_VERSION);
+  if (!d3d.value) { unavailable("create_d3d9", E_FAIL); return; }
+  struct Window {
+    HWND handle = CreateWindowExW(0, L"STATIC", L"LDB state check", WS_OVERLAPPED,
+      0, 0, 320, 240, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+    ~Window() { if (handle) { DestroyWindow(handle); } }
+  } window;
+  if (!window.handle) { unavailable("window", HRESULT_FROM_WIN32(GetLastError())); return; }
+  Ref<IDirect3DDevice9> device;
+  D3DPRESENT_PARAMETERS present{};
+  present.BackBufferWidth = 320; present.BackBufferHeight = 240;
+  present.BackBufferFormat = D3DFMT_A8R8G8B8; present.BackBufferCount = 1;
+  present.SwapEffect = D3DSWAPEFFECT_DISCARD; present.hDeviceWindow = window.handle; present.Windowed = TRUE;
+  present.EnableAutoDepthStencil = TRUE; present.AutoDepthStencilFormat = D3DFMT_D16;
+  const auto created = d3d.value->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_NULLREF, window.handle,
+    D3DCREATE_SOFTWARE_VERTEXPROCESSING, &present, &device.value);
+  if (FAILED(created)) { unavailable("create_nullref", created); return; }
+  auto check = [](HRESULT result) { require(SUCCEEDED(result), "system D3D9 state/draw failed after device creation"); };
+  rt_test::Declaration layout;
+  Ref<IDirect3DVertexDeclaration9> declaration;
+  check(device.value->CreateVertexDeclaration(layout.elements.data(), &declaration.value));
+  Ref<IDirect3DVertexBuffer9> buffer;
+  check(device.value->CreateVertexBuffer(120, D3DUSAGE_WRITEONLY, 0, D3DPOOL_MANAGED, &buffer.value, nullptr));
+  const float triangle[30] = {-1, -1, 3, 0, 0, -1, 0, 0, 0, 0,
+                              0, 1, 3, 0, 0, -1, 0, 0, 0, 0,
+                              1, -1, 3, 0, 0, -1, 0, 0, 0, 0};
+  void* locked = nullptr;
+  check(buffer.value->Lock(0, UINT(sizeof(triangle)), &locked, 0));
+  require(locked != nullptr, "NULLREF buffer lock returned null");
+  std::memcpy(locked, triangle, sizeof(triangle)); check(buffer.value->Unlock());
+  check(device.value->SetStreamSource(0, buffer.value, 0, 40));
+  check(device.value->SetStreamSourceFreq(0, 1));
+  check(device.value->SetVertexDeclaration(declaration.value));
+  const D3DVIEWPORT9 viewport{0, 0, 320, 240, 0, 1};
+  check(device.value->SetViewport(&viewport));
+  check(device.value->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE));
+  check(device.value->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE));
+  check(device.value->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE));
+  check(device.value->SetRenderState(D3DRS_ZWRITEENABLE, TRUE));
+  const auto original = rt_test::matrix(123);
+  for (auto type : {D3DTS_WORLD, D3DTS_VIEW, D3DTS_PROJECTION}) { check(device.value->SetTransform(type, &original)); }
+  DWORD oldFvf = 0; check(device.value->GetFVF(&oldFvf));
+  auto snapshot = rt_test::snapshot(); snapshot.camera.width = 320; snapshot.camera.height = 240;
+  Report report;
+  check(device.value->BeginScene());
+  const auto result = execute(device.value, &snapshot, D3DPT_TRIANGLELIST, false, true, [&] {
+    return device.value->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
+  }, report);
+  check(device.value->EndScene()); check(result);
+  require(report.code == Code::Applied && report.converted && SUCCEEDED(report.restore), "system D3D9 conversion/restore failed");
+  for (auto type : {D3DTS_WORLD, D3DTS_VIEW, D3DTS_PROJECTION}) {
+    D3DMATRIX actual{}; check(device.value->GetTransform(type, &actual));
+    require(!std::memcmp(&actual, &original, sizeof(actual)), "system D3D9 matrix restore mismatch");
+  }
+  DWORD restoredFvf = 0; check(device.value->GetFVF(&restoredFvf));
+  require(oldFvf == restoredFvf, "system D3D9 FVF restore mismatch");
+  Ref<IDirect3DVertexDeclaration9> actual;
+  check(device.value->GetVertexDeclaration(&actual.value));
+  require(actual.value == declaration.value, "system D3D9 declaration restore mismatch");
+  std::cout << "RT static-world system D3D9 NULLREF: PASS (state/draw only, GPU RT unrun, ptr_bits=" << 8 * sizeof(void*) << ")\n";
+}
+
 int main() {
   try {
     conversionAndRestore(); rejectionPreservesDraw(); failuresRestoreAndRemainVisible();
     std::cout << "RT static-world scoped D3D9 methods: PASS (3 groups, GPU unrun, ptr_bits=" << 8 * sizeof(void*) << ")\n";
+    systemD3D9State();
     return 0;
   } catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
 }

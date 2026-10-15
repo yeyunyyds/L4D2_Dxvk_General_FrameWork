@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import struct
 import zipfile
@@ -15,11 +16,12 @@ if __name__ == '__main__':
     output.parent.mkdir(parents=True, exist_ok=True)
     status = {'schema': 1, 'commit': os.environ['GITHUB_SHA'],
               'native_outcome': os.environ.get('RT_BUILD_OUTCOME', 'unknown'),
-              'scope': 'Bridge + COM/protocol/Host foundation, not game hooks or GPU RT',
+              'scope': 'Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT',
               'game_queue_execution': 'unrun', 'b580_rt': 'unrun', 'binaries': {},
               'sdk_queue_development_execution': 'unrun',
               'game_binding_probe_native_execution': 'unrun',
               'static_draw_development_execution': 'unrun',
+              'system_d3d9_nullref_state': {'x86': 'unrun', 'x64': 'unrun'},
               'artifact_validation': 'unrun'}
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for file in sorted((ROOT / 'ci-rt-logs').glob('*.log')):
@@ -62,6 +64,10 @@ if __name__ == '__main__':
                 raise RuntimeError('Missing native client/Host binary')
             status['artifact_validation'] = 'pass'
         queue_log = ROOT / 'ci-rt-logs/native.log'
+        if queue_log.exists():
+            for outcome, bits in re.findall(r'RT static-world system D3D9 NULLREF: (PASS|UNAVAILABLE) \([^\r\n]*ptr_bits=(32|64)\)',
+                                           queue_log.read_text(errors='replace')):
+                status['system_d3d9_nullref_state']['x86' if bits == '32' else 'x64'] = outcome.lower()
         if (queue_log.exists() and queue_log.read_text(errors='replace').count('RT static-world scoped D3D9 methods: PASS') == 2
                 and all((source / ('checks-' + arch) / 'static-draw.exe').exists() for arch in ('x86', 'x64'))):
             status['static_draw_development_execution'] = 'pass'
