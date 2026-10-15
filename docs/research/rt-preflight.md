@@ -27,7 +27,7 @@ native CI 会解压入口包，使用**包内 Python**执行 `--verify-package`�
 
 用户步骤：
 
-1. 解压入口 ZIP 到独立目录，使用目前正常工作的 LDB 启动游戏并进入地图。
+1. 解压入口 ZIP 到独立目录，打开 `download-dependencies.html`，在浏览器下载三个依赖 ZIP 并放在 `run-test.cmd` 旁边，不解压依赖；让目前正常工作的 LDB 游戏保持在地图中。
 2. 双击 `run-test.cmd`，等待独立 RT 窗口和模块检查结束。
 3. 上传 `results/rt-preflight-*.zip`。失败也上传该 ZIP。
 
@@ -42,3 +42,7 @@ RT 失败不跳过游戏证据，游戏读取失败不删除 RT 结果；日志�
 修正版复用同一原生 runtime；三个大依赖绑定到已经发布并核对长度的固定提交 `fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0`，下载失败时尝试 GitHub 的另一入口，保持大小和 SHA 校验。小型 Vulkan loader 依赖随入口 ZIP 提供。控制台和 `progress.log` 记录进度、URL、具体异常及后续阶段；`game-discovery.json` 保留相关进程、PID 和实际模块列表。发现 Client/Engine 后立即采集；渲染或材料模块缺失由采集器单独记录，不再当作未进图的依据。没有找到目标时依然有等待上限。
 
 本机 RT 回归 42 项，其中 40 通过、2 项需要 Windows 而跳过。发布工作流还会用真实 x86 fixture（进程名 `left4dead2.exe`）验证 x64 进程发现，并使用最终包内 Python 校验并加载原生 DLL；额外从 Windows runner 无仓库凭据探测依赖 URL，区分本环境可访问与用户匿名下载可访问。测试结果不等于当前游戏模块 ABI 或 B580 光追通过。
+
+后续 Windows 工作流在无仓库凭据时，对三个已发布的固定依赖地址均复现 HTTP 404，而云环境授权访问可读取相同对象。因此仅改变地址或增加下载备用入口不足以解决此次交付问题；本次默认改为浏览器下载三个依赖 ZIP。新版入口接受同目录的 ZIP，逐包及逐文件 SHA 校验不变；小型 loader ZIP 已随入口包提供。Windows 16 项检查全通过，包含实际 x64→x86 进程发现；独立 DLL 加载与 API 导出检查通过。上述检查不包含 GPU 执行和实际游戏 ABI。
+
+最终打包提交 `97ff840` 的 Actions 事件明确确认 `repository_private=true`，并复现三次匿名 HTTP 404：原方案遗漏了私有仓库鉴权条件，不能把本环境授权可读取当作用户脚本匿名可下载。当前通过用户已有 GitHub 登录的浏览器取得 ZIP，脚本不收集用户凭据，也不改变仓库可见性。最终发布文件与原生校验的 SHA、规范化脚本内容、README、内置 loader ZIP 和 CRC 已复核；见 [此次失败与修复验证记录](../../research/rt-preflight-user-validation.json)。

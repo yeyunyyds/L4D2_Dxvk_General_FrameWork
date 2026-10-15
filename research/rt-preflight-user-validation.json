@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "scope": "private_repository_download_failure_and_prerequisite_launcher_repair",
+  "user_result": {
+    "filename": "rt-preflight-20261015-163255-a87c254e.zip",
+    "sha256": "54788fa7957e5d65d5e238435264f10883297f12b91cca27a3836b2fdd315afa",
+    "summary": {
+      "schema": 1,
+      "scope": "rt_prerequisites",
+      "collection": "complete",
+      "runtime_preparation": "fail",
+      "runtime_smoke": "unrun",
+      "game_binding": "fail",
+      "game_rt": "unrun",
+      "source_threading": "unrun",
+      "performance": "unrun",
+      "b580_rt": "unrun",
+      "verify_only": false,
+      "errors": [
+        {
+          "stage": "runtime",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "stage": "game_binding",
+          "error": "Game modules not ready within 180 seconds; start L4D2 and load a map"
+        }
+      ],
+      "build_commit": "61814722cc592c491fa1698e3f10f426f9e7d469",
+      "omitted_files": []
+    }
+  },
+  "diagnosis": {
+    "repository_private": true,
+    "anonymous_published_payload_requests": [
+      {
+        "name": "rt-prereq-payload-25802f8447a81def30122c8d.zip",
+        "url": "https://raw.githubusercontent.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0/downloads/rt-prereq-payload-25802f8447a81def30122c8d.zip",
+        "expected_size": 78275253,
+        "repository_private": true,
+        "error": "HTTPError: HTTP Error 404: Not Found"
+      },
+      {
+        "name": "rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
+        "url": "https://raw.githubusercontent.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0/downloads/rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
+        "expected_size": 95644514,
+        "repository_private": true,
+        "error": "HTTPError: HTTP Error 404: Not Found"
+      },
+      {
+        "name": "rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
+        "url": "https://raw.githubusercontent.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0/downloads/rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
+        "expected_size": 89038588,
+        "repository_private": true,
+        "error": "HTTPError: HTTP Error 404: Not Found"
+      }
+    ],
+    "old_game_discovery": "no_pid_or_module_evidence_retained; cannot infer that map was not loaded"
+  },
+  "repair": {
+    "build_commit": "97ff8405f622d5a434c2fa865f96fffdc611d892",
+    "download_ref": "6ab7168a63f1a33d0b66db916476f06c3cd65e57",
+    "primary_sha256": "92608d661cfd73e321f600cd797199cef66f6e82c71e7b5af52bda6a84dfe279",
+    "primary_size": 10780674,
+    "scripts_equal_after_line_ending_normalization": true,
+    "readme_matches": true,
+    "zip_crc": "pass",
+    "local_rt_tests": {
+      "total": 42,
+      "pass": 40,
+      "skipped_requires_windows": 2
+    },
+    "native_coordinator_tests": {
+      "total": 16,
+      "pass": 16
+    },
+    "native_status": {
+      "schema": 1,
+      "commit": "97ff8405f622d5a434c2fa865f96fffdc611d892",
+      "coordinator_tests": "success",
+      "restoration": "success",
+      "loader_build": "success",
+      "package_repair": "success",
+      "scope": "dependency_load_diagnostic",
+      "gpu_execution": "unrun"
+    },
+    "package_validation": {
+      "schema": 1,
+      "scope": "rt_prerequisites",
+      "collection": "complete",
+      "runtime_preparation": "pass",
+      "runtime_smoke": "unrun",
+      "game_binding": "unrun",
+      "game_rt": "unrun",
+      "source_threading": "unrun",
+      "performance": "unrun",
+      "b580_rt": "unrun",
+      "verify_only": true,
+      "errors": [],
+      "build_commit": "97ff8405f622d5a434c2fa865f96fffdc611d892",
+      "runtime_load": {
+        "dependency_load": "pass",
+        "api_export": "present",
+        "gpu_execution": "unrun"
+      },
+      "omitted_files": [],
+      "vulkan_loader": {
+        "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+        "commit": "fb78607414e154c7a5c01b23177ba719c8a44909",
+        "headers_commit": "409c16be502e39fe70dd6fe2d9ad4842ef2c9a53",
+        "scope": "app_local_standard_loader_not_gpu_driver",
+        "sha256": "53ef3c4a6ab1f5e65e9bf444f668a658b968fb97cf8761e3b6b68cba6d32fe8c",
+        "size": 687104
+      },
+      "native_build_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+      "primary_zip_sha256": "92608d661cfd73e321f600cd797199cef66f6e82c71e7b5af52bda6a84dfe279"
+    }
+  },
+  "user_setup": "Browser-download three dependency ZIPs using existing GitHub login and place beside run-test.cmd, without extracting them; then run once and return the single result ZIP."
+}
