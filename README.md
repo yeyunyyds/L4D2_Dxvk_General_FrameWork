@@ -9,7 +9,8 @@
 本版合并[可显示生成帧的相机插帧原型](docs/research/frame-generation-prototype.md)：全尺寸 GPU 历史、场景/武器/UI 阶段掩码、中间视角合成和真实 Present。武器/UI 保留当前帧，动态物体、透明边缘与帧节奏仍属原型限制。用户之前的 B580 GPU 重投影验证见[报告](docs/research/gpu-reprojection-user-results.md)。
 
 - [第一阶段研究结果](docs/research/phase1.md)：源码接入点、必要改动与验证证据。
-- [官方 FSR 组件接入](docs/research/fsr-component-backend.md)：官方光流与插帧已在软件 Vulkan 执行，游戏后端尚未切换。
+- [官方 FSR 组件接入](docs/research/fsr-component-backend.md)：官方光流与插帧组件的移植和验证依据。
+- [官方 FSR Host 接入](docs/research/fsr-host-integration.md)：实际 Present 接入、安装和一次综合测试。B580 游戏验收待完成。
 - [Windows / B580 验证步骤](docs/research/windows-validation.md)：GPU 探测与官方 FSR Vulkan 样例验收。
 - [帧输入契约草案](docs/research/frame-input-contract.md)：深度、相机、运动矢量、HUD 与资源生命周期。
 - [固定研究版本](research/sources.lock.json)及[本轮验证记录](research/validation-2026-10-12.json)。

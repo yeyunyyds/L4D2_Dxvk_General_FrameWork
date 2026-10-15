@@ -1,8 +1,11 @@
 #pragma once
+#include "camera_state.h"
 #include "dxvk_capture_shared.h"
 #include "frame_generate_spirv.h"
 #include "frame_quality_spirv.h"
+#include "fsr_backend_api.h"
 #include <algorithm>
+#include <memory>
 namespace dxvk_capture {
 // Own Vulkan histories only. The device/interop is borrowed from the live Host
 // device.
@@ -34,6 +37,18 @@ public:
 
 private:
   Capture c;
+  struct FsrLibrary {
+    HMODULE module{};
+    const LdbFsrApi *api{};
+    void *context{};
+    ~FsrLibrary() {
+      if (context && api)
+        api->destroy(context);
+      if (module)
+        FreeLibrary(module);
+    }
+  };
+  std::unique_ptr<FsrLibrary> fsr;
 
   struct OwnedImage {
     VkImage image{};
@@ -288,6 +303,7 @@ public:
       c.interop->ReleaseSubmissionQueue();
       c.pending = false;
     }
+    fsr.reset(); // Borrowed image views must die before their Host histories.
     if (timestamps)
       vkDestroyQueryPool(c.device, timestamps, nullptr);
     if (qualityPipeline)
@@ -410,8 +426,10 @@ public:
                     : VkImageAspectFlags(VK_IMAGE_ASPECT_COLOR_BIT);
       VkFormatProperties fp{};
       props(c.physical, i.format, &fp);
-      VkFormatFeatureFlags needed = out ? VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT
-                                        : VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+      VkFormatFeatureFlags needed =
+          out ? VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT |
+                    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT
+              : VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
       if ((fp.optimalTilingFeatures & needed) != needed)
         throw std::runtime_error("FG format feature missing");
       VkImageCreateInfo info{};
@@ -425,7 +443,8 @@ public:
       info.tiling = VK_IMAGE_TILING_OPTIMAL;
       info.usage =
           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-          (out ? VK_IMAGE_USAGE_STORAGE_BIT : VK_IMAGE_USAGE_SAMPLED_BIT);
+          (out ? VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+               : VK_IMAGE_USAGE_SAMPLED_BIT);
       info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
       vkcheck(c.vkCreateImage(c.device, &info, nullptr, &i.image),
               "FG history image");
@@ -688,6 +707,92 @@ public:
                            0, nullptr);
     if (!deferSubmit)
       end();
+  }
+  static bool wantsFsr() {
+    wchar_t value[16]{};
+    return GetEnvironmentVariableW(L"LDB_FG_BACKEND", value, 16) == 3 &&
+           std::wstring(value) == L"fsr";
+  }
+  int generateFsr(const ldb_camera::Matrix &current,
+                  const ldb_camera::Matrix &previous, uint64_t frame,
+                  double frameTimeMs, bool hasUi, bool preflight = true,
+                  bool previousNear = false) {
+    if (recording)
+      end();
+    if (preflight && readQuality().reject(uint64_t(width) * height))
+      return 2;
+    if (!fsr) {
+      auto loaded = std::make_unique<FsrLibrary>();
+      HMODULE dxvk{};
+      auto address = (*reinterpret_cast<void ***>(c.interop))[0];
+      if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                                  GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                              reinterpret_cast<LPCWSTR>(address), &dxvk))
+        throw std::runtime_error("FSR DXVK module unavailable");
+      using Features = uint32_t(__stdcall *)(IDirect3DDevice9 *);
+      auto features = reinterpret_cast<Features>(
+          GetProcAddress(dxvk, "LdbFsrDeviceFeatures"));
+      Com<IDirect3DDevice9> device;
+      hr(c.interop->QueryInterface(__uuidof(IDirect3DDevice9),
+                                   reinterpret_cast<void **>(device.put())),
+         "FSR real D3D9 device");
+      if (!features || features(device.get()) != 15u)
+        throw std::runtime_error(
+            "FSR requires packaged DXVK with enabled storage-image features");
+      std::wstring executable(32768, L'\0');
+      DWORD count = GetModuleFileNameW(nullptr, executable.data(),
+                                       DWORD(executable.size()));
+      if (!count || count >= executable.size())
+        throw std::runtime_error("FSR executable path");
+      executable.resize(count);
+      auto path = std::filesystem::path(executable).parent_path() /
+                  L"LDBFsrBackend64.dll";
+      loaded->module = LoadLibraryExW(path.c_str(), nullptr,
+                                      LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR |
+                                          LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+      if (!loaded->module)
+        throw std::runtime_error(
+            "FSR backend DLL missing or dependencies unavailable");
+      auto get = reinterpret_cast<LdbFsrGetApi>(
+          GetProcAddress(loaded->module, "LdbFsrGetInterface"));
+      loaded->api = get ? get(1) : nullptr;
+      if (!loaded->api || loaded->api->version != 1 ||
+          loaded->api->size != sizeof(LdbFsrApi))
+        throw std::runtime_error("FSR backend ABI mismatch");
+      char message[512]{};
+      if (loaded->api->create(c.device, c.physical, width, height,
+                              &loaded->context, message, sizeof(message)) < 0)
+        throw std::runtime_error(std::string("FSR create: ") + message);
+      fsr = std::move(loaded);
+    }
+    LdbFsrFrame f;
+    f.width = width;
+    f.height = height;
+    f.flags = (hasUi ? 1u : 0u) | (previousNear ? 4u : 0u);
+    f.frame = frame;
+    f.depthFormat = depthFormat;
+    f.finalFormat = finalFormat;
+    f.frameTimeMs = std::isfinite(frameTimeMs) && frameTimeMs > 0
+                        ? float(frameTimeMs)
+                        : 16.6667f;
+    ldb_camera::Matrix transform{};
+    if (!ldb_camera::transform(previous, current, transform))
+      throw std::runtime_error("FSR camera transform");
+    std::copy(transform.begin(), transform.end(), f.currentToPrevious);
+    std::copy(current.begin(), current.end(), f.viewProjection);
+    const Slot slots[]{CurrentDepth,  PreviousDepth,      CurrentFinal,
+                       PreviousFinal, CurrentUi,          Mask,
+                       Output,        PreviousNearBefore, PreviousNearAfter};
+    for (size_t n = 0; n < 9; ++n)
+      f.images[n] = images[slots[n]].image;
+    begin();
+    char message[512]{};
+    int result = fsr->api->dispatch(fsr->context, c.command, &f, message,
+                                    sizeof(message));
+    if (result < 0)
+      throw std::runtime_error(std::string("FSR dispatch: ") + message);
+    end();
+    return result;
   }
   Quality readQuality() {
     if (recording || c.pending)

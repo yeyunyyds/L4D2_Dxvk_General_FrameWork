@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "download_commit": "68532c7b2931d09a2ed4ba368f108050d6b8feff",
+  "archive_sha256": "01eba413df961301176b549abff1fb256634f9cd046bd76d4158a92229d30b9a",
+  "files": {
+    "bin/.l4d2bridge/LDBFsrBackend64.dll": "8b5953617c2ecbafee933de9f3ca7a11e3a384e97c055463a6836a061941f91d",
+    "bin/.l4d2bridge/d3d9vk_x64.dll": "48faff88a57553ef24f6db33eba933ff544eb894b29d7298d79dbac25f656920",
+    "licenses/FidelityFX-LICENSE.txt": "82cf74fc23885107c7f69249ac3f1dac55898ff68320eb2c753984cae6b2d78a",
+    "licenses/FSR-DXVK-LICENSE": "a5cb1a6ded7d2d7e92d550ba28edd21be2d1d4044662b399887351023e30ce64",
+    "licenses/MinGW-w64-copyright": "50e5bb66d222c7d4692c2d13670ddcd3664779358e389a026b69a0e0e18e7be5",
+    "licenses/MinGW-GCC-copyright": "f891d7e0c56f503a92c7258d540b3d8215852d8387cbca8f1f07c6f4b6e67da6",
+    "fsr-backend-build.json": "c45cffeabf2e74cba64e064a0e509af4585ecb8ffc4e5f674baae5072cea9cff"
+  },
+  "project_source_hashes": {
+    "tools/fsr_backend_api.h": "f5fa0d0a9200ca0485c8c62379eda9e6c0e97214a7f76b0c9e877c1273ab2c9c",
+    "tools/fsr_backend.cpp": "78e5f277335fca1705a9f847acfad07c4e49bd38eec253551051a3888bb7ca2b",
+    "tools/fsr_component_backend.h": "217ba492d97a38ba88a304cb6b9ed777feed51301e9fe4a9709e0383a9b291b1",
+    "tools/fsr_sdk_support.cpp": "5691ef782d69ee9433367874dd42fcf3d1ca3991ce975acc610c0f47605d3360",
+    "tools/fsr_sdk_portability.h": "5eb5500f70dd70c44e3eb930c2b2e4ce72215d41a7c4f26470e9f54f06bd31fc",
+    "integration/ldb/fsr_camera.h": "d2bbd642a562bae3df82a620f3f18bc8e7a44ab9451cbaa679dda71cfe79f11b",
+    "integration/ldb/camera_state.h": "e2345d8b036d05fcd43a7a22f2a17d0cae0d852181e453e91da897cf32fb9918",
+    "shaders/fsr_inputs.comp": "987fdc403059251a7d35ba66df1e550cec3a0c719ee7044383f3fd19a7d8bef9",
+    "shaders/fsr_compose.comp": "24457383dca55ad1750c27bc688200855ae5ea1ee2165a2308117b1488d8fc52",
+    "scripts/build_fsr_vulkan.py": "ad3506fb2d44b450232f846a24bc46050b6dca4ebe0cf33fe49c5d9ac6f39c3f",
+    "scripts/build_fsr_backend.py": "1219175dcf933bdcc5fb538745855ea4f3ae048c30e72d0bb8dde6f472341daa",
+    "scripts/build_fsr_dxvk.py": "dbed99c4443344ce347dc67c92ebb67bcd3d7788563f4d159a8d848af3a62a35",
+    "research/sources.lock.json": "b97e3645fb931ee9fd6af5b6ee439f57a7092cbee4abd80676d18b1893eccf3d"
+  }
+}

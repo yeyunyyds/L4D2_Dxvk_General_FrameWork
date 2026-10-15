@@ -6,6 +6,8 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($VcVarsVer -notmatch '^\d+\.\d+$') { throw 'Invalid MSVC toolset version' }
 $repo = Split-Path $PSScriptRoot -Parent
+& python (Join-Path $PSScriptRoot 'fetch_fsr_assets.py')
+if ($LASTEXITCODE -ne 0) { throw 'FSR asset verification failed' }
 $sourcePath = (Resolve-Path (Join-Path $repo $Source)).Path
 $receipt = Join-Path $sourcePath 'capture-source.json'
 if (-not (Test-Path $receipt)) { throw 'Run prepare_ldb_capture.py first' }

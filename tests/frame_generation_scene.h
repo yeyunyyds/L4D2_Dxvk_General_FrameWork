@@ -47,14 +47,25 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
     float x, y, z, w;
   };
   bool occlusionCase = ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"occlusion";
-  bool perspectiveScene = occlusionCase;
+  bool perspectiveScene = occlusionCase || dxvk_capture::ResidentFg::wantsFsr();
   auto quad = [&](float x0, float y0, float x1, float y1, float z,
                   std::array<float, 4> color) {
     if (perspectiveScene) {
-      x0 = z * x0 + .5f * width * (1 - z);
-      x1 = z * x1 + .5f * width * (1 - z);
-      y0 = z * y0 + .5f * height * (1 - z);
-      y1 = z * y1 + .5f * height * (1 - z);
+      if (dxvk_capture::ResidentFg::wantsFsr()) {
+        if (!occlusionCase)
+          z = 1;
+        float fy = 1.f / std::tan(.5f), fx = fy / (float(width) / height);
+        x0 = (2 * x0 / width - 1) * z * 100 / fx;
+        x1 = (2 * x1 / width - 1) * z * 100 / fx;
+        y0 = (1 - 2 * y0 / height) * z * 100 / fy;
+        y1 = (1 - 2 * y1 / height) * z * 100 / fy;
+        z *= 100;
+      } else {
+        x0 = z * x0 + .5f * width * (1 - z);
+        x1 = z * x1 + .5f * width * (1 - z);
+        y0 = z * y0 + .5f * height * (1 - z);
+        y1 = z * y1 + .5f * height * (1 - z);
+      }
     }
     Vertex vertices[] = {
         {x0, y0, z, 1}, {x1, y0, z, 1}, {x0, y1, z, 1}, {x1, y1, z, 1}};
@@ -73,6 +84,15 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
       m[11] = -.1f;
       m[14] = 1;
       m[15] = 0;
+      if (dxvk_capture::ResidentFg::wantsFsr()) {
+        m = {};
+        m[5] = 1.f / std::tan(.5f);
+        m[0] = m[5] / (float(width) / height);
+        m[3] = shift * 100;
+        m[10] = 10000.f / 9990.f;
+        m[11] = -100000.f / 9990.f;
+        m[14] = 1;
+      }
     }
     hr(device->SetVertexShaderConstantF(4, m.data(), 4),
        "FG fixture projection");
@@ -135,6 +155,10 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
     hr(device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE),
        "Thin effect restore blend");
   }
+  if (dxvk_capture::ResidentFg::wantsFsr() && qualityCase &&
+      (frame == 2 || frame == 3))
+    hr(device->Clear(0, nullptr, D3DCLEAR_ZBUFFER, 0, 0, 0),
+       "FG fixture deliberately unusable world depth");
   perspectiveScene = false;
   D3DVIEWPORT9 nearView{0, 0, width, height, 0, .1f};
   ldb_fg::viewport(device, &nearView, frame);
@@ -160,6 +184,10 @@ void fgFixtureScene(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
       hr(device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE),
          "FG fixture zero depth test");
   }
+  if (dxvk_capture::ResidentFg::wantsFsr() && qualityCase &&
+      (frame == 2 || frame == 3))
+    hr(device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE),
+       "FG fixture draw near over deliberately invalid world depth");
   projection(0);
   bool contaminated =
       ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE") == L"mask_contamination" &&
@@ -294,23 +322,78 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
     float objectX = .38f * width +
                     .01f * width * (float(frame) - (generated ? .5f : 0.f)) +
                     (generated ? 3.f : (frame % 2 ? 6.f : 0.f));
-    for (uint32_t ty = 2; ty < 8; ty++)
-      for (uint32_t tx = 2; tx < 10; tx++) {
-        uint32_t hash = (tx + ty * 17u) * 747796405u + 2891336453u;
-        hash = ((hash >> ((hash >> 28u) + 4u)) ^ hash) * 277803737u;
-        hash = (hash >> 22u) ^ hash;
-        auto pixel = rgb(uint32_t(objectX + tx * 4 + 2),
-                         uint32_t(.72f * height +
-                                  (generated ? 2.f : (frame % 2 ? 4.f : 0.f)) +
-                                  ty * 4 + 2));
-        if (std::abs(pixel[0] - int(40 + (hash & 127u))) > 2 ||
-            std::abs(pixel[1] - int(40 + ((hash >> 8) & 127u))) > 2 ||
-            std::abs(pixel[2] - int(40 + ((hash >> 16) & 127u))) > 2) {
-          read->UnlockRect();
-          throw std::runtime_error(
-              "Textured moving object is not at the midpoint");
-        }
+    if (dxvk_capture::ResidentFg::wantsFsr()) {
+      // SDK filtering can change RGB by a few levels. Verify actual spatial
+      // phase with independent correlation, and reject displaced peaks. Keep
+      // the original exact-colour oracle for the custom reconstruction below.
+      float midpointX =
+          .38f * width + .01f * width * (float(frame) - .5f) + 3.f;
+      float midpointY = .72f * height + 2.f;
+      auto correlation = [&](int sx, int sy) {
+        double sumA = 0, sumB = 0, sumAA = 0, sumBB = 0, sumAB = 0;
+        int n = 0;
+        for (uint32_t ty = 2; ty < 8; ++ty)
+          for (uint32_t tx = 2; tx < 10; ++tx) {
+            uint32_t hash = (tx + ty * 17u) * 747796405u + 2891336453u;
+            hash = ((hash >> ((hash >> 28u) + 4u)) ^ hash) * 277803737u;
+            hash = (hash >> 22u) ^ hash;
+            auto actual = rgb(uint32_t(int(midpointX + tx * 4 + 2) + sx),
+                              uint32_t(int(midpointY + ty * 4 + 2) + sy));
+            for (int k = 0; k < 3; ++k) {
+              double a = 40 + ((hash >> (k * 8)) & 127u), b = actual[k];
+              sumA += a;
+              sumB += b;
+              sumAA += a * a;
+              sumBB += b * b;
+              sumAB += a * b;
+              ++n;
+            }
+          }
+        double a = sumAA - sumA * sumA / n, b = sumBB - sumB * sumB / n;
+        return a > 0 && b > 0 ? (sumAB - sumA * sumB / n) / std::sqrt(a * b)
+                              : -1.0;
+      };
+      double center = correlation(0, 0), displaced = -1;
+      for (int sy = -6; sy <= 6; ++sy)
+        for (int sx = -8; sx <= 8; ++sx)
+          if (std::abs(sx) >= 3 || std::abs(sy) >= 3)
+            displaced = std::max(displaced, correlation(sx, sy));
+      bool midpoint = center > .985 && displaced < center - .02;
+      if ((generated && !midpoint) || (!generated && frame > 0 && midpoint)) {
+        read->UnlockRect();
+        throw std::runtime_error(
+            "FSR texture phase/correlation control failed: center=" +
+            std::to_string(center) + " displaced=" + std::to_string(displaced));
       }
+      if (frame > 0)
+        std::cout << "{\"event\":\"fsr_motion_phase\",\"frame\":" << frame
+                  << ",\"generated\":" << (generated ? "true" : "false")
+                  << ",\"center_ncc\":" << center
+                  << ",\"displaced_ncc\":" << displaced
+                  << ",\"source_control\":" << (!generated ? "true" : "false")
+                  << "}\n";
+    } else
+      for (uint32_t ty = 2; ty < 8; ty++)
+        for (uint32_t tx = 2; tx < 10; tx++) {
+          uint32_t hash = (tx + ty * 17u) * 747796405u + 2891336453u;
+          hash = ((hash >> ((hash >> 28u) + 4u)) ^ hash) * 277803737u;
+          hash = (hash >> 22u) ^ hash;
+          auto pixel =
+              rgb(uint32_t(objectX + tx * 4 + 2),
+                  uint32_t(.72f * height +
+                           (generated ? 2.f : (frame % 2 ? 4.f : 0.f)) +
+                           ty * 4 + 2));
+          if (std::abs(pixel[0] - int(40 + (hash & 127u))) > 2 ||
+              std::abs(pixel[1] - int(40 + ((hash >> 8) & 127u))) > 2 ||
+              std::abs(pixel[2] - int(40 + ((hash >> 16) & 127u))) > 2) {
+            read->UnlockRect();
+            throw std::runtime_error(
+                "Textured moving object is not at the midpoint: frame=" +
+                std::to_string(frame) + " tile=" + std::to_string(tx) + "," +
+                std::to_string(ty) + " rgb=" + std::to_string(pixel[0]) + "," +
+                std::to_string(pixel[1]) + "," + std::to_string(pixel[2]));
+          }
+        }
   }
   read->UnlockRect();
   if (qualityCase && frame == 3 && redPixels > uint32_t(width * .15f) + 3)
@@ -335,7 +418,11 @@ void fgFixtureCheck(IDirect3DDevice9 *device, uint32_t frame, uint32_t width,
        revealedBackground[1] > 90 || revealedBackground[2] > 45 ||
        std::abs(float(redPixels) - .15f * width) > 3))
     throw std::runtime_error(
-        "Parallax occlusion edge mixed the source camera poses");
+        "Parallax occlusion edge mixed the source camera poses: rgb=" +
+        std::to_string(revealedBackground[0]) + "," +
+        std::to_string(revealedBackground[1]) + "," +
+        std::to_string(revealedBackground[2]) +
+        " width=" + std::to_string(redPixels));
   if (contaminated && (std::abs(originalBackground[0] - 31) > 2 ||
                        std::abs(originalBackground[1] - 54) > 2 ||
                        std::abs(originalBackground[2] - 87) > 2))

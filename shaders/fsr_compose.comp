@@ -1,0 +1,25 @@
+#version 450
+layout(local_size_x=8,local_size_y=8) in;
+layout(binding=0) uniform sampler2D generated;
+layout(binding=1) uniform sampler2D original;
+layout(binding=2) uniform sampler2D mask;
+layout(binding=3) uniform sampler2D previousNearBefore;
+layout(binding=4) uniform sampler2D previousNearAfter;
+layout(binding=6,rgba8) uniform image2D outputColour;
+layout(binding=10,std140) uniform Params { vec4 rows[4];uvec4 flags; } p;
+void main(){
+ ivec2 q=ivec2(gl_GlobalInvocationID.xy);if(any(greaterThanEqual(q,ivec2(p.flags.xy))))return;
+ vec3 m=texelFetch(mask,q,0).rgb;vec4 c=texelFetch(generated,q,0);
+ // Retain the depth-verified previous-surface fill where current geometry
+ // occludes its projection. The preflight candidate already occupies output.
+ if(m.r>.9&&m.g>.1&&m.g<.75&&m.b<.1){c=imageLoad(outputColour,q);if((p.flags.z&2u)!=0u)c=c.bgra;}
+ bool previousNear=(p.flags.z&4u)!=0u&&any(greaterThan(abs(texelFetch(previousNearBefore,q,0).rgb-texelFetch(previousNearAfter,q,0).rgb),vec3(.00001)));
+ vec4 current=texelFetch(original,q,0);float contrast=0;
+ for(int y=-2;y<=2;y+=2)for(int x=-2;x<=2;x+=2)
+  contrast+=dot(abs(texelFetch(original,clamp(q+ivec2(x,y),ivec2(0),ivec2(p.flags.xy)-1),0).rgb-current.rgb),vec3(1.0/27.0));
+ bool uncertain=(m.r>.9&&m.g<.1)||(m.r<.1&&m.g>.9&&m.b>.9);
+ bool flatChange=uncertain&&contrast<.02&&any(greaterThan(abs(c.rgb-current.rgb),vec3(.12)));
+ if((m.r>.9&&m.g>.9&&m.b<.1)||flatChange||previousNear)c=current;
+ c.a=1;if((p.flags.z&2u)!=0u)c=c.bgra;
+ imageStore(outputColour,q,c);
+}

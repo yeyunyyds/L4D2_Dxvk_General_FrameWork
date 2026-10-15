@@ -4,12 +4,12 @@
 #include <FidelityFX/host/ffx_message.h>
 #include <cstdio>
 #include <cstdlib>
+#include <stdexcept>
 
 FfxErrorCode
 ffxSetFrameGenerationConfigToSwapchainVK(const FfxFrameGenerationConfig *) {
   return FFX_ERROR_INVALID_ARGUMENT;
 }
-#ifndef _WIN32
 void ffxSetPrintMessageCallback(ffxMessageCallback, uint32_t) {}
 void ffxPrintMessage(uint32_t type, const wchar_t *message) {
   std::fprintf(stderr, "SDK message %u: %ls\n", type, message);
@@ -23,6 +23,7 @@ bool ffxAssertReport(const char *file, int32_t line, const char *condition,
                message     ? message
                : condition ? condition
                            : "unknown");
-  std::abort();
+  throw std::runtime_error(message     ? message
+                           : condition ? condition
+                                       : "SDK assertion");
 }
-#endif

@@ -23,6 +23,7 @@ def analyze(path):
     summaries, errors, changes, captures, rejected = [], [], [], [], []
     previous = None
     frequency = None
+    backend = 'custom'
     complete = False
     successful = 0
     extra_calls = 0
@@ -33,6 +34,7 @@ def analyze(path):
             counts[kind] += 1
             if kind == 'session':
                 frequency = event['qpc_frequency']
+                backend = event.get('backend','custom')
             elif kind == 'summary':
                 summaries.append(event)
                 complete = True
@@ -69,6 +71,7 @@ def analyze(path):
                 previous = (group, event)
     logical = summaries[-1]['logical_presents'] if summaries else None
     return dict(log=path.name, log_complete=complete, event_counts=dict(counts),
+                backend=backend, gpu_dispatch_scope='preflight_only' if backend.startswith('fsr') else 'generation',
                 generated_by_mode=dict(by_mode), successful_generated_presents=successful,
                 backend_calls=logical+extra_calls if logical is not None else None,
                 summaries=summaries, errors=errors, mode_changes=changes, captures=captures,
@@ -78,6 +81,7 @@ def analyze(path):
                 interpretation=['Capture frames and adjacent arrival intervals are excluded from metrics.',
                                 'Rejected candidates restore the original before Present; candidate PPMs do not prove presentation.',
                                 'GPU dispatch uses device timestamps; -1 means unavailable.',
+                                'For official FSR, GPU dispatch timestamps and motion counts describe the conservative preflight, not the SDK kernels.',
                                 'Fence waits cover FG submissions including stage copies; Host work covers the Present wrapper only.',
                                 'Source arrival intervals and backend calls do not measure monitor delivery, FPS gain or added input latency.',
                                 'On/off samples can contain different scenes and are not a controlled benchmark.',

@@ -6,6 +6,7 @@ from pathlib import Path
 import struct
 import zipfile
 from prepare_research import ROOT
+from fetch_fsr_assets import obtain_assets
 
 
 def package(source, build_id, output):
@@ -22,6 +23,8 @@ def package(source, build_id, output):
     if build_id != expected_id:
         raise ValueError('Mismatched development identity')
     entries = {}
+    asset_lock,assets=obtain_assets()
+    entries.update({name:data for name,data in assets.items() if name.startswith('bin/')})
     examples = {}
     targets = [('x86', 'client/d3d9.dll', 'bin/dxvk_d3d9.dll', 0x14c),
                ('x64', 'server/L4D2Bridge64.exe', 'bin/.l4d2bridge/L4D2Bridge64.exe', 0x8664),
@@ -42,14 +45,19 @@ def package(source, build_id, output):
             raise ValueError('x86 Host is not LARGEADDRESSAWARE')
         entries[destination] = data
         examples[role] = actual[0]
-    receipt.update(native_host_build='compiled_MSVC_Release', build_id=build_id, compile_examples=examples,
+    receipt.update(fsr_assets_archive_sha256=asset_lock['archive_sha256'],
+                   fsr_assets_build='cross_compiled_MinGW_x64; Host trio is native MSVC',
+                   native_host_build='compiled_MSVC_Release', build_id=build_id, compile_examples=examples,
                    l4d2_game_capture='unrun', b580_integrated_capture='unrun', gpu_fg_execution='unrun_in_game', frame_generation_prototype='compiled_with_real_present_path',
                    binaries_sha256={name: hashlib.sha256(data).hexdigest() for name,data in entries.items()})
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for name, data in entries.items(): archive.writestr(name, data)
         archive.writestr('capture-build.json', json.dumps(receipt, indent=2)+'\n')
-        archive.write(ROOT/'docs/research/frame-generation-prototype.md', 'README.md')
+        archive.write(ROOT/'docs/research/fsr-host-integration.md', 'README.md')
+        archive.write(ROOT/'docs/research/frame-generation-prototype.md', 'docs/previous-prototype.md')
+        for name,data in assets.items():
+            if not name.startswith('bin/'):archive.writestr(name,data)
         archive.write(ROOT/'docs/research/gpu-reprojection.md','docs/gpu-reprojection.md')
         archive.write(ROOT/'docs/research/capture-series.md','docs/capture-series.md')
         archive.write(ROOT/'docs/research/ldb-host-capture.md', 'docs/host-capture.md')

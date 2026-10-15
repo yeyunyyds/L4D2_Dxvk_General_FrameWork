@@ -18,7 +18,7 @@ s=s[:a]+r'''    if(ldb_fg::readEnv(L"LDB_FG_FIXTURE_CAPTURE_CLOCK")==L"1" && (fr
     bool special=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"partial" || ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"failure";
     bool quality=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"quality" || ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"mask_contamination";
     bool failure=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")==L"failure";
-    bool generatedExpected=ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")!=L"thin_effect" && ldb_fg::config().enabled && frame!=0 && int(frame)!=args.resetFrame && !((special||quality)&&(frame==2||frame==3));
+    bool generatedExpected=ldb_fg::readEnv(L"LDB_FG_FIXTURE_EXPECT_NO_FSR")!=L"1" && ldb_fg::readEnv(L"LDB_FG_FIXTURE_CASE")!=L"thin_effect" && ldb_fg::config().enabled && frame!=0 && int(frame)!=args.resetFrame && !((special||quality)&&(frame==2||frame==3)) && !(dxvk_capture::ResidentFg::wantsFsr() && quality && frame==4);
     Com<IDirect3DSwapChain9> chain;
     if(frame%2)hr(device->GetSwapChain(0,chain.put()),"FG fixture swapchain");
     HRESULT result=ldb_fg::present(device.get(),frame,[&](){
@@ -35,4 +35,9 @@ s=s.replace('  capture.reset();\n  std::cout << "{\\"event\\":\\"completed\\",',
 p=out/'frame_generation_fixture.cpp';p.write_text(s)
 compiler=ROOT/'.research/windows-tools/root/usr/bin/x86_64-w64-mingw32-g++-posix';env=os.environ.copy();env['PATH']=str(compiler.parent)+os.pathsep+env.get('PATH','');exe=out/'frame_generation_fixture.exe'
 cmd=[str(compiler),'-std=c++17','-O2','-Wall','-Wextra','-Werror','-Wno-cast-function-type','-static','-municode',*[f'-I{p}' for p in [ROOT/'tools',ROOT/'integration/ldb',ROOT/'tests',ROOT/'.research/bin',ROOT/'.research/sources/vulkan_headers/include']],str(p),'-luser32','-luuid','-o',str(exe)]
-subprocess.run(cmd,check=True,env=env);(out/'build.json').write_text(json.dumps({'exe_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'command':cmd,'actual_game':'unrun'},indent=2)+'\n');print(exe)
+subprocess.run(cmd,check=True,env=env)
+fsr=ROOT/'.research/fsr-backend/windows/LDBFsrBackend64.dll'
+if fsr.exists():
+ import shutil
+ shutil.copyfile(fsr,out/fsr.name)
+(out/'build.json').write_text(json.dumps({'exe_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'command':cmd,'actual_game':'unrun'},indent=2)+'\n');print(exe)

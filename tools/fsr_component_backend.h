@@ -198,7 +198,7 @@ public:
         reset || !history || lastFrame == UINT64_MAX || frame != lastFrame + 1;
     FfxOpticalflowDispatchDescription of{};
     of.commandList = ffxGetCommandListVK(cmd);
-    of.color = color;
+    of.color = hudless.resource ? hudless : color;
     of.opticalFlowVector = flow;
     of.opticalFlowSCD = scd;
     of.reset = reset;

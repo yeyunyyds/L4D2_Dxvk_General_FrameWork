@@ -1,0 +1,55 @@
+#version 450
+layout(local_size_x=8,local_size_y=8) in;
+layout(binding=0) uniform sampler2D depth;
+layout(binding=1) uniform sampler2D previousDepth;
+layout(binding=2) uniform sampler2D colour;
+layout(binding=3) uniform sampler2D previousColour;
+layout(binding=4) uniform sampler2D beforeUi;
+layout(binding=5) uniform sampler2D mask;
+layout(binding=6,rgba8) writeonly uniform image2D inputColour;
+layout(binding=7,rgba8) writeonly uniform image2D inputHudless;
+layout(binding=8,r32f) writeonly uniform image2D inputDepth;
+layout(binding=9,rg32f) writeonly uniform image2D inputMotion;
+layout(binding=10,std140) uniform Params { vec4 rows[4]; uvec4 flags; } p;
+vec3 rgb(sampler2D s,ivec2 x){return texelFetch(s,clamp(x,ivec2(0),ivec2(p.flags.xy)-1),0).rgb;}
+bool valid(ivec2 q,int border){return all(greaterThanEqual(q,ivec2(border)))&&all(lessThan(q,ivec2(p.flags.xy)-border));}
+float score(ivec2 a,ivec2 b,float expected){
+ if(!valid(b,2)||abs(texelFetch(previousDepth,b,0).r-expected)>.002)return 1;
+ float sum=0;
+ for(int y=-2;y<=2;y+=2)for(int x=-2;x<=2;x+=2)
+  sum+=dot(abs(rgb(colour,a+ivec2(x,y))-rgb(previousColour,b+ivec2(x,y))),vec3(1.0/27.0));
+ return sum;
+}
+void main(){
+ ivec2 q=ivec2(gl_GlobalInvocationID.xy);if(!valid(q,0))return;
+ float z=texelFetch(depth,q,0).r;vec2 motion=vec2(0);
+ vec2 ndc=vec2(2*(vec2(q).x+.5)/p.flags.x-1,1-2*(vec2(q).y+.5)/p.flags.y);
+ vec4 clip=vec4(ndc,z,1),v=vec4(dot(p.rows[0],clip),dot(p.rows[1],clip),dot(p.rows[2],clip),dot(p.rows[3],clip));
+ vec3 m=texelFetch(mask,q,0).rgb;bool foreground=m.r>.9&&m.g>.9&&m.b<.1;
+ if(!foreground&&v.w>1e-8&&!any(isnan(v))&&!any(isinf(v))){
+  v.xyz/=v.w;vec2 predicted=vec2((v.x+1)*p.flags.x*.5,(1-v.y)*p.flags.y*.5)-.5;
+  motion=predicted-vec2(q);
+  // Bounded, confidence-gated image matching supplements camera-only vectors.
+  // This is not engine bone/vertex motion; official optical flow handles residuals.
+  if(z>.2&&z<.999999&&valid(q,2)){
+   vec3 centre=rgb(colour,q);float contrast=0;
+   for(int y=-2;y<=2;y+=2)for(int x=-2;x<=2;x+=2)contrast+=dot(abs(rgb(colour,q+ivec2(x,y))-centre),vec3(1.0/27.0));
+   ivec2 base=ivec2(floor(predicted+.5)),bestPoint=base;float best=1,second=1;
+   if(contrast>.02&&score(q,base,v.z)>.01){
+    for(int y=-8;y<=8;y+=2)for(int x=-8;x<=8;x+=2){
+     ivec2 b=base+ivec2(x,y);float s=score(q,b,v.z);
+     if(s<best){if(distance(vec2(b),vec2(bestPoint))>3)second=min(second,best);best=s;bestPoint=b;}
+     else if(distance(vec2(b),vec2(bestPoint))>3)second=min(second,s);
+    }
+    ivec2 coarse=bestPoint;
+    for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){ivec2 b=coarse+ivec2(x,y);float s=score(q,b,v.z);if(s<best){best=s;bestPoint=b;}}
+    if(best<.025&&second-best>.003&&all(lessThanEqual(abs(vec2(bestPoint)-predicted),vec2(8))))motion=vec2(bestPoint-q)+(predicted-vec2(base));
+   }
+  }
+ }
+ if(any(isnan(motion))||any(isinf(motion))||any(greaterThan(abs(motion),vec2(p.flags.xy))))motion=vec2(0);
+ imageStore(inputColour,q,vec4(rgb(colour,q),1));
+ imageStore(inputHudless,q,vec4((p.flags.z&1u)!=0u?rgb(beforeUi,q):rgb(colour,q),1));
+ imageStore(inputDepth,q,vec4(foreground||isnan(z)||isinf(z)?1:clamp(z,0,1)));
+ imageStore(inputMotion,q,vec4(motion,0,0));
+}

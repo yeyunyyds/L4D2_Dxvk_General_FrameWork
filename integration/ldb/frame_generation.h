@@ -143,7 +143,11 @@ struct State {
          "\"qpc_frequency\":" + std::to_string(frequency.QuadPart) +
              ",\"full_size_gpu_history\":true,\"pixel_cpu_upload\":false,"
              "\"prototype\":true,\"mode\":" +
-             quote(generatedOnly ? "generated" : "paired") +
+             quote(generatedOnly ? "generated" : "paired") + ",\"backend\":" +
+             quote(ResidentFg::wantsFsr() ? "fsr_official" : "custom") +
+             ",\"motion_source\":" +
+             quote(ResidentFg::wantsFsr() ? "camera_plus_bounded_patch"
+                                          : "prototype_patch_matching") +
              ",\"auto_capture\":" +
              std::string(config().autoCapture ? "true" : "false") +
              ",\"pacing_budget_ms\":" + std::to_string(config().pacingMs));
@@ -553,7 +557,7 @@ struct State {
     ResidentFg::Quality quality{};
     double captureMs = 0, generatedPresentMs = 0, logicalPresentMs = 0;
     int64_t generatedStart = 0;
-    bool wrote = false, ready = false;
+    bool wrote = false, ready = false, fsrWarmup = false;
     HRESULT extra = S_OK;
     Com<IDirect3DSurface9> back;
 
@@ -569,6 +573,11 @@ struct State {
            "FG final backbuffer");
         transfer(back.get(), ResidentFg::CurrentFinal);
         ready = true;
+        if (ResidentFg::wantsFsr() && !history) {
+          gpu->generateFsr(currentMatrix, currentMatrix, frame,
+                           sourceIntervalMs, uiCopied, false);
+          emit("fsr_history_primed", uid, "\"backend\":\"fsr_official\"");
+        }
 
         if (history && previousColor == sceneColor &&
             previousDepth == sceneDepth) {
@@ -586,6 +595,15 @@ struct State {
                     ? (captures < 32 && burstRemaining && now() >= nextCapture)
                     : captures < captureLimit;
             gpu->generate(params, !captureDue);
+            if (ResidentFg::wantsFsr()) {
+              int status = gpu->generateFsr(currentMatrix, previousMatrix,
+                                            frame, sourceIntervalMs, uiCopied,
+                                            true, (previousFlags & 8u) != 0);
+              fsrWarmup = status == 1;
+              emit(status == 2 ? "fsr_skipped" : "fsr_dispatch", uid,
+                   "\"status\":" + std::to_string(status) +
+                       ",\"backend\":\"fsr_official\"");
+            }
 
             if (captureDue) {
               auto captureStart = now();
@@ -618,7 +636,7 @@ struct State {
 
             quality = gpu->readQuality();
             qualityRejected =
-                quality.reject(uint64_t(gpu->width) * gpu->height);
+                fsrWarmup || quality.reject(uint64_t(gpu->width) * gpu->height);
             if (qualityRejected) {
               transfer(back.get(), ResidentFg::CurrentFinal, true);
               wrote = false;
@@ -626,8 +644,10 @@ struct State {
               emit(
                   "frame_rejected", uid,
                   "\"reason\":" +
-                      quote(quality.rejectReason(uint64_t(gpu->width) *
-                                                 gpu->height)) +
+                      quote(fsrWarmup
+                                ? "fsr_history_warmup"
+                                : quality.rejectReason(uint64_t(gpu->width) *
+                                                       gpu->height)) +
                       ",\"invalid_scene_"
                       "ratio\":" +
                       std::to_string(quality.invalidSceneRatio()) +
@@ -766,6 +786,11 @@ struct State {
     emit(
         "frame_metrics", uid,
         "\"enabled\":" + std::string(!paused && !disabled ? "true" : "false") +
+            ",\"backend\":" +
+            quote(ResidentFg::wantsFsr() ? "fsr_official_with_guards"
+                                         : "custom") +
+            ",\"gpu_dispatch_scope\":" +
+            quote(ResidentFg::wantsFsr() ? "preflight_only" : "generation") +
             ",\"mode\":" + quote(generatedOnly ? "generated" : "paired") +
             ",\"generated\":" + std::string(generatedFrame ? "true" : "false") +
             ",\"captured\":" + std::string(captured ? "true" : "false") +

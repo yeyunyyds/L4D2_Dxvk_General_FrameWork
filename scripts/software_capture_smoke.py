@@ -9,6 +9,7 @@ import select
 import shutil
 import subprocess
 import uuid
+import tempfile
 
 from analyze_host_capture import analyze, read_events
 from prepare_research import ROOT
@@ -19,12 +20,16 @@ def smoke(args):
     wine = runtime / "root/usr/lib/wine/wine64"
     server = runtime / "root/usr/lib/wine/wineserver64"
     exe = args.exe.resolve() if getattr(args, "exe", None) else ROOT / ".research/bin/dxvk_host_capture.exe"
-    backend = runtime / "d3d9.dll"
+    backend = ROOT/'.research/fsr-dxvk/build/src/d3d9/d3d9.dll' if getattr(args,'fg_backend','custom')=='fsr' else runtime / "d3d9.dll"
+    profile_negative=args.negative_case=='fsr-profile'
+    if profile_negative:
+        if getattr(args,'fg_backend',None)!='fsr' or not getattr(args,'fg_mode',None):raise RuntimeError('FSR profile control requires --fg-backend fsr and --fg-mode')
+        backend=runtime/'d3d9.dll'
     if not all(path.is_file() for path in (wine, exe, backend, runtime / "lvp.json")):
         raise RuntimeError("Run setup_software_runtime.sh and build_host_capture.py first")
     directory = runtime / "captures" / uuid.uuid4().hex
     directory.mkdir(parents=True)
-    prefix = directory / "prefix"
+    prefix = Path(tempfile.mkdtemp(prefix="ldb-capture-wine-",dir="/tmp"))
     system32 = prefix / "drive_c/windows/system32"
     system32.mkdir(parents=True)
     shutil.copyfile(runtime / "root/usr/x86_64-w64-mingw32/lib/zlib1.dll", system32 / "zlib1.dll")
@@ -43,6 +48,8 @@ def smoke(args):
     )
     environment["LD_LIBRARY_PATH"] = str(runtime / "root/usr/lib/x86_64-linux-gnu/wine/x86_64-unix") + ":" + str(runtime / "root/usr/lib/x86_64-linux-gnu")
     environment["LDB_GPU_REPROJECT"] = "1" if getattr(args,"gpu_reproject",False) else "0"
+    environment['LDB_FG_BACKEND']=getattr(args,'fg_backend','custom')
+    environment['LDB_FG_FIXTURE_EXPECT_NO_FSR']='1' if profile_negative else '0'
     if getattr(args,"fg_mode",None):
         environment.update(LDB_FG_ENABLE="0" if args.fg_mode=="off" else "1",LDB_FG_MODE="generated" if args.fg_mode=="generated" else "paired",LDB_FG_LOG_DIR="Z:"+str(directory/"fg").replace("/","\\"),LDB_FG_CAPTURE_FRAMES="8",LDB_FG_HOTKEYS="0",LDB_FG_FIXTURE_CASE=getattr(args,"fg_case","normal"))
     if getattr(args,"fg_near_case",None):environment["LDB_FG_FIXTURE_NEAR_CASE"]=args.fg_near_case
@@ -99,7 +106,18 @@ def smoke(args):
             environment["DISPLAY"] = ":" + number
             with (directory / "capture.jsonl").open("w") as stdout, (directory / "stderr.log").open("w") as stderr:
                 process = subprocess.run(command, cwd=directory, env=environment, stdout=stdout, stderr=stderr, timeout=90)
-            if args.negative_case:
+            if profile_negative:
+                events=read_events(directory/'capture.jsonl')
+                presents=[e for e in events if e['event']=='fixture_present']
+                folders=list((directory/'fg').iterdir())
+                fgevents=read_events(folders[0]/'fg-events.jsonl') if len(folders)==1 else []
+                errors=[e for e in fgevents if e['event']=='fg_error']
+                if process.returncode!=0 or not events or events[-1]['event']!='completed' or len(presents)!=args.frames or any(e['generated_verified'] for e in presents):raise ValueError('Missing FSR profile did not preserve all original Presents')
+                if not errors or any('requires packaged DXVK' not in e['message'] for e in errors) or any(e['event']=='fsr_dispatch' for e in fgevents):raise ValueError('Missing profile did not block SDK dispatch')
+                result={'status':'expected_failure','run_id':directory.name,'exit_code':0,
+                        'validation_level':'fsr_missing_profile_original_fallback','original_presents_verified':len(presents),
+                        'backend_errors':errors,'gpu_fg_execution':'blocked_before_sdk_dispatch','game_capture':'unrun'}
+            elif args.negative_case:
                 events = read_events(directory / "capture.jsonl")
                 if process.returncode != 2 or len(events) != 1 or events[0].get("event") != "error" or "AMD64 DLL" not in events[0].get("message", ""):
                     raise ValueError("Wrong-architecture backend was not rejected correctly")
@@ -114,6 +132,7 @@ def smoke(args):
                     if len(selection)!=1 or selection[0]['mixed']!=(args.fg_near_case!='normal'):raise ValueError('Requested near fixture case not executed')
                     presents=[e for e in events if e['event']=='fixture_present']
                     expected_generated=0 if args.fg_mode=='off' or args.fg_case=='thin_effect' else args.frames-2-(2 if getattr(args,'fg_case','normal') in ('partial','failure','quality','mask_contamination') else 0)
+                    if getattr(args,'fg_backend','custom')=='fsr' and args.fg_mode!='off' and args.fg_case in ('quality','mask_contamination'):expected_generated-=1
                     expected=args.frames if args.fg_mode in ('off','generated') else args.frames+expected_generated
                     if len(presents)!=expected:raise ValueError('Wrong real Present call count')
                     generated=sum(e['generated_verified'] for e in presents)
@@ -136,8 +155,14 @@ def smoke(args):
                         normal=[e for e in metrics if (e['generated'] or e['quality_rejected']) and not e['captured']]
                         # scene, two near colour copies, depth, UI, final, combined compute/write, restore.
                         expected_submissions=10 if getattr(args,'fg_near_case',None)!='normal' else 8
+                        if getattr(args,'fg_backend','custom')=='fsr':expected_submissions+=1 if args.fg_case=='thin_effect' else 2
                         if not normal or any(e['gpu_submissions']!=expected_submissions for e in normal):raise ValueError('Combined dispatch/write submission not verified')
                         result['gpu_timestamps']='verified';result['combined_submission_count']=expected_submissions
+                        if getattr(args,'fg_backend','custom')=='fsr':
+                            accepted=[e for e in fgevents if e['event']=='fsr_dispatch' and e.get('status')==0]
+                            if len(accepted)!=expected_generated:raise ValueError('Official FSR dispatch count does not match generated frames')
+                            result['backend']='fsr_official';result['official_fsr_dispatches']=len(accepted)
+                            result['gpu_timestamp_scope']='legacy_preflight_only; CPU fence time includes SDK work'
                         if any(not e.get('near_colour_mask_valid') for e in metrics if e['generated']):raise ValueError('Near colour mask not validated')
                         result['near_colour_mask']='verified_before_after_HDR'
                         result['near_fixture_case']=getattr(args,'fg_near_case','normal')
@@ -152,19 +177,28 @@ def smoke(args):
                                 if not init or event['quality_total_pixels']!=init['width']*init['height']:raise ValueError('GPU quality counter missed pixels')
                         rejects=[e for e in fgevents if e['event']=='frame_rejected']
                         if args.fg_case in ('quality','mask_contamination'):
-                            if [e['frame'] for e in rejects]!=[2,3] or any(not e.get('original_restored') or e.get('presented') for e in rejects):raise ValueError('Quality-rejected candidate was presented')
+                            expected_rejects=[2,3,4] if getattr(args,'fg_backend','custom')=='fsr' else [2,3]
+                            if [e['frame'] for e in rejects]!=expected_rejects or any(not e.get('original_restored') or e.get('presented') for e in rejects):raise ValueError('Quality-rejected candidate was presented')
                         elif args.fg_case=='thin_effect':
                             if len(rejects)!=args.frames-2 or any(e['reason']!='unsafe_thin_effect' or not e['original_restored'] or e['presented'] for e in rejects):raise ValueError('Thin effect rejection not verified')
                             if any(not e['local_effect_risk'] or e['motion_interpolated_pixels']>e['scene_reprojected_pixels'] for e in metrics if e['quality_rejected']):raise ValueError('Tagged local risk corrupts motion count')
                             result['thin_effect']='verified_original_ring_in_actual_backbuffer_before_present'
                         elif rejects:raise ValueError('Normal fixture was incorrectly rejected')
-                        if args.fg_case=='mask_contamination' and any(e['reason']!='excessive_foreground_coverage' for e in rejects):raise ValueError('Contamination rejection reason not validated')
+                        if args.fg_case=='mask_contamination' and any(e['reason']!='excessive_foreground_coverage' for e in rejects if e['frame'] in (2,3)):raise ValueError('Contamination rejection reason not validated')
                         if args.fg_near_case=='depth_clear_zero':
                             if any(e['near_depth_pixels']!=e['quality_total_pixels'] or e['foreground_ratio']>.3 or e['near_colour_pixels']==0 for e in metrics if e['generated']):raise ValueError('Cleared depth poisoned foreground mask')
                             result['cleared_depth_diagnostic']='full_depth_coverage_while_foreground_stays_local'
                         if args.fg_case=='motion':
                             if not all(e['motion_interpolated_pixels']>0 for e in metrics if e['generated']):raise ValueError('GPU object motion not exercised')
                             result['textured_object_motion']='verified_midpoint_in_actual_backbuffer'
+                            if getattr(args,'fg_backend','custom')=='fsr':
+                                phase=[e for e in events if e['event']=='fsr_motion_phase']
+                                generated_phase=[e for e in phase if e['generated']]
+                                controls=[e for e in phase if e['source_control']]
+                                expected_controls=args.frames-1 if args.fg_mode=='paired' else 1
+                                if len(generated_phase)!=expected_generated or len(controls)!=expected_controls:raise ValueError('FSR motion phase or original-frame negative controls missing')
+                                result['motion_ncc_min']=min(e['center_ncc'] for e in generated_phase)
+                                result['original_frame_phase_controls']=len(controls)
                         if args.fg_case=='occlusion':result['parallax_occlusion']='verified_revealed_background_and_occluder_width_in_actual_backbuffer'
                         result['whole_frame_quality']='verified';result['rejected_frames']=[e['frame'] for e in rejects]
                         result['fg_events']='verified';result['history_storage']='full_size_gpu'
@@ -212,11 +246,12 @@ if __name__ == "__main__":
     parser.add_argument("--frames", type=int, default=60)
     parser.add_argument("--depth-format", choices=("auto", "d32", "d24"), default="auto")
     parser.add_argument("--validation", action="store_true")
-    parser.add_argument("--negative-case", choices=("wrong-arch",))
+    parser.add_argument("--negative-case", choices=("wrong-arch","fsr-profile"))
     parser.add_argument("--stride",type=int,choices=range(1,9),default=1)
     parser.add_argument("--hdr-scene", action="store_true")
     parser.add_argument("--gpu-reproject", action="store_true")
     parser.add_argument("--fg-mode",choices=("paired","generated","off"))
+    parser.add_argument('--fg-backend',choices=('custom','fsr'),default='custom')
     parser.add_argument("--fg-odd-extent",action="store_true")
     parser.add_argument("--fg-near-case",choices=("normal","no_depth_and_rebind","depth_clear_zero"),default="normal")
     parser.add_argument("--fg-auto-capture",action="store_true")
@@ -229,7 +264,7 @@ if __name__ == "__main__":
         parser.error("--frames must be 2..1000")
     if args.hdr_scene and args.observer not in ("enabled","triggered"):
         parser.error("HDR scene validation requires --observer enabled or triggered")
-    if args.negative_case and args.validation:
+    if args.negative_case=='wrong-arch' and args.validation:
         parser.error("Backend rejection occurs before Vulkan activation; omit --validation")
     try:
         raise SystemExit(smoke(args))
