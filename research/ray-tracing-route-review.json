@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "date_client_timezone": "2026-10-15 America/Los_Angeles",
+  "scope": "Route review for skipping FG and prioritizing ray tracing on L4D2/DXVK/Arc B580; no renderer implementation or hardware test",
+  "reviewed_project_commit": "7feca8d46f6dedb07de5626bef6ccc8c17283f19",
+  "constraints": [
+    "Arc B580",
+    "High-pressure original gameplay 60-80 source FPS",
+    "Aim to retain 60 real frames; later external 2x FG optional",
+    "Avoid assuming entire game must be single-threaded"
+  ],
+  "findings": [
+    "FG is not a prerequisite for ray tracing. A single-frame/static RT visibility experiment avoids previous/current correspondence and FG scheduling, but full RT requires more complete scene data.",
+    "Current collection of final/HUDless color, depth and inferred cameras is not a complete RT scene. Geometry, deformation, materials, lights and stable instance identities are missing or not proven.",
+    "l4d2-rtx compatibility code forces mat_queue_mode=0, r_threaded_particles=0, r_threadeddetailprops=0 and mat_softwareskin=1; this affects render concurrency/skinning but does not mean every game subsystem is single-threaded.",
+    "Pinned current Remix uses required KHR acceleration-structure, ray-query, ray-tracing-pipeline and buffer-device-address extensions; examined NV interop and invocation-reorder extensions are optional.",
+    "Pinned Remix context falls back from unsupported DLSS to TAAU and disables unsupported DLFG. These code paths do not prove B580 runtime compatibility or performance.",
+    "The reviewed current Remix commit differs from the bridge baseline and original reference lock. A matching package/API/bridge combination must be validated; no drop-in compatibility claim."
+  ],
+  "routes": [
+    {
+      "name": "Existing l4d2-rtx with matching Remix runtime",
+      "role": "First compatibility/quality/performance baseline to evaluate when RT is the goal",
+      "risks": [
+        "Unverified Arc runtime path",
+        "Render-thread/CPU-skinning overhead under hordes",
+        "PBR material, lights, transparency and addon coverage",
+        "Version/API compatibility and denoising/upscaling fallback"
+      ]
+    },
+    {
+      "name": "Original raster plus bounded hardware RT effect",
+      "role": "Preferred bounded research fallback if retaining high-pressure 60 is more important than full scene relighting",
+      "first_scope": [
+        "Trusted current camera",
+        "Static opaque world geometry",
+        "Correct BLAS/TLAS and ray-hit debug view",
+        "One selected AO/visibility or light-shadow effect",
+        "Explicit composition that avoids blindly multiplying baked final lighting"
+      ],
+      "risks": [
+        "Still requires true geometry and reliable classification",
+        "Missing dynamic/alpha-tested occluders must be treated as a known limit",
+        "Denoising and GPU budget still need measurement"
+      ]
+    },
+    {
+      "name": "Full custom Vulkan path tracer",
+      "role": "Highest new engineering burden; not recommended as the first route",
+      "risks": [
+        "Scene extraction, GPU skinning, materials, lights, denoising, temporal history, pacing and lifecycle"
+      ]
+    },
+    {
+      "name": "Screen-space SSR/SSGI effects",
+      "role": "Lower-data visual-effect alternative only",
+      "limit": "Does not substitute for full-scene hardware RT; offscreen geometry is absent"
+    }
+  ],
+  "recommended_gates": [
+    "Test hardware RT features and an existing matching RT runtime/compatibility baseline on B580 without FG; record errors and CPU/GPU costs.",
+    "If full existing RT works, assess original versus RT high-pressure source FPS before investing in a custom renderer.",
+    "If existing RT is unsuitable, first prove static scene geometry and correct ray hits in a bounded hybrid path. Do not automatically start a full custom renderer.",
+    "Only then add one defined effect, denoising, dynamic occluders, materials and high-pressure performance acceptance."
+  ],
+  "hardware_validation": {
+    "b580_rt_feature_probe": "unrun",
+    "existing_l4d2_rtx_on_b580": "unrun",
+    "high_pressure_rt_60fps": "unrun"
+  },
+  "difficulty": "A static/limited RT milestone can be easier to verify than general FG; complete playable RT is a larger scene/rendering project and is not established as easier. No delivery date is inferred.",
+  "sources": [
+    {
+      "name": "compat-main",
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "url": "https://github.com/xoxor4d/l4d2-rtx/blob/1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e/src/components/modules/main_module.cpp",
+      "sha256": "efada8686f51c7c29218a68bfc7b3dd59b86788119e07ea1e1a89565103b982c"
+    },
+    {
+      "name": "compat-model",
+      "commit": "1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e",
+      "url": "https://github.com/xoxor4d/l4d2-rtx/blob/1fc8ded63a8491e9c1972eb2940d6cebbc20ad9e/src/components/modules/model_render.cpp",
+      "sha256": "ae3ae0a7b1826e082570fd09afb12d3a85ec88b13a5c954c76e523939cc9f04f"
+    },
+    {
+      "name": "remix-extensions",
+      "commit": "3bde35c3268fe16f4d8075acc7d27340abeb4277",
+      "url": "https://github.com/NVIDIAGameWorks/dxvk-remix/blob/3bde35c3268fe16f4d8075acc7d27340abeb4277/src/dxvk/dxvk_extensions.h",
+      "sha256": "8818db953b80858122e74471743214485651a0ef92d2faea9b201e51eaa8c372"
+    },
+    {
+      "name": "remix-adapter",
+      "commit": "3bde35c3268fe16f4d8075acc7d27340abeb4277",
+      "url": "https://github.com/NVIDIAGameWorks/dxvk-remix/blob/3bde35c3268fe16f4d8075acc7d27340abeb4277/src/dxvk/dxvk_adapter.cpp",
+      "sha256": "8112d2219b536d0006c4c7340ced7641f6cdab27f69b48a41d2b7e0638bda2bd"
+    },
+    {
+      "name": "remix-context",
+      "commit": "3bde35c3268fe16f4d8075acc7d27340abeb4277",
+      "url": "https://github.com/NVIDIAGameWorks/dxvk-remix/blob/3bde35c3268fe16f4d8075acc7d27340abeb4277/src/dxvk/rtx_render/rtx_context.cpp",
+      "sha256": "09609313fe510122348f37c1ac5ea96f1fb8327d25d01646bc5910138fa7b457"
+    }
+  ]
+}
