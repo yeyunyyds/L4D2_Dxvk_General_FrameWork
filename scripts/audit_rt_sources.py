@@ -81,6 +81,15 @@ def audit():
                          'GetCallQueue_slot_selected': None, 'queued_mesh_abi_verified': False,
                          'decision': 'Do not invent a slot or use static-RVA fallback. Establish a version-checked queue callback boundary before producing engine-labelled frames.'},
         'hook_references': hooks,
+        'global_references': [
+            {'symbol': symbol, 'module': match[1], 'pattern': match[2],
+             'operand_offset': int(match[3]), 'reference_static_rva': match[4],
+             'candidate_slots': slots, 'game_validation': 'unrun'}
+            for symbol, slots in [('material_system_ptr', [95, 96]),
+                                  ('shaderapi_ptr', [250, 255]), ('d3d_device_ptr', [])]
+            for match in [re.search(r'PATTERN_OFFSET_DWORD_PTR_CAST_TYPE\((\w+),\s*' + symbol +
+                                   r',\s*DWORD\*,\s*"([^"]+)",\s*(\d+),\s*(0x[0-9A-Fa-f]+)\)', patterns)]
+            if match is not None],
         'transport': {'metadata_channel': 'DeviceBridge', 'hello_opcode': '0x1e10', 'metadata_opcode': '0x1e11',
                       'packet_header_bytes': 104, 'version': 1,
                       'source_queue_order_proven_by_transport_only': False},

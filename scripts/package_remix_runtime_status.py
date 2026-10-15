@@ -23,8 +23,10 @@ if __name__ == '__main__':
     output = ROOT / '.research/dist/rt-runtime-build-status.zip'
     output.parent.mkdir(parents=True, exist_ok=True)
     status = {'schema': 1, 'commit': os.environ['GITHUB_SHA'],
+              'run_id': os.environ.get('GITHUB_RUN_ID'),
               'prepare_outcome': os.environ.get('REMIX_PREPARE_OUTCOME', 'unknown'),
               'native_outcome': os.environ.get('REMIX_BUILD_OUTCOME', 'unknown'),
+              'preflight_package_outcome': os.environ.get('REMIX_PACKAGE_OUTCOME', 'unrun'),
               'artifact_validation': 'unrun', 'static_scene_execution': 'unrun',
               'game_rt': 'unrun', 'b580_rt': 'unrun', 'source_threading': 'unrun',
               'scope': 'Custom runtime build evidence; dependencies/game hook not bundled', 'binaries': {}}
@@ -32,6 +34,10 @@ if __name__ == '__main__':
     with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED) as archive:
         for log in sorted((ROOT / 'ci-remix-logs').glob('*.log')):
             archive.write(log, 'logs/' + log.name)
+        preflight = ROOT / '.research/dist/rt-prerequisites'
+        for name in ('package-validation.json', 'publish-index.json'):
+            if (preflight / name).is_file():
+                archive.write(preflight / name, 'preflight/' + name)
         for path in sorted((source / 'checks').glob('negative-*/*')):
             if path.is_file() and path.suffix in ('.json', '.jsonl'):
                 archive.write(path, 'checks/' + str(path.relative_to(source / 'checks')).replace('\\', '/'))

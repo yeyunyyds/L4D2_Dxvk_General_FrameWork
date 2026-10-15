@@ -10,7 +10,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from rt_game_probe import MappedImage, WindowsProcess, collect, file_identity, matches, pattern_bytes, unique_modules
+from rt_game_probe import MappedImage, WindowsProcess, collect, file_identity, global_evidence, matches, pattern_bytes, unique_modules
 
 BASE = 0x12340000
 
@@ -60,6 +60,40 @@ def image(data, missing=()):
 
 
 class ProbeCases(unittest.TestCase):
+    def test_private_global_candidate_reads_heap_object_without_calling_interface(self):
+        data = fixture()
+        storage, heap = BASE + 0x3400, 0x70000000
+        data[0x1100:0x1106] = b'\xa1' + struct.pack('<I', storage) + b'\xc3'
+        put32(data, 0x3400, heap)
+        put32(data, 0x2404 + 250 * 4, BASE + 0x1050)
+        module = image(data)
+        class Reader:
+            def read(self, address, size):
+                if address != heap or size != 4:
+                    raise OSError('Unexpected read')
+                return struct.pack('<I', BASE + 0x2404)
+        reference = {'symbol': 'shaderapi_ptr', 'pattern': 'A1 ? ? ? ? C3',
+                     'operand_offset': 1, 'candidate_slots': [250, 255]}
+        result = global_evidence(Reader(), {'shaderapidx9.dll': module}, module, reference)
+        self.assertEqual(result['object_address'], heap)
+        self.assertEqual(result['candidate_slots']['250']['target_rva'], 0x1050)
+        self.assertEqual(result['candidate_slots']['250']['module'], 'shaderapidx9.dll')
+        self.assertFalse(result['interface_binding_verified'])
+        self.assertFalse(result['candidate_slots']['250']['semantics_verified'])
+        self.assertIsNone(result['candidate_slots']['255']['target_address'])
+
+    def test_other_published_interfaces_are_recorded_without_material_slots(self):
+        data = fixture()
+        name = b'VClient016\0'
+        data[0x2100:0x2100 + len(name)] = name
+        put32(data, 0x3200, BASE + 0x1100, BASE + 0x2100, 0)
+        data[0x1100:0x1106] = b'\xb8' + struct.pack('<I', BASE + 0x3300) + b'\xc3'
+        put32(data, 0x3300, BASE + 0x2404)
+        candidate = image(data).interface_registry()['candidates'][0]
+        self.assertEqual(candidate['name'], 'VClient016')
+        self.assertEqual(candidate['candidate_slots'], {})
+        self.assertFalse(candidate['interface_binding_verified'])
+
     def test_identical_snapshot_aliases_merge_but_conflicting_modules_remain(self):
         first = {'name': 'client.dll', 'path': 'C:\\Game\\client.dll', 'base': BASE, 'size': 4096}
         alias = {**first, 'path': 'c:\\game\\CLIENT.DLL'}

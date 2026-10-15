@@ -4,6 +4,8 @@
 
 Host 实际 Draw 旁的静态世界转换实现与验证边界见 [静态 Draw 转换](rt-static-draw.md)。
 
+当前游戏绑定证据与独立 GPU 测试已合并到[接入前置检查入口](rt-preflight.md)。这个入口不是综合包 A；不要求用户分别运行旧检查器和静态诊断。
+
 ## 队列回调
 
 `integration/rt/rt_source_queue.h` 直接继承固定 L4D2 SDK 的 `CFunctor`，经 SDK 的 `ICallQueue::QueueFunctor` 入队，没有手写猜测的 functor 虚表。SDK 由 `prepare_rt_source_sdk.py` 从固定提交归档，原始头文件不作修改。

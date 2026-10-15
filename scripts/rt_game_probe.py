@@ -240,7 +240,7 @@ class MappedImage:
         for section in self.sections:
             if section['data'] is None or section['flags'] & EXECUTE:
                 continue
-            for match in re.finditer(rb'VMaterialSystem[0-9]{3}\0', section['data']):
+            for match in re.finditer(rb'(?:VMaterialSystem|VClient|VEngineClient|VEngineRenderView|ShaderApi)[0-9]{3}\0', section['data']):
                 name_rva = section['rva'] + match.start()
                 for pointer in self.occurrences(struct.pack('<I', self.base + name_rva)):
                     entry = pointer - 4
@@ -270,7 +270,7 @@ class MappedImage:
                     first = self.data_at(table_rva, 4)
                     valid = first is not None and self.executable(u32(first) - self.base)
                     methods = {}
-                    if valid:
+                    if valid and match.group().startswith(b'VMaterialSystem'):
                         for slot in (95, 96):
                             value = self.data_at(table_rva + slot * 4, 4)
                             target = u32(value) - self.base if value else -1
@@ -301,7 +301,50 @@ class MappedImage:
                               if s['data'] is not None else None} for s in self.sections],
                 'hook_candidates': [{'symbol': h['symbol'], **self.pattern(h['pattern'])} for h in hooks],
                 'rtti': {name: self.rtti(name, slots) for name, slots in classes.items()},
+                'interface_registry': self.interface_registry(),
                 'material_system_registry': self.interface_registry() if classes else {'result': 'not_requested'}}
+
+
+def global_evidence(process, images, image, reference):
+    """Read private global pointer candidates, never call their vtable methods."""
+    result = {'symbol': reference['symbol'], **image.pattern(reference['pattern']),
+              'interface_binding_verified': False, 'candidate_slots': {}}
+    if result['result'] != 'unique_candidate':
+        return result
+    try:
+        operand = image.data_at(result['match_rvas'][0] + reference['operand_offset'], 4)
+        if operand is None:
+            raise ValueError('Global pointer operand outside snapshot')
+        storage = u32(operand)
+        # The reference instruction names a pointer inside its own module.
+        value = image.data_at(storage - image.base, 4)
+        if value is None:
+            raise ValueError('Global pointer storage outside module snapshot')
+        address = u32(value)
+        if not 0 < address < 2**32 - 4:
+            raise ValueError('Null/invalid private global object')
+        table = u32(process.read(address, 4))
+        result.update(storage_rva=storage - image.base, object_address=address, vtable_address=table)
+        owner = next(((name, candidate) for name, candidate in images.items()
+                      if candidate.data_at(table - candidate.base, 4) is not None), None)
+        if owner is None:
+            result['vtable_result'] = 'outside_collected_modules'
+            return result
+        name, candidate = owner
+        result.update(vtable_module=name, vtable_rva=table - candidate.base, vtable_result='candidate')
+        for slot in reference['candidate_slots']:
+            raw = candidate.data_at(table - candidate.base + 4 * slot, 4)
+            target = u32(raw) if raw else 0
+            method_owner = next(((n, m) for n, m in images.items() if m.executable(target - m.base)), None)
+            method = {'target_address': target or None, 'semantics_verified': False}
+            if method_owner:
+                target_name, target_image = method_owner
+                method.update(module=target_name, target_rva=target - target_image.base,
+                              code_window=target_image.code_window(target - target_image.base, before=0))
+            result['candidate_slots'][str(slot)] = method
+    except (OSError, ValueError, struct.error) as error:
+        result['error'] = str(error)
+    return result
 
 
 class WindowsProcess:
@@ -424,6 +467,7 @@ def collect(pid, audit):
             if not report['process']['alive']:
                 raise OSError('Target process has exited')
             before = process.modules()
+            images = {}
             required = set(MODULES.values()) | {'materialsystem.dll'}
             stable = True
             for name in sorted(required):
@@ -440,11 +484,17 @@ def collect(pid, audit):
                     hooks = [h for h in audit['hook_references'] if MODULES[h['module']] == name]
                     classes = CLASSES if name == 'materialsystem.dll' else {}
                     image = MappedImage(process.read, module['base'], module['size'])
+                    images[name] = image
                     item.update(image.evidence(hooks, classes))
                     item['result'] = 'incomplete' if image.read_errors else 'snapshot_collected'
                     stable &= not image.read_errors
                 except (OSError, ValueError, struct.error) as error:
                     item['error'] = str(error); stable = False
+            report['private_global_candidates'] = []
+            for reference in audit.get('global_references', []):
+                name = MODULES[reference['module']]
+                if name in images:
+                    report['private_global_candidates'].append(global_evidence(process, images, images[name], reference))
             after = process.modules()
             for name in required:
                 identity = lambda entries: [(x['base'], x['size'], x['path']) for x in entries if x['name'] == name]

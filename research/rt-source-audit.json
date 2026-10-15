@@ -126,6 +126,41 @@
       "installed": false
     }
   ],
+  "global_references": [
+    {
+      "symbol": "material_system_ptr",
+      "module": "CLIENT_MOD",
+      "pattern": "A1 ? ? ? ? 53 56 57 89 4D ? 89 45",
+      "operand_offset": 1,
+      "reference_static_rva": "0x11B76",
+      "candidate_slots": [
+        95,
+        96
+      ],
+      "game_validation": "unrun"
+    },
+    {
+      "symbol": "shaderapi_ptr",
+      "module": "RENDERER_MOD",
+      "pattern": "8B 0D ? ? ? ? ? ? 8B 90 ? ? ? ? FF D2 ? ? 8B C8 8B 82 ? ? ? ? FF E0",
+      "operand_offset": 2,
+      "reference_static_rva": "0x6870",
+      "candidate_slots": [
+        250,
+        255
+      ],
+      "game_validation": "unrun"
+    },
+    {
+      "symbol": "d3d_device_ptr",
+      "module": "RENDERER_MOD",
+      "pattern": "A1 ? ? ? ? 50 8B CE E8 ? ? ? ? 84 DB 75",
+      "operand_offset": 1,
+      "reference_static_rva": "0x5E5C",
+      "candidate_slots": [],
+      "game_validation": "unrun"
+    }
+  ],
   "transport": {
     "metadata_channel": "DeviceBridge",
     "hello_opcode": "0x1e10",
