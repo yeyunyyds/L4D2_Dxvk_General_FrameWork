@@ -1,0 +1,378 @@
+{
+  "schema": 1,
+  "run": "fg-20444-17160640-1833861227520",
+  "source_framework_commit": "ee7d6f785df95d05255ae009689d12f79788fea0",
+  "native_client_and_host_build_id": "ldb-capture-dev+be7d88f56bcbd42b",
+  "host_build_ids_verified_from_bridge_logs": true,
+  "installed_five_binary_hashes": "not_recorded_in_this_upload",
+  "backend_api": "v2 required by this Host; session has no ABI error",
+  "gpu": "Intel Arc B580",
+  "driver": "Intel Corporation 101.8531.0",
+  "render_extent": [
+    1920,
+    1200
+  ],
+  "duration_seconds": 146.6618372,
+  "event_counts": {
+    "session": 1,
+    "frame_fallback": 17,
+    "logical_present": 302,
+    "frame_metrics": 5858,
+    "gpu_initialized": 1,
+    "fsr_history_primed": 1,
+    "fsr_dispatch": 1595,
+    "frame_rejected": 349,
+    "generated_present": 1534,
+    "capture": 16,
+    "fsr_skipped": 288,
+    "summary": 1
+  },
+  "successful_generated_present_calls": 1534,
+  "logical_present_calls": 5858,
+  "present_modes": {
+    "generated": 1534
+  },
+  "candidate_count": 1883,
+  "candidate_acceptance": 0.8146574614976102,
+  "fsr_dispatch_status": {
+    "1": 61,
+    "0": 1534
+  },
+  "rejected_reasons": {
+    "fsr_history_warmup": 61,
+    "invalid_scene_coverage": 137,
+    "excessive_foreground_coverage": 151
+  },
+  "accepted_frames_with_local_risk": 1370,
+  "captures": [
+    {
+      "frame": 4000,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 0,
+      "near_colour_mask_valid": false,
+      "near_colour_pixels": 0,
+      "foreground_ratio": 0.085471,
+      "invalid_scene_ratio": 0.022558,
+      "local_effect_risk": true,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 21854,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 4001,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 0,
+      "near_colour_mask_valid": false,
+      "near_colour_pixels": 0,
+      "foreground_ratio": 0.08547,
+      "invalid_scene_ratio": 0.01408,
+      "local_effect_risk": false,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 21856,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 4002,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 0,
+      "near_colour_mask_valid": false,
+      "near_colour_pixels": 0,
+      "foreground_ratio": 0.08547,
+      "invalid_scene_ratio": 0.007727,
+      "local_effect_risk": true,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 21854,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 4003,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 0,
+      "near_colour_mask_valid": false,
+      "near_colour_pixels": 0,
+      "foreground_ratio": 0.08545,
+      "invalid_scene_ratio": 0.006678,
+      "local_effect_risk": true,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 21851,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 4435,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 5,
+      "near_colour_mask_valid": true,
+      "near_colour_pixels": 257781,
+      "foreground_ratio": 0.177918,
+      "invalid_scene_ratio": 0.101795,
+      "local_effect_risk": true,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 45519,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 4436,
+      "quality_accepted": false,
+      "generated_present_success": false,
+      "near_draws": 5,
+      "near_colour_mask_valid": true,
+      "near_colour_pixels": 213756,
+      "foreground_ratio": 0.156765,
+      "invalid_scene_ratio": 0.247422,
+      "local_effect_risk": true,
+      "reject_reason": "invalid_scene_coverage"
+    },
+    {
+      "frame": 4437,
+      "quality_accepted": false,
+      "generated_present_success": false,
+      "near_draws": 5,
+      "near_colour_mask_valid": true,
+      "near_colour_pixels": 176594,
+      "foreground_ratio": 0.140263,
+      "invalid_scene_ratio": 0.155964,
+      "local_effect_risk": true,
+      "reject_reason": "invalid_scene_coverage"
+    },
+    {
+      "frame": 4438,
+      "quality_accepted": false,
+      "generated_present_success": false,
+      "near_draws": 3,
+      "near_colour_mask_valid": true,
+      "near_colour_pixels": 179993,
+      "foreground_ratio": 0.146301,
+      "invalid_scene_ratio": 0.206934,
+      "local_effect_risk": true,
+      "reject_reason": "invalid_scene_coverage"
+    },
+    {
+      "frame": 4987,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 1,
+      "near_colour_mask_valid": true,
+      "near_colour_pixels": 1313227,
+      "foreground_ratio": 0.606744,
+      "invalid_scene_ratio": 0.0131,
+      "local_effect_risk": false,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 155384,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 4988,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 1,
+      "near_colour_mask_valid": true,
+      "near_colour_pixels": 1313938,
+      "foreground_ratio": 0.606975,
+      "invalid_scene_ratio": 0.00488,
+      "local_effect_risk": false,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 155432,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 4989,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 1,
+      "near_colour_mask_valid": true,
+      "near_colour_pixels": 1314143,
+      "foreground_ratio": 0.607053,
+      "invalid_scene_ratio": 0.003372,
+      "local_effect_risk": false,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 155475,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 4990,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 1,
+      "near_colour_mask_valid": true,
+      "near_colour_pixels": 1316686,
+      "foreground_ratio": 0.608276,
+      "invalid_scene_ratio": 0.010969,
+      "local_effect_risk": false,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 155793,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 5461,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 0,
+      "near_colour_mask_valid": false,
+      "near_colour_pixels": 0,
+      "foreground_ratio": 0.079616,
+      "invalid_scene_ratio": 0.086864,
+      "local_effect_risk": true,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 20359,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 5462,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 0,
+      "near_colour_mask_valid": false,
+      "near_colour_pixels": 0,
+      "foreground_ratio": 0.079619,
+      "invalid_scene_ratio": 0.061951,
+      "local_effect_risk": true,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 20364,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 5463,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 0,
+      "near_colour_mask_valid": false,
+      "near_colour_pixels": 0,
+      "foreground_ratio": 0.07962,
+      "invalid_scene_ratio": 0.027955,
+      "local_effect_risk": true,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 20361,
+      "changed_yellow_samples": 0
+    },
+    {
+      "frame": 5464,
+      "quality_accepted": true,
+      "generated_present_success": true,
+      "near_draws": 0,
+      "near_colour_mask_valid": false,
+      "near_colour_pixels": 0,
+      "foreground_ratio": 0.079606,
+      "invalid_scene_ratio": 0.147605,
+      "local_effect_risk": true,
+      "reject_reason": null,
+      "saved_extent": [
+        640,
+        400
+      ],
+      "yellow_protected_samples": 20355,
+      "changed_yellow_samples": 0
+    }
+  ],
+  "yellow_protected_saved_samples": 836457,
+  "changed_yellow_saved_samples": 0,
+  "session_complete": true,
+  "fg_errors": [],
+  "bridge_shutdown": "Client and Host both report successful cleanup",
+  "timing_interpretation": "Generated-mode Host work median 31.8109 ms excluding captures; preflight GPU timestamp median 20.629999 ms excludes SDK kernels; neither measures monitor FPS or latency.",
+  "visual_findings": [
+    {
+      "frames": [
+        4435
+      ],
+      "observation": "Accepted candidate has displaced/fragmented building edges and object detail relative to adjacent originals."
+    },
+    {
+      "frames": [
+        5461,
+        5464
+      ],
+      "observation": "Accepted generated images show fragmented/doubled white character silhouettes and smeared or ghosted lower-screen minigun. Original models are already white; the reported defect is additional contour breakup and displacement."
+    },
+    {
+      "frames": [
+        5461,
+        5464
+      ],
+      "observation": "near_draws=0 and near_colour_mask_valid=false. The lower gun is outside the protected near-stage classification; current images alone do not establish whether it is a viewmodel omission or world/mounted geometry."
+    },
+    {
+      "frames": [
+        4000,
+        4002,
+        4987
+      ],
+      "observation": "Less obvious distortion in inspected captures; this is not an independent midpoint truth check. In 4987..4990 about 60.7 percent foreground coverage limits the scene region eligible for interpolation."
+    }
+  ],
+  "findings": [
+    "Regional protection removed whole-frame thin-effect rejections in this run; 1370 generated frames still carry the local-risk flag.",
+    "Thirteen saved candidates are linked to successful generated Present calls, unlike the previous upload where all captures were rejected.",
+    "Protected yellow pixels match current originals in all saved accepted samples. Unclassified geometry and characters still exhibit visible defects; overall image quality fails acceptance.",
+    "This run contains generated-only preview, with no paired-mode test or added backend Present calls.",
+    "No FG error, device-loss error or abnormal shutdown was recorded. Previous intermittent startup failure remains unexplained."
+  ],
+  "next_priorities": [
+    "Check static-scene depth and current/previous matrix timing, vector direction/scale and SDK inputs; accepted wall deformation shows a wider issue than character motion alone.",
+    "Disambiguate mounted/world gun geometry from near-viewmodel classification, then improve motion or preservation for gun and character regions.",
+    "Capture SDK output before guards alongside SDK depth/motion inputs in the same bounded diagnostic batch if numerical attribution is needed; do not judge correctness from acceptance counts alone."
+  ],
+  "limits": [
+    "Saved images are 640x400 samples of 1920x1200 rendering. Yellow-pixel checks apply only to saved sample locations.",
+    "Counter and HRESULT success do not prove monitor delivery, correct midpoint motion, FPS benefit or latency.",
+    "Session acceptance ratios can be described individually; prior 4.97 percent and current 81.47 percent come from different scenes/actions/durations, not a controlled performance comparison."
+  ],
+  "log_hashes": {
+    "fg-20444-17160640-1833861227520/fg-events.jsonl": "b70c7516f8ee71faa1a8c53d56c2bd3aa212b9d35b1c90f9045752d09dd4643b",
+    "bridge64.log": "0c07bfe706265d3c3122f00b5fbf3dc937fc7eff0b41c747d7370abfb3ebe1e5",
+    "L4D2Bridge64_d3d9.log": "762dc05c7c44edc8a20d792d1a913a03103416f218874c805519a080a0d57ae0",
+    "bridge32.log": "b6cbc79239781ad6552b39922a03db51970b3109e546dd6f7f53fec9a60379df"
+  }
+}

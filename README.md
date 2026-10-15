@@ -10,6 +10,7 @@
 
 - [第一阶段研究结果](docs/research/phase1.md)：源码接入点、必要改动与验证证据。
 - [官方 FSR 组件接入](docs/research/fsr-component-backend.md)：官方光流与插帧组件的移植和验证依据。
+- [区域保护版 B580 分析](docs/research/fsr-regional-b580-result.md)：1534 次生成帧调用成功，接受率 81.47%；人物／机枪残影与墙体错位仍未通过画质验收。
 - [FSR 区域保护修正](docs/research/fsr-regional-protection.md)：局部保留细亮区域，采集成功／拒绝候选并统一日志；本轮 B580 画质待验收。
 - [B580 首次 FSR 游戏运行](docs/research/fsr-b580-first-run.md)：174 次生成帧 Present 成功，但约 95% 候选被保护规则拒绝，画质尚未验收。
 - [地图加载诊断](docs/research/fsr-startup-diagnostics.md)：统一收集 Bridge、DXVK 与 FG 日志，包含关闭 FSR 的进程级对照。
