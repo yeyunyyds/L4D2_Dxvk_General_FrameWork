@@ -71,6 +71,7 @@ struct Packet { Header header; Bytes payload; };
 inline Bytes encode(const Header& h, const Bytes& payload = {}) {
   if (payload.size() > kMaxPacketBytes - kHeaderBytes) { throw std::length_error("rt packet"); }
   Writer w;
+  w.data.reserve(kHeaderBytes + payload.size());
   w.u32(kMagic); w.u32(kVersion); w.u32(kHeaderBytes);
   w.u32(uint32_t(kHeaderBytes + payload.size()));
   w.u32(static_cast<uint32_t>(h.kind)); w.u32(0);

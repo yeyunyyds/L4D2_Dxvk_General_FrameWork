@@ -39,6 +39,10 @@ jobs:
           $result = $LASTEXITCODE
           Get-Content ci-rt-logs/prepare.log
           if ($result -ne 0) { throw 'RT source preparation failed' }
+          & cmd.exe /d /c 'python scripts/prepare_rt_source_sdk.py > ci-rt-logs/sdk.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content ci-rt-logs/sdk.log
+          if ($result -ne 0) { throw 'RT SDK preparation failed' }
           & cmd.exe /d /c 'powershell.exe -NoProfile -File scripts/build_rt_foundation.ps1 > ci-rt-logs/native.log 2>&1'
           $result = $LASTEXITCODE
           Get-Content ci-rt-logs/native.log

@@ -17,6 +17,7 @@ if __name__ == '__main__':
               'native_outcome': os.environ.get('RT_BUILD_OUTCOME', 'unknown'),
               'scope': 'Bridge + COM/protocol/Host foundation, not game hooks or GPU RT',
               'game_queue_execution': 'unrun', 'b580_rt': 'unrun', 'binaries': {},
+              'sdk_queue_development_execution': 'unrun',
               'artifact_validation': 'unrun'}
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for file in sorted((ROOT / 'ci-rt-logs').glob('*.log')):
@@ -26,6 +27,12 @@ if __name__ == '__main__':
         if receipt.exists():
             archive.write(receipt, 'rt-source.json')
             identity = ('ldb-rt-observer+' + json.loads(receipt.read_text())['fingerprint'][:16]).encode()
+        sdk_receipt = ROOT / '.research/rt-sdk-source/rt-sdk-source.json'
+        if sdk_receipt.exists():
+            archive.write(sdk_receipt, 'rt-sdk-source.json')
+        queue_source = ROOT / 'integration/rt/rt_source_queue.h'
+        if queue_source.exists():
+            status['source_queue_sha256'] = hashlib.sha256(queue_source.read_bytes()).hexdigest()
         for arch, relative in [('x64', 'server/L4D2Bridge64.exe'), ('x86', 'client/d3d9.dll')]:
             file = source / f'bridge/_rtRelease_{arch}/src' / relative
             if file.exists():
@@ -46,12 +53,15 @@ if __name__ == '__main__':
                 status['binaries'][destination] = hashlib.sha256(data).hexdigest()
                 archive.write(file, destination)
             for file in sorted((source / f'checks-{arch}').rglob('*')):
-                if file.is_file() and file.suffix in ('.exe', '.bin'):
+                if file.is_file() and file.suffix in ('.exe', '.bin', '.asm', '.json'):
                     archive.write(file, 'checks/' + arch + '/' + str(file.relative_to(source / f'checks-{arch}')))
         if status['native_outcome'] == 'success':
             if len(status['binaries']) != 2:
                 raise RuntimeError('Missing native client/Host binary')
             status['artifact_validation'] = 'pass'
+            queue_log = ROOT / 'ci-rt-logs/native.log'
+            if sdk_receipt.exists() and queue_log.exists() and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace'):
+                status['sdk_queue_development_execution'] = 'pass'
         archive.writestr('status.json', json.dumps(status, indent=2) + '\n')
         archive.writestr('README.txt', 'Development build evidence only. No Source game hook or Remix RT runtime is included.\nDo not install this ZIP as combined test package A.\n')
     print(output)
