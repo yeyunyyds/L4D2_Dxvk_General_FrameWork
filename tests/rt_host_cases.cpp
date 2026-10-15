@@ -44,9 +44,13 @@ int main() {
     require(FAILED(send(Kind::BeginFrame, {}, 1)), "metadata allowed before handshake");
     --h.sequence;
     require(SUCCEEDED(send(Kind::Hello)), "Host handshake");
+    const auto menuUid = ++device.uid;
+    ldb_rt_host::draw(id, menuUid); ldb_rt_host::drawResult(id, menuUid, S_OK);
+    ldb_rt_host::present(id, ++device.uid, S_OK);
     for (uint64_t frame = 1; frame <= 4; ++frame) {
       if (frame == 3) {
         ldb_rt_host::reset(id, ++device.uid, E_FAIL);
+        require(FAILED(send(Kind::BeginFrame, {}, frame)), "lost-device metadata was consumed");
         ++h.generation;
         require(FAILED(send(Kind::Reset)), "failed physical reset acknowledged");
         --h.sequence;
@@ -68,7 +72,7 @@ int main() {
       ldb_rt_host::present(id, ++device.uid, S_OK);
     }
     auto& observer = *ldb_rt_host::observers().at(id);
-    require(observer.draws == 4 && observer.presents == 4 && !observer.failed, "Host counts");
+    require(observer.draws == 4 && observer.presents == 4 && observer.unlabelled == 1 && !observer.failed, "Host counts");
     api->Release(); require(device.refs == 1, "adapter leaked parent reference");
     ldb_rt_host::destroy(id);
     std::cout << "RT COM/Host observer: PASS (4 frames, failed/successful Reset, ptr_bits=" << 8 * sizeof(void*) << ")\n";

@@ -65,7 +65,8 @@ def analyze(path):
                 identity = key
                 if kind != 1:
                     errors.append('missing_hello')
-            if key != identity or not all(key) or not gen or not map_id or not producer or seq != sequence + 1 or (kind == 1 and packets):
+            ordered = seq > sequence if kind == 8 and saw_reset else seq == sequence + 1
+            if key != identity or not all(key) or not gen or not map_id or not producer or not ordered or (kind == 1 and packets):
                 errors.append('packet_identity_or_sequence')
             if generation is not None:
                 if kind == 8 and (gen != generation[0] + 1 or map_id != generation[1]):
@@ -125,6 +126,9 @@ def analyze(path):
                     errors.append('duplicate_or_failed_draw_result')
                 draws[key]['result'] = hresult
                 active_draw = None
+        elif event == 6:
+            if len(payload) != 4 or pending is not None or ended is not None:
+                errors.append('unlabelled_present_payload_or_open_frame')
         elif event == 7:
             errors.append('host_rejected_metadata')
         elif event == 8:
@@ -134,6 +138,13 @@ def analyze(path):
                 footer = struct.unpack('<4Q2I', payload)
         elif event == 9:
             errors.append('trace_budget_exhausted')
+        elif event == 10:
+            if len(payload) < PACKET.size:
+                errors.append('truncated_skipped_packet')
+            else:
+                fields = PACKET.unpack_from(payload)
+                if fields[0] != 0x5452444c or fields[1] != 1 or fields[3] != len(payload) or tuple(fields[6:9]) != identity:
+                    errors.append('invalid_skipped_packet')
         else:
             errors.append('unknown_trace_event')
     if not frequency or footer is None or not packets or not draws or not presented:
@@ -146,6 +157,8 @@ def analyze(path):
     return {'schema': 1, 'scope': 'metadata_transport_observer_only',
             'result': 'pass' if not errors else 'fail', 'errors': sorted(set(errors)),
             'packets': packets, 'labelled_draws': len(draws), 'successful_presents': len(presented),
+            'unlabelled_presents': events[6],
+            'skipped_metadata_packets': events[10],
             'presented_metadata_frame_ids': presented, 'events': dict(sorted(events.items())),
             'consumer_thread': consumer, 'qpc_frequency': frequency,
             'source_game_queue': 'unrun', 'image_quality': 'unrun', 'b580_rt': 'unrun',

@@ -70,8 +70,12 @@ inline HRESULT submit(uint64_t device, const void* bytes, uint32_t size, uint32_
       it = slots.emplace(device, std::move(observer)).first;
     }
     auto& s = *it->second;
-    if (s.failed || (s.needsReset && (!s.resetAvailable || packet.header.kind != ldb_rt::Kind::Reset))) { return E_UNEXPECTED; }
-    const auto error = s.stream.apply(bytes, size, GetCurrentThreadId());
+    if (s.failed) { return E_UNEXPECTED; }
+    if (s.needsReset && (!s.resetAvailable || packet.header.kind != ldb_rt::Kind::Reset)) {
+      s.record(10, uid, bytes, size); return E_UNEXPECTED;
+    }
+    if (packet.header.kind == ldb_rt::Kind::Reset && !s.needsReset) { return E_UNEXPECTED; }
+    const auto error = s.stream.apply(bytes, size, GetCurrentThreadId(), s.needsReset && s.resetAvailable);
     if (error != ldb_rt::Error::Ok) {
       ++s.rejected; s.failed = true;
       const uint32_t reason = static_cast<uint32_t>(error);
@@ -80,8 +84,15 @@ inline HRESULT submit(uint64_t device, const void* bytes, uint32_t size, uint32_
     }
     s.needsReset = false; s.record(1, uid, bytes, size);
     return S_OK;
-  } catch (const std::bad_alloc&) { return E_OUTOFMEMORY; }
-    catch (...) { return E_FAIL; }
+  } catch (const std::bad_alloc&) {
+    const auto it = observers().find(device);
+    if (it != observers().end()) { it->second->failed = true; }
+    return E_OUTOFMEMORY;
+  } catch (...) {
+    const auto it = observers().find(device);
+    if (it != observers().end()) { it->second->failed = true; }
+    return E_FAIL;
+  }
 }
 inline void draw(uint64_t device, uint32_t uid) noexcept {
   try {
@@ -103,6 +114,12 @@ inline void present(uint64_t device, uint32_t uid, HRESULT result) noexcept {
     auto& s = *it->second;
     uint64_t frame = 0;
     if (s.failed || s.needsReset) { return; }
+    if (!s.stream.inFrame() && !s.stream.awaitingPresent()) {
+      ldb_rt::Writer w; w.u32(uint32_t(result));
+      s.record(6, uid, w.data.data(), uint32_t(w.data.size()));
+      if (FAILED(result)) { s.needsReset = true; s.resetAvailable = false; }
+      return;
+    }
     const auto error = s.stream.present(GetCurrentThreadId(), frame);
     ldb_rt::Writer w; w.u64(frame); w.u32(uint32_t(result)); w.u32(uint32_t(error));
     s.record(3, uid, w.data.data(), uint32_t(w.data.size()));

@@ -205,9 +205,11 @@ public:
   explicit Stream(size_t budget = 16 * 1024 * 1024) : m_budget(std::make_shared<Budget>(budget)) {}
   size_t retainedBytes() const { return m_budget->bytes.load(); }
   bool ready() const { return m_ready; }
+  bool inFrame() const { return m_inFrame; }
+  bool awaitingPresent() const { return m_endedFrame; }
   uint64_t sequence() const { return m_sequence; }
 
-  Error apply(const void* bytes, size_t size, uint64_t consumerThread) {
+  Error apply(const void* bytes, size_t size, uint64_t consumerThread, bool physicalResetBarrier = false) {
     Packet packet;
     const Error wire = decode(bytes, size, packet);
     if (wire != Error::Ok) { return wire; }
@@ -224,8 +226,11 @@ public:
     if (!m_ready || h.session != m_identity.session || h.run != m_identity.run || h.device != m_identity.device) {
       return Error::Identity;
     }
-    if (m_sequence == UINT64_MAX || h.sequence != m_sequence + 1) { return Error::Sequence; }
     const bool reset = h.kind == Kind::Reset;
+    if (m_sequence == UINT64_MAX ||
+        (reset && physicalResetBarrier ? h.sequence <= m_sequence : h.sequence != m_sequence + 1)) {
+      return Error::Sequence;
+    }
     const bool mapChange = h.kind == Kind::ChangeMap;
     if (reset) {
       if (m_identity.generation == UINT64_MAX || h.generation != m_identity.generation + 1 || h.map != m_identity.map) {
