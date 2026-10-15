@@ -95,7 +95,8 @@
         "Cross-frame, reset and lifetime execution cases",
         "Bounded developer suite coordinator and trace analyzer",
         "Pinned SDK queue callback with owned packets/COM lease and cancel/Reset handling",
-        "Native x86 SDK queue/COM/Host fixture: 512 overlap frames plus 2 recovery frames"
+        "Native x86 SDK queue/COM/Host fixture: 512 overlap frames plus 2 recovery frames",
+        "Host per-Draw static FFP scope; native x86/x64 fault/restore and system D3D9 NULLREF checks, plus 512 SDK-queue-owned state conversions passed; actual game binding unrun"
       ],
       "remaining_parts": [
         "Actual game hook/context binding and queue insertion beside real render commands",
@@ -122,11 +123,12 @@
       ],
       "completed_parts": [
         "Standalone API 0.6.4 static scene diagnostic implemented and natively compiled; GPU execution unrun",
-        "Pinned matching runtime full native x64 Release build; GPU execution unrun"
+        "Pinned matching runtime full native x64 Release build; GPU execution unrun",
+        "Strictly classified LightmappedGeneric world layout conversion at Host Draw implemented; actual game/runtime RT validation pending"
       ],
       "remaining_parts": [
         "Matching runtime initialization and B580 execution",
-        "Current-game static world conversion",
+        "Current-game static world classification/binding and remaining conversion/material adaptation",
         "R0/R1/R2 combined package A"
       ]
     },
@@ -411,8 +413,8 @@
     }
   ],
   "validation_this_change": {
-    "scope": "Native SDK queue: research/rt-source-queue-validation.json; full runtime build: research/rt-runtime-validation.json; native collector fixture: research/rt-game-probe-validation.json. Current game/GPU unrun.",
-    "rt_implementation": "metadata_observer_implemented_renderer_not_implemented",
+    "scope": "Native protocol/SDK queue and collector evidence retained; latest Host static FFP scope and system D3D9/512-frame validation: research/rt-static-draw-validation.json. Current game, real cross-process GPU IPC and Remix/B580 unrun.",
+    "rt_implementation": "metadata_observer_and_scoped_static_FFP_implemented_game_adapter_pending",
     "b580_hardware_rt": "unrun",
     "game_multithreading": "unrun",
     "new_test_launcher": "developer_coordinator_implemented_game_launcher_pending"

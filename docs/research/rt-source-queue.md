@@ -2,6 +2,8 @@
 
 当前已通过原生 Windows 开发验证的是 **SDK 队列回调 → 生产 COM adapter → Host observer**，尚未安装 Source 游戏 Hook。固定自定义 Remix runtime 的完整 x64 Release 与静态场景程序均已编译通过；GPU 实际执行单列为未验证。它们均不是综合测试包 A。
 
+Host 实际 Draw 旁的静态世界转换实现与验证边界见 [静态 Draw 转换](rt-static-draw.md)。
+
 ## 队列回调
 
 `integration/rt/rt_source_queue.h` 直接继承固定 L4D2 SDK 的 `CFunctor`，经 SDK 的 `ICallQueue::QueueFunctor` 入队，没有手写猜测的 functor 虚表。SDK 由 `prepare_rt_source_sdk.py` 从固定提交归档，原始头文件不作修改。

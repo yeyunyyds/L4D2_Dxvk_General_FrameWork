@@ -1,0 +1,284 @@
+{
+  "schema": 1,
+  "date_utc": "2026-10-15",
+  "scope": "Host_static_FFP_state_conversion_not_game_or_GPU_RT",
+  "native_build_commit": "9188a862a4128e425abe8119bca2ddab0fae2cf6",
+  "status_archive_sha256": "4cd6a2e192c2b8d0a115d2881b3d6defd26e3fd22ccde448d32261853832cb75",
+  "build_id": "ldb-rt-observer+814c9e50a4248fa3",
+  "status": {
+    "schema": 1,
+    "commit": "9188a862a4128e425abe8119bca2ddab0fae2cf6",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "8f5e392aa08476278950aad030e4ad8942c54cfb714039a4501513f6436f91e8",
+      "development/x86/d3d9.dll": "09fbd82915b0b6ace567f84ae30590cc271da04e76a01931679b2d272456d9b7"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "native_inputs_sha256": {
+    "bridge-hooks.patch": "de06b24da3de57b49b2f02cf1ec965842de278ba3afd749895f307dd4bf6cd98",
+    "rt_protocol.h": "c7406af31144bdeeed8a0eafd54b13c871410c55b744e922fcd5f6455f0768ae",
+    "rt_bridge_api.h": "f3b2626817908909610a257a4268744e7f69eae89eb7549795109fc240568baa",
+    "rt_client.h": "6706a51fa0e57cae75d619dea1a1b32594bc737b73a701ff9ab6de86f3eb9ca1",
+    "rt_host.h": "13e0118f1b127943b8d7ed90e8a5895a191a24823a789ac405c362f7343236a5",
+    "rt_static_draw.h": "ca9e38ac74a6d4b368c89dde0a8b7a54778b998117377dcb6deda0eb1f8afa34"
+  },
+  "test_sources_sha256": {
+    "tests/rt_static_draw_cases.cpp": "89103eda2080bc7a506d927976e4d6d6665290359205a09faa1b8f53831364fe",
+    "tests/rt_static_device.h": "885d85bb83d7596ea6370881126c2206e6486e209f98579ed4ef741c91e36c9a",
+    "tests/rt_source_queue_cases.cpp": "68a29278c34afd2b505f958ec0c3c622e3deca8df3c5a6f703689c4dba2057af",
+    "scripts/analyze_rt_trace.py": "c8da8fcecdefa219fba1e7f0831a5e32fd3714040a7309e6eeed2eb90b3cc99f"
+  },
+  "release_validation": {
+    "x86": {
+      "cpp_commands": 49,
+      "O2_NDEBUG_no_DEBUGOPT": true
+    },
+    "x64": {
+      "cpp_commands": 21,
+      "O2_NDEBUG_no_DEBUGOPT": true
+    }
+  },
+  "native_log_markers": [
+    "RT static-world scoped D3D9 methods: PASS (3 groups, GPU unrun, ptr_bits=64)",
+    "NULLREF original_fvf=530 restored_fvf=530",
+    "RT static-world system D3D9 NULLREF: PASS (state/draw only, GPU RT unrun, ptr_bits=64)",
+    "RT static-world scoped D3D9 methods: PASS (3 groups, GPU unrun, ptr_bits=32)",
+    "NULLREF original_fvf=530 restored_fvf=530",
+    "RT static-world system D3D9 NULLREF: PASS (state/draw only, GPU RT unrun, ptr_bits=32)",
+    "source_frames=512 overlapped_draws=511",
+    "RT L4D2 SDK queue/COM/Host: PASS (3 groups, ptr_bits=32)"
+  ],
+  "trace_validation": [
+    {
+      "file": "checks/x64/trace/rt-host-2208-190.bin",
+      "sha256": "23801406e14c31fcd0eb0acf8d0454d74636a6ae285a81b00e566e360e90bf06",
+      "analysis": {
+        "schema": 1,
+        "scope": "metadata_transport_observer_only",
+        "result": "pass",
+        "errors": [],
+        "packets": 22,
+        "labelled_draws": 4,
+        "successful_presents": 4,
+        "unlabelled_presents": 1,
+        "skipped_metadata_packets": 2,
+        "static_draw_diagnostic": {
+          "requested": false,
+          "events": 0,
+          "converted_draws": 0,
+          "outcome_codes": {},
+          "result": "unrun",
+          "gpu_rt": "unrun"
+        },
+        "events": {
+          "0": 1,
+          "1": 22,
+          "2": 4,
+          "3": 4,
+          "4": 2,
+          "5": 5,
+          "6": 1,
+          "8": 1,
+          "10": 2
+        },
+        "consumer_thread": 5320,
+        "qpc_frequency": 10000000,
+        "source_game_queue": "unrun",
+        "image_quality": "unrun",
+        "b580_rt": "unrun",
+        "performance_acceptance": "unrun",
+        "presented_frames": {
+          "first": 1,
+          "last": 6,
+          "count": 4,
+          "consecutive": false
+        }
+      }
+    },
+    {
+      "file": "checks/x86/source-trace/rt-host-952-192.bin",
+      "sha256": "0131e3f6fce82f52d36c1702a9fa07193272a2744f31b7dba3a66faaf305ab56",
+      "analysis": {
+        "schema": 1,
+        "scope": "metadata_transport_observer_only",
+        "result": "pass",
+        "errors": [],
+        "packets": 14,
+        "labelled_draws": 2,
+        "successful_presents": 2,
+        "unlabelled_presents": 0,
+        "skipped_metadata_packets": 0,
+        "static_draw_diagnostic": {
+          "requested": false,
+          "events": 0,
+          "converted_draws": 0,
+          "outcome_codes": {},
+          "result": "unrun",
+          "gpu_rt": "unrun"
+        },
+        "events": {
+          "0": 1,
+          "1": 14,
+          "2": 2,
+          "3": 2,
+          "4": 2,
+          "5": 2,
+          "8": 1
+        },
+        "consumer_thread": 5336,
+        "qpc_frequency": 10000000,
+        "source_game_queue": "unrun",
+        "image_quality": "unrun",
+        "b580_rt": "unrun",
+        "performance_acceptance": "unrun",
+        "presented_frames": {
+          "first": 1,
+          "last": 5,
+          "count": 2,
+          "consecutive": false
+        }
+      }
+    },
+    {
+      "file": "checks/x86/source-trace/rt-host-952-194.bin",
+      "sha256": "b204ceb710e7deb6e5bc47e1a8334e6afc7861330bb30aed8c225c3a6c4b4dcd",
+      "analysis": {
+        "schema": 1,
+        "scope": "metadata_transport_observer_only",
+        "result": "pass",
+        "errors": [],
+        "packets": 3073,
+        "labelled_draws": 512,
+        "successful_presents": 512,
+        "unlabelled_presents": 0,
+        "skipped_metadata_packets": 0,
+        "static_draw_diagnostic": {
+          "requested": true,
+          "events": 512,
+          "converted_draws": 512,
+          "outcome_codes": {
+            "9": 512
+          },
+          "result": "pass",
+          "gpu_rt": "unrun"
+        },
+        "events": {
+          "0": 1,
+          "1": 3073,
+          "2": 512,
+          "3": 512,
+          "5": 512,
+          "8": 1,
+          "11": 512,
+          "12": 1
+        },
+        "consumer_thread": 5336,
+        "qpc_frequency": 10000000,
+        "source_game_queue": "unrun",
+        "image_quality": "unrun",
+        "b580_rt": "unrun",
+        "performance_acceptance": "unrun",
+        "presented_frames": {
+          "first": 1,
+          "last": 512,
+          "count": 512,
+          "consecutive": true
+        }
+      }
+    },
+    {
+      "file": "checks/x86/trace/rt-host-1396-190.bin",
+      "sha256": "a76490ad6051d3cfffb93adc4be109e08e8fdfe4a9936d06a6ceee214c260cf5",
+      "analysis": {
+        "schema": 1,
+        "scope": "metadata_transport_observer_only",
+        "result": "pass",
+        "errors": [],
+        "packets": 22,
+        "labelled_draws": 4,
+        "successful_presents": 4,
+        "unlabelled_presents": 1,
+        "skipped_metadata_packets": 2,
+        "static_draw_diagnostic": {
+          "requested": false,
+          "events": 0,
+          "converted_draws": 0,
+          "outcome_codes": {},
+          "result": "unrun",
+          "gpu_rt": "unrun"
+        },
+        "events": {
+          "0": 1,
+          "1": 22,
+          "2": 4,
+          "3": 4,
+          "4": 2,
+          "5": 5,
+          "6": 1,
+          "8": 1,
+          "10": 2
+        },
+        "consumer_thread": 1856,
+        "qpc_frequency": 10000000,
+        "source_game_queue": "unrun",
+        "image_quality": "unrun",
+        "b580_rt": "unrun",
+        "performance_acceptance": "unrun",
+        "presented_frames": {
+          "first": 1,
+          "last": 6,
+          "count": 4,
+          "consecutive": false
+        }
+      }
+    }
+  ],
+  "local_checks": {
+    "python_tests": 71,
+    "passed": 70,
+    "skipped": 1,
+    "skip_reason": "Native Windows fixture is run by CI",
+    "mingw_x64_strict_compile": "pass",
+    "pinned_bridge_archive_patch_preparation": "pass"
+  },
+  "corrected_cases": [
+    "MSVC unreachable-code warning in deliberately throwing callback test; type erasure preserves the exception case under W4/WX.",
+    "Restoring an equivalent FVF failed the native declaration pointer check. The scope now restores the original declaration; native checks require its canonical COM identity and matching FVF."
+  ],
+  "limits": [
+    "512-frame queue fixture uses a test SDK queue and same-process production COM/Host adapter, not the Source engine or actual x86-to-x64 graphics IPC.",
+    "D3D9 NULLREF state/Draw test does not rasterize or execute RT.",
+    "Only explicitly classified, opaque main-view world with the strict 40-byte layout can convert.",
+    "This is a per-Draw getter diagnostic, not a production performance profile."
+  ],
+  "unrun": [
+    "Actual game Hook and Source context/queue binding",
+    "Current-game classification and full static-world coverage",
+    "Bridge/Remix actual GPU execution and binary tuple initialization",
+    "B580 image quality and high-pressure real-60 performance",
+    "Game multithreading and forced-single-thread removal",
+    "Combined user package A"
+  ],
+  "native_static_check_executables": {
+    "x86": {
+      "sha256": "19858e610d21800ea2a7c479fb9825e3b46798699586bd2d69636321a8180875",
+      "pe_machine": "0x14c"
+    },
+    "x64": {
+      "sha256": "7ffa4dbfa191f9f73effd796b84cdede0f2653430b52a4b34ab36e93ac67bf85",
+      "pe_machine": "0x8664"
+    }
+  }
+}
