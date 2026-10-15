@@ -1,6 +1,6 @@
 # 游戏接入前置检查
 
-`rt-preflight-dev.zip` 将当前游戏绑定证据与固定自定义 Remix 的静态 RT 冒烟测试合为一次运行、一个结果 ZIP。它不是 R0／R1／R2 综合包 A。游戏 Hook、实际引擎队列插入、世界转换、线程及性能仍未验收。
+已发布的 [rt-preflight-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/rt-preflight-dev.zip) 将当前游戏绑定证据与固定自定义 Remix 的静态 RT 冒烟测试合为一次运行、一个结果 ZIP。它不是 R0／R1／R2 综合包 A。游戏 Hook、实际引擎队列插入、世界转换、线程及性能仍未验收。
 
 当前源码检查得到两个具体结论：
 
@@ -20,6 +20,10 @@
 Git 文件大小限制通过若干小于 95 MiB 的**有效 ZIP** 依赖包解决。用户只需下载入口 ZIP；首次运行自动从同一下载分支取得依赖，逐包及逐文件校验 SHA／大小，之后复用缓存。入口与所有依赖一次 Git 提交发布，避免入口先于依赖上线。结果 ZIP 不重复包含这些大依赖。
 
 native CI 会解压入口包，使用**包内 Python**执行 `--verify-package`，从本次依赖 ZIP 解包、逐文件验证、真正加载自定义 DLL 并检查 API 导出。该检查不初始化 GPU；只有这个检查通过才发布入口包。GPU 冒烟、游戏模块证据、B580 身份／图像仍需用户机器执行和分析。
+
+最终打包提交 `6181472` 已通过上述原生检查并发布：入口约 10 MiB，首次自动取得四个依赖 ZIP，共约 251 MiB，运行目录包含 173 个 runtime／依赖文件。已复核入口 ZIP 的 CRC、SHA 和脚本源码，以及四个已发布依赖的有界读取及长度；[完整验证记录](../../research/rt-preflight-validation.json) 保留原生构建与打包的分别身份。
+
+完整 runtime 的原生构建来自 `9c3b2f8`。最初加载失败的原因是无 GPU 的 Windows 构建机缺少 `vulkan-1.dll`；PE 依赖图确认后，复用既有二进制，增加固定提交的 Khronos Vulkan-Loader 1.4.313、匹配头文件和许可。loader 放在应用目录，不安装或替换系统驱动。最终普通导入无缺失，六个关键 DLL 分别加载通过，runtime API 导出存在；API 初始化与 GPU 光追依然记为 unrun。修复打包没有重新编译 runtime。
 
 用户步骤：
 

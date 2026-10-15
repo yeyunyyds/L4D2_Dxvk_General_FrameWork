@@ -1,0 +1,272 @@
+{
+  "schema": 1,
+  "code_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+  "scope": "RT prerequisite launcher and read-only current-game candidates; no installed game hooks",
+  "local_tests": {
+    "command": "python -m unittest discover -s tests -q",
+    "total": 83,
+    "passed": 82,
+    "skipped": 1
+  },
+  "game_rt": "unrun",
+  "source_threading": "unrun",
+  "b580_rt": "unrun",
+  "runtime_distribution": "published_and_native_loader_verified",
+  "native_bridge": {
+    "evidence_zip_sha256": "9cee743cfa631fa8812553f9c6ae6c28bc35c8ae1415fbec3bd8a251c97a7674",
+    "status": {
+      "schema": 1,
+      "commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+      "native_outcome": "success",
+      "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+      "game_queue_execution": "unrun",
+      "b580_rt": "unrun",
+      "binaries": {
+        "development/x64/L4D2Bridge64.exe": "d6ddfd054a68180459f17a5aee5cdc618a82b558daf7a94b216851449ee8ee8c",
+        "development/x86/d3d9.dll": "8bab0f7d6300e0d1e93caa2f00a2198e52c626cc1a7b5dde3b978fd7f2890a43"
+      },
+      "sdk_queue_development_execution": "pass",
+      "game_binding_probe_native_execution": "pass",
+      "static_draw_development_execution": "pass",
+      "system_d3d9_nullref_state": {
+        "x86": "pass",
+        "x64": "pass"
+      },
+      "artifact_validation": "pass",
+      "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+    }
+  },
+  "native_game_probe": {
+    "evidence_zip_sha256": "dc244c76a5575af611f765bc3228fc8918a98962238242fbb61f45d43f8be814",
+    "status": {
+      "schema": 1,
+      "commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+      "scope": "external_x64_reader_x86_fixture_not_game_binding",
+      "native_outcome": "success",
+      "game_queue_execution": "unrun",
+      "b580_rt": "unrun",
+      "files": {
+        "scripts/rt_game_probe.py": "60b1ad5775e7ab763d8878756fe726908a80a438382567d5ce7d06411fae8d83",
+        "tests/test_rt_game_probe.py": "7254150ffb8ab61624d2a860070e36c12dda2efc4dc91ccf99168988e0557e11",
+        "tests/rt_game_probe_fixture.cpp": "f09537039f5b6e0710b13212e6c117e9d099c68fe2cc2b569e39d7df58240571",
+        "compile.log": "d5a67448f3e9e95c1bdce868403ad2217247d30250d5a29eda057b1c98499dbd",
+        "game-probe-fixture.exe": "098dc08d32f4007d8791376dd5b396ce72ed006b920cb996768d6b740be12ce6",
+        "game-probe.json": "84fde6801c316514bfa829886e86806d2a1589baf9e042e4042c12c3ef53f4cf",
+        "native.log": "1636a702e745d4a82d2e815f031cab0c97bb4674cf954ad5bf81d4c4f96c9c09"
+      }
+    }
+  },
+  "native_trace_analysis": [
+    {
+      "archive_path": "checks/x64/trace/rt-host-1300-190.bin",
+      "sha256": "e457ddefe825a3dd3e932c8de4e7d785640775b203f6be0af7822dd655964bb0",
+      "result": "pass",
+      "packets": 22,
+      "labelled_draws": 4,
+      "successful_presents": 4,
+      "static_draw_diagnostic": {
+        "requested": false,
+        "events": 0,
+        "converted_draws": 0,
+        "outcome_codes": {},
+        "result": "unrun",
+        "gpu_rt": "unrun"
+      }
+    },
+    {
+      "archive_path": "checks/x86/source-trace/rt-host-6108-192.bin",
+      "sha256": "1479ed834f5d8e986f18090af39941cc045a2c351119e5ad7a05fbb1bb868d97",
+      "result": "pass",
+      "packets": 14,
+      "labelled_draws": 2,
+      "successful_presents": 2,
+      "static_draw_diagnostic": {
+        "requested": false,
+        "events": 0,
+        "converted_draws": 0,
+        "outcome_codes": {},
+        "result": "unrun",
+        "gpu_rt": "unrun"
+      }
+    },
+    {
+      "archive_path": "checks/x86/source-trace/rt-host-6108-194.bin",
+      "sha256": "b6558e9ff17c84f05a0ce78e30663421bb610ae60ad42d3b8e414a951021feb0",
+      "result": "pass",
+      "packets": 3073,
+      "labelled_draws": 512,
+      "successful_presents": 512,
+      "static_draw_diagnostic": {
+        "requested": true,
+        "events": 512,
+        "converted_draws": 512,
+        "outcome_codes": {
+          "9": 512
+        },
+        "result": "pass",
+        "gpu_rt": "unrun"
+      }
+    },
+    {
+      "archive_path": "checks/x86/trace/rt-host-2852-190.bin",
+      "sha256": "ed5446afecb0d8ac28d3b6224c11d183a1cea27f1040fbbb0660538041d61bdd",
+      "result": "pass",
+      "packets": 22,
+      "labelled_draws": 4,
+      "successful_presents": 4,
+      "static_draw_diagnostic": {
+        "requested": false,
+        "events": 0,
+        "converted_draws": 0,
+        "outcome_codes": {},
+        "result": "unrun",
+        "gpu_rt": "unrun"
+      }
+    }
+  ],
+  "packaging_commit": "61814722cc592c491fa1698e3f10f426f9e7d469",
+  "download_branch_commit": "e9185d2de0bd360e1679bacb26b51e415fe25ad4",
+  "launcher_sha256": "24c95e229f9eaef6ea058b073b9c9a658e13d00f8379b8e7ae24fc79375108a2",
+  "launcher_bytes": 10521898,
+  "launcher_url": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/rt-preflight-dev.zip",
+  "runtime_release": {
+    "native_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+    "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "runtime_dll": {
+      "size": 210378240,
+      "sha256": "21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7"
+    },
+    "smoke_exe": {
+      "size": 291328,
+      "sha256": "16313c79783afe6251e82cc2b121393553d894394dc9c6cab4f7421032942b4d"
+    },
+    "gpu_execution": "unrun",
+    "api_initialization": "unrun"
+  },
+  "package_validation": {
+    "schema": 1,
+    "scope": "rt_prerequisites",
+    "collection": "complete",
+    "runtime_preparation": "pass",
+    "runtime_smoke": "unrun",
+    "game_binding": "unrun",
+    "game_rt": "unrun",
+    "source_threading": "unrun",
+    "performance": "unrun",
+    "b580_rt": "unrun",
+    "verify_only": true,
+    "errors": [],
+    "build_commit": "61814722cc592c491fa1698e3f10f426f9e7d469",
+    "runtime_load": {
+      "dependency_load": "pass",
+      "api_export": "present",
+      "gpu_execution": "unrun"
+    },
+    "omitted_files": [],
+    "vulkan_loader": {
+      "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+      "commit": "fb78607414e154c7a5c01b23177ba719c8a44909",
+      "headers_commit": "409c16be502e39fe70dd6fe2d9ad4842ef2c9a53",
+      "scope": "app_local_standard_loader_not_gpu_driver",
+      "sha256": "b8d12c46b1d88cccb719b2a54efa6dd14cbd58a3b8cbf1561b53e4158eb3db8a",
+      "size": 687104
+    },
+    "native_build_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+    "primary_zip_sha256": "24c95e229f9eaef6ea058b073b9c9a658e13d00f8379b8e7ae24fc79375108a2"
+  },
+  "missing_ordinary_imports": [],
+  "isolated_dependency_loads": {
+    "d3d9.dll": {
+      "exit_code": 0,
+      "stdout": "LOAD_PASS\n",
+      "stderr": ""
+    },
+    "NRC_Vulkan.dll": {
+      "exit_code": 0,
+      "stdout": "LOAD_PASS\n",
+      "stderr": ""
+    },
+    "NvLowLatencyVk.dll": {
+      "exit_code": 0,
+      "stdout": "LOAD_PASS\n",
+      "stderr": ""
+    },
+    "libxess.dll": {
+      "exit_code": 0,
+      "stdout": "LOAD_PASS\n",
+      "stderr": ""
+    },
+    "GFSDK_Aftermath_Lib.x64.dll": {
+      "exit_code": 0,
+      "stdout": "LOAD_PASS\n",
+      "stderr": ""
+    },
+    "usd.dll": {
+      "exit_code": 0,
+      "stdout": "LOAD_PASS\n",
+      "stderr": ""
+    }
+  },
+  "payloads": [
+    {
+      "name": "rt-prereq-payload-25802f8447a81def30122c8d.zip",
+      "sha256": "25802f8447a81def30122c8d8a6511ee7cec86b321826526c0d4ce35c5f94814",
+      "size": 78275253
+    },
+    {
+      "name": "rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
+      "sha256": "cc8723b1f848c058238dcf27c0fa610a05654c707672341bfeae24ca127e7633",
+      "size": 95644514
+    },
+    {
+      "name": "rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
+      "sha256": "b6201876eb36a3699d3c04ed97fe90b395c1ca803f839d2f586290bab7125f15",
+      "size": 89038588
+    },
+    {
+      "name": "rt-prereq-payload-a9a9fb4c4cb343d2875f5435.zip",
+      "size": 259359,
+      "sha256": "a9a9fb4c4cb343d2875f543572e97942a3b1a534c472e839761c28d43e727364"
+    }
+  ],
+  "published_payload_range_checks": [
+    {
+      "name": "rt-prereq-payload-25802f8447a81def30122c8d.zip",
+      "method": "GET_range",
+      "status": 206,
+      "first_byte": "50",
+      "size_header": "1",
+      "content_range": "bytes 0-0/78275253"
+    },
+    {
+      "name": "rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
+      "method": "GET_range",
+      "status": 206,
+      "first_byte": "50",
+      "size_header": "1",
+      "content_range": "bytes 0-0/95644514"
+    },
+    {
+      "name": "rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
+      "method": "GET_range",
+      "status": 206,
+      "first_byte": "50",
+      "size_header": "1",
+      "content_range": "bytes 0-0/89038588"
+    },
+    {
+      "name": "rt-prereq-payload-a9a9fb4c4cb343d2875f5435.zip",
+      "method": "GET_range",
+      "status": 206,
+      "first_byte": "50",
+      "size_header": "1",
+      "content_range": "bytes 0-0/259359"
+    }
+  ],
+  "initial_package_failure": {
+    "native_build": "pass",
+    "package": "fail",
+    "reason": "Headless Windows CI lacked vulkan-1.dll; fixed with pinned app-local standard Vulkan loader, no driver modification"
+  },
+  "package_validation_evidence_sha256": "0ce7ea970176a26ff495447c1963fa450792cc6f601cfb517ec1ad9261034e3d"
+}
