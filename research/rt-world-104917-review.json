@@ -328,7 +328,7 @@
     "scope": "collector Python source only; no change to runtime, Draw selection, state conversion or Bridge timeouts",
     "pre_exit_checkpoint": "copy available game logs and write explicitly incomplete summary before waiting",
     "finalization": "refresh logs after exit and retain one final ZIP",
-    "published_runtime_package": "unchanged_v3; source fix not yet shipped in a new test package",
+    "published_runtime_package": "included_in_verified_v4_delivery",
     "validation": {
       "python_tests": {
         "total": 82,
@@ -350,7 +350,7 @@
       "real_game_validation": "unrun_cloud_has_no_L4D2_or_B580"
     }
   },
-  "next_evidence": "v4 one-entry, one-F9, one-ZIP retest after build/product verification; existing logs are sufficient to choose the scoped transport fix.",
+  "next_evidence": "Run verified v4 with the same single entry and one F9, then upload the final single ZIP to check startup recovery, 240 Presents and RT readbacks together.",
   "game_rt": "incomplete_requires_review",
   "source_queue_execution": "unrun",
   "source_parallel_preparation": "unrun",
@@ -402,5 +402,15 @@
     "root_hypothesis": "Ring-capacity wait expires while first RT initialization blocks Host; confirmed reproducible with production queue, actual v3 lower-level fault not recorded.",
     "prior_reply_deadline_hypothesis": "not_supported_by_uploaded_log; actual marker is command-aborted, not reply-deadline",
     "v4_fix": "Only validated world launch selects 60000 ms producer ring/upload-capacity budget; normal profile retains 2000 ms. Peer close/fault checks remain, and faults log underlying transport codes."
+  },
+  "v4_delivery": {
+    "build_commit": "a45ab966f680ce6acbd5e86127d6640fd5164648",
+    "download_ref": "90598699fda203b1d6cbb1e0725136bda7c38ebf",
+    "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/90598699fda203b1d6cbb1e0725136bda7c38ebf/downloads/rt-world-pilot-dev.zip",
+    "size": 11883112,
+    "sha256": "b103fca27fd1fb4effdcddef13b51dc7913f980f05552327b83a0eebc25a6b8e",
+    "build_id": "ldb-rt-observer+d74c587122809d67",
+    "native_x86_x64_backpressure_execution": "pass",
+    "actual_game_crash_fix": "unrun_requires_same_one_F9_test"
   }
 }

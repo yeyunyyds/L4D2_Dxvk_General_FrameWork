@@ -2,7 +2,7 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/039eb815d49044f6ecd6699ceeab62566edd5517/downloads/rt-world-pilot-dev.zip)。当前为 v3，构建提交为 `b93b2c068af1d525e3b06543ab89905f07f6982e`，包大小 11,880,824 字节，SHA256 为 `7a0a3373a6d10016744d1d90cbe372352edc314c993bca8b352ed6a1514bccc9`。该链接固定到本次已核验产物，不随下载分支更新而改变。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/90598699fda203b1d6cbb1e0725136bda7c38ebf/downloads/rt-world-pilot-dev.zip)。当前为 v4，构建提交为 `a45ab966f680ce6acbd5e86127d6640fd5164648`，包大小 11,883,112 字节，SHA256 为 `b103fca27fd1fb4effdcddef13b51dc7913f980f05552327b83a0eebc25a6b8e`。该链接固定到本次已核验产物，不随下载分支更新而改变。
 
 ## 从数据到实际转换
 
@@ -48,8 +48,10 @@ v1 的 [历史交付核验记录](../../research/rt-world-pilot-validation.json)
 
 v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190 Draw 完整、地图最终画面正常，但所有世界格式候选的标准 shader getter 是尚未支持的 A1 指针读取，导致零转换、RT 未请求开启。v3 补齐该只读解码，并记录名称槽/地址。另将法线原始 uint32 与 alpha 分开统计，避免把固定 `(0,0,0,1)` 字节模式当有效几何；固定运行时的 primary normal 源为 R32_UINT 打包编码，旧 PNG 的 float 通道映射不能作为向量法线验收，原始字节始终保留供后续离线解码。
 
-当前 [v3 交付核验记录](../../research/rt-world-pilot-v3-validation.json) 已从固定 GitHub 提交重新下载并校验 CRC/全部成员哈希、包内脚本和配置、配套二进制/源码指纹。Windows x86/x64 均执行了有界 A1 名称读取、全局指针变化、溢出、空名称和自定义 shader 拒绝用例，启动开关/状态恢复与 NULLREF 检查继续通过；包内 Python、固定 DLL/API 和完整依赖加载检查通过。本地为 77 项通过、2 项需 Windows 而跳过，实际 v2 原始回包由新版分析器重析后仍明确报告零 RT 开启、零世界转换、全零深度及 alpha-only 法线不构成几何信号。v3 的实机复核见下段。
+[v3 历史交付核验记录](../../research/rt-world-pilot-v3-validation.json) 已从固定 GitHub 提交重新下载并校验 CRC/全部成员哈希、包内脚本和配置、配套二进制/源码指纹。Windows x86/x64 均执行了有界 A1 名称读取、全局指针变化、溢出、空名称和自定义 shader 拒绝用例，启动开关/状态恢复与 NULLREF 检查继续通过；包内 Python、固定 DLL/API 和完整依赖加载检查通过。本地为 77 项通过、2 项需 Windows 而跳过，实际 v2 原始回包由新版分析器重析后仍明确报告零 RT 开启、零世界转换、全零深度及 alpha-only 法线不构成几何信号。v3 的实机复核见下段。
 
-[v3 实际回包复核](rt-world-104917-result.md) 已确认标准材质名称解码成功、176 次世界绘制完成转换；采集在第 33 次 Present 后中断，最后 Present 记录间隔约 17.6 秒，同期开始初始化 Ray Query 管线。手动压缩的中间目录缺失 Bridge 日志，不能据此确认原生异常或通信超时根因，实际 RT 图像仍未通过。采集器源码补充等待退出前的日志及 incomplete 摘要快照，最终仍合并一个 ZIP；该修正尚未更新上面的 v3 发行包。下一步优先补齐这次已有的最终 ZIP 或 Bridge 日志，不要求重复采集。
+[v3 实际回包复核](rt-world-104917-result.md) 已确认标准材质名称解码成功、176 次世界绘制完成转换；采集在第 33 次 Present 后中断，最后 Present 记录间隔约 17.6 秒，同期开始初始化 Ray Query 管线。手动压缩的中间目录缺失 Bridge 日志，不能据此确认原生异常或通信超时根因，实际 RT 图像仍未通过。补充的等待退出前日志及 incomplete 摘要快照已进入 v4，最终仍合并一个 ZIP。后补 Bridge 日志的归因见下段。
 
-后补同次 Bridge 日志后，已确认首条错误为 client 的 SetStreamSource 命令提交中止，Host 随后清理并以 0 退出；没有 `reply-deadline` 或原生异常报告。v4 将有效 world 启动请求下的 full IPC 生产端容量等待由 2 秒设为有限的 60 秒，保留 peer/故障检查和普通观察模式的 2 秒预算，并补记底层 transport fault。生产队列回归复现了默认超时，也验证了消费者暂停超过 2 秒后仍完整有序提交、peer 关闭及时取消。实际 v3 底层 fault 未记录，不能将机制复现等同于实机原因完全坐实；v4 成品及实机结果仍需各自验收，以上 v3 下载链接尚未更新。
+后补同次 Bridge 日志后，已确认首条错误为 client 的 SetStreamSource 命令提交中止，Host 随后清理并以 0 退出；没有 `reply-deadline` 或原生异常报告。v4 将有效 world 启动请求下的 full IPC 生产端容量等待由 2 秒设为有限的 60 秒，保留 peer/故障检查和普通观察模式的 2 秒预算，并补记底层 transport fault。生产队列回归复现了默认超时，也验证了消费者暂停超过 2 秒后仍完整有序提交、peer 关闭及时取消。实际 v3 底层 fault 未记录，不能将机制复现等同于实机原因完全坐实；实际 RT 图像和本次崩溃是否恢复仍待实机验收。
+
+[v4 交付核验记录](../../research/rt-world-pilot-v4-validation.json) 已核对固定 GitHub 成品的 CRC、全部成员哈希、配套 PE 架构/身份、源码指纹，以及包内脚本/配置/README 一致性。Windows x86/x64 均执行默认队列超时、暂停消费者 2.3 秒后 65 条命令完整有序传递、peer 关闭及时中断扩展等待；新增门槛与既有状态恢复/NULLREF、真实固定 DLL/API、包内 Python/完整依赖检查均通过。分别重析双架构 240 Present/720 Draw/210 转换模拟 trace，旧实际 40,952 Draw 兼容性回归通过。本地 Python 82 项中 80 项通过、2 项需 Windows 跳过，生产队列在 Linux 实际执行和 MinGW 严格交叉编译通过。v3 原生源码输入全部保持相同，只新增 transport patch/policy；Source producer、实际 RT 和性能仍未验收。
