@@ -295,8 +295,17 @@ def wait_game(timeout=180, diagnostics=None, notify=message):
 def verify_load(runtime):
     if os.name != 'nt':
         raise OSError('Runtime loader verification requires Windows x64')
-    library = ctypes.WinDLL(str(runtime / 'd3d9.dll'), winmode=0x1100)
-    getattr(library, 'remixapi_InitializeLibrary')
+    # Runtime dependencies can retain loaded modules after the top-level DLL
+    # handle is released. Keep this load-only check in its own process so no
+    # runtime DLL (or worker) survives into collection or package cleanup.
+    code = '''import ctypes, sys
+library = ctypes.WinDLL(sys.argv[1], winmode=0x1100)
+getattr(library, 'remixapi_InitializeLibrary')
+'''
+    process = subprocess.run([sys.executable, '-I', '-c', code, str((runtime / 'd3d9.dll').resolve())],
+                             capture_output=True, text=True, timeout=30)
+    if process.returncode:
+        raise OSError('Runtime dependency/export check failed: ' + process.stderr[-4000:])
     return {'dependency_load': 'pass', 'api_export': 'present', 'gpu_execution': 'unrun'}
 
 
