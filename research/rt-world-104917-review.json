@@ -1,0 +1,358 @@
+{
+  "schema": 1,
+  "scope": "v3_first_selected_world_conversion_incomplete_near_rt_pipeline_initialization",
+  "input": {
+    "file": "rt-world-20261016-104917-4f080893.7z",
+    "sha256": "799a1fec457c9ec03a452f28bf8ebe5e335e702a163bcbf7dcfc1ef1d80df07e",
+    "size": 1656468,
+    "archive_integrity": "pass",
+    "archive_members": [
+      "rt-draw-host-17040-2.bin",
+      "world.conf",
+      "draw-analysis.json",
+      "game-binding.json",
+      "installation.json",
+      "rt-draw-done-530851461514927876.json",
+      "startup-modules.json",
+      "rt-draw-control-11272-265155712.jsonl",
+      "rt-draw-materials-11272-265155712.jsonl",
+      "world-runtime.jsonl",
+      "progress.log",
+      "remix-dxvk.log",
+      "world-30-0.png",
+      "world-30-0.rgba32f",
+      "world-30-1.rgba32f",
+      "world-30-2.rgba32f",
+      "metrics.txt"
+    ],
+    "manually_packed": true
+  },
+  "user_observation": "Game crashed before 240 frames; uploaded a manually compressed result directory.",
+  "build_commit": "b93b2c068af1d525e3b06543ab89905f07f6982e",
+  "installed_pair_matches_v3": true,
+  "native_trace_sha256": "f7f66aecdaa83b86df1f35cfa1e0d70905cd2a19cff0c347252d32166e9a995b",
+  "draw_observation": {
+    "pass": false,
+    "errors": [
+      "incomplete_or_failed_segment"
+    ],
+    "header": {
+      "session": 530851461514927876,
+      "device": 2,
+      "frequency": 10000000,
+      "profile": "world_pilot",
+      "target_presents": 240,
+      "control_presents": 30
+    },
+    "footer": {
+      "draws": 24314,
+      "valid": 24314,
+      "presents": 33,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 3
+    },
+    "status_counts": {
+      "valid": 24314
+    },
+    "material_decode_flags": {
+      "3": 24314
+    },
+    "shader_names": {
+      "ShadowBuild_DX9": 2075,
+      "NekoSky": 198,
+      "LightmappedGeneric": 4113,
+      "UnlitGeneric": 7819,
+      "VertexLitGeneric": 5130,
+      "Infected": 2416,
+      "NekoToon": 1452,
+      "Shadow": 66,
+      "Occlusion_DX9": 152,
+      "MotionBlur_dx9": 33,
+      "Spritecard": 33,
+      "Neko_Downsample_nohdr": 33,
+      "BlurFilterX": 33,
+      "BlurFilterY": 33,
+      "NekoBloom": 429,
+      "Neko_Engine_Post": 33,
+      "DepthWrite": 266
+    },
+    "world_decisions": {
+      "1": 21736,
+      "3": 2299,
+      "8": 176,
+      "4": 6,
+      "7": 97
+    },
+    "world_conversion": {
+      "reports": 24314,
+      "converted": 176
+    },
+    "world_normalization": "unrun_or_incomplete",
+    "host_thread": 3856,
+    "client_draw_threads": [
+      5344
+    ],
+    "pipeline_query_failure_draws": 0,
+    "viewport_mismatches": 0
+  },
+  "material_observation": {
+    "unique": 347,
+    "decode_flags": {
+      "3": 347
+    },
+    "world_format_unique": 54,
+    "world_format_names": {
+      "LightmappedGeneric": 54
+    },
+    "method_calls_executed": false
+  },
+  "converted_report_codes": {
+    "9": 176
+  },
+  "converted_state_hresult_counts": {
+    "0": 528
+  },
+  "physical_draw_and_present_hresult_counts": {
+    "0": 24347
+  },
+  "last_frames": [
+    {
+      "frame": 28,
+      "draws": 842,
+      "converted": 0,
+      "first_draw_tick": 55083841401,
+      "last_draw_tick": 55084430108,
+      "present_tick": 55084431584,
+      "present_hresult": 0,
+      "present_interval_ms": 59.22,
+      "last_draw_to_present_record_ms": 0.1476
+    },
+    {
+      "frame": 29,
+      "draws": 858,
+      "converted": 0,
+      "first_draw_tick": 55084434768,
+      "last_draw_tick": 55085037175,
+      "present_tick": 55085038400,
+      "present_hresult": 0,
+      "present_interval_ms": 60.6816,
+      "last_draw_to_present_record_ms": 0.1225
+    },
+    {
+      "frame": 30,
+      "draws": 857,
+      "converted": 0,
+      "first_draw_tick": 55085041198,
+      "last_draw_tick": 55085634572,
+      "present_tick": 55085635660,
+      "present_hresult": 0,
+      "present_interval_ms": 59.726,
+      "last_draw_to_present_record_ms": 0.1088
+    },
+    {
+      "frame": 31,
+      "draws": 857,
+      "converted": 60,
+      "first_draw_tick": 55085788451,
+      "last_draw_tick": 55086444986,
+      "present_tick": 55086446132,
+      "present_hresult": 0,
+      "present_interval_ms": 81.0472,
+      "last_draw_to_present_record_ms": 0.1146
+    },
+    {
+      "frame": 32,
+      "draws": 864,
+      "converted": 59,
+      "first_draw_tick": 55086447144,
+      "last_draw_tick": 55087090057,
+      "present_tick": 55087091456,
+      "present_hresult": 0,
+      "present_interval_ms": 64.5324,
+      "last_draw_to_present_record_ms": 0.1399
+    },
+    {
+      "frame": 33,
+      "draws": 857,
+      "converted": 57,
+      "first_draw_tick": 55087093245,
+      "last_draw_tick": 55087728284,
+      "present_tick": 55263347481,
+      "present_hresult": 0,
+      "present_interval_ms": 17625.6025,
+      "last_draw_to_present_record_ms": 17561.9197
+    }
+  ],
+  "footer_tick": 55275215736,
+  "last_present_to_footer_ms": 1186.8255,
+  "timing_limit": "Intervals between trace records; no Present-entry timestamp or asynchronous GPU completion/fault measurement.",
+  "runtime_observation": {
+    "rt_requested_on": 1,
+    "rt_requested_off": 1,
+    "ray_query_pipeline_initialization_logged_at_local_time": "10:51:20.116",
+    "restir_gi_activated_logged_at_local_time": "10:51:20.124",
+    "native_fault_or_device_lost_in_uploaded_remix_log": false,
+    "common_objects_undisposed": 40,
+    "rt_dispatch_or_correct_rt_image_proven": false
+  },
+  "readback": {
+    "schema": 1,
+    "scope": "reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance",
+    "runtime_outputs": "incomplete",
+    "errors": [
+      "incomplete_control_and_world_output_set"
+    ],
+    "samples": [
+      {
+        "frame": 30,
+        "kind": 0,
+        "file": "world-30-0.rgba32f",
+        "copy_code": 0,
+        "hresult": 0,
+        "sha256": "c2c9a4c593536e6aad3e0fc8617d9e9a47bba8fa262aa71f7894b311e29e35ff",
+        "pixels": 256000,
+        "finite_fraction": 1.0,
+        "nonzero_values": 1021344,
+        "positive_bounded_first_channel_fraction": 0.995640625,
+        "nonzero_finite_rgb_values": 765344,
+        "nonzero_rgb_words": 765344,
+        "first_rgba_u32": [
+          1057918607,
+          1056504057,
+          1054003923,
+          1065353216
+        ],
+        "sampled_rgb_variants": 29269,
+        "zero_initialized_buffer_unchanged": false
+      },
+      {
+        "frame": 30,
+        "kind": 1,
+        "file": "world-30-1.rgba32f",
+        "copy_code": 0,
+        "hresult": 0,
+        "sha256": "830497acdc4cbdebb0fc5a05f65cb02a183648329f3067ac2ed27fbcb0ea3419",
+        "pixels": 256000,
+        "finite_fraction": 1.0,
+        "nonzero_values": 0,
+        "positive_bounded_first_channel_fraction": 0.0,
+        "nonzero_finite_rgb_values": 0,
+        "nonzero_rgb_words": 0,
+        "first_rgba_u32": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sampled_rgb_variants": 1,
+        "zero_initialized_buffer_unchanged": true
+      },
+      {
+        "frame": 30,
+        "kind": 2,
+        "file": "world-30-2.rgba32f",
+        "copy_code": 0,
+        "hresult": 0,
+        "sha256": "9f94cc80e5009735a51f911b96c1f9fb89e2a7e34ee8d7d89c4daea4e695a39a",
+        "pixels": 256000,
+        "finite_fraction": 1.0,
+        "nonzero_values": 256000,
+        "positive_bounded_first_channel_fraction": 0.0,
+        "nonzero_finite_rgb_values": 0,
+        "nonzero_rgb_words": 0,
+        "first_rgba_u32": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "sampled_rgb_variants": 1,
+        "zero_initialized_buffer_unchanged": false
+      }
+    ],
+    "startup_raster_gate": "requested_events_present_not_effective_state_proof",
+    "rt_activation_requests": 1,
+    "nonzero_world_depth_and_normals": false,
+    "geometry_visual_review": "incomplete",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun",
+    "game_rt": "requires_visual_and_thread_review",
+    "preview_mapping": {
+      "color": "clamped RGB [0,1]",
+      "depth": "positive first channel logarithmic normalization",
+      "normals": "legacy float-channel visualization, not decoded packed normals; raw uint32 bits retained"
+    },
+    "normal_source_format_from_pinned_runtime": "VK_FORMAT_R32_UINT; first RGBA word may contain packed normal; transfer interpretation needs actual RT data",
+    "limits": "normal encoding and scene correspondence require review; no API return code or nonzero buffer proves ray dispatch by itself"
+  },
+  "live_game_module_probe": {
+    "execution": "snapshot_collected",
+    "before": {
+      "pid": 11272,
+      "creation_filetime": 134366465606693493,
+      "alive": true
+    },
+    "after": {
+      "pid": 11272,
+      "creation_filetime": 134366465606693493,
+      "alive": true
+    }
+  },
+  "footer_reason_interpretation": "3 means Recorder destructor; it is not a crash code or evidence of Reset/device loss.",
+  "root_cause": "undetermined_without_bridge_logs",
+  "hypotheses": [
+    {
+      "description": "First RT pipeline initialization blocks Host progress long enough for a client IPC response deadline.",
+      "status": "unconfirmed",
+      "basis": "Approximately 17.6 s final Present interval, RT pipeline initialization log, and bounded UID response waits in pinned LDB source.",
+      "required_evidence": [
+        "bridge32.log reply-deadline / IPC fault or peer exit",
+        "bridge64.log final commands and peer exit / exception report"
+      ],
+      "limit": "A long interval does not identify an active synchronous RPC, configured timeout, GPU hang, or native crash."
+    }
+  ],
+  "missing_original_upload": [
+    "summary.json",
+    "game-log-inventory.json",
+    "bridge32.log",
+    "bridge64.log",
+    "world-analysis.json",
+    "frame120_readbacks",
+    "frame240_readbacks"
+  ],
+  "collector_gap": "Bridge logs and summary were saved only after waiting for game/Host exit; manual compression during that wait omitted them.",
+  "collector_fix": {
+    "scope": "collector Python source only; no change to runtime, Draw selection, state conversion or Bridge timeouts",
+    "pre_exit_checkpoint": "copy available game logs and write explicitly incomplete summary before waiting",
+    "finalization": "refresh logs after exit and retain one final ZIP",
+    "published_runtime_package": "unchanged_v3; source fix not yet shipped in a new test package",
+    "validation": {
+      "python_tests": {
+        "total": 82,
+        "passed": 80,
+        "skipped_windows_required": 2
+      },
+      "collector_tests": {
+        "total": 16,
+        "passed": 16
+      },
+      "coverage": [
+        "early Host exit with live game",
+        "pre-exit summary cannot report complete",
+        "timeout checkpoint remains archivable",
+        "log-copy failure preserves independent world analysis"
+      ],
+      "native_runtime_changes": false,
+      "new_windows_native_build": "not_required_collector_only_change",
+      "real_game_validation": "unrun_cloud_has_no_L4D2_or_B580"
+    }
+  },
+  "next_evidence": "Existing final rt-world-20261016-104917-4f080893.zip, or the same-run bridge32.log and bridge64.log; no rerun requested.",
+  "game_rt": "incomplete_requires_review",
+  "source_queue_execution": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun"
+}

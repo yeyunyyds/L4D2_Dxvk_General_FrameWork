@@ -242,6 +242,35 @@ def finish_capture(directory,root,pid,report,notify):
     report['result_scope']='consumer state / RPC ordering only; no Source producer queue or RT image acceptance'
 
 
+def finish_world_capture(directory,game,since,report,notify):
+    # A Host may have exited while the game remains alive. Retain its errors
+    # before the potentially long normal-exit wait, including in manual copies
+    # of the result directory. The final pass refreshes these logs after exit.
+    try:
+        collect_game_logs(game,directory,since)
+        report['pre_exit_game_logs']='snapshot_collected'
+    except OSError as error:
+        report['pre_exit_game_logs']='incomplete'
+        report['errors'].append('Pre-exit game log collection: '+str(error))
+    checkpoint=dict(report,collection='incomplete',collection_phase='waiting_for_game_and_host_exit')
+    save(directory/'summary.json',checkpoint)
+    notify(('Capture segment and live module probe finished.' if report['collection']=='complete' else
+            'INCOMPLETE capture; available trace and live module probe saved.')+
+           ' Incomplete summary and available logs saved; final logs will join this ONE ZIP after L4D2 exits.')
+    wait_stopped(notify)
+    outputs=analyze_world(directory);save(directory/'world-analysis.json',outputs)
+    report['world_outputs']=outputs['runtime_outputs']
+    report['world_geometry_buffers']='nonzero_requires_review' if outputs.get('nonzero_world_depth_and_normals') else 'incomplete'
+    reviews=json.loads((directory/'draw-analysis.json').read_text())
+    report['world_converted_draws']=sum(t.get('world_conversion',{}).get('converted',0) for t in reviews.values())
+    report['rt_activation_requests']=outputs.get('rt_activation_requests',0)
+    notify('World conversion: '+str(report['world_converted_draws'])+' Draws; RT enable requests: '+
+           str(report['rt_activation_requests'])+'. Actual RT images still require review.')
+    report['world_normalization']='pass' if reviews and all(t.get('world_normalization')=='pass' for t in reviews.values()) else 'incomplete'
+    if (outputs['runtime_outputs']!='pass' or report['world_normalization']!='pass'
+            or report['world_geometry_buffers']=='incomplete'):report['collection']='incomplete'
+
+
 def startup_modules(directory,pid,notify):
     """Retain bounded module lists even if no F9 trace ever starts."""
     result={'scope':'read_only_startup_module_inventory_not_capture_completion',
@@ -334,21 +363,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if not marker_ok:
             report['collection']='incomplete';report['errors'].append('Capture completion marker identity/count/reason mismatch')
         if world:
-            notify(('Capture segment and live module probe finished.' if report['collection']=='complete' else
-                    'INCOMPLETE capture; available trace and live module probe saved.')+
-                   ' Please exit L4D2 normally; final logs will join this ONE ZIP.')
-            wait_stopped(notify)
-            outputs=analyze_world(directory);save(directory/'world-analysis.json',outputs)
-            report['world_outputs']=outputs['runtime_outputs']
-            report['world_geometry_buffers']='nonzero_requires_review' if outputs.get('nonzero_world_depth_and_normals') else 'incomplete'
-            reviews=json.loads((directory/'draw-analysis.json').read_text())
-            report['world_converted_draws']=sum(t.get('world_conversion',{}).get('converted',0) for t in reviews.values())
-            report['rt_activation_requests']=outputs.get('rt_activation_requests',0)
-            notify('World conversion: '+str(report['world_converted_draws'])+' Draws; RT enable requests: '+
-                   str(report['rt_activation_requests'])+'. Actual RT images still require review.')
-            report['world_normalization']='pass' if reviews and all(t.get('world_normalization')=='pass' for t in reviews.values()) else 'incomplete'
-            if (outputs['runtime_outputs']!='pass' or report['world_normalization']!='pass'
-                    or report['world_geometry_buffers']=='incomplete'):report['collection']='incomplete'
+            finish_world_capture(directory,location,started_at,report,notify)
     except Exception as error:
         report['collection']='incomplete'
         report['errors'].append(f'{type(error).__name__}: {error}');notify(report['errors'][-1])
@@ -358,6 +373,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
             try:collect_game_logs(location,directory,started_at)
             except OSError as error:
                 report['collection']='incomplete';report['errors'].append('Game log collection: '+str(error))
+        report['collection_phase']='finalized'
         output=archive_result(directory,report)
         print('Collection: '+report['collection'].upper()+('. RT images still require review.' if report['collection']=='complete' else
               '. Partial evidence only; the test has NOT passed.'),flush=True)

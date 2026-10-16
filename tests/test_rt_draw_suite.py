@@ -103,6 +103,65 @@ assert result['execution']=='incomplete'
         self.assertIn('does not mean',messages[0])
         self.assertFalse(list(directory.glob('rt-draw-done-*')))
 
+    def test_world_exit_wait_already_has_bridge_logs_and_incomplete_summary(self):
+        directory=self.root/'results';directory.mkdir()
+        game=self.root/'game';logs=game/'rtx-remix/logs';logs.mkdir(parents=True)
+        (logs/'bridge32.log').write_text('fixture reply-deadline')
+        (logs/'bridge64.log').write_text('fixture Host stopped')
+        report={'collection':'incomplete','errors':[],'capture_marker':{'reason':3,'presents':33}}
+        def waiting(notify):
+            saved=json.loads((directory/'summary.json').read_text())
+            self.assertEqual(saved['collection'],'incomplete')
+            self.assertEqual(saved['collection_phase'],'waiting_for_game_and_host_exit')
+            self.assertEqual(saved['pre_exit_game_logs'],'snapshot_collected')
+            self.assertEqual(saved['capture_marker']['presents'],33)
+            inventory=json.loads((directory/'game-log-inventory.json').read_text())
+            self.assertEqual(len(inventory['copied']),2)
+            self.assertIn('reply-deadline',(directory/'game-logs/0/bridge32.log').read_text())
+            raise TimeoutError('fixture game remains alive after Host exit')
+        with patch.object(suite,'wait_stopped',side_effect=waiting),patch.object(suite,'analyze_world') as analyze:
+            with self.assertRaisesRegex(TimeoutError,'game remains alive'):
+                suite.finish_world_capture(directory,game,0,report,lambda message:None)
+            analyze.assert_not_called()
+        # The existing outer finally can archive this checkpoint on timeout.
+        output=suite.archive_result(directory,report)
+        import zipfile
+        with zipfile.ZipFile(output) as archive:
+            self.assertIn('game-logs/0/bridge64.log',archive.namelist())
+            self.assertEqual(json.loads(archive.read('summary.json'))['collection'],'incomplete')
+
+    def test_world_log_checkpoint_failure_does_not_prevent_final_analysis(self):
+        directory=self.root/'results';directory.mkdir()
+        suite.save(directory/'draw-analysis.json',{'trace':{'world_conversion':{'converted':176},
+                                                          'world_normalization':'unrun_or_incomplete'}})
+        report={'collection':'incomplete','errors':[]}
+        with patch.object(suite,'collect_game_logs',side_effect=PermissionError('fixture locked log')),\
+             patch.object(suite,'wait_stopped'),\
+             patch.object(suite,'analyze_world',return_value={'runtime_outputs':'fail',
+                'rt_activation_requests':1,'nonzero_world_depth_and_normals':False}):
+            suite.finish_world_capture(directory,self.root/'game',0,report,lambda message:None)
+        self.assertTrue((directory/'summary.json').is_file())
+        self.assertTrue((directory/'world-analysis.json').is_file())
+        self.assertIn('locked log',report['errors'][0])
+        self.assertEqual(report['pre_exit_game_logs'],'incomplete')
+        self.assertEqual(report['collection'],'incomplete')
+        self.assertEqual(report['world_converted_draws'],176)
+        self.assertEqual(report['rt_activation_requests'],1)
+
+    def test_complete_draw_capture_waits_for_world_analysis_before_reporting_complete(self):
+        directory=self.root/'results';directory.mkdir()
+        suite.save(directory/'draw-analysis.json',{'trace':{'world_conversion':{'converted':210},
+                                                          'world_normalization':'pass'}})
+        report={'collection':'complete','errors':[]}
+        def waiting(notify):
+            self.assertEqual(json.loads((directory/'summary.json').read_text())['collection'],'incomplete')
+        with patch.object(suite,'collect_game_logs'),patch.object(suite,'wait_stopped',side_effect=waiting),\
+             patch.object(suite,'analyze_world',return_value={'runtime_outputs':'pass',
+                'rt_activation_requests':1,'nonzero_world_depth_and_normals':True}):
+            suite.finish_world_capture(directory,self.root/'game',0,report,lambda message:None)
+        self.assertEqual(report['collection'],'complete')
+        self.assertEqual(report['world_normalization'],'pass')
+
 
 class InstallTests(unittest.TestCase):
     def setUp(self):

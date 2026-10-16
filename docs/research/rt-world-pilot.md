@@ -48,4 +48,6 @@ v1 的 [历史交付核验记录](../../research/rt-world-pilot-validation.json)
 
 v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190 Draw 完整、地图最终画面正常，但所有世界格式候选的标准 shader getter 是尚未支持的 A1 指针读取，导致零转换、RT 未请求开启。v3 补齐该只读解码，并记录名称槽/地址。另将法线原始 uint32 与 alpha 分开统计，避免把固定 `(0,0,0,1)` 字节模式当有效几何；固定运行时的 primary normal 源为 R32_UINT 打包编码，旧 PNG 的 float 通道映射不能作为向量法线验收，原始字节始终保留供后续离线解码。
 
-当前 [v3 交付核验记录](../../research/rt-world-pilot-v3-validation.json) 已从固定 GitHub 提交重新下载并校验 CRC/全部成员哈希、包内脚本和配置、配套二进制/源码指纹。Windows x86/x64 均执行了有界 A1 名称读取、全局指针变化、溢出、空名称和自定义 shader 拒绝用例，启动开关/状态恢复与 NULLREF 检查继续通过；包内 Python、固定 DLL/API 和完整依赖加载检查通过。本地为 77 项通过、2 项需 Windows 而跳过，实际 v2 原始回包由新版分析器重析后仍明确报告零 RT 开启、零世界转换、全零深度及 alpha-only 法线不构成几何信号。v3 实际名称和 RT 世界画面待下一次实机结果确认。
+当前 [v3 交付核验记录](../../research/rt-world-pilot-v3-validation.json) 已从固定 GitHub 提交重新下载并校验 CRC/全部成员哈希、包内脚本和配置、配套二进制/源码指纹。Windows x86/x64 均执行了有界 A1 名称读取、全局指针变化、溢出、空名称和自定义 shader 拒绝用例，启动开关/状态恢复与 NULLREF 检查继续通过；包内 Python、固定 DLL/API 和完整依赖加载检查通过。本地为 77 项通过、2 项需 Windows 而跳过，实际 v2 原始回包由新版分析器重析后仍明确报告零 RT 开启、零世界转换、全零深度及 alpha-only 法线不构成几何信号。v3 的实机复核见下段。
+
+[v3 实际回包复核](rt-world-104917-result.md) 已确认标准材质名称解码成功、176 次世界绘制完成转换；采集在第 33 次 Present 后中断，最后 Present 记录间隔约 17.6 秒，同期开始初始化 Ray Query 管线。手动压缩的中间目录缺失 Bridge 日志，不能据此确认原生异常或通信超时根因，实际 RT 图像仍未通过。采集器源码补充等待退出前的日志及 incomplete 摘要快照，最终仍合并一个 ZIP；该修正尚未更新上面的 v3 发行包。下一步优先补齐这次已有的最终 ZIP 或 Bridge 日志，不要求重复采集。
