@@ -232,11 +232,15 @@ class PreflightCases(unittest.TestCase):
         (smoke / 'status.json').write_text(json.dumps(good))
         for name in visual.ALL_CASES:
             case = smoke / name; case.mkdir()
-            (case / 'status.json').write_text(json.dumps(good))
+            dark = name in visual.DARK_CASES
+            status = good | ({'result':'static_expected_dark_readback'} if dark else {})
+            (case / 'status.json').write_text(json.dumps(status))
             for part in ('early', 'final'):
-                (case / (part + '-color.ppm')).write_bytes(self.triangle(104 if name == 'translated' else 0))
-        (smoke / 'matrix.json').write_text(json.dumps({'selected_profile':'baseline','translated_offset_x':1.0}))
+                pixels = (b'P6\n640 360\n255\n' + bytes((2,3,4)) * (640*360)) if dark else self.triangle(104 if name in ('translated','light_translated') else 0)
+                (case / (part + '-color.ppm')).write_bytes(pixels)
+        (smoke / 'matrix.json').write_text(json.dumps({'schema':2,'selected_profile':'baseline','translated_offset_x':1.0}))
         (smoke / 'final-color.ppm').write_bytes(self.triangle())
+        (smoke / 'geometry-input.json').write_text(json.dumps({'uvs':[[0,1],[0.5,0],[1,1]],'normals':[[0,0,-1]]*3}))
         return stage, smoke, good
 
     def test_image_alone_or_hit_alone_or_crashed_cleanup_cannot_pass(self):
@@ -294,8 +298,30 @@ class PreflightCases(unittest.TestCase):
         self.assertTrue(result['cases']['albedo']['pass'])
         self.assertTrue(result['cases']['emission']['pass'])
         # Passing debug captures cannot be selected as the normal control.
-        (smoke / 'matrix.json').write_text(json.dumps({'selected_profile':'emission','translated_offset_x':1.0}))
+        (smoke / 'matrix.json').write_text(json.dumps({'schema':2,'selected_profile':'emission','translated_offset_x':1.0}))
         self.assertIn('Invalid normal profile', visual.evaluate_matrix(smoke)['error'])
+
+    def test_lighting_success_cannot_replace_failed_emission_or_stale_controls(self):
+        stage, smoke, good = self.matrix_fixture()
+        black = b'P6\n640 360\n255\n' + bytes((1,4,5)) * (640*360)
+        for part in ('early','final'):
+            (smoke / 'emission' / (part + '-color.ppm')).write_bytes(black)
+        result = visual.evaluate_matrix(smoke)
+        self.assertTrue(result['lighting_path']['pass'])
+        self.assertFalse(result['emission_path']['pass'])
+        self.assertFalse(result['pass'])
+        # Light left on cannot be called a successful off/on/off comparison.
+        (smoke / 'light_off_after/final-color.ppm').write_bytes(self.triangle())
+        self.assertFalse(visual.inspect_dark(smoke / 'light_off_after/final-color.ppm')['pass'])
+
+    def test_reported_good_images_do_not_override_degenerate_uv_inputs(self):
+        stage, smoke, good = self.matrix_fixture()
+        (smoke / 'geometry-input.json').write_text(json.dumps({'uvs':[[0,0]]*3,'normals':[[0,0,-1]]*3}))
+        result = visual.evaluate_matrix(smoke)
+        self.assertTrue(result['cases']['baseline']['pass'])
+        self.assertFalse(result['mesh_inputs']['pass'])
+        self.assertFalse(result['lighting_path']['pass'])
+        self.assertFalse(result['pass'])
 
     def test_resource_warning_survives_a_successful_owned_shutdown(self):
         stage, smoke, good = self.matrix_fixture()

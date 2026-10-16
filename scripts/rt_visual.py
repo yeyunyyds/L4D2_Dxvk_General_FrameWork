@@ -9,7 +9,11 @@ from pathlib import Path
 
 WIDTH, HEIGHT = 640, 360
 NORMAL_CASES = ('baseline', 'explicit_blend', 'fixed_exposure', 'high_emission')
-ALL_CASES = NORMAL_CASES + ('albedo', 'emission', 'translated')
+LEGACY_CASES = NORMAL_CASES + ('albedo', 'emission', 'translated')
+DEBUG_CASES = ('albedo', 'processed_albedo', 'emission', 'invalid_values')
+DARK_CASES = ('light_off', 'light_off_after', 'invalid_values')
+LIGHT_CASES = ('light_off', 'light_on', 'light_translated', 'light_off_after')
+ALL_CASES = NORMAL_CASES + DEBUG_CASES + LIGHT_CASES + ('translated',)
 
 
 def read_ppm(path):
@@ -89,27 +93,63 @@ def moved(original, translated):
             'newly_covered_fraction': fractions[1], 'tested_pixels': counts}
 
 
+def inspect_dark(path):
+    try:
+        data = read_ppm(path)
+        maximum = max(data)
+        return {'pass': maximum <= 24, 'maximum': maximum, 'scope': 'expected dark control, not a visible-image pass'}
+    except (OSError, ValueError) as error:
+        return {'pass': False, 'error': str(error)}
+
+
+def inspect_inputs(directory):
+    try:
+        data = json.loads((directory / 'geometry-input.json').read_text())
+        uv, normals = data['uvs'], data['normals']
+        if len(uv) != 3 or any(len(v) != 2 for v in uv) or len(normals) != 3 or any(len(n) != 3 for n in normals):
+            raise ValueError('Expected three UV pairs and three normals')
+        if not all(math.isfinite(x) for v in uv + normals for x in v):
+            raise ValueError('Nonfinite mesh input')
+        a, b, c = uv
+        determinant = (a[0]-c[0])*(b[1]-c[1]) - (a[1]-c[1])*(b[0]-c[0])
+        valid = abs(determinant) >= 1e-6 and all(abs(sum(x*x for x in n)-1) <= 1e-5 for n in normals)
+        return {'pass': valid, 'uv_determinant_recomputed': determinant, 'input': data}
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        return {'pass': False, 'error': str(error)}
+
+
 def evaluate_matrix(directory):
     directory = Path(directory)
-    evidence = {'schema': 1, 'pass': False, 'cases': {}, 'selected_profile': None,
+    evidence = {'schema': 2, 'pass': False, 'cases': {}, 'selected_profile': None,
                 'scope': 'standalone static RT final color and translated geometry; game RT unrun',
                 'debug_views_count_as_acceptance': False}
-    for name in ALL_CASES:
+    try:
+        matrix = json.loads((directory / 'matrix.json').read_text())
+        if matrix.get('schema') not in (1, 2):
+            raise ValueError('Unknown case matrix version')
+    except (OSError, ValueError) as error:
+        evidence['error'] = str(error)
+        return evidence
+    modern = matrix['schema'] == 2
+    names = ALL_CASES if modern else LEGACY_CASES
+    for name in names:
         case = directory / name
         try:
             status = json.loads((case / 'status.json').read_text())
         except (OSError, ValueError) as error:
             status = {'error': str(error)}
-        offset = 1.0 if name == 'translated' else 0.0
-        images = {part: inspect(case / (part + '-color.ppm'), offset) for part in ('early', 'final')}
-        valid = (status.get('result') == 'static_visible_triangle_readback'
+        offset = 1.0 if name in ('translated', 'light_translated') else 0.0
+        dark = name in DARK_CASES
+        images = {part: (inspect_dark(case / (part + '-color.ppm')) if dark
+                         else inspect(case / (part + '-color.ppm'), offset)) for part in ('early', 'final')}
+        expected_result = 'static_expected_dark_readback' if dark else 'static_visible_triangle_readback'
+        valid = (status.get('result') == expected_result
                  and status.get('cleanup') == 'complete' and status.get('pick_hit') is True
                  and status.get('stable_image_signal') is True and status.get('readback_successes', 0) >= 2
                  and all(item['pass'] for item in images.values()))
-        evidence['cases'][name] = {'pass': valid, 'role': 'debug' if name in ('albedo', 'emission') else 'final_color',
-                                    'status': status, 'images': images}
+        role = 'debug' if name in DEBUG_CASES else ('dark_control' if dark else 'final_color')
+        evidence['cases'][name] = {'pass': valid, 'role': role, 'status': status, 'images': images}
     try:
-        matrix = json.loads((directory / 'matrix.json').read_text())
         selected = matrix['selected_profile']
         if selected not in NORMAL_CASES or matrix.get('translated_offset_x') != 1.0:
             raise ValueError('Invalid normal profile or translated control')
@@ -118,14 +158,30 @@ def evaluate_matrix(directory):
                                      directory / 'translated/final-color.ppm')
         complete = all(item['status'].get('cleanup') == 'complete' for item in evidence['cases'].values())
         evidence['matrix_complete'] = complete
-        evidence['pass'] = (complete and evidence['cases'][selected]['pass']
+        emission_visible = (complete and evidence['cases'][selected]['pass']
                             and evidence['cases']['translated']['pass'] and evidence['movement']['pass'])
+        evidence['pass'] = emission_visible
+        if modern:
+            evidence['mesh_inputs'] = inspect_inputs(directory)
+            evidence['emission_path'] = {'pass': (emission_visible and evidence['cases']['emission']['pass']
+                                                   and evidence['mesh_inputs']['pass'])}
+            lighting_move = moved(directory / 'light_on/final-color.ppm', directory / 'light_translated/final-color.ppm')
+            evidence['lighting_path'] = {'pass': (complete and evidence['mesh_inputs']['pass']
+                                                  and all(evidence['cases'][n]['pass'] for n in LIGHT_CASES)
+                                                  and lighting_move['pass']),
+                                         'movement': lighting_move,
+                                         'scope': 'separate nonemissive material, light off/on/moved/off; cannot replace emission acceptance'}
+            evidence['pass'] = emission_visible and evidence['emission_path']['pass'] and evidence['mesh_inputs']['pass']
     except (OSError, ValueError, KeyError) as error:
         evidence['error'] = str(error)
-    # These are comparison-based leads, not claims of a proven root cause.
     leads = ('normal_output_visible', 'compare_default_and_explicit_blend',
              'compare_local_auto_and_global_fixed_exposure', 'compare_emission_scale')
     evidence['next_focus'] = next((lead for name, lead in zip(NORMAL_CASES, leads)
                                    if evidence['cases'][name]['pass']),
-                                  'inspect_material_emission_and_composite_debug_images')
+                                  'trace_emission_material_and_shader_values')
+    if modern and not evidence.get('emission_path', {}).get('pass'):
+        if evidence['cases']['processed_albedo']['pass']:
+            evidence['next_focus'] = 'processed_color_visible_trace_emission_enable_intensity_and_color'
+        elif evidence['cases']['albedo']['pass']:
+            evidence['next_focus'] = 'raw_color_visible_inspect_processed_material_and_invalid_value_view'
     return evidence

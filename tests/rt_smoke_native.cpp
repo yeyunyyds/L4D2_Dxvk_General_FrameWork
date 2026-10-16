@@ -3,6 +3,7 @@
 #include "../integration/rt/rt_runtime_smoke.cpp"
 #undef wmain
 #include <vector>
+#include <limits>
 
 void require(bool condition, const char* reason) {
   if (!condition) { throw std::runtime_error(reason); }
@@ -22,6 +23,18 @@ int wmain(int argc, wchar_t** argv) {
     require(argc == 3, "fixture DLL and output directory required");
     const fs::path output(argv[2]);
     require(fs::create_directory(output), "use new fixture output");
+    static_assert(sizeof(remixapi_HardcodedVertex) == 64, "pinned API vertex stride");
+    static_assert(offsetof(remixapi_HardcodedVertex, texcoord) == 24, "pinned API UV offset");
+    static_assert(offsetof(remixapi_HardcodedVertex, color) == 32, "pinned API color offset");
+    auto triangle = triangleVertices();
+    require(validTriangle(triangle), "production triangle has finite normals and independent UVs");
+    require(std::abs(uvDeterminant(triangle) - 1.0f) < 1e-6f, "nondegenerate production UV determinant");
+    for (auto& vertex : triangle) { vertex.texcoord[0] = 0; vertex.texcoord[1] = 0; }
+    require(!validTriangle(triangle), "reject old all-zero UV input");
+    triangle = triangleVertices(); triangle[0].normal[0] = std::numeric_limits<float>::quiet_NaN();
+    require(!validTriangle(triangle), "reject nonfinite normal");
+    triangle = triangleVertices(); triangle[0].texcoord[0] = std::numeric_limits<float>::infinity();
+    require(!validTriangle(triangle), "reject nonfinite UV");
     PickResult pick;
     Outcome outcome;
     outcome.failedAt = "verify_pick_and_readback";

@@ -19,6 +19,7 @@
 #include <string>
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace fs = std::filesystem;
 constexpr unsigned kWidth = 640, kHeight = 360;
@@ -168,28 +169,62 @@ ImageStats screenshot(Runtime& runtime, const fs::path& destination, Log& log) {
 
 struct Outcome {
   unsigned frames = 0, captures = 0, captureAttempts = 0;
-  bool signal = false, passed = false, stableSignal = false;
+  bool signal = false, passed = false, stableSignal = false, expectedDark = false;
   const char* failedAt = "";
   std::string error;
   void save(const fs::path& file, const PickResult& pick, const char* cleanup) const {
     std::ofstream out(file);
-    out << "{\"schema\":3,\"result\":\"" << (passed ? "static_visible_triangle_readback" : "fail")
+    out << "{\"schema\":4,\"result\":\"" << (passed ? (expectedDark ? "static_expected_dark_readback" : "static_visible_triangle_readback") : "fail")
         << "\",\"frames\":" << frames << ",\"pick_callback_count\":" << pick.callbacks.load()
         << ",\"pick_hit\":" << (pick.hit.load() ? "true" : "false") << ",\"pick_values\":" << pick.values.load()
         << ",\"capture_attempts\":" << captureAttempts << ",\"readback_successes\":" << captures
         << ",\"stable_image_signal\":" << (stableSignal ? "true" : "false")
-        << ",\"image_has_signal\":" << (signal ? "true" : "false") << ",\"cleanup\":" << jsonString(cleanup)
+        << ",\"expected_appearance\":" << jsonString(expectedDark ? "dark_control" : "orange_triangle")
+        << ",\"image_has_signal\":" << (signal && !expectedDark ? "true" : "false") << ",\"cleanup\":" << jsonString(cleanup)
         << ",\"failed_at\":" << jsonString(failedAt) << ",\"error\":" << jsonString(error)
         << ",\"game_rt\":\"unrun\",\"source_threading\":\"unrun\",\"performance\":\"unrun\"}\n";
     out.close(); if (!out) { throw std::runtime_error("save diagnostic status"); }
   }
 };
 
+std::array<remixapi_HardcodedVertex, 3> triangleVertices() {
+  std::array<remixapi_HardcodedVertex, 3> vertices{};
+  const float positions[3][3] = {{-2, -1, 3}, {0, 2, 3}, {2, -1, 3}};
+  // The pinned runtime's genTangSpace reads raw tangent outputs before its
+  // degenerate-UV fallback. Three zero UVs can therefore expose undefined data.
+  const float uv[3][2] = {{0, 1}, {0.5f, 0}, {1, 1}};
+  for (unsigned i = 0; i < 3; ++i) {
+    for (unsigned j = 0; j < 3; ++j) { vertices[i].position[j] = positions[i][j]; }
+    for (unsigned j = 0; j < 2; ++j) { vertices[i].texcoord[j] = uv[i][j]; }
+    vertices[i].normal[2] = -1; vertices[i].color = 0xffffffff;
+  }
+  return vertices;
+}
+
+float uvDeterminant(const std::array<remixapi_HardcodedVertex, 3>& vertices) {
+  const auto& a = vertices[0].texcoord; const auto& b = vertices[1].texcoord; const auto& c = vertices[2].texcoord;
+  return (a[0] - c[0]) * (b[1] - c[1]) - (a[1] - c[1]) * (b[0] - c[0]);
+}
+
+bool validTriangle(const std::array<remixapi_HardcodedVertex, 3>& vertices) {
+  for (const auto& vertex : vertices) {
+    for (const auto f : vertex.position) { if (!std::isfinite(f)) { return false; } }
+    for (const auto f : vertex.normal) { if (!std::isfinite(f)) { return false; } }
+    for (const auto f : vertex.texcoord) { if (!std::isfinite(f)) { return false; } }
+    const auto& n = vertex.normal;
+    if (std::abs(n[0]*n[0] + n[1]*n[1] + n[2]*n[2] - 1) > 1e-5f) { return false; }
+  }
+  const auto d = uvDeterminant(vertices);
+  return std::isfinite(d) && std::abs(d) >= 1e-6f;
+}
+
 struct Case {
   const char* name;
   bool blend, fixedExposure, highEmission;
   const char* debugView;
   float offset;
+  unsigned materialVariant = 0;
+  bool lighting = false, dark = false;
   bool started = false;
   PickResult pick{};
   Outcome outcome{};
@@ -225,21 +260,28 @@ int wmain(int argc, wchar_t** argv) {
   PickResult pick; // Outlives explicit shutdown and its asynchronous callbacks.
   Log log(directory / "events.jsonl");
   Outcome outcome;
-  std::array<Case, 7> cases{{
+  std::array<Case, 13> cases{{
     {"baseline", false, false, false, "0", 0},
     {"explicit_blend", true, false, false, "0", 0},
     {"fixed_exposure", true, true, false, "0", 0},
     {"high_emission", true, true, true, "0", 0},
     {"albedo", true, true, false, "32", 0},
+    {"processed_albedo", true, true, false, "23", 0},
     {"emission", true, true, false, "30", 0},
+    {"invalid_values", true, true, false, "260", 0, 0, false, true},
+    {"light_off", true, true, false, "0", 0, 2, false, true},
+    {"light_on", true, true, false, "0", 0, 2, true},
+    {"light_translated", true, true, false, "0", 1.0f, 2, true},
+    {"light_off_after", true, true, false, "0", 0, 2, false, true},
     {"translated", false, false, false, "0", 1.0f}
   }};
   unsigned selected = 0;
   bool normalPassed = false;
   Runtime runtime; // Remains alive across the catch and window destruction.
   HWND& window = runtime.window;
-  std::array<remixapi_MaterialHandle, 2> materialHandles{};
-  std::array<remixapi_MeshHandle, 2> meshHandles{};
+  std::array<remixapi_MaterialHandle, 3> materialHandles{};
+  std::array<remixapi_MeshHandle, 3> meshHandles{};
+  remixapi_LightHandle lightHandle = nullptr;
   try {
     runtime.module = LoadLibraryExW(dll.c_str(), nullptr,
       LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
@@ -255,7 +297,8 @@ int wmain(int argc, wchar_t** argv) {
     log.result("initialize_api_0_6_4", uint32_t(initialize(&init, &runtime.api)));
     if (!runtime.api.Shutdown || !runtime.api.CreateMaterial || !runtime.api.DestroyMaterial ||
         !runtime.api.CreateMesh || !runtime.api.DestroyMesh || !runtime.api.SetupCamera ||
-        !runtime.api.DrawInstance || !runtime.api.SetConfigVariable || !runtime.api.dxvk_CreateD3D9 ||
+        !runtime.api.DrawInstance || !runtime.api.CreateLight || !runtime.api.DestroyLight ||
+        !runtime.api.DrawLightInstance || !runtime.api.SetConfigVariable || !runtime.api.dxvk_CreateD3D9 ||
         !runtime.api.dxvk_RegisterD3D9Device || !runtime.api.dxvk_CopyRenderingOutput ||
         !runtime.api.pick_RequestObjectPicking || !runtime.api.Present) {
       throw std::runtime_error("incomplete API function table");
@@ -289,28 +332,43 @@ int wmain(int argc, wchar_t** argv) {
     log.result("register_device", uint32_t(runtime.api.dxvk_RegisterD3D9Device(runtime.device)));
     runtime.registered = true;
 
-    for (unsigned variant = 0; variant < 2; ++variant) {
+    const auto vertices = triangleVertices();
+    log.result("validate_triangle_inputs", validTriangle(vertices) ? 0 : ERROR_INVALID_DATA);
+    std::ofstream geometry(directory / "geometry-input.json");
+    geometry << "{\"schema\":1,\"uv_determinant\":" << uvDeterminant(vertices) << ",\"uvs\":[";
+    for (unsigned i = 0; i < vertices.size(); ++i) {
+      if (i) { geometry << ','; }
+      geometry << '[' << vertices[i].texcoord[0] << ',' << vertices[i].texcoord[1] << ']';
+    }
+    geometry << "],\"normals\":[";
+    for (unsigned i = 0; i < vertices.size(); ++i) {
+      if (i) { geometry << ','; }
+      geometry << '[' << vertices[i].normal[0] << ',' << vertices[i].normal[1] << ',' << vertices[i].normal[2] << ']';
+    }
+    geometry << "]}\n";
+    geometry.close(); if (!geometry) { throw std::runtime_error("save geometry input validation"); }
+    for (unsigned variant = 0; variant < 3; ++variant) {
       remixapi_MaterialInfoOpaqueEXT opaque{};
       opaque.sType = REMIXAPI_STRUCT_TYPE_MATERIAL_INFO_OPAQUE_EXT;
       opaque.albedoConstant = {0.8f, 0.2f, 0.05f}; opaque.opacityConstant = 1; opaque.roughnessConstant = 1;
       remixapi_MaterialInfo material{};
       material.sType = REMIXAPI_STRUCT_TYPE_MATERIAL_INFO; material.pNext = &opaque; material.hash = 0x4c445201 + variant * 16;
-      material.emissiveIntensity = variant ? 64.0f : 4.0f; material.emissiveColorConstant = {1, 0.2f, 0.05f};
+      material.emissiveIntensity = variant == 2 ? 0.0f : (variant == 1 ? 64.0f : 4.0f); material.emissiveColorConstant = {1, 0.2f, 0.05f};
       log.result("create_material", uint32_t(runtime.api.CreateMaterial(&material, &materialHandles[variant])));
-      remixapi_HardcodedVertex vertices[3]{};
-      const float positions[3][3] = {{-2, -1, 3}, {0, 2, 3}, {2, -1, 3}};
-      for (unsigned i = 0; i < 3; ++i) {
-        for (unsigned j = 0; j < 3; ++j) { vertices[i].position[j] = positions[i][j]; }
-        vertices[i].normal[2] = -1; vertices[i].color = 0xffffffff;
-      }
       const uint32_t indices[] = {0, 1, 2};
       remixapi_MeshInfoSurfaceTriangles surface{};
-      surface.vertices_values = vertices; surface.vertices_count = 3;
+      surface.vertices_values = vertices.data(); surface.vertices_count = 3;
       surface.indices_values = indices; surface.indices_count = 3; surface.material = materialHandles[variant];
       remixapi_MeshInfo mesh{}; mesh.sType = REMIXAPI_STRUCT_TYPE_MESH_INFO; mesh.hash = 0x4c445202 + variant * 16;
       mesh.surfaces_values = &surface; mesh.surfaces_count = 1;
       log.result("create_mesh", uint32_t(runtime.api.CreateMesh(&mesh, &meshHandles[variant])));
     }
+    remixapi_LightInfoDistantEXT distant{};
+    distant.sType = REMIXAPI_STRUCT_TYPE_LIGHT_INFO_DISTANT_EXT;
+    distant.direction = {0, 0, 1}; distant.angularDiameterDegrees = 0.5f;
+    remixapi_LightInfo light{}; light.sType = REMIXAPI_STRUCT_TYPE_LIGHT_INFO;
+    light.pNext = &distant; light.hash = 0x4c444c54; light.radiance = {5, 5, 5};
+    log.result("create_distant_light", uint32_t(runtime.api.CreateLight(&light, &lightHandle)));
     remixapi_CameraInfoParameterizedEXT parameters{};
     parameters.sType = REMIXAPI_STRUCT_TYPE_CAMERA_INFO_PARAMETERIZED_EXT;
     parameters.forward = {0, 0, 1}; parameters.up = {0, 1, 0}; parameters.right = {1, 0, 0};
@@ -331,24 +389,29 @@ int wmain(int argc, wchar_t** argv) {
     double lastProgress = -2;
     for (unsigned index = 0; index < cases.size(); ++index) {
       auto& test = cases[index];
-      if (index == 6) {
+      if (index + 1 == cases.size()) {
         // Repeat a normal final-color profile, never a debug view, with just
         // the object's world X changed. Keep its material and exposure fixed.
         test.blend = cases[selected].blend; test.fixedExposure = cases[selected].fixedExposure;
         test.highEmission = cases[selected].highEmission;
       }
+      if (index == 11 && lightHandle) {
+        log.result("destroy_light_for_off_control", uint32_t(runtime.api.DestroyLight(lightHandle)));
+        lightHandle = nullptr;
+      }
+      test.outcome.expectedDark = test.dark;
       test.started = true; test.pick.expected = kObject + index;
       const auto output = directory / test.name; fs::create_directory(output);
       log.output << "{\"stage\":\"case_begin\",\"case\":" << jsonString(test.name)
                  << ",\"object_id\":" << test.pick.expected << ",\"offset_x\":" << test.offset
-                 << ",\"profile\":" << jsonString(index == 6 ? cases[selected].name : test.name) << "}\n" << std::flush;
-      std::cout << "RT case " << index + 1 << "/7: " << test.name << std::endl;
+                 << ",\"profile\":" << jsonString(index + 1 == cases.size() ? cases[selected].name : test.name) << "}\n" << std::flush;
+      std::cout << "RT case " << index + 1 << "/" << cases.size() << ": " << test.name << std::endl;
       configure(runtime, log, test);
       remixapi_InstanceInfoObjectPickingEXT object{};
       object.sType = REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_OBJECT_PICKING_EXT;
       object.objectPickingValue = test.pick.expected; object.pNext = test.blend ? &blend : nullptr;
       remixapi_InstanceInfo instance{}; instance.sType = REMIXAPI_STRUCT_TYPE_INSTANCE_INFO;
-      instance.pNext = &object; instance.mesh = meshHandles[test.highEmission ? 1 : 0]; instance.doubleSided = TRUE;
+      instance.pNext = &object; instance.mesh = meshHandles[test.materialVariant == 2 ? 2 : (test.highEmission ? 1 : 0)]; instance.doubleSided = TRUE;
       for (unsigned i = 0; i < 3; ++i) { instance.transform.matrix[i][i] = 1; }
       instance.transform.matrix[0][3] = test.offset;
       const remixapi_Rect2D center{int(kWidth / 2), int(kHeight / 2), int(kWidth / 2 + 1), int(kHeight / 2 + 1)};
@@ -359,14 +422,14 @@ int wmain(int argc, wchar_t** argv) {
         ++test.outcome.captureAttempts;
         try {
           const auto stats = screenshot(runtime, output / name, log);
-          ++test.outcome.captures; test.outcome.signal = stats.hasSignal();
+          ++test.outcome.captures; test.outcome.signal = test.dark ? stats.maximum <= 24 : stats.hasSignal();
           log.output << "{\"stage\":\"image_stats\",\"case\":" << jsonString(test.name)
                      << ",\"file\":" << jsonString(name) << ",\"frame\":" << outcome.frames
                      << ",\"minimum\":" << stats.minimum << ",\"maximum\":" << stats.maximum
                      << ",\"warm_pixels\":" << stats.warmPixels << ",\"center_warm\":" << stats.centerWarm
                      << ",\"background_warm\":" << stats.backgroundWarm << ",\"center_rgb\":["
                      << stats.center[0] << ',' << stats.center[1] << ',' << stats.center[2] << "]}\n" << std::flush;
-          return stats.hasSignal();
+          return test.outcome.signal;
         } catch (const std::exception& error) {
           log.output << "{\"stage\":\"capture_failed\",\"case\":" << jsonString(test.name)
                      << ",\"failed_at\":" << jsonString(log.stage) << ",\"error\":" << jsonString(error.what()) << "}\n" << std::flush;
@@ -382,6 +445,7 @@ int wmain(int argc, wchar_t** argv) {
         if (!IsWindow(window)) { throw std::runtime_error("diagnostic window closed"); }
         log.result("setup_camera", uint32_t(runtime.api.SetupCamera(&camera)));
         log.result("draw_instance", uint32_t(runtime.api.DrawInstance(&instance)));
+        if (test.lighting) { log.result("draw_distant_light", uint32_t(runtime.api.DrawLightInstance(lightHandle))); }
         if (frame >= 24 && (!requested || (test.pick.called.load() && !test.pick.hit.load() && frame % 15 == 0))) {
           test.pick.called.store(false);
           log.result("request_center_hit", uint32_t(runtime.api.pick_RequestObjectPicking(&center, picked, &test.pick)));
@@ -407,18 +471,19 @@ int wmain(int argc, wchar_t** argv) {
       test.outcome.passed = test.pick.hit.load() && test.outcome.stableSignal;
       if (!test.outcome.passed) {
         test.outcome.failedAt = "verify_visible_triangle";
-        test.outcome.error = !test.pick.hit.load() ? "expected object picking hit missing" : "expected orange triangle missing from stable final color";
+        test.outcome.error = !test.pick.hit.load() ? "expected object picking hit missing" :
+          (test.dark ? "dark control contains unexpected bright output" : "expected orange triangle missing from stable final color");
       }
       outcome.captures += test.outcome.captures; outcome.captureAttempts += test.outcome.captureAttempts;
       if (index < 4 && test.outcome.passed && !normalPassed) { selected = index; normalPassed = true; }
       test.outcome.save(output / "status.json", test.pick, "pending");
     }
-    outcome.signal = normalPassed; outcome.stableSignal = normalPassed && cases[6].outcome.stableSignal;
-    outcome.passed = normalPassed && cases[6].outcome.passed;
+    outcome.signal = normalPassed; outcome.stableSignal = normalPassed && cases.back().outcome.stableSignal;
+    outcome.passed = normalPassed && cases.back().outcome.passed;
     log.stage = "save_matrix";
     fs::copy_file(directory / cases[selected].name / "final-color.ppm", directory / "final-color.ppm");
     std::ofstream matrix(directory / "matrix.json");
-    matrix << "{\"schema\":1,\"selected_profile\":" << jsonString(cases[selected].name)
+    matrix << "{\"schema\":2,\"selected_profile\":" << jsonString(cases[selected].name)
            << ",\"normal_profile_visible\":" << (normalPassed ? "true" : "false")
            << ",\"translated_offset_x\":1.0,\"debug_views_count_as_acceptance\":false}\n";
     matrix.close(); if (!matrix) { throw std::runtime_error("save case matrix"); }
@@ -433,6 +498,7 @@ int wmain(int argc, wchar_t** argv) {
   auto& finalPick = cases[0].started ? cases[selected].pick : pick;
   outcome.save(directory / "status.json", finalPick, "pending");
   try {
+    if (lightHandle) { log.result("destroy_distant_light", uint32_t(runtime.api.DestroyLight(lightHandle))); }
     for (const auto mesh : meshHandles) { if (mesh) { log.result("destroy_mesh", uint32_t(runtime.api.DestroyMesh(mesh))); } }
     for (const auto material : materialHandles) { if (material) { log.result("destroy_material", uint32_t(runtime.api.DestroyMaterial(material))); } }
     runtime.cleanup(log);

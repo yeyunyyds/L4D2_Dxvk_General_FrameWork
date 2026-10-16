@@ -388,7 +388,7 @@ def run(root=ROOT, pid=None, payload_cache=None, verify_only=False):
             if verify_only:
                 report['runtime_load'] = verify_load(runtime)
             else:
-                notify('Running 7 automatic RT comparisons in one window (up to 6 minutes total)...')
+                notify('Running 13 automatic RT comparisons in one window (up to 6 minutes total)...')
                 stage = directory / 'runtime'
                 entry = run_owned([program, runtime / 'd3d9.dll', stage / 'smoke'], stage, notify=notify)
                 report['runtime_process'] = entry
@@ -396,6 +396,12 @@ def run(root=ROOT, pid=None, payload_cache=None, verify_only=False):
                 report['runtime_details'] = details
                 report['runtime_smoke'] = 'static_visible_triangle_and_motion' if passed else 'fail'
                 report['static_visual_acceptance'] = 'pass' if passed else 'fail'
+                visual = details['visual_acceptance']
+                report['emission_path'] = 'pass' if passed else 'fail_or_unrun'
+                report['lighting_path'] = 'pass' if (visual.get('lighting_path', {}).get('pass')
+                    and entry.get('exit_code') in (0, 1) and 'reason' not in entry
+                    and details['diagnostic_status'].get('cleanup') == 'complete'
+                    and not details['crash_report_present'] and not details['minidump_present']) else 'fail_or_unrun'
                 report['resource_warning_review'] = 'required' if details['resource_warnings'] else 'none_observed'
                 notify('Static RT diagnostic: ' + report['runtime_smoke'])
                 # Verify the vendor observed by the actual runtime, not Windows' GPU list.
