@@ -96,7 +96,16 @@ void audit(IDirect3DDevice9* device, const draw_observe::Snapshot& snapshot) noe
     events << "{\"event\":\"world_material_sample\",\"phase\":\"" << world_diagnostics::name(phase)
       << "\",\"material\":" << snapshot.material << ",\"table\":" << snapshot.materialTable
       << ",\"ordinal\":" << snapshot.ordinal << ",\"pixel_shader_hresult\":" << uint32_t(ps)
-      << ",\"pixel_shader_bound\":" << (shader.value ? "true" : "false") << ",\"stages\":[";
+      << ",\"pixel_shader_bound\":" << (shader.value ? "true" : "false") << ",\"render_state_values\":[";
+    const D3DRENDERSTATETYPE renderNames[] = {D3DRS_TEXTUREFACTOR, D3DRS_LIGHTING, D3DRS_COLORVERTEX,
+      D3DRS_DIFFUSEMATERIALSOURCE, D3DRS_AMBIENTMATERIALSOURCE, D3DRS_AMBIENT, D3DRS_FOGENABLE, D3DRS_SRGBWRITEENABLE};
+    uint32_t renderFailures = 0;
+    for (unsigned i = 0; i < sizeof(renderNames) / sizeof(renderNames[0]); ++i) {
+      DWORD value = 0;
+      if (FAILED(device->GetRenderState(renderNames[i], &value))) { renderFailures |= 1u << i; }
+      if (i) { events << ','; } events << value;
+    }
+    events << "],\"render_state_query_failure_bits\":" << renderFailures << ",\"stages\":[";
     const D3DTEXTURESTAGESTATETYPE names[] = {D3DTSS_COLOROP, D3DTSS_COLORARG1, D3DTSS_COLORARG2,
       D3DTSS_ALPHAOP, D3DTSS_ALPHAARG1, D3DTSS_ALPHAARG2, D3DTSS_TEXCOORDINDEX, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTSS_RESULTARG};
     for (DWORD stage = 0; stage < 8; ++stage) {

@@ -167,7 +167,8 @@ def analyze(directory,previews=True):
             'material_audit':{'samples':len(material_samples),'counts':material_counts,'per_phase_limit':64,
                 'status':'samples_available' if all(material_counts.values()) else 'incomplete' if comparison else 'not_requested',
                 'texture_stage_fields':['COLOROP','COLORARG1','COLORARG2','ALPHAOP','ALPHAARG1','ALPHAARG2','TEXCOORDINDEX','TEXTURETRANSFORMFLAGS','RESULTARG'],
-                'query_failures':sum(bool(e.get('pixel_shader_hresult',0)&0x80000000) or any(
+                'render_state_fields':['TEXTUREFACTOR','LIGHTING','COLORVERTEX','DIFFUSEMATERIALSOURCE','AMBIENTMATERIALSOURCE','AMBIENT','FOGENABLE','SRGBWRITEENABLE'],
+                'query_failures':sum(bool(e.get('pixel_shader_hresult',0)&0x80000000) or bool(e.get('render_state_query_failure_bits',0)) or any(
                     t.get('query_failure_bits',0) or t.get('texture_hresult',0)&0x80000000 or t.get('srgb_hresult',0)&0x80000000
                     for t in e.get('stages',[])) for e in material_samples),
                 'limits':'first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials'},
