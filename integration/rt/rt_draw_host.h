@@ -100,7 +100,7 @@ public:
   }
   void conversion(uint32_t uid, consumer_world::Decision decision, const static_draw::Report& report, bool called, HRESULT physical) {
     // The conversion scope has restored the original public D3D9 state here.
-    if (report.converted && nativeDevice && world_runtime::state().active && world_runtime::state().audit) {
+    if (report.converted && SUCCEEDED(report.restore) && nativeDevice && world_runtime::state().active && world_runtime::state().audit) {
       world_runtime::state().audit(nativeDevice, nextSnapshot);
     }
     Writer w; w.u32(uint32_t(decision)); w.u32(uint32_t(report.code));
