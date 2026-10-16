@@ -44,3 +44,6 @@ v4 的实际地图数据已证明受限世界几何可以进入 RT 输出，后�
 云端覆盖：阶段顺序、重复/缺失控制段、各个 setter 部分失败后的阻断；双架构 Windows 原生执行；旧/新读回集合和错误阶段的拒绝；打包法线、深度遮罩、零 word 合法法线、亮度统计与相机端点差异；原 40,952 Draw 与 v4 实际读回兼容回归。成品发布后另记录固定下载提交、成员哈希、源码指纹、配套 PE 与本次 CI 用例证据。
 
 L4D2/B580 的 v5 光源效果、实际配置帧边界生效、完整材质与 HUD/武器、Source 准备线程并行和性能仍需实机验证。既有 40 个退出时未释放对象的问题也不由这次照明诊断解决。
+
+
+发布成品：[固定提交文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/b37045a2b29af77718567f07369b4f229829c8ab/downloads/rt-world-pilot-dev.zip)；构建提交 `23570a69a4e75661802c5d26ca3e6bce318b2038`；SHA256 `f20d45547b925b2b3bd3fa83c7657a402ff9e9c25dfe785488e94ed7330cd86d`。完整构建与成品核验见 [v5 记录](../../research/rt-world-pilot-v5-validation.json)。该记录不替代 v5 实机回包。

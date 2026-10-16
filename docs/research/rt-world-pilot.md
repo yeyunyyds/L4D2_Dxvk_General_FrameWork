@@ -2,11 +2,11 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/90598699fda203b1d6cbb1e0725136bda7c38ebf/downloads/rt-world-pilot-dev.zip)。当前为 v4，构建提交为 `a45ab966f680ce6acbd5e86127d6640fd5164648`，包大小 11,883,112 字节，SHA256 为 `b103fca27fd1fb4effdcddef13b51dc7913f980f05552327b83a0eebc25a6b8e`。该链接固定到本次已核验产物，不随下载分支更新而改变。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/b37045a2b29af77718567f07369b4f229829c8ab/downloads/rt-world-pilot-dev.zip)。当前为 v5，构建提交为 `23570a69a4e75661802c5d26ca3e6bce318b2038`，包大小 11,889,324 字节，SHA256 为 `f20d45547b925b2b3bd3fa83c7657a402ff9e9c25dfe785488e94ed7330cd86d`。该链接固定到本次已核验产物，不随下载分支更新而改变。
 
 [v4 实机完整回包](rt-world-130102-result.md) 已独立复核通过 240 Present、193,262 Draw、11,805 次受限世界转换，9 份读回齐全、无状态恢复错误、无本轮 IPC fault。按实际 primary GBuffer 编码离线解出的法线/深度轮廓与地图表面相符，受限静态世界的 RT 输出链路已跑通。读回仍偏暗，武器/HUD 等内容缺失；完整场景、照明材质正确性、Source 准备线程并行、资源释放和性能继续待验收。基础数据已经足够，下一步转向画面正确性与覆盖补全。
 
-下一版 [v5 灯光与材质合并验证](rt-world-v5-lighting.md) 将用同一次 240 Present 比较原球灯、较强同型球灯与定向灯，同时保存有界纹理阶段样本及正确解码的法线预览。该对照要求按一次 F9 后保持镜头静止。
+本版 [v5 灯光与材质合并验证](rt-world-v5-lighting.md) 用同一次 240 Present 比较原球灯、较强同型球灯与定向灯，同时保存有界纹理阶段样本及正确解码的法线预览。该对照要求按一次 F9 后保持镜头静止。
 
 ## 从数据到实际转换
 
@@ -30,7 +30,7 @@ Host 启动时读取本次 `LDB_RT_WORLD_1` 请求，只在该模式下加载包
 
 发行包 `rt-world-pilot-dev.zip` 的 `run-test.cmd` 复用既有 preflight 缓存或下载固定 SHA 依赖，等待正常退出游戏，校验并继承相邻旧观察包的原始备份，安装 x86 client/x64 Host，再由 Steam 启动。没有改 backend 文件、Source CVar 或 Steam 启动选项；请求仅对本次 Host 启动选择 Remix。
 
-进图后按一次 F9。前 30 次 Present 保留未转换光栅观察，之后尝试选定世界转换并请求开启 RT，总共 240 次 Present；这些都是同一个 Remix 后端，不能冒充普通 DXVK 的 R0 对照。30/120/240 后分别用 API 读回颜色、primary depth、primary world shading normal，输出为 640×400 最近邻缩放的 RGBA32F 和预览。目标先清零：参考 API 在没有源图时也可能返回成功，因此检查实际缓冲内容，不能只检查返回值。
+进图后面向同时包含地面与墙壁的位置，按一次 F9 后保持镜头静止。前 30 次 Present 保留未转换光栅观察，之后尝试选定世界转换并请求开启 RT，总共 240 次 Present；这些都是同一个 Remix 后端，不能冒充普通 DXVK 的 R0 对照。30/120/180/240 后分别用 API 读回颜色、primary depth、primary world shading normal，输出为 640×400 最近邻缩放的 RGBA32F 和预览。目标先清零：参考 API 在没有源图时也可能返回成功，因此检查实际缓冲内容，不能只检查返回值。
 
 v2 在 F9 前独立保留有界启动模块清单、首次 Draw 到达 Host/调用计数和 client 的请求/F9/前台 PID 记录。菜单若仍黑屏可直接正常退出，不要求盲操作；脚本会保存 INCOMPLETE 部分包。最终的完成提示和退出码区分完整采集与部分结果；模块清单成功或库加载成功都不表示 240 Present 已完成。用户主动退出与退出阶段 ReShade/驱动异常也分别记录，不能倒推成游戏此前自动崩溃。
 
@@ -59,3 +59,6 @@ v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190
 后补同次 Bridge 日志后，已确认首条错误为 client 的 SetStreamSource 命令提交中止，Host 随后清理并以 0 退出；没有 `reply-deadline` 或原生异常报告。v4 将有效 world 启动请求下的 full IPC 生产端容量等待由 2 秒设为有限的 60 秒，保留 peer/故障检查和普通观察模式的 2 秒预算，并补记底层 transport fault。生产队列回归复现了默认超时，也验证了消费者暂停超过 2 秒后仍完整有序提交、peer 关闭及时取消。实际 v3 底层 fault 未记录，不能将机制复现等同于实机原因完全坐实；实际 RT 图像和本次崩溃是否恢复仍待实机验收。
 
 [v4 交付核验记录](../../research/rt-world-pilot-v4-validation.json) 已核对固定 GitHub 成品的 CRC、全部成员哈希、配套 PE 架构/身份、源码指纹，以及包内脚本/配置/README 一致性。Windows x86/x64 均执行默认队列超时、暂停消费者 2.3 秒后 65 条命令完整有序传递、peer 关闭及时中断扩展等待；新增门槛与既有状态恢复/NULLREF、真实固定 DLL/API、包内 Python/完整依赖检查均通过。分别重析双架构 240 Present/720 Draw/210 转换模拟 trace，旧实际 40,952 Draw 兼容性回归通过。本地 Python 82 项中 80 项通过、2 项需 Windows 跳过，生产队列在 Linux 实际执行和 MinGW 严格交叉编译通过。v3 原生源码输入全部保持相同，只新增 transport patch/policy；Source producer、实际 RT 和性能仍未验收。
+
+
+[v5 交付核验记录](../../research/rt-world-pilot-v5-validation.json) 已检查固定提交成品的 CRC/全部成员、源码输入与配置、配套 PE 身份及 native 证据。Windows x86/x64 均通过新增灯光阶段顺序/重复或缺失控制段/部分设置失败阻断用例，以及既有世界作用域、启动保护、IPC 背压、材质解码与系统 NULLREF 检查；固定 DLL/API 初始化、包内 Python/配置与依赖校验也通过。本地完整 Python 84 项中 82 项通过、2 项需 Windows 而跳过，最终分析器专项 5 项全部通过。新分析器重析旧实际 RGBA32F 数据及独立法线预览回归通过。v5 的实际三段灯光效果、HUD/武器与完整游戏光追、Source 并行和性能仍未验收。
