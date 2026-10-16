@@ -24,6 +24,7 @@ if __name__ == '__main__':
               'consumer_draw_development_execution': 'unrun',
               'consumer_world_development_execution': 'unrun',
               'world_startup_gate_development_execution': 'unrun',
+              'material_global_name_decoder_development_execution': 'unrun',
               'system_d3d9_nullref_state': {'x86': 'unrun', 'x64': 'unrun'},
               'artifact_validation': 'unrun'}
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -85,6 +86,8 @@ if __name__ == '__main__':
                 status['consumer_world_development_execution']='pass'
         if queue_log.exists() and queue_log.read_text(errors='replace').count('RT world startup gate/activation failure/raster restoration: PASS') == 2:
             status['world_startup_gate_development_execution']='pass'
+        if queue_log.exists() and queue_log.read_text(errors='replace').count('RT bounded A1 shader-name pointer reread: PASS') == 2:
+            status['material_global_name_decoder_development_execution']='pass'
         if (sdk_receipt.exists() and (source / 'checks-x86/source-queue.exe').exists() and queue_log.exists()
                 and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace')):
             status['sdk_queue_development_execution'] = 'pass'

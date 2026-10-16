@@ -8,6 +8,7 @@ enum : uint32_t { FormatRead = 1, ShaderRead = 2 };
 struct Info {
   uint64_t format = 0;
   uint32_t flags = 0, shaderObject = 0, shaderMethod = 0;
+  uint32_t nameSlot = 0, nameAddress = 0; // Diagnostic only; not added to the wire.
   std::array<char, 64> shader{};
 };
 template<class Memory> bool read(Memory& memory, uint32_t base, uint32_t offset, void* out, size_t size) {
@@ -50,9 +51,16 @@ template<class Memory> Info decode(Memory& memory, uint32_t object, uint32_t tab
   uint32_t string = 0;
   if (body[0] == 0xb8 && body[5] == 0xc3) {
     std::memcpy(&string, body + 1, 4); // mov eax, <literal>; ret
+  } else if (body[0] == 0xa1 && body[5] == 0xc3) {
+    // Actual stdshader_dx9 GetName leaf: mov eax, [absolute pointer]; ret.
+    // Read the pointer cell as data; never execute the getter.
+    std::memcpy(&result.nameSlot, body + 1, 4);
+    if (!read(memory, result.nameSlot, 0, &string, 4)) { return result; }
   } else if (body[0] == 0x8b && body[1] == 0x41 && body[3] == 0xc3 && body[2] < 0x80) {
     if (!read(memory, result.shaderObject, body[2], &string, 4)) { return result; }
+    result.nameSlot = result.shaderObject + body[2];
   } else { return result; }
+  result.nameAddress = string;
   if (!text(memory, string, result.shader)) { return result; }
   std::array<char,64> repeatedName{};
   uint8_t repeatedCode[sizeof(body)]{};
@@ -61,7 +69,7 @@ template<class Memory> Info decode(Memory& memory, uint32_t object, uint32_t tab
       !memory.code(result.shaderMethod,repeatedCode,sizeof(repeatedCode)) || std::memcmp(body,repeatedCode,sizeof(body)) ||
       !read(memory,result.shaderObject,0,&repeatedTable,4) || repeatedTable!=shaderTable ||
       !read(memory,shaderTable,0,&repeatedMethod,4) || repeatedMethod!=result.shaderMethod ||
-      (body[0]==0x8b && (!read(memory,result.shaderObject,body[2],&repeatedString,4) || repeatedString!=string))) { return Info{}; }
+      (result.nameSlot && (!read(memory,result.nameSlot,0,&repeatedString,4) || repeatedString!=string))) { return Info{}; }
   uint32_t afterObject = 0, afterTable = 0;
   uint64_t afterFormat = 0;
   if (!read(memory, object, 0x14, &afterObject, 4) || afterObject != result.shaderObject ||

@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "scope": "v2_complete_raster_capture_no_rt_activation_material_name_decoder_gap",
+  "archive_sha256": "24d1ec4c1add2c59b1bd549a327a347edd79256c5241c2d098d25c378c9b6cb5",
+  "archive_size": 7832494,
+  "crc": "pass",
+  "build_commit": "f241cdcbbb0ff78c4f29b3169bd1f2572ec8decb",
+  "native_trace_sha256": "285a53292e3567c880dedf9104f13d2748284f7d8d174ccc9fbace95ac0c9edc",
+  "draw_observation": {
+    "pass": true,
+    "errors": [],
+    "header": {
+      "session": 2948948672537195175,
+      "device": 2,
+      "frequency": 10000000,
+      "profile": "world_pilot",
+      "target_presents": 240,
+      "control_presents": 30
+    },
+    "footer": {
+      "draws": 97190,
+      "valid": 97190,
+      "presents": 240,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "status_counts": {
+      "valid": 97190
+    },
+    "client_draw_threads": [
+      4464
+    ],
+    "host_thread": 20624,
+    "viewport_mismatches": 0,
+    "pipeline_query_failure_draws": 0,
+    "material_decode_flags": {
+      "1": 91670,
+      "3": 5520
+    },
+    "shader_names": {
+      "NekoToon": 5520
+    },
+    "world_decisions": {
+      "1": 9525,
+      "3": 87665
+    },
+    "world_conversion": {
+      "reports": 97190
+    }
+  },
+  "world_converted_draws": 0,
+  "rt_requested_on_events": 0,
+  "module_evidence": "snapshot_collected",
+  "materials": {
+    "total": 416,
+    "world_format_unique": 62,
+    "world_format_shader_leaf_code": "a1e4c11d52c3",
+    "leaf_semantics": "mov eax, [0x521dc1e4]; ret (loaded-image pointer; address must not be hardcoded)",
+    "world_format_material_name_unreadable_by_v2": 62,
+    "custom_shader_name_decoded": "NekoToon",
+    "whitelist_not_widened": true
+  },
+  "other_world_filters_name_unknown": {
+    "counts": {
+      "world_format_draws": 7880,
+      "other_high_level_world_filters_pass_name_unknown": 7355,
+      "world_format_post_control": 7379,
+      "other_high_level_filters_post_control_name_unknown": 6884
+    },
+    "materials": 53,
+    "scope": "shader_name_unknown_other_high_level_filters_only"
+  },
+  "readback": {
+    "color": "nonblack game image at frames 30/120/240, visually inspected frame240",
+    "depth": "all zero",
+    "normals_raw_u32": "constant [0,0,0,1]; alpha bits do not prove geometry",
+    "source_encoding": "not yet validated with actual RT data"
+  },
+  "thread_cvar_candidate": {
+    "mat_queue_mode": -1,
+    "current_abi_verified": false,
+    "parallel_execution_proven": false
+  },
+  "exit": "normal Host cleanup; no L4D2_BRIDGE_EXCEPTION report found; runtime reports 39 common objects undisposed",
+  "game_rt": "unrun",
+  "source_queue_execution": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun"
+}

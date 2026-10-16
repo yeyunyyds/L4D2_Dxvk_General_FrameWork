@@ -6,7 +6,7 @@
 
 ## 从数据到实际转换
 
-实际 Draw 的同一 RPC 携带 v2 快照：原有矩阵/材质/viewport，以及当次读取的 64 位格式、解码状态和有界 shader 名称。v1 trace 继续可读。格式 getter 必须与已采到的 `mov eax,[ecx+0x38]; mov edx,[ecx+0x3c]; ret` 匹配；shader getter 必须与已采到的 `this+0x14` 路径匹配。随后只识别两种叶函数：返回字符串字面量，或返回对象内的小偏移指针。代码必须位于已映射的可执行 image page，名称最多 63 字节，字段复读不一致或未知实现均拒绝分类。不会执行私有材质函数。
+实际 Draw 的同一 RPC 携带 v2 快照：原有矩阵/材质/viewport，以及当次读取的 64 位格式、解码状态和有界 shader 名称。v1 trace 继续可读。格式 getter 必须与已采到的 `mov eax,[ecx+0x38]; mov edx,[ecx+0x3c]; ret` 匹配；shader getter 必须与已采到的 `this+0x14` 路径匹配。随后识别返回字符串字面量、读取对象内小偏移指针，或 v3 补充的 `A1 <absolute>; ret` 全局字符串指针叶函数。全局指针槽和指向的名称都复读，发生变化则拒绝；槽地址从当前已验证代码读取，不硬编码 ASLR 地址。代码必须位于已映射的可执行 image page，名称最多 63 字节，字段复读不一致或未知实现均拒绝分类。不会执行私有材质函数。
 
 选择条件为：有效快照、非空材质身份、`0x480003`、明确的 LightmappedGeneric 名称、单位 world、刚性 view、有限的右手透视投影、near 4～32、零起点/full-Z viewport、同尺寸 HDR 目标、不混合/不 alpha test 且写深度。它是消费端世界候选策略，不能当作完整 Source 主视图 ID 或静态对象来源证明；反射等特殊视图仍需结合实际画面审查。
 
@@ -45,3 +45,5 @@ v1 的 [历史交付核验记录](../../research/rt-world-pilot-validation.json)
 发行验证曾发现 Windows 依赖 DLL 被父 Python 进程保留，导致临时目录清理失败；现将加载/导出检查放在独立进程执行，退出后释放其依赖，重新完成 Windows 打包、目录清理和发布。此修正不调用 GPU 或私有游戏方法。
 
 当前 [v2 交付核验记录](../../research/rt-world-pilot-v2-validation.json) 已核对固定 GitHub 成品的 CRC、全部成员哈希、源码/配置/README、配套二进制与原生指纹，并重新分析双架构观察/转换 trace。Windows x86/x64 均实际执行启动开关保护、拒绝布局、开启失败时恢复原 Draw、完成后关闭且禁止重新开启的用例；系统 NULLREF 状态、固定 DLL/API 初始化、包内 Python 与完整配置检查也通过。本地 Python 为 76 项通过、2 项需 Windows 而跳过。以上不替代菜单画面、API 帧边界实际生效、游戏 RT 或 Source 并行的实机验收。
+
+v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190 Draw 完整、地图最终画面正常，但所有世界格式候选的标准 shader getter 是尚未支持的 A1 指针读取，导致零转换、RT 未请求开启。v3 补齐该只读解码，并记录名称槽/地址。另将法线原始 uint32 与 alpha 分开统计，避免把固定 `(0,0,0,1)` 字节模式当有效几何；固定运行时的 primary normal 源为 R32_UINT 打包编码，旧 PNG 的 float 通道映射不能作为向量法线验收，原始字节始终保留供后续离线解码。

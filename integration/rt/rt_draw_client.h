@@ -131,7 +131,8 @@ class Collector {
     const bool shaderRead = info.shaderObject && memory.read(info.shaderObject, shaderObject, sizeof(shaderObject));
     const bool codeRead = info.shaderMethod && memory.code(info.shaderMethod, shaderCode, sizeof(shaderCode));
     materialLog << "],\"vertex_format\":" << info.format << ",\"decode_flags\":" << info.flags
-      << ",\"shader_name\":\"" << info.shader.data() << "\",\"shader_object\":\"" << (shaderRead ? bytesHex(shaderObject, sizeof(shaderObject)) : "")
+      << ",\"shader_name\":\"" << info.shader.data() << "\",\"name_pointer_slot\":" << info.nameSlot
+      << ",\"name_address\":" << info.nameAddress << ",\"shader_object\":\"" << (shaderRead ? bytesHex(shaderObject, sizeof(shaderObject)) : "")
       << "\",\"shader_method\":" << info.shaderMethod << ",\"shader_code\":\"" << (codeRead ? bytesHex(shaderCode, sizeof(shaderCode)) : "")
       << "\",\"method_calls_executed\":false}\n" << std::flush;
   }

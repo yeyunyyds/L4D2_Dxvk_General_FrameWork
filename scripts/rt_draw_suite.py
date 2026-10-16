@@ -88,6 +88,7 @@ def install(root,game,manifest):
     known_observers={'c220626110df028be42f3df7732b116ae8c04c341fce8dd695362bc608b43b64',
                      '26507cdd3315268f6beb8c03ecf98b113c0135f423f5209d1f5ab17cdec80c11',
                      '9b8436a1832eb1133ab2a0d94989e84c24bb633e55c606a7baec009d6a096d15',
+                     'b0bbc701404bfeaa1be6f51183716ce98e79884209818b35b55f5267131b8f8a',
                      manifest['binaries'][TARGETS[0]]['sha256']}
     if inherited is None and digest(game/TARGETS[0]) in known_observers:
         raise ValueError('Earlier observer found without its recovery receipt. Restore it from its original package folder first.')
@@ -341,6 +342,10 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
             report['world_outputs']=outputs['runtime_outputs']
             report['world_geometry_buffers']='nonzero_requires_review' if outputs.get('nonzero_world_depth_and_normals') else 'incomplete'
             reviews=json.loads((directory/'draw-analysis.json').read_text())
+            report['world_converted_draws']=sum(t.get('world_conversion',{}).get('converted',0) for t in reviews.values())
+            report['rt_activation_requests']=outputs.get('rt_activation_requests',0)
+            notify('World conversion: '+str(report['world_converted_draws'])+' Draws; RT enable requests: '+
+                   str(report['rt_activation_requests'])+'. Actual RT images still require review.')
             report['world_normalization']='pass' if reviews and all(t.get('world_normalization')=='pass' for t in reviews.values()) else 'incomplete'
             if (outputs['runtime_outputs']!='pass' or report['world_normalization']!='pass'
                     or report['world_geometry_buffers']=='incomplete'):report['collection']='incomplete'

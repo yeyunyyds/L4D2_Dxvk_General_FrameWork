@@ -9,9 +9,13 @@ struct Memory {
   std::vector<uint8_t> data = std::vector<uint8_t>(65536);
   unsigned reads = 0, failAt = 0;
   bool changeTop = false;
+  uint32_t changeCell = 0;
   bool read(uint32_t address, void* out, size_t bytes) {
     if (++reads == failAt || address > data.size() || bytes > data.size() - address) { return false; }
     std::memcpy(out, data.data() + address, bytes);
+    if (changeCell && address == changeCell && bytes == 4) {
+      const uint32_t other = 0x7600; std::memcpy(data.data() + address, &other, 4);
+    }
     if (changeTop && reads == 12) { const uint32_t changed = 1; std::memcpy(data.data() + 0x201c, &changed, 4); }
     return true;
   }
@@ -66,6 +70,21 @@ int main() {
       const uint8_t fieldBody[]={0x8b,0x41,0x04,0xc3,0,0,0,0};
       std::memcpy(data.data.data()+0x7300,fieldBody,sizeof(fieldBody));data.put(0x7004,uint32_t(0x7400));
       require(material_decode::decode(data,0x4000,0x5000).flags==3,"bounded shader field decoder");
+      data.data[0x7300]=0xa1;data.put(0x7301,uint32_t(0x7500));data.data[0x7305]=0xc3;data.put(0x7500,uint32_t(0x7400));
+      const auto global=material_decode::decode(data,0x4000,0x5000);
+      require(global.flags==3 && global.nameSlot==0x7500 && global.nameAddress==0x7400 &&
+        material_decode::worldShader(global.shader),"A1 global pointer leaf resolves bounded world name");
+      data.changeCell=0x7500;
+      require(material_decode::decode(data,0x4000,0x5000).flags==0,"changed global name pointer must fail closed");
+      data.changeCell=0;data.put(0x7500,uint32_t(0x7400));
+      data.put(0x7301,uint32_t(UINT32_MAX-1));
+      require(material_decode::decode(data,0x4000,0x5000).flags==1,"global name pointer read cannot wrap address space");
+      data.put(0x7301,uint32_t(0x7500));data.put(0x7500,uint32_t(0xfff0));
+      require(material_decode::decode(data,0x4000,0x5000).flags==1,"empty global name is never a classified world");
+      data.put(0x7500,uint32_t(0x7400));std::memset(data.data.data()+0x7400,0,64);
+      std::memcpy(data.data.data()+0x7400,"NekoToon",9);
+      const auto custom=material_decode::decode(data,0x4000,0x5000);
+      require(custom.flags==3 && !material_decode::worldShader(custom.shader),"global custom shader must not bypass world whitelist");
       data.data[0x7300]=0xe8;
       require(material_decode::decode(data,0x4000,0x5000).flags==1,"never execute or guess a call instruction");
       data.data[0x7300]=0xb8;data.put(0x7301,uint32_t(0x7400));data.data[0x7305]=0xc3;std::memset(data.data.data()+0x7400,'A',64);
@@ -73,6 +92,7 @@ int main() {
       require(tooLong.flags==1 && tooLong.shader[0]==0,"reject truncated classification string");
       require(material_decode::decode(data,UINT32_MAX-4,0x5000).flags==0,"bound material address overflow");
     }
+    std::cout << "RT bounded A1 shader-name pointer reread: PASS; private functions never called\n";
     std::cout << "RT Draw packet and bounded matrix observation: PASS; game ABI/queue/RT unrun\n";
     return 0;
   } catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }

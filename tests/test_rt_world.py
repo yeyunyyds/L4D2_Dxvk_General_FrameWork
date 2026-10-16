@@ -9,6 +9,25 @@ from analyze_rt_world import analyze
 
 
 class ReadbackEvidenceTests(unittest.TestCase):
+    def test_alpha_only_normals_are_not_geometry_even_with_nonzero_depth(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary)
+            events=[{'event':name,'code':0} for name in ('loaded_pinned_runtime','initialize_api_0_6_4','register_game_device')]
+            for frame in (30,120,240):
+                for kind in (0,1,2):
+                    name=f'world-{frame}-{kind}.rgba32f'
+                    pixel=struct.pack('<4f',1.,0.,0.,1.) if kind==1 else struct.pack('<4I',0,0,0,1)
+                    (root/name).write_bytes(pixel*(640*400))
+                    events.append(dict(event='world_readback',frame=frame,kind=kind,file=name,width=640,height=400,
+                                       initialized_to_zero=True,written=True,copy_code=0,hresult=0))
+            (root/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+            report=analyze(root,previews=False)
+            self.assertEqual(report['runtime_outputs'],'pass')
+            self.assertFalse(report['nonzero_world_depth_and_normals'])
+            normals=[s for s in report['samples'] if s['kind']==2]
+            self.assertTrue(all(s['nonzero_values']>0 and s['nonzero_finite_rgb_values']==0 for s in normals))
+            self.assertTrue(all(s['nonzero_rgb_words']==0 and s['first_rgba_u32']==[0,0,0,1] for s in normals))
+
     def test_api_success_and_unchanged_zero_buffers_do_not_prove_world_geometry(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)

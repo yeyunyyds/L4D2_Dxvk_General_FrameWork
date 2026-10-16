@@ -1,4 +1,4 @@
-LDB 1.3.2：受限静态世界 Remix 接入试验 v2（启动光栅保护）
+LDB 1.3.2：受限静态世界 Remix 接入试验 v3（补齐实际世界 shader 名称读取）
 
 本版开始尝试在真实游戏中转换选定的 LightmappedGeneric 世界绘制，并加载已在 B580 独立测试通过的同一版 Remix。它不是完整 l4d2-rtx 移植；动态模型、武器、天空、透明与 HUD 合成尚未验收，画面可能缺失这些内容。Source 队列和性能也不以本包的诊断帧率验收。
 
@@ -17,6 +17,7 @@ LDB 1.3.2：受限静态世界 Remix 接入试验 v2（启动光栅保护）
 
 测试内容及边界：
 - 验证 shaderapivk 模块和矩阵栈布局，矩阵、实时 VertexFormat、可解码的 shader 名称与实际 Draw 同一 RPC 传输；未知代码只留证据，不执行私有方法。
+- 支持实际 stdshader_dx9 的 A1 全局字符串指针 getter：只读取指针和有界名称，复读代码、指针与材质身份，发现变化即拒绝。LightmappedGeneric 白名单不放宽，NekoToon 等自定义 shader 不会因格式相同而被当作世界。
 - 只选 0x480003、LightmappedGeneric 白名单、单位 world、刚性透视相机、完整深度范围、HDR 同尺寸目标、不混合/不 alpha test 且写深度的候选。
 - 支持已观察到的 48 字节步长及附加 stream 2 声明。FVF 只读取 stream 0 的前 40 字节，不改顶点数据或绑定步长；每次 Draw 后恢复原矩阵、shader 和完整声明。
 - 使用标准 D3D9 draw-call conversion，固定 API 0.6.4 只做配置和输出读回，不与 Bridge 原有 API 混用，不调用会强制释放游戏设备的 standalone Shutdown。

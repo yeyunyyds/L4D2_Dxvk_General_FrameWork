@@ -51,12 +51,16 @@ def analyze(directory,previews=True):
             errors.append('missing_or_failed_readback:'+name);continue
         raw=file.read_bytes();values=array('f');values.frombytes(raw)
         if sys.byteorder!='little':values.byteswap()
+        words=array('I');words.frombytes(raw)
+        if sys.byteorder!='little':words.byteswap()
         finite=sum(math.isfinite(v) for v in values);pixels=len(values)//4
         first=values[0::4];positive=sum(math.isfinite(v) and 0<v<1e8 for v in first)
         variation=len({tuple(round(v,4) if math.isfinite(v) and abs(v)<1e8 else 'invalid' for v in values[i:i+3])
                        for i in range(0,len(values),16)})
         sample.update(sha256=hashlib.sha256(raw).hexdigest(),pixels=pixels,finite_fraction=finite/len(values),
                       nonzero_values=sum(v!=0 for v in values),positive_bounded_first_channel_fraction=positive/pixels,
+                      nonzero_finite_rgb_values=sum(math.isfinite(v) and v!=0 for i,v in enumerate(values) if i%4!=3),
+                      nonzero_rgb_words=sum(v!=0 for i,v in enumerate(words) if i%4!=3),first_rgba_u32=list(words[:4]),
                       sampled_rgb_variants=variation,zero_initialized_buffer_unchanged=all(v==0 for v in values))
         if previews:
             finite_depth=[v for v in first if math.isfinite(v) and 0<v<1e8]
@@ -73,15 +77,19 @@ def analyze(directory,previews=True):
     expected={(f,k) for f in (30,120,240) for k in (0,1,2)}
     if seen!=expected:errors.append('incomplete_control_and_world_output_set')
     world=[s for s in samples if s['frame'] in (120,240) and s['kind'] in (1,2)]
-    nonzero=bool(world) and len(world)==4 and all(not s.get('zero_initialized_buffer_unchanged',True) for s in world)
+    nonzero=bool(world) and len(world)==4 and all(
+        s.get('positive_bounded_first_channel_fraction',0)>0 if s['kind']==1 else s.get('nonzero_rgb_words',0)>0
+        for s in world)
     return {'schema':1,'scope':'reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance',
             'runtime_outputs':'pass' if not errors else 'incomplete','errors':errors,'samples':samples,
             'startup_raster_gate':'requested_events_present_not_effective_state_proof' if gated else 'legacy_ungated',
+            'rt_activation_requests':sum(e.get('event')=='raytracing_requested_on' and e.get('code')==0 for e in events),
             'nonzero_world_depth_and_normals':nonzero,
             'geometry_visual_review':'required' if nonzero else 'incomplete',
             'source_parallel_preparation':'unrun','performance':'unrun','game_rt':'requires_visual_and_thread_review',
             'preview_mapping':{'color':'clamped RGB [0,1]','depth':'positive first channel logarithmic normalization',
-                               'normals':'RGB*.5+.5 visualization only; raw RGBA32F retained'},
+                               'normals':'legacy float-channel visualization, not decoded packed normals; raw uint32 bits retained'},
+            'normal_source_format_from_pinned_runtime':'VK_FORMAT_R32_UINT; first RGBA word may contain packed normal; transfer interpretation needs actual RT data',
             'limits':'normal encoding and scene correspondence require review; no API return code or nonzero buffer proves ray dispatch by itself'}
 
 
