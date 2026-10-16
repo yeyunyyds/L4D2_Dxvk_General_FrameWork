@@ -12,7 +12,7 @@ try {
   $apiSource = '.research/preflight-smoke/api'
   Invoke-LoggedNative ('git init -q ' + $apiSource) 'api-init'
   Invoke-LoggedNative ('git -C ' + $apiSource + ' remote add origin https://github.com/xoxor4d/dxvk-remix.git') 'api-origin'
-  Invoke-LoggedNative ('git -C ' + $apiSource + ' fetch --depth=1 --filter=blob:none origin b73eb23053aa50d3787b0c6c8b4b8ae49962880e') 'api-fetch'
+  Invoke-LoggedNative ('git -C ' + $apiSource + ' fetch --depth=1 origin b73eb23053aa50d3787b0c6c8b4b8ae49962880e') 'api-fetch'
   Invoke-LoggedNative ('git -C ' + $apiSource + ' checkout FETCH_HEAD -- public/include/remix/remix_c.h') 'api-header'
   $header = Join-Path $apiSource 'public/include/remix/remix_c.h'
   if ((Get-FileHash $header -Algorithm SHA256).Hash.ToLower() -ne '58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e') { throw 'API header hash differs' }
@@ -26,8 +26,8 @@ try {
   Invoke-LoggedNative ($prefix + '/LD tests/rt_smoke_window_fixture.cpp /Fe:.research/preflight-smoke/window-fixture.dll /Fo:.research/preflight-smoke/window.obj /link user32.lib') 'compile-window'
   Invoke-LoggedNative ($prefix + 'tests/rt_smoke_native.cpp /Fe:.research/preflight-smoke/native-tests.exe /Fo:.research/preflight-smoke/native-tests.obj /link user32.lib dbghelp.lib') 'compile-tests'
   $base = (Resolve-Path .research/preflight-smoke).Path
-  Invoke-LoggedNative ('"' + $base + '/native-tests.exe" "' + $base + '/window-fixture.dll" "' + $base + '/helper-evidence"') 'helper-checks'
-  Invoke-LoggedNative ('"' + $base + '/rt-runtime-smoke.exe" "' + $env:SystemRoot + '/System32/d3d9.dll" "' + $base + '/negative"') 'negative-control' 1
+  Invoke-LoggedNative ('call "' + $base + '/native-tests.exe" "' + $base + '/window-fixture.dll" "' + $base + '/helper-evidence"') 'helper-checks'
+  Invoke-LoggedNative ('call "' + $base + '/rt-runtime-smoke.exe" "' + $env:SystemRoot + '/System32/d3d9.dll" "' + $base + '/negative"') 'negative-control' 1
   $status = Get-Content "$base/negative/status.json" -Raw | ConvertFrom-Json
   $events = Get-Content "$base/negative/events.jsonl" -Raw
   if ($status.result -ne 'fail' -or $status.cleanup -ne 'complete' -or $status.failed_at -ne 'find_api' -or $events -notmatch '"stage":"find_api","code":127') { throw 'Standard D3D9 rejection or failure cleanup failed' }
