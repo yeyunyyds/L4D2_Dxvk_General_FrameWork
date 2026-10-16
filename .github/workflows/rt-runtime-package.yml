@@ -11,6 +11,11 @@ on:
       - scripts/rt_suite.py
       - integration/rt/preflight-readme.txt
       - tests/test_rt_preflight.py
+      - tests/test_rt_game_probe.py
+      - integration/rt/rt_runtime_smoke.cpp
+      - scripts/build_rt_diagnostic.ps1
+      - tests/rt_smoke_native.cpp
+      - tests/rt_smoke_window_fixture.cpp
   workflow_dispatch:
 permissions:
   contents: write
@@ -23,6 +28,8 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 20
     steps:
+      - name: Preserve pinned source line endings
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -47,6 +54,14 @@ jobs:
           $result = $LASTEXITCODE
           Get-Content .research/preflight-check/tests.log
           if ($result -ne 0) { throw 'Preflight checks failed' }
+          & cmd.exe /d /c 'python -m unittest discover -s tests -p test_rt_game_probe.py -v > .research/preflight-check/game-tests.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content .research/preflight-check/game-tests.log
+          if ($result -ne 0) { throw 'Game collector checks failed' }
+      - name: Compile and verify only the updated standalone diagnostic
+        id: smoke
+        shell: powershell
+        run: ./scripts/build_rt_diagnostic.ps1
       - uses: actions/download-artifact@v4
         with:
           name: rt-runtime-9c3b2f860095d4e75e283d24dd9a54c0343554ec
@@ -126,7 +141,7 @@ jobs:
         id: repair
         shell: powershell
         run: |
-          & cmd.exe /d /c 'python tools/repackage_rt_product.py --loader .research/vulkan-loader-build/loader/Release/vulkan-1.dll > .research/rt-repackage.log 2>&1'
+          & cmd.exe /d /c 'python tools/repackage_rt_product.py --loader .research/vulkan-loader-build/loader/Release/vulkan-1.dll --diagnostic .research/preflight-smoke/rt-runtime-smoke.exe > .research/rt-repackage.log 2>&1'
           $result = $LASTEXITCODE
           Get-Content .research/rt-repackage.log
           if ($result -ne 0) { throw 'Native repaired package verification failed' }
@@ -159,6 +174,7 @@ jobs:
           RT_LOADER_OUTCOME: ${{ steps.loader.outcome }}
           RT_REPAIR_OUTCOME: ${{ steps.repair.outcome }}
           RT_COORDINATOR_OUTCOME: ${{ steps.coordinator.outcome }}
+          RT_SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
         run: |
           import json, os, pathlib, zipfile
           path=pathlib.Path('.research/dist/rt-runtime-dependencies-status.zip')
@@ -169,7 +185,10 @@ jobs:
               for name in ['.research/vulkan-loader-build.log','.research/rt-repackage.log','.research/dist/rt-prerequisites/package-validation.json','.research/dist/rt-prerequisites/publish-index.json','.research/preflight-check/compile.log','.research/preflight-check/tests.log','.research/preflight-check/public-payload-urls.json']:
                   p=pathlib.Path(name)
                   if p.is_file(): z.write(p,p.name)
-              z.writestr('status.json',json.dumps({'schema':1,'commit':os.environ['GITHUB_SHA'],'coordinator_tests':os.environ['RT_COORDINATOR_OUTCOME'],'restoration':os.environ['RT_DEPENDENCY_OUTCOME'],'loader_build':os.environ['RT_LOADER_OUTCOME'],'package_repair':os.environ['RT_REPAIR_OUTCOME'],'scope':'dependency_load_diagnostic','gpu_execution':'unrun'}))
+              for name in ['.research/preflight-smoke/native.log','.research/preflight-smoke/native-validation.json','.research/preflight-check/game-tests.log','.research/preflight-smoke/negative/status.json','.research/preflight-smoke/negative/events.jsonl','.research/preflight-smoke/helper-evidence/status.json','.research/preflight-smoke/helper-evidence/cleanup-events.jsonl','.research/preflight-smoke/helper-evidence/crash.json']:
+                  p=pathlib.Path(name)
+                  if p.is_file(): z.write(p,'diagnostic/'+p.relative_to('.research').as_posix())
+              z.writestr('status.json',json.dumps({'schema':1,'commit':os.environ['GITHUB_SHA'],'coordinator_tests':os.environ['RT_COORDINATOR_OUTCOME'],'diagnostic_native_checks':os.environ['RT_SMOKE_OUTCOME'],'restoration':os.environ['RT_DEPENDENCY_OUTCOME'],'loader_build':os.environ['RT_LOADER_OUTCOME'],'package_repair':os.environ['RT_REPAIR_OUTCOME'],'scope':'dependency_load_diagnostic','gpu_execution':'unrun'}))
           import subprocess, sys
           subprocess.run([sys.executable,'scripts/publish_rt_build_status.py','--package',str(path)],check=True)
       - name: Publish verified launcher and all dependency ZIPs atomically

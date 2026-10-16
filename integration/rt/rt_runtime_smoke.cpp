@@ -5,16 +5,19 @@
 #define REMIX_WINAPI_NO_LIBRARY_LOADER
 #include <windows.h>
 #include <d3d9.h>
+#include <dbghelp.h>
 #include <remix/remix_c.h>
 
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <algorithm>
 
 namespace fs = std::filesystem;
 constexpr unsigned kWidth = 640, kHeight = 360;
@@ -22,27 +25,25 @@ constexpr uint32_t kObject = 0x4c445254;
 
 struct PickResult {
   std::atomic<bool> called{false}, hit{false};
-  std::atomic<uint32_t> values{0};
+  std::atomic<uint32_t> values{0}, callbacks{0};
 };
 void REMIXAPI_CALL picked(const uint32_t* values, uint32_t count, void* user) {
   auto& result = *static_cast<PickResult*>(user);
   for (uint32_t i = 0; i < count; ++i) { if (values[i] == kObject) { result.hit.store(true); } }
-  result.values.store(count); result.called.store(true);
+  result.values.store(count); result.callbacks.fetch_add(1); result.called.store(true);
 }
 
+struct Log;
 struct Runtime {
   HMODULE module = nullptr;
   remixapi_Interface api{};
   IDirect3D9Ex* d3d = nullptr;
   IDirect3DDevice9Ex* device = nullptr;
   bool registered = false;
-  ~Runtime() {
-    // The pinned runtime's Shutdown drains its D3D reference counts, including
-    // those returned by CreateD3D9/CreateDeviceEx. Do not release stale pointers.
-    if (registered) { api.Shutdown(); }
-    else { if (device) { device->Release(); } if (d3d) { d3d->Release(); } }
-    if (module) { FreeLibrary(module); }
-  }
+  HWND window = nullptr;
+  void cleanup(Log& log);
+  // The standalone process keeps the DLL mapped through process exit. Window
+  // hooks and asynchronous runtime callbacks must never execute unmapped code.
 };
 template<class T> struct ComPtr {
   T* value = nullptr;
@@ -61,29 +62,115 @@ struct Log {
   void hr(const char* name, HRESULT code) { result(name, SUCCEEDED(code) ? 0 : uint32_t(code)); }
 };
 
-void screenshot(Runtime& runtime, const fs::path& destination, Log& log) {
-  ComPtr<IDirect3DSurface9> gpu, cpu;
-  log.hr("create_capture_target", runtime.device->CreateRenderTarget(kWidth, kHeight, D3DFMT_A8R8G8B8,
-    D3DMULTISAMPLE_NONE, 0, FALSE, &gpu.value, nullptr));
-  log.hr("create_capture_readback", runtime.device->CreateOffscreenPlainSurface(kWidth, kHeight,
-    D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &cpu.value, nullptr));
-  log.result("copy_final_color", uint32_t(runtime.api.dxvk_CopyRenderingOutput(gpu.value,
-    REMIXAPI_DXVK_COPY_RENDERING_OUTPUT_TYPE_FINAL_COLOR)));
-  log.hr("read_final_color", runtime.device->GetRenderTargetData(gpu.value, cpu.value));
-  D3DLOCKED_RECT locked{};
-  log.hr("lock_final_color", cpu.value->LockRect(&locked, nullptr, D3DLOCK_READONLY));
-  struct Unlock { IDirect3DSurface9* surface; ~Unlock() { surface->UnlockRect(); } } unlock{cpu.value};
+void Runtime::cleanup(Log& log) {
+  if (window && IsWindow(window)) {
+    log.stage = "destroy_window";
+    log.result("destroy_window", DestroyWindow(window) ? 0 : GetLastError());
+  }
+  window = nullptr;
+  if (registered) {
+    log.result("shutdown_runtime", uint32_t(api.Shutdown()));
+    registered = false; device = nullptr; d3d = nullptr;
+  } else {
+    if (device) { device->Release(); device = nullptr; }
+    if (d3d) { d3d->Release(); d3d = nullptr; }
+  }
+  log.result("cleanup_complete", 0);
+}
+
+std::string jsonString(const std::string& text) {
+  std::string result = "\"";
+  for (const unsigned char c : text) {
+    if (c == '"' || c == '\\') { result += '\\'; result += char(c); }
+    else if (c == '\n') { result += "\\n"; }
+    else if (c == '\r') { result += "\\r"; }
+    else if (c == '\t') { result += "\\t"; }
+    else if (c < 32) { result += '?'; }
+    else { result += char(c); }
+  }
+  return result + '"';
+}
+
+std::wstring crashPath, dumpPath;
+LONG WINAPI crashReport(EXCEPTION_POINTERS* pointers) {
+  const auto code = pointers && pointers->ExceptionRecord ? pointers->ExceptionRecord->ExceptionCode : 0;
+  HANDLE dump = CreateFileW(dumpPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  bool saved = false;
+  if (dump != INVALID_HANDLE_VALUE) {
+    MINIDUMP_EXCEPTION_INFORMATION info{GetCurrentThreadId(), pointers, FALSE};
+    saved = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), dump,
+      MINIDUMP_TYPE(MiniDumpNormal | MiniDumpWithThreadInfo), pointers ? &info : nullptr, nullptr, nullptr) != FALSE;
+    CloseHandle(dump);
+  }
+  HANDLE output = CreateFileW(crashPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (output != INVALID_HANDLE_VALUE) {
+    char data[180]{};
+    const int size = std::snprintf(data, sizeof(data), "{\"exception_code\":%lu,\"minidump_saved\":%s}\n",
+      static_cast<unsigned long>(code), saved ? "true" : "false");
+    DWORD written = 0;
+    if (size > 0) { WriteFile(output, data, DWORD(size), &written, nullptr); FlushFileBuffers(output); }
+    CloseHandle(output);
+  }
+  return EXCEPTION_EXECUTE_HANDLER;
+}
+
+struct ImageStats {
+  unsigned minimum = 255, maximum = 0, nonblack = 0;
+  unsigned center[3]{};
+  bool hasSignal() const { return nonblack > 0 && maximum > minimum && center[0] + center[1] + center[2] > 0; }
+};
+
+ImageStats writeImage(const D3DLOCKED_RECT& locked, const fs::path& destination) {
+  ImageStats stats;
   std::ofstream file(destination, std::ios::binary);
   file << "P6\n" << kWidth << ' ' << kHeight << "\n255\n";
   for (unsigned y = 0; y < kHeight; ++y) {
     const auto* row = static_cast<const uint8_t*>(locked.pBits) + ptrdiff_t(y) * locked.Pitch;
     for (unsigned x = 0; x < kWidth; ++x) {
-      const char rgb[] = {char(row[4 * x + 2]), char(row[4 * x + 1]), char(row[4 * x])};
-      file.write(rgb, 3);
+      const unsigned rgb[] = {row[4 * x + 2], row[4 * x + 1], row[4 * x]};
+      if (rgb[0] + rgb[1] + rgb[2] > 4) { ++stats.nonblack; }
+      for (unsigned i = 0; i < 3; ++i) {
+        stats.minimum = std::min(stats.minimum, rgb[i]); stats.maximum = std::max(stats.maximum, rgb[i]);
+        if (x == kWidth / 2 && y == kHeight / 2) { stats.center[i] = rgb[i]; }
+        file.put(char(rgb[i]));
+      }
     }
   }
   file.close(); if (!file) { throw std::runtime_error("save final color"); }
+  return stats;
 }
+
+ImageStats screenshot(Runtime& runtime, const fs::path& destination, Log& log) {
+  ComPtr<IDirect3DSurface9> gpu, cpu;
+  // FINAL_COLOR in the pinned API copies this same backbuffer, but leaks its
+  // acquired surface reference. Read it directly and release every reference.
+  log.hr("get_final_color_backbuffer", runtime.device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &gpu.value));
+  log.hr("create_capture_readback", runtime.device->CreateOffscreenPlainSurface(kWidth, kHeight,
+    D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &cpu.value, nullptr));
+  log.hr("read_final_color", runtime.device->GetRenderTargetData(gpu.value, cpu.value));
+  D3DLOCKED_RECT locked{};
+  log.hr("lock_final_color", cpu.value->LockRect(&locked, nullptr, D3DLOCK_READONLY));
+  struct Unlock { IDirect3DSurface9* surface; ~Unlock() { surface->UnlockRect(); } } unlock{cpu.value};
+  return writeImage(locked, destination);
+}
+
+struct Outcome {
+  unsigned frames = 0, captures = 0, captureAttempts = 0;
+  bool signal = false, passed = false;
+  const char* failedAt = "";
+  std::string error;
+  void save(const fs::path& file, const PickResult& pick, const char* cleanup) const {
+    std::ofstream out(file);
+    out << "{\"schema\":2,\"result\":\"" << (passed ? "static_hit_and_color_readback" : "fail")
+        << "\",\"frames\":" << frames << ",\"pick_callback_count\":" << pick.callbacks.load()
+        << ",\"pick_hit\":" << (pick.hit.load() ? "true" : "false") << ",\"pick_values\":" << pick.values.load()
+        << ",\"capture_attempts\":" << captureAttempts << ",\"readback_successes\":" << captures
+        << ",\"image_has_signal\":" << (signal ? "true" : "false") << ",\"cleanup\":" << jsonString(cleanup)
+        << ",\"failed_at\":" << jsonString(failedAt) << ",\"error\":" << jsonString(error)
+        << ",\"game_rt\":\"unrun\",\"source_threading\":\"unrun\",\"performance\":\"unrun\"}\n";
+    out.close(); if (!out) { throw std::runtime_error("save diagnostic status"); }
+  }
+};
 
 int wmain(int argc, wchar_t** argv) {
   if (argc != 3) { std::cerr << "usage: rt-runtime-smoke.exe <absolute-runtime-dll> <new-output-directory>\n"; return 2; }
@@ -93,13 +180,17 @@ int wmain(int argc, wchar_t** argv) {
       throw std::runtime_error("require existing absolute DLL and new output directory");
     }
   } catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 2; }
-  PickResult pick; // Outlives Runtime shutdown and its asynchronous callbacks.
+  crashPath = (directory / "crash.json").wstring(); dumpPath = (directory / "crash.dmp").wstring();
+  SetUnhandledExceptionFilter(crashReport);
+  PickResult pick; // Outlives explicit shutdown and its asynchronous callbacks.
   Log log(directory / "events.jsonl");
-  unsigned frames = 0;
-  bool image = false;
-  HWND window = nullptr;
+  Outcome outcome;
+  unsigned& frames = outcome.frames;
+  Runtime runtime; // Remains alive across the catch and window destruction.
+  HWND& window = runtime.window;
+  remixapi_MaterialHandle materialHandle = nullptr;
+  remixapi_MeshHandle meshHandle = nullptr;
   try {
-    Runtime runtime;
     runtime.module = LoadLibraryExW(dll.c_str(), nullptr,
       LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
     log.result("load_runtime", runtime.module ? 0 : GetLastError());
@@ -154,7 +245,6 @@ int wmain(int argc, wchar_t** argv) {
     remixapi_MaterialInfo material{};
     material.sType = REMIXAPI_STRUCT_TYPE_MATERIAL_INFO; material.pNext = &opaque; material.hash = 0x4c445201;
     material.emissiveIntensity = 4; material.emissiveColorConstant = {1, 0.2f, 0.05f};
-    remixapi_MaterialHandle materialHandle = nullptr;
     log.result("create_material", uint32_t(runtime.api.CreateMaterial(&material, &materialHandle)));
     remixapi_HardcodedVertex vertices[3]{};
     const float positions[3][3] = {{-2, -1, 3}, {0, 2, 3}, {2, -1, 3}};
@@ -168,7 +258,6 @@ int wmain(int argc, wchar_t** argv) {
     surface.indices_values = indices; surface.indices_count = 3; surface.material = materialHandle;
     remixapi_MeshInfo mesh{}; mesh.sType = REMIXAPI_STRUCT_TYPE_MESH_INFO; mesh.hash = 0x4c445202;
     mesh.surfaces_values = &surface; mesh.surfaces_count = 1;
-    remixapi_MeshHandle meshHandle = nullptr;
     log.result("create_mesh", uint32_t(runtime.api.CreateMesh(&mesh, &meshHandle)));
     remixapi_CameraInfoParameterizedEXT parameters{};
     parameters.sType = REMIXAPI_STRUCT_TYPE_CAMERA_INFO_PARAMETERIZED_EXT;
@@ -184,8 +273,25 @@ int wmain(int argc, wchar_t** argv) {
     for (unsigned i = 0; i < 3; ++i) { instance.transform.matrix[i][i] = 1; }
     const remixapi_Rect2D center{int(kWidth / 2), int(kHeight / 2), int(kWidth / 2 + 1), int(kHeight / 2 + 1)};
     bool requested = false;
+    bool imageForHit = false;
     const auto started = std::chrono::steady_clock::now();
-    for (; frames < 600 && std::chrono::steady_clock::now() - started < std::chrono::seconds(60); ++frames) {
+    double lastCapture = -30, lastProgress = -2;
+    auto capture = [&]() {
+      ++outcome.captureAttempts;
+      try {
+        const auto stats = screenshot(runtime, directory / "final-color.ppm", log);
+        ++outcome.captures; outcome.signal = stats.hasSignal();
+        imageForHit = pick.hit.load() && outcome.signal;
+        log.output << "{\"stage\":\"image_stats\",\"frame\":" << frames
+                   << ",\"nonblack_pixels\":" << stats.nonblack << ",\"minimum\":" << stats.minimum
+                   << ",\"maximum\":" << stats.maximum << ",\"center_rgb\":[" << stats.center[0] << ','
+                   << stats.center[1] << ',' << stats.center[2] << "]}\n" << std::flush;
+      } catch (const std::exception& error) {
+        log.output << "{\"stage\":\"capture_failed\",\"failed_at\":" << jsonString(log.stage)
+                   << ",\"error\":" << jsonString(error.what()) << "}\n" << std::flush;
+      }
+    };
+    for (; frames < 20000 && std::chrono::steady_clock::now() - started < std::chrono::seconds(240); ++frames) {
       MSG message;
       while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) { TranslateMessage(&message); DispatchMessageW(&message); }
       if (!IsWindow(window)) { throw std::runtime_error("diagnostic window closed"); }
@@ -196,24 +302,51 @@ int wmain(int argc, wchar_t** argv) {
         log.result("request_center_hit", uint32_t(runtime.api.pick_RequestObjectPicking(&center, picked, &pick)));
         requested = true;
       }
-      log.result("present", uint32_t(runtime.api.Present(nullptr)));
-      if (frames >= 60 && pick.hit.load()) { screenshot(runtime, directory / "final-color.ppm", log); image = true; ++frames; break; }
+      // The pinned API Present wrapper leaks its GetSwapChain reference. Use
+      // the very same device Present without the leaking window-size wrapper.
+      log.hr("present_device", runtime.device->PresentEx(nullptr, nullptr, nullptr, nullptr, 0));
+      const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+      if (frames >= 96 && (elapsed - lastCapture >= 15 || (pick.hit.load() && !imageForHit))) {
+        capture(); lastCapture = elapsed;
+      }
+      if (elapsed - lastProgress >= 2) {
+        std::ofstream progress(directory / "progress.json");
+        progress << "{\"frames\":" << frames << ",\"elapsed_seconds\":" << elapsed
+                 << ",\"pick_callback_count\":" << pick.callbacks.load() << ",\"pick_hit\":"
+                 << (pick.hit.load() ? "true" : "false") << ",\"readback_successes\":" << outcome.captures << "}\n";
+        log.output << "{\"stage\":\"progress\",\"frame\":" << frames << ",\"elapsed_seconds\":" << elapsed
+                   << ",\"pick_callback_count\":" << pick.callbacks.load() << ",\"pick_hit\":"
+                   << (pick.hit.load() ? "true" : "false") << "}\n" << std::flush;
+        std::cout << "RT frame " << frames << ", " << unsigned(elapsed) << "s, pick callbacks=" << pick.callbacks.load()
+                  << ", readbacks=" << outcome.captures << std::endl;
+        lastProgress = elapsed;
+      }
+      if (frames >= 96 && pick.hit.load() && imageForHit) { ++frames; break; }
       MsgWaitForMultipleObjectsEx(0, nullptr, 16, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
     }
-    log.result("destroy_mesh", uint32_t(runtime.api.DestroyMesh(meshHandle)));
-    log.result("destroy_material", uint32_t(runtime.api.DestroyMaterial(materialHandle)));
-    if (!pick.hit.load() || !image) { throw std::runtime_error("no expected center hit and final-color readback"); }
-    // Shutdown completes before the callback storage or DLL code is released.
+    if (!imageForHit) { capture(); }
+    log.stage = "verify_pick_and_readback";
+    if (!pick.hit.load()) { throw std::runtime_error(pick.called.load() ? "picking completed without expected object" : "picking callback did not complete within diagnostic budget"); }
+    if (!imageForHit) { throw std::runtime_error("expected object hit, but final color did not have readable image signal"); }
+    outcome.passed = true;
   } catch (const std::exception& error) {
-    log.output << "{\"failed_at\":\"" << log.stage << "\"}\n" << std::flush;
+    outcome.failedAt = log.stage; outcome.error = error.what();
+    log.output << "{\"failed_at\":" << jsonString(log.stage) << ",\"error\":" << jsonString(error.what()) << "}\n" << std::flush;
     std::cerr << error.what() << '\n';
-    if (window && IsWindow(window)) { DestroyWindow(window); }
-    std::ofstream(directory / "status.json") << "{\"schema\":1,\"result\":\"fail\",\"game_rt\":\"unrun\"}\n";
+  }
+  // Persist the measurement before touching window/device lifetime. A cleanup
+  // crash must not erase the test's real failure or be mistaken for GPU loss.
+  outcome.save(directory / "status.json", pick, "pending");
+  try {
+    if (meshHandle) { log.result("destroy_mesh", uint32_t(runtime.api.DestroyMesh(meshHandle))); }
+    if (materialHandle) { log.result("destroy_material", uint32_t(runtime.api.DestroyMaterial(materialHandle))); }
+    runtime.cleanup(log);
+  } catch (const std::exception& error) {
+    log.output << "{\"cleanup_failed_at\":" << jsonString(log.stage) << ",\"error\":" << jsonString(error.what()) << "}\n" << std::flush;
+    if (outcome.error.empty()) { outcome.failedAt = log.stage; outcome.error = error.what(); }
+    outcome.passed = false; outcome.save(directory / "status.json", pick, "fail");
     return 1;
   }
-  if (window && IsWindow(window)) { DestroyWindow(window); }
-  std::ofstream(directory / "status.json") << "{\"schema\":1,\"result\":\"static_hit_and_color_readback\",\"frames\":" << frames
-    << ",\"object_id\":" << kObject << ",\"pick_values\":" << pick.values.load()
-    << ",\"game_rt\":\"unrun\",\"source_threading\":\"unrun\",\"performance\":\"unrun\"}\n";
-  return 0;
+  outcome.save(directory / "status.json", pick, "complete");
+  return outcome.passed ? 0 : 1;
 }

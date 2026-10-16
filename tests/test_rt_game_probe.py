@@ -8,9 +8,10 @@ import struct
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from rt_game_probe import MappedImage, WindowsProcess, collect, file_identity, global_evidence, matches, pattern_bytes, unique_modules
+from rt_game_probe import MappedImage, WindowsProcess, collect, file_identity, global_evidence, matches, pattern_bytes, unique_modules, select_renderer
 
 BASE = 0x12340000
 
@@ -60,6 +61,35 @@ def image(data, missing=()):
 
 
 class ProbeCases(unittest.TestCase):
+    def test_renderer_selection_rejects_two_loaded_renderers_and_conflicting_aliases(self):
+        vk = {'name': 'shaderapivk.dll', 'path': 'game/shaderapivk.dll', 'base': BASE}
+        dx = {'name': 'shaderapidx9.dll', 'path': 'game/shaderapidx9.dll', 'base': BASE + 0x10000}
+        self.assertEqual(select_renderer([vk])['name'], 'shaderapivk.dll')
+        self.assertFalse(select_renderer([vk])['interface_binding_verified'])
+        self.assertEqual(select_renderer([vk, dx])['result'], 'ambiguous')
+        self.assertIsNone(select_renderer([vk, vk])['name'])
+        self.assertEqual(select_renderer([])['result'], 'unavailable')
+
+    def test_loaded_vulkan_renderer_receives_reference_patterns_as_candidates(self):
+        data = fixture()
+        modules = [{'name': name, 'path': 'game/' + name, 'base': BASE, 'size': len(data), 'snapshot_alias_count': 1}
+                   for name in ['client.dll', 'engine.dll', 'materialsystem.dll', 'shaderapivk.dll']]
+        audit = {'hook_references': [{'module': 'RENDERER_MOD', 'symbol': 'fixture_renderer_pattern',
+                                     'pattern': '8B 43 ? 3B C7', 'byte_offset': 0}]}
+        with patch('rt_game_probe.WindowsProcess') as target, patch('rt_game_probe.file_identity', return_value={'sha256':'fixture'}):
+            process = target.return_value.__enter__.return_value
+            process.identity.return_value = {'pid': 10, 'alive': True}
+            process.modules.return_value = modules
+            process.read.side_effect = lambda address, size: bytes(data[address-BASE:address-BASE+size])
+            report = collect(10, audit)
+        self.assertEqual(report['execution'], 'snapshot_collected')
+        self.assertTrue(report['renderer_selection_stable'])
+        renderer = next(m for m in report['modules'] if m['name'] == 'shaderapivk.dll')
+        self.assertTrue(renderer['reference_module_differs'])
+        self.assertEqual(renderer['hook_candidates'][0]['result'], 'unique_candidate')
+        self.assertFalse(renderer['hook_candidates'][0]['hook_install_allowed'])
+        self.assertFalse(report['hook_install_allowed'])
+
     def test_private_global_candidate_reads_heap_object_without_calling_interface(self):
         data = fixture()
         storage, heap = BASE + 0x3400, 0x70000000

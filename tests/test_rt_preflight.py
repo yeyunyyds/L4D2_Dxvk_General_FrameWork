@@ -60,6 +60,19 @@ class PreflightCases(unittest.TestCase):
         self.assertFalse((self.root / 'cache/runtime/d3d9.dll').exists())
         self.assertFalse(list(self.cache.glob('*.download')))
 
+    def test_small_update_reuses_verified_runtime_files_without_unpacking_them(self):
+        manifest = self.fixture()
+        runtime = runner.ensure_runtime(self.root, manifest, self.cache)
+        (runtime / 'rt-runtime-smoke.exe').write_bytes(b'corrupt')
+        original = zipfile.ZipFile.open
+        def open_member(archive, member, *args, **kwargs):
+            if getattr(member, 'filename', member) == 'd3d9.dll':
+                raise AssertionError('Verified large DLL must be reused')
+            return original(archive, member, *args, **kwargs)
+        with patch.object(zipfile.ZipFile, 'open', open_member):
+            runner.ensure_runtime(self.root, manifest, self.cache)
+        self.assertEqual((runtime / 'rt-runtime-smoke.exe').read_bytes(), b'diagnostic')
+
     def test_404_falls_back_to_github_and_keeps_pinned_revision_and_hash(self):
         manifest = self.fixture()
         part = manifest['payloads'][0]
@@ -188,6 +201,32 @@ class PreflightCases(unittest.TestCase):
         self.assertEqual(result['reason'], 'timeout')
         self.assertIn('started', (stage / 'stdout.log').read_text())
         self.assertIsNotNone(result['exit_code'])
+
+    def test_rebuilt_diagnostic_integrity_is_independent_of_large_runtime_payloads(self):
+        self.fixture()
+        executable = self.root / 'bin/rt-runtime-smoke.exe'
+        executable.parent.mkdir(); executable.write_bytes(b'new native diagnostic')
+        manifest = {'diagnostic':{'path':'bin/rt-runtime-smoke.exe','sha256':runner.digest(executable),'size':executable.stat().st_size}}
+        self.assertEqual(runner.smoke_program(self.root, manifest, self.root / 'cache/runtime'), executable)
+        executable.write_bytes(b'tampered')
+        with self.assertRaisesRegex(ValueError, 'diagnostic SHA256'):
+            runner.smoke_program(self.root, manifest, self.root / 'cache/runtime')
+
+    def test_image_alone_or_hit_alone_or_crashed_cleanup_cannot_pass(self):
+        stage = self.root / 'runtime'; smoke = stage / 'smoke'; smoke.mkdir(parents=True)
+        image = smoke / 'final-color.ppm'; image.write_bytes(b'fixture ppm')
+        good = {'result':'static_hit_and_color_readback','cleanup':'complete','pick_hit':True,
+                'image_has_signal':True,'readback_successes':1}
+        (stage / 'frame_trace.jsonl').write_text('{"camera_valid":true,"shader_compile_inflight_count":5}\n')
+        for changes in [{'pick_hit':False},{'readback_successes':0},{'image_has_signal':False},{'cleanup':'pending'},{}]:
+            with self.subTest(changes=changes):
+                (smoke / 'status.json').write_text(json.dumps(good | changes))
+                passed, evidence = runner.smoke_evidence(stage, {'execution':'pass'})
+                self.assertEqual(passed, not bool(changes))
+                self.assertEqual(evidence['readiness_trace'][0]['shader_compile_inflight_count'],5)
+        self.assertFalse(runner.smoke_evidence(stage, {'execution':'fail'})[0])
+        image.unlink()
+        self.assertFalse(runner.smoke_evidence(stage, {'execution':'pass'})[0])
 
     def test_owned_child_output_budget_stops_verbose_process(self):
         result = runner.run_owned([sys.executable, '-c', 'import time; print("x"*10000, flush=True); time.sleep(30)'],

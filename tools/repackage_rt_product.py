@@ -25,13 +25,19 @@ HEADERS_COMMIT = '409c16be502e39fe70dd6fe2d9ad4842ef2c9a53'
 PAYLOAD_REF = 'fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0'
 
 
-def repackage(candidate, loader, loader_source, headers_source, output):
+def repackage(candidate, loader, loader_source, headers_source, output, diagnostic):
     if output.exists():
         raise FileExistsError('Preserve existing package output')
     output.mkdir(parents=True)
     from runtime_imports import imports
     if imports(loader)['machine'] != '0x8664':
         raise ValueError('Expected x64 Vulkan loader')
+    if imports(diagnostic)['machine'] != '0x8664':
+        raise ValueError('Expected x64 rebuilt diagnostic')
+    native = json.loads((diagnostic.parent / 'native-validation.json').read_text(encoding='utf-8-sig'))
+    if (native['native_checks'] != 'pass' or native['exe_sha256'] != digest(diagnostic)
+            or native['source_sha256'] != digest(ROOT / 'integration/rt/rt_runtime_smoke.cpp')):
+        raise ValueError('Rebuilt diagnostic differs from native validation')
     for directory, expected in ((loader_source, LOADER_COMMIT), (headers_source, HEADERS_COMMIT)):
         if subprocess.check_output(['git', '-C', str(directory), 'rev-parse', 'HEAD'], text=True).strip() != expected:
             raise ValueError('Vulkan loader/headers checkout differs from pin')
@@ -59,11 +65,16 @@ def repackage(candidate, loader, loader_source, headers_source, output):
                         vulkan_loader={'repository': 'https://github.com/KhronosGroup/Vulkan-Loader.git',
                                        'commit': LOADER_COMMIT, 'headers_commit': HEADERS_COMMIT,
                                        'scope': 'app_local_standard_loader_not_gpu_driver'})
+        manifest['diagnostic'] = {'path':'bin/rt-runtime-smoke.exe', 'sha256':digest(diagnostic),
+                                  'size':diagnostic.stat().st_size, 'build_commit':os.environ['GITHUB_SHA'],
+                                  'source_sha256':native['source_sha256'], 'api_sha256':native['api_sha256'],
+                                  'api_commit':native['api_commit'], 'native_checks':'pass', 'gpu_execution':'unrun'}
         primary = output / 'rt-preflight-dev.zip'
         replacements = {name: ROOT / name for name in (
             'scripts/rt_preflight.py', 'scripts/rt_game_probe.py', 'scripts/rt_suite.py',
             'integration/rt/baseline.json', 'research/rt-source-audit.json', 'research/rt-source-queue-sdk.json')}
         replacements['README.txt'] = ROOT / 'integration/rt/preflight-readme.txt'
+        replacements['bin/rt-runtime-smoke.exe'] = diagnostic
         with zipfile.ZipFile(primary, 'w', zipfile.ZIP_DEFLATED) as archive:
             for info in original.infolist():
                 relative(info.filename)
@@ -111,6 +122,8 @@ def repackage(candidate, loader, loader_source, headers_source, output):
     report = json.loads(reports[0].read_text(encoding='utf-8'))
     report['vulkan_loader'] = manifest['vulkan_loader'] | manifest['runtime_files']['vulkan-1.dll']
     report['native_build_commit'] = NATIVE_COMMIT
+    report['rebuilt_diagnostic'] = manifest['diagnostic']
+    report['diagnostic_native_validation'] = native
     report['primary_zip_sha256'] = digest(primary)
     (output / 'package-validation.json').write_text(json.dumps(report, indent=2)+'\n')
     if executed.returncode or report['errors'] or report.get('runtime_load', {}).get('dependency_load') != 'pass':
@@ -125,9 +138,10 @@ def repackage(candidate, loader, loader_source, headers_source, output):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--loader', type=Path, required=True)
+    parser.add_argument('--diagnostic', type=Path, required=True)
     args = parser.parse_args()
     candidates = list((ROOT / '.research/rt-existing-product').rglob('rt-preflight-dev.zip'))
     if len(candidates) != 1:
         raise SystemExit('Expected exactly one preserved native product')
     repackage(candidates[0], args.loader.resolve(), ROOT / '.research/vulkan-loader',
-              ROOT / '.research/vulkan-headers', ROOT / '.research/dist/rt-prerequisites')
+              ROOT / '.research/vulkan-headers', ROOT / '.research/dist/rt-prerequisites', args.diagnostic.resolve())

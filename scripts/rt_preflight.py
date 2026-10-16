@@ -147,6 +147,8 @@ def ensure_runtime(root, manifest, payload_cache=None, notify=message):
                 # Resolve the full destination before writing; reject redirected parents.
                 if not target.resolve().is_relative_to(runtime.resolve()):
                     raise ValueError('Payload destination leaves runtime directory')
+                if check_file(target, entry):
+                    continue
                 target.parent.mkdir(parents=True, exist_ok=True)
                 temporary = target.with_name(target.name + '.unpacking')
                 with archive.open(info) as source, temporary.open('wb') as output:
@@ -168,22 +170,36 @@ def ensure_runtime(root, manifest, payload_cache=None, notify=message):
     return runtime
 
 
-def run_owned(argv, directory, timeout=180, byte_limit=64 * 1024 * 1024):
+def run_owned(argv, directory, timeout=360, byte_limit=64 * 1024 * 1024, notify=message):
     """Bound the owned diagnostic; never terminate the game by process name."""
     directory.mkdir(parents=True, exist_ok=False)
     entry = {'execution': 'fail', 'argv': list(map(str, argv))}
     child = None
     started = time.monotonic()
+    updated = started
     try:
         with (directory / 'stdout.log').open('wb') as stdout, (directory / 'stderr.log').open('wb') as stderr:
             options = {'start_new_session': True} if os.name != 'nt' else {'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP}
             environment = os.environ.copy()
-            environment.update(LDB_FG_ENABLE='0', LDB_FG_HOTKEYS='0', DXVK_LOG_PATH=str(directory))
+            environment.update(LDB_FG_ENABLE='0', LDB_FG_HOTKEYS='0', DXVK_LOG_PATH=str(directory),
+                               DXVK_METRICS_PATH=str(directory), RTX_TEST_TRACE='1',
+                               DXVK_DUMP_SCREENSHOT_FRAME='90',
+                               RTX_AUTOMATION_DISABLE_BLOCKING_DIALOG_BOXES='1')
             # A private working directory isolates config, shader caches and logs.
             child = subprocess.Popen(list(map(str, argv)), cwd=directory, env=environment,
                                      stdout=stdout, stderr=stderr, **options)
             entry['pid'] = child.pid
             while child.poll() is None:
+                now = time.monotonic()
+                if now - updated >= 15:
+                    progress = directory / 'smoke/progress.json'
+                    try:
+                        state = json.loads(progress.read_text()) if progress.is_file() else {}
+                    except (OSError, ValueError):
+                        state = {}
+                    notify(f'RT diagnostic: {now-started:.0f}s; frames={state.get("frames", "initializing")}; '
+                           f'pick callbacks={state.get("pick_callback_count", 0)}; readbacks={state.get("readback_successes", 0)}')
+                    updated = now
                 size = sum(p.stat().st_size for p in directory.rglob('*') if p.is_file() and not p.is_symlink())
                 if time.monotonic() - started > timeout or size > byte_limit:
                     entry['reason'] = 'timeout' if time.monotonic() - started > timeout else 'output_budget'
@@ -282,6 +298,33 @@ def verify_load(runtime):
     return {'dependency_load': 'pass', 'api_export': 'present', 'gpu_execution': 'unrun'}
 
 
+def smoke_program(root, manifest, runtime):
+    """A small rebuilt diagnostic can replace the old EXE without repacking DLLs."""
+    diagnostic = manifest.get('diagnostic')
+    if diagnostic is None:
+        return runtime / 'rt-runtime-smoke.exe'
+    name = relative(diagnostic['path'])
+    if name.as_posix() != 'bin/rt-runtime-smoke.exe' or not check_file(root / name, diagnostic):
+        raise ValueError('Bundled diagnostic SHA256/size/path mismatch')
+    return root / name
+
+
+def smoke_evidence(stage, entry):
+    status = stage / 'smoke/status.json'
+    observed = json.loads(status.read_text()) if status.is_file() else {}
+    passed = (entry['execution'] == 'pass' and observed.get('result') == 'static_hit_and_color_readback'
+              and observed.get('cleanup') == 'complete' and observed.get('pick_hit') is True
+              and observed.get('image_has_signal') is True and observed.get('readback_successes', 0) > 0
+              and (stage / 'smoke/final-color.ppm').is_file())
+    trace = stage / 'frame_trace.jsonl'
+    traces = [json.loads(line) for line in trace.read_text().splitlines() if line.strip()] if trace.is_file() else []
+    return passed, {'diagnostic_status': observed, 'readiness_trace': traces,
+                    'readiness_scope': 'bounded snapshot around runtime frame 90, not a full run timeline',
+                    'status_file_present': status.is_file(), 'final_color_present': (stage / 'smoke/final-color.ppm').is_file(),
+                    'crash_report_present': (stage / 'smoke/crash.json').is_file(),
+                    'minidump_present': (stage / 'smoke/crash.dmp').is_file()}
+
+
 def pack_results(directory, report, limit=MAX_RESULTS):
     archive = directory.with_suffix('.zip')
     skipped = []
@@ -329,18 +372,17 @@ def run(root=ROOT, pid=None, payload_cache=None, verify_only=False):
         save(directory / 'package-manifest.json', manifest)
         try:
             runtime = ensure_runtime(root, manifest, payload_cache, notify=notify)
+            program = smoke_program(root, manifest, runtime)
             report['runtime_preparation'] = 'pass'
             if verify_only:
                 report['runtime_load'] = verify_load(runtime)
             else:
-                notify('Running static RT diagnostic (up to 180 seconds)...')
+                notify('Running static RT diagnostic (up to 6 minutes including initialization/cleanup)...')
                 stage = directory / 'runtime'
-                entry = run_owned([runtime / 'rt-runtime-smoke.exe', runtime / 'd3d9.dll', stage / 'smoke'], stage)
+                entry = run_owned([program, runtime / 'd3d9.dll', stage / 'smoke'], stage, notify=notify)
                 report['runtime_process'] = entry
-                status = stage / 'smoke/status.json'
-                observed = json.loads(status.read_text()) if status.is_file() else {}
-                passed = (entry['execution'] == 'pass' and observed.get('result') == 'static_hit_and_color_readback'
-                          and (stage / 'smoke/final-color.ppm').is_file())
+                passed, details = smoke_evidence(stage, entry)
+                report['runtime_details'] = details
                 report['runtime_smoke'] = 'static_hit_and_color_readback' if passed else 'fail'
                 notify('Static RT diagnostic: ' + report['runtime_smoke'])
                 # Verify the vendor observed by the actual runtime, not Windows' GPU list.

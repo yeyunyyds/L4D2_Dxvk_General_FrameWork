@@ -16,6 +16,7 @@ import struct
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = {'CLIENT_MOD': 'client.dll', 'ENGINE_MOD': 'engine.dll',
            'RENDERER_MOD': 'shaderapidx9.dll'}
+RENDERERS = ('shaderapidx9.dll', 'shaderapivk.dll')
 CLASSES = {'CMaterialSystem': [95, 96], 'CMatRenderContext': [29, 30, 146],
            'CMatQueuedRenderContext': [29, 30, 146]}
 EXECUTE = 0x20000000
@@ -34,6 +35,15 @@ def unique_modules(entries):
         else:
             result[key] = {**entry, 'snapshot_alias_count': 1}
     return list(result.values())
+
+
+def select_renderer(modules):
+    """Select a loaded renderer, without treating matching patterns as an ABI."""
+    loaded = [m for m in modules if m['name'] in RENDERERS]
+    return {'result': 'unique_candidate' if len(loaded) == 1 else 'ambiguous' if loaded else 'unavailable',
+            'name': loaded[0]['name'] if len(loaded) == 1 else None,
+            'loaded': [{'name': m['name'], 'path': m['path'], 'base': m['base']} for m in loaded],
+            'reference_module': MODULES['RENDERER_MOD'], 'interface_binding_verified': False}
 
 
 def u32(data, offset=0):
@@ -467,13 +477,23 @@ def collect(pid, audit):
             if not report['process']['alive']:
                 raise OSError('Target process has exited')
             before = process.modules()
+            renderer = select_renderer(before)
+            report['renderer_selection'] = renderer
+            bindings = dict(MODULES)
+            if renderer['name']:
+                bindings['RENDERER_MOD'] = renderer['name']
             images = {}
-            required = set(MODULES.values()) | {'materialsystem.dll'}
+            required = set(bindings.values()) | {'materialsystem.dll'}
             stable = True
             for name in sorted(required):
                 candidates = [m for m in before if m['name'] == name]
                 item = {'name': name, 'result': 'unavailable'}
                 report['modules'].append(item)
+                if name == bindings['RENDERER_MOD']:
+                    item['reference_module'] = MODULES['RENDERER_MOD']
+                    item['reference_module_differs'] = name != MODULES['RENDERER_MOD']
+                    if renderer['result'] != 'unique_candidate':
+                        item['error'] = 'Renderer missing or ambiguous'; stable = False; continue
                 if len(candidates) != 1:
                     item['error'] = 'Module missing or ambiguous'; stable = False; continue
                 module = candidates[0]
@@ -481,7 +501,7 @@ def collect(pid, audit):
                             snapshot_alias_count=module['snapshot_alias_count'])
                 try:
                     item['file'] = file_identity(module['path'])
-                    hooks = [h for h in audit['hook_references'] if MODULES[h['module']] == name]
+                    hooks = [h for h in audit['hook_references'] if bindings[h['module']] == name]
                     classes = CLASSES if name == 'materialsystem.dll' else {}
                     image = MappedImage(process.read, module['base'], module['size'])
                     images[name] = image
@@ -492,10 +512,12 @@ def collect(pid, audit):
                     item['error'] = str(error); stable = False
             report['private_global_candidates'] = []
             for reference in audit.get('global_references', []):
-                name = MODULES[reference['module']]
+                name = bindings[reference['module']]
                 if name in images:
                     report['private_global_candidates'].append(global_evidence(process, images, images[name], reference))
             after = process.modules()
+            report['renderer_selection_stable'] = select_renderer(after) == renderer
+            stable &= report['renderer_selection_stable']
             for name in required:
                 identity = lambda entries: [(x['base'], x['size'], x['path']) for x in entries if x['name'] == name]
                 if identity(before) != identity(after):
