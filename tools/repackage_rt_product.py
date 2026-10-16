@@ -36,6 +36,7 @@ def repackage(candidate, loader, loader_source, headers_source, output, diagnost
         raise ValueError('Expected x64 rebuilt diagnostic')
     native = json.loads((diagnostic.parent / 'native-validation.json').read_text(encoding='utf-8-sig'))
     if (native['native_checks'] != 'pass' or native.get('alpha_shader_contract') != 'pass'
+            or native.get('post_processing_contract') != 'pass'
             or native['exe_sha256'] != digest(diagnostic)
             or native['source_sha256'] != digest(ROOT / 'integration/rt/rt_runtime_smoke.cpp')):
         raise ValueError('Rebuilt diagnostic differs from native validation')
@@ -70,7 +71,8 @@ def repackage(candidate, loader, loader_source, headers_source, output, diagnost
                                   'size':diagnostic.stat().st_size, 'build_commit':os.environ['GITHUB_SHA'],
                                   'source_sha256':native['source_sha256'], 'api_sha256':native['api_sha256'],
                                   'api_commit':native['api_commit'], 'native_checks':'pass',
-                                  'alpha_shader_contract':native['alpha_shader_contract'], 'gpu_execution':'unrun'}
+                                  'alpha_shader_contract':native['alpha_shader_contract'],
+                                  'post_processing_contract':native['post_processing_contract'], 'gpu_execution':'unrun'}
         primary = output / 'rt-preflight-dev.zip'
         replacements = {name: ROOT / name for name in (
             'scripts/rt_preflight.py', 'scripts/rt_game_probe.py', 'scripts/rt_suite.py', 'scripts/rt_visual.py',

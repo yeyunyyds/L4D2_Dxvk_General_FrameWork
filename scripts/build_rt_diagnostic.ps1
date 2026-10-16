@@ -32,7 +32,7 @@ try {
   $status = Get-Content "$base/negative/status.json" -Raw | ConvertFrom-Json
   $events = Get-Content "$base/negative/events.jsonl" -Raw
   if ($status.result -ne 'fail' -or $status.cleanup -ne 'complete' -or $status.failed_at -ne 'find_api' -or $events -notmatch '"stage":"find_api","code":127') { throw 'Standard D3D9 rejection or failure cleanup failed' }
-  $receipt = @{ schema=1; native_checks='pass'; alpha_shader_contract='pass'; gpu_execution='unrun'; api_commit='b73eb23053aa50d3787b0c6c8b4b8ae49962880e'; api_sha256=(Get-FileHash $header -Algorithm SHA256).Hash.ToLower(); source_sha256=(Get-FileHash integration/rt/rt_runtime_smoke.cpp -Algorithm SHA256).Hash.ToLower(); exe_sha256=(Get-FileHash "$base/rt-runtime-smoke.exe" -Algorithm SHA256).Hash.ToLower(); compiler_arch='x64'; compiler_toolset='14.29'; optimization='/O2 /MT'; scope='diagnostic_helpers_real_dll_window_lifetime_and_negative_control_not_gpu' }
+  $receipt = @{ schema=1; native_checks='pass'; alpha_shader_contract='pass'; post_processing_contract='pass'; gpu_execution='unrun'; api_commit='b73eb23053aa50d3787b0c6c8b4b8ae49962880e'; api_sha256=(Get-FileHash $header -Algorithm SHA256).Hash.ToLower(); source_sha256=(Get-FileHash integration/rt/rt_runtime_smoke.cpp -Algorithm SHA256).Hash.ToLower(); exe_sha256=(Get-FileHash "$base/rt-runtime-smoke.exe" -Algorithm SHA256).Hash.ToLower(); compiler_arch='x64'; compiler_toolset='14.29'; optimization='/O2 /MT'; scope='diagnostic_helpers_real_dll_window_lifetime_and_negative_control_not_gpu' }
   $receipt | ConvertTo-Json | Set-Content -Encoding UTF8 "$base/native-validation.json"
 } finally { Stop-Transcript }
 exit 0

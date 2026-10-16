@@ -19,11 +19,35 @@ template<class Function> Function procedure(HMODULE module, const char* name) {
   return result;
 }
 
+std::vector<std::pair<std::string, std::string>> configCalls;
+bool rejectBloom = false;
+remixapi_ErrorCode REMIXAPI_CALL recordConfig(const char* name, const char* value) {
+  configCalls.emplace_back(name, value);
+  return static_cast<remixapi_ErrorCode>(rejectBloom && std::strcmp(name, "rtx.bloom.enable") == 0 ? 1 : 0);
+}
+
 int wmain(int argc, wchar_t** argv) {
   try {
     require(argc == 3, "fixture DLL and output directory required");
     const fs::path output(argv[2]);
     require(fs::create_directory(output), "use new fixture output");
+    Runtime configuration;
+    configuration.api.SetConfigVariable = recordConfig;
+    Case test{"native_config", false, false, false, "0", 0};
+    Log configLog(output / "configuration-events.jsonl");
+    configure(configuration, configLog, test);
+    for (const char* name : {"rtx.bloom.enable", "rtx.postfx.enable", "rtx.postfx.enableMotionBlur",
+                             "rtx.postfx.enableChromaticAberration", "rtx.postfx.enableVignette"}) {
+      require(std::find(configCalls.begin(), configCalls.end(), std::make_pair(std::string(name), std::string("False")))
+              != configCalls.end(), "sharp-silhouette controls must reach the runtime API");
+    }
+    rejectBloom = true;
+    bool rejected = false;
+    try { configure(configuration, configLog, test); }
+    catch (const std::runtime_error&) { rejected = true; }
+    require(rejected && std::strcmp(configLog.stage, "rtx.bloom.enable") == 0,
+            "failed post-processing request must abort the case");
+    std::cout << "SHARP_SILHOUETTE_CONFIG_PASS: production API requests and rejection; GPU unrun\n";
     static_assert(sizeof(remixapi_HardcodedVertex) == 64, "pinned API vertex stride");
     static_assert(offsetof(remixapi_HardcodedVertex, texcoord) == 24, "pinned API UV offset");
     static_assert(offsetof(remixapi_HardcodedVertex, color) == 32, "pinned API color offset");

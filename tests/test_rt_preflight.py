@@ -238,7 +238,10 @@ class PreflightCases(unittest.TestCase):
             for part in ('early', 'final'):
                 pixels = (b'P6\n640 360\n255\n' + bytes((2,3,4)) * (640*360)) if dark else self.triangle(104 if name in ('translated','light_translated') else 0)
                 (case / (part + '-color.ppm')).write_bytes(pixels)
-        (smoke / 'matrix.json').write_text(json.dumps({'schema':3,'selected_profile':'baseline','translated_offset_x':1.0}))
+        (smoke / 'matrix.json').write_text(json.dumps({'schema':4,'selected_profile':'baseline','translated_offset_x':1.0}))
+        events = [{'stage':'render_config','case':name,'option':option,'value':'False','code':0}
+                  for name in visual.ALL_CASES for option in visual.SHARP_OPTIONS]
+        (smoke / 'events.jsonl').write_text(''.join(json.dumps(e)+'\n' for e in events))
         (smoke / 'final-color.ppm').write_bytes(self.triangle())
         (smoke / 'geometry-input.json').write_text(json.dumps({'uvs':[[0,1],[0.5,0],[1,1]],'normals':[[0,0,-1]]*3}))
         (smoke / 'material-input.json').write_text(json.dumps({'materials':[
@@ -344,6 +347,24 @@ class PreflightCases(unittest.TestCase):
         result = visual.evaluate_matrix(smoke)
         self.assertTrue(result['cases']['baseline']['pass'])
         self.assertFalse(result['material_inputs']['pass'])
+        self.assertFalse(result['emission_path']['pass'])
+        self.assertFalse(result['lighting_path']['pass'])
+        self.assertFalse(result['pass'])
+
+    def test_sharp_output_requires_successful_configuration_for_every_case(self):
+        stage, smoke, good = self.matrix_fixture()
+        path = smoke / 'events.jsonl'
+        events = [json.loads(line) for line in path.read_text().splitlines()]
+        self.assertTrue(visual.inspect_render_config(smoke)['pass'])
+        for changed in [events[1:], events + [events[0]],
+                        [events[0] | {'code':1}] + events[1:],
+                        [events[0] | {'value':'True'}] + events[1:]]:
+            with self.subTest(first=changed[0], length=len(changed)):
+                path.write_text(''.join(json.dumps(e)+'\n' for e in changed))
+                self.assertFalse(visual.inspect_render_config(smoke)['pass'])
+        result = visual.evaluate_matrix(smoke)
+        self.assertTrue(result['cases']['baseline']['pass'])
+        self.assertFalse(result['render_config']['pass'])
         self.assertFalse(result['emission_path']['pass'])
         self.assertFalse(result['lighting_path']['pass'])
         self.assertFalse(result['pass'])

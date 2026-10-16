@@ -1,5 +1,7 @@
 # 不透明材质 alpha 初始化修正 v5
 
+后续：[v5 两次 B580 实测与 v6 后处理修正](rt-preflight-postfx-v6.md)。两次均恢复材质、自发光和独立灯光输出；严格背景/移动检查仍失败，原始 CPU 与发布验证记录保留如下。
+
 用户结果 `rt-preflight-20261015-204652-f0253de7.zip` 与已发布 v4 一致：完整完成 13 项、1088 帧、26 次读回，约 34.34 秒，实际设备为 Intel Arc B580。有效 UV/法线检查通过，13 项均有预期拾取；原始 albedo 正确，处理后 albedo 和自发光调试图全部为零，独立方向光也未恢复正常画面。NaN/Inf 调试图没有报告无效数值。UV 修正没有解决当前黑屏。
 
 源码审查找到独立测试程序中的确定错误：`remixapi_MaterialInfoOpaqueEXT` 零初始化后，没有设定 `alphaTestType`。固定 runtime 的 [AlphaTestType](https://github.com/xoxor4d/dxvk-remix/blob/b73eb23053aa50d3787b0c6c8b4b8ae49962880e/src/dxvk/shaders/rtx/concept/surface/surface_shared.h#L46) 中 `0=NEVER`，`7=ALWAYS`。零不是“关闭 alpha 测试”。同时，零初始化的 `useDrawCallAlphaState=false` 会让 [calculateAlphaState](https://github.com/xoxor4d/dxvk-remix/blob/b73eb23053aa50d3787b0c6c8b4b8ae49962880e/src/dxvk/rtx_render/rtx_instance_manager.cpp#L678) 使用材质自身的 alpha 状态，覆盖实例侧的状态。这解释了为什么之前的显式 InstanceInfoBlendEXT 对照没有解除拒绝条件。

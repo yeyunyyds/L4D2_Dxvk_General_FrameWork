@@ -254,6 +254,12 @@ void configure(Runtime& runtime, Log& log, const Case& test) {
     {"rtx.autoExposure.enabled", test.fixedExposure ? "False" : "True"},
     {"rtx.tonemap.exposureBias", "0"}, {"rtx.tonemap.tonemappingEnabled", "True"},
     {"rtx.tonemap.colorGradingEnabled", "False"},
+    // The pixel oracle expects a sharp silhouette. Runtime defaults enable
+    // bloom and lens effects, which spread valid shading into the background.
+    {"rtx.bloom.enable", "False"}, {"rtx.postfx.enable", "False"},
+    {"rtx.postfx.enableMotionBlur", "False"},
+    {"rtx.postfx.enableChromaticAberration", "False"},
+    {"rtx.postfx.enableVignette", "False"},
     // Keep the off/on/off control independent of Remix's automatic headlight.
     {"rtx.fallbackLightMode", "0"},
     {"rtx.debugView.debugViewIdx", test.debugView},
@@ -263,7 +269,11 @@ void configure(Runtime& runtime, Log& log, const Case& test) {
     {"rtx.debugView.overlayOnTopOfRenderOutput", "False"}
   };
   for (const auto& option : options) {
-    log.result(option.first, uint32_t(runtime.api.SetConfigVariable(option.first, option.second)));
+    const auto code = uint32_t(runtime.api.SetConfigVariable(option.first, option.second));
+    log.output << "{\"stage\":\"render_config\",\"case\":" << jsonString(test.name)
+               << ",\"option\":" << jsonString(option.first) << ",\"value\":" << jsonString(option.second)
+               << ",\"code\":" << code << "}\n" << std::flush;
+    log.result(option.first, code);
   }
 }
 
@@ -514,7 +524,7 @@ int wmain(int argc, wchar_t** argv) {
     log.stage = "save_matrix";
     fs::copy_file(directory / cases[selected].name / "final-color.ppm", directory / "final-color.ppm");
     std::ofstream matrix(directory / "matrix.json");
-    matrix << "{\"schema\":3,\"selected_profile\":" << jsonString(cases[selected].name)
+    matrix << "{\"schema\":4,\"selected_profile\":" << jsonString(cases[selected].name)
            << ",\"normal_profile_visible\":" << (normalPassed ? "true" : "false")
            << ",\"translated_offset_x\":1.0,\"debug_views_count_as_acceptance\":false}\n";
     matrix.close(); if (!matrix) { throw std::runtime_error("save case matrix"); }

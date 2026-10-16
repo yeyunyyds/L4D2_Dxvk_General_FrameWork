@@ -14,6 +14,8 @@ DEBUG_CASES = ('albedo', 'processed_albedo', 'emission', 'invalid_values')
 DARK_CASES = ('light_off', 'light_off_after', 'invalid_values')
 LIGHT_CASES = ('light_off', 'light_on', 'light_translated', 'light_off_after')
 ALL_CASES = NORMAL_CASES + DEBUG_CASES + LIGHT_CASES + ('translated',)
+SHARP_OPTIONS = ('rtx.bloom.enable', 'rtx.postfx.enable', 'rtx.postfx.enableMotionBlur',
+                 'rtx.postfx.enableChromaticAberration', 'rtx.postfx.enableVignette')
 
 
 def read_ppm(path):
@@ -135,6 +137,26 @@ def inspect_materials(directory):
         return {'pass': False, 'error': str(error)}
 
 
+def inspect_render_config(directory):
+    # These are actual SetConfigVariable requests/results, not a readback of
+    # runtime internals. The independent pixel checks remain mandatory.
+    try:
+        records = {(case, option): [] for case in ALL_CASES for option in SHARP_OPTIONS}
+        with (directory / 'events.jsonl').open() as events:
+            for line in events:
+                event = json.loads(line)
+                if event.get('stage') == 'render_config':
+                    key = (event.get('case'), event.get('option'))
+                    if key in records:
+                        records[key].append((event.get('value'), event.get('code')))
+        bad = [case + ':' + option for (case, option), calls in records.items()
+               if calls != [('False', 0)]]
+        return {'pass': not bad, 'expected_case_option_pairs': len(records), 'invalid_or_missing': bad,
+                'scope': 'successful per-case requests; effective output checked separately from pixels'}
+    except (OSError, ValueError, TypeError) as error:
+        return {'pass': False, 'error': str(error)}
+
+
 def evaluate_matrix(directory):
     directory = Path(directory)
     evidence = {'schema': 2, 'pass': False, 'cases': {}, 'selected_profile': None,
@@ -142,7 +164,7 @@ def evaluate_matrix(directory):
                 'debug_views_count_as_acceptance': False}
     try:
         matrix = json.loads((directory / 'matrix.json').read_text())
-        if matrix.get('schema') not in (1, 2, 3):
+        if matrix.get('schema') not in (1, 2, 3, 4):
             raise ValueError('Unknown case matrix version')
     except (OSError, ValueError) as error:
         evidence['error'] = str(error)
@@ -195,6 +217,12 @@ def evaluate_matrix(directory):
             evidence['pass'] = emission_visible and evidence['emission_path']['pass'] and evidence['mesh_inputs']['pass'] and material_valid
             if matrix['schema'] >= 3:
                 evidence['pass'] = evidence['pass'] and evidence['lighting_path']['pass']
+            if matrix['schema'] >= 4:
+                evidence['render_config'] = inspect_render_config(directory)
+                configured = evidence['render_config']['pass']
+                evidence['emission_path']['pass'] = evidence['emission_path']['pass'] and configured
+                evidence['lighting_path']['pass'] = evidence['lighting_path']['pass'] and configured
+                evidence['pass'] = evidence['pass'] and configured
     except (OSError, ValueError, KeyError) as error:
         evidence['error'] = str(error)
     leads = ('normal_output_visible', 'compare_default_and_explicit_blend',
@@ -207,4 +235,9 @@ def evaluate_matrix(directory):
             evidence['next_focus'] = 'processed_color_visible_trace_emission_enable_intensity_and_color'
         elif evidence['cases']['albedo']['pass']:
             evidence['next_focus'] = 'raw_color_visible_inspect_processed_material_and_invalid_value_view'
+        if any(c['images']['final'].get('interior_orange_fraction', 0) >= 0.65
+               and c['images']['final'].get('exterior_orange_fraction', 0) > 0.05
+               and c['images']['final'].get('red_contrast', 0) >= 20
+               for n, c in evidence['cases'].items() if n in NORMAL_CASES):
+            evidence['next_focus'] = 'final_color_visible_verify_silhouette_and_post_processing'
     return evidence
