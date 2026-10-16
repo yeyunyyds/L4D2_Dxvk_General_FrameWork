@@ -31,3 +31,5 @@
 本机 RT Python 回归 47 项，45 通过、2 项需要 Windows 而跳过；诊断与原生测试已用 MinGW x64 交叉编译。Windows 工作流使用固定 SHA 的 API 头文件和 MSVC 14.29 `/O2 /MT /W4 /WX`，编译诊断及无 GPU 的测试：实际 DLL 窗口回调的关闭顺序、状态先落盘、独立颜色数据写入、崩溃证据和标准 D3D9 的负向拒绝。窗口/CPU 图像 fixture 通过不等于 B580 光追通过。
 
 最终入口仍由包内 Python 验证并真正加载相同原生 runtime。GitHub 仓库为私有；已有用户只需覆盖解压入口包并保留 cache/三个大 ZIP，首次用户仍从登录浏览器取得大依赖。用户运行一次 `run-test.cmd`，返回一个结果 ZIP，无 F8/F9 或规定运动动作。实际 B580 图像、游戏 Hook/队列、多线程及性能仍需真实机器分别验收。
+
+最终打包提交 `0673ced` 已通过 Windows 验证并发布：协调器 19 项全通过，游戏采集器 16 项中 15 通过、1 项 Linux 专用检查跳过；独立诊断、真实 DLL 窗口清理、CPU 颜色写入、普通 minidump 和标准 D3D9 拒绝均通过。最终包约 10.4 MiB，新诊断 EXE 297472 字节；已从发布分支取回核对 CRC、包/EXE SHA、脚本与 README 的逐字节一致性，三个大依赖不变。完整记录见 [发布与原生验证](../../research/rt-preflight-v2-validation.json)。这些原生检查的 GPU 执行均为 unrun。
