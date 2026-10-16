@@ -2,7 +2,7 @@
 
 已发布的 [rt-preflight-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/rt-preflight-dev.zip) 将当前游戏绑定证据与固定自定义 Remix 的静态 RT 冒烟测试合为一次运行、一个结果 ZIP。它不是 R0／R1／R2 综合包 A。游戏 Hook、实际引擎队列插入、世界转换、线程及性能仍未验收。
 
-当前为 [不透明材质 alpha 修正 v5](rt-preflight-alpha-v5.md)。v4 实测表明有效 UV 未解决黑屏；源码已确认旧测试材质把 alphaTestType 留为 NEVER，且覆盖实例 alpha 状态。本版显式设为 ALWAYS，加入固定着色器 alpha 分支回归和实际材质输入校验；13 项仍一次完成。修正后的 B580 图像需由新版实测确认。
+当前 v6 已完成 [B580 独立静态 RT 视觉验收](rt-preflight-b580-static-pass.md)：13 项、26 次读回及自发光/独立灯光的轮廓和平移均通过，原像素标准未放宽。无需重复此类三角形采集；下一步转入实际游戏队列与静态世界接入，资源释放警告仍需调查。此前 [v5 alpha 修正](rt-preflight-alpha-v5.md) 和 [v6 后处理配置](rt-preflight-postfx-v6.md) 的诊断记录保留。
 
 当前源码检查得到两个具体结论：
 

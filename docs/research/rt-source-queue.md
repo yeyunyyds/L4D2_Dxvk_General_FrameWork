@@ -1,6 +1,6 @@
 # L4D2 队列回调与静态场景诊断
 
-当前已通过原生 Windows 开发验证的是 **SDK 队列回调 → 生产 COM adapter → Host observer**，尚未安装 Source 游戏 Hook。固定自定义 Remix runtime 的完整 x64 Release 与静态场景程序均已编译通过；GPU 实际执行单列为未验证。它们均不是综合测试包 A。
+当前已通过原生 Windows 开发验证的是 **SDK 队列回调 → 生产 COM adapter → Host observer**，尚未安装 Source 游戏 Hook。固定自定义 Remix runtime 的完整 x64 Release 与静态场景程序均已编译通过；后续 v6 的 [B580 独立静态 RT 视觉验收已通过](rt-preflight-b580-static-pass.md)。它们均不是综合测试包 A，游戏队列执行仍未验收。
 
 Host 实际 Draw 旁的静态世界转换实现与验证边界见 [静态 Draw 转换](rt-static-draw.md)。
 

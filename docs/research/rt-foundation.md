@@ -1,6 +1,6 @@
 # 多线程 RT 的版本审查与有序接入基础
 
-状态：已实现并验证协议、LDB Device 接入、Host 观察和开发采集协调器。Source 游戏队列 Hook、几何转换、实际 Remix RT 初始化和 B580 验收尚未完成；当前不是综合测试包 A。
+状态：已实现并验证协议、LDB Device 接入、Host 观察和开发采集协调器。[B580 独立最小 RT 视觉验收已通过](rt-preflight-b580-static-pass.md)。Source 游戏队列 Hook、游戏几何转换、游戏 RT／多线程／性能及资源释放仍未验收；当前不是综合测试包 A。
 
 ## 本轮实现
 

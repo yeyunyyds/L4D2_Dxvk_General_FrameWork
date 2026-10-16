@@ -1,0 +1,754 @@
+{
+  "schema": 1,
+  "scope": "standalone_static_rt_visual_acceptance_not_l4d2_rt_or_threading",
+  "input": {
+    "filename": "rt-preflight-20261015-222206-695a12d1.zip",
+    "size": 615272,
+    "sha256": "422e40a852564a37c7b951720fd9863036a7bf4284d0cb78d36714bb21901266",
+    "zip_crc": "pass"
+  },
+  "build_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+  "package_matches_published_v6": true,
+  "diagnostic": {
+    "path": "bin/rt-runtime-smoke.exe",
+    "sha256": "88bfdd61c4735c670bb2a37292878ff65f3befb3f97692a87e12a813120cb2f5",
+    "size": 314368,
+    "build_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+    "source_sha256": "dd8dde3a979e4a604e0d26ffab06590891b047487186759e66dca848b179f850",
+    "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+    "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "native_checks": "pass",
+    "alpha_shader_contract": "pass",
+    "post_processing_contract": "pass",
+    "gpu_execution": "unrun"
+  },
+  "runtime_dll": {
+    "size": 210378240,
+    "sha256": "21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7"
+  },
+  "reviewed_b580_rt": "standalone_static_visual_pass",
+  "archived_summary_b580_rt": "pending_adapter_and_image_review",
+  "adapter": {
+    "name": "Intel Arc B580",
+    "vendor_id": "0x8086",
+    "device_id": "0xe20b",
+    "actual_runtime_log_verified": true
+  },
+  "raytrace_modes": {
+    "gbuffer": "Ray Query (CS)",
+    "direct": "Ray Query (CS)",
+    "indirect": "Ray Query (CS)",
+    "indirect_integrator": "ReSTIR GI"
+  },
+  "duration_seconds": 35.68699999999808,
+  "exit_code": 0,
+  "frames": 1088,
+  "readbacks": 26,
+  "cases_total": 13,
+  "cases_passed": 13,
+  "independent_pixel_recompute": "exact_match",
+  "manual_image_review": "visible_normal_and_lit_triangles_translate_with_dark_off_controls",
+  "strict_pixel_thresholds_unchanged_from_v5": true,
+  "visual_acceptance": {
+    "schema": 2,
+    "pass": true,
+    "cases": {
+      "baseline": {
+        "pass": true,
+        "role": "final_color",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 128,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.99591554606008,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.99585270830715,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      },
+      "explicit_blend": {
+        "pass": true,
+        "role": "final_color",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.99553851954255,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.9976750031419,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      },
+      "fixed_exposure": {
+        "pass": true,
+        "role": "final_color",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.99754932763605,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.9948473042604,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      },
+      "high_emission": {
+        "pass": true,
+        "role": "final_color",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.99447027774286,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.99588412718361,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      },
+      "albedo": {
+        "pass": true,
+        "role": "debug",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 230.0,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 230
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 230.0,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 230
+          }
+        }
+      },
+      "processed_albedo": {
+        "pass": true,
+        "role": "debug",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 204.0,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 204
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 204.0,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 204
+          }
+        }
+      },
+      "emission": {
+        "pass": true,
+        "role": "debug",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 255.0,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 255.0,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      },
+      "invalid_values": {
+        "pass": true,
+        "role": "debug",
+        "status": {
+          "schema": 5,
+          "result": "static_expected_dark_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "dark_control",
+          "image_has_signal": false,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "maximum": 0,
+            "scope": "expected dark control, not a visible-image pass"
+          },
+          "final": {
+            "pass": true,
+            "maximum": 0,
+            "scope": "expected dark control, not a visible-image pass"
+          }
+        }
+      },
+      "light_off": {
+        "pass": true,
+        "role": "dark_control",
+        "status": {
+          "schema": 5,
+          "result": "static_expected_dark_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "dark_control",
+          "image_has_signal": false,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "maximum": 0,
+            "scope": "expected dark control, not a visible-image pass"
+          },
+          "final": {
+            "pass": true,
+            "maximum": 0,
+            "scope": "expected dark control, not a visible-image pass"
+          }
+        }
+      },
+      "light_on": {
+        "pass": true,
+        "role": "final_color",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.995569938419,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.9976750031419,
+            "interior_pixels": 31828,
+            "exterior_pixels": 126450,
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      },
+      "light_translated": {
+        "pass": true,
+        "role": "final_color",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.9977378408948,
+            "interior_pixels": 31828,
+            "exterior_pixels": 128532,
+            "minimum": 0,
+            "maximum": 255
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.99456453437224,
+            "interior_pixels": 31828,
+            "exterior_pixels": 128532,
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      },
+      "light_off_after": {
+        "pass": true,
+        "role": "dark_control",
+        "status": {
+          "schema": 5,
+          "result": "static_expected_dark_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "dark_control",
+          "image_has_signal": false,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "maximum": 0,
+            "scope": "expected dark control, not a visible-image pass"
+          },
+          "final": {
+            "pass": true,
+            "maximum": 0,
+            "scope": "expected dark control, not a visible-image pass"
+          }
+        }
+      },
+      "translated": {
+        "pass": true,
+        "role": "final_color",
+        "status": {
+          "schema": 5,
+          "result": "static_visible_triangle_readback",
+          "frames": 80,
+          "pick_callback_count": 1,
+          "pick_hit": true,
+          "pick_values": 1,
+          "capture_attempts": 2,
+          "readback_successes": 2,
+          "stable_image_signal": true,
+          "expected_appearance": "orange_triangle",
+          "image_has_signal": true,
+          "cleanup": "complete",
+          "failed_at": "",
+          "error": "",
+          "game_rt": "unrun",
+          "source_threading": "unrun",
+          "performance": "unrun"
+        },
+        "images": {
+          "early": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.9957270328013,
+            "interior_pixels": 31828,
+            "exterior_pixels": 128532,
+            "minimum": 0,
+            "maximum": 255
+          },
+          "final": {
+            "pass": true,
+            "interior_orange_fraction": 1.0,
+            "exterior_orange_fraction": 0.0,
+            "red_contrast": 254.99544426291317,
+            "interior_pixels": 31828,
+            "exterior_pixels": 128532,
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      }
+    },
+    "selected_profile": "baseline",
+    "scope": "standalone static RT final color and translated geometry; game RT unrun",
+    "debug_views_count_as_acceptance": false,
+    "movement": {
+      "pass": true,
+      "cleared_fraction": 1.0,
+      "newly_covered_fraction": 1.0,
+      "tested_pixels": [
+        4355,
+        4423
+      ]
+    },
+    "matrix_complete": true,
+    "mesh_inputs": {
+      "pass": true,
+      "uv_determinant_recomputed": 1.0,
+      "input": {
+        "schema": 1,
+        "uv_determinant": 1,
+        "uvs": [
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "normals": [
+          [
+            0,
+            0,
+            -1
+          ],
+          [
+            0,
+            0,
+            -1
+          ],
+          [
+            0,
+            0,
+            -1
+          ]
+        ]
+      }
+    },
+    "material_inputs": {
+      "pass": true,
+      "input": {
+        "schema": 1,
+        "materials": [
+          {
+            "variant": 0,
+            "alpha_test_type": 7,
+            "use_draw_call_alpha_state": false,
+            "opacity": 1,
+            "blend_override": false,
+            "emissive_intensity": 4
+          },
+          {
+            "variant": 1,
+            "alpha_test_type": 7,
+            "use_draw_call_alpha_state": false,
+            "opacity": 1,
+            "blend_override": false,
+            "emissive_intensity": 64
+          },
+          {
+            "variant": 2,
+            "alpha_test_type": 7,
+            "use_draw_call_alpha_state": false,
+            "opacity": 1,
+            "blend_override": false,
+            "emissive_intensity": 0
+          }
+        ]
+      },
+      "contract": "pinned AlphaTestType 7=ALWAYS, 0=NEVER; fixed opaque material owns alpha state"
+    },
+    "emission_path": {
+      "pass": true
+    },
+    "lighting_path": {
+      "pass": true,
+      "movement": {
+        "pass": true,
+        "cleared_fraction": 1.0,
+        "newly_covered_fraction": 1.0,
+        "tested_pixels": [
+          4355,
+          4423
+        ]
+      },
+      "scope": "separate nonemissive material, light off/on/moved/off; cannot replace emission acceptance"
+    },
+    "render_config": {
+      "pass": true,
+      "expected_case_option_pairs": 65,
+      "invalid_or_missing": [],
+      "scope": "successful per-case requests; effective output checked separately from pixels"
+    },
+    "next_focus": "normal_output_visible"
+  },
+  "cleanup": {
+    "window_and_shutdown": "complete",
+    "crash_report_present": false,
+    "minidump_present": false,
+    "resource_warning": [
+      {
+        "file": "remix-dxvk.log",
+        "message": "[22:22:48.527] err:   [40] common device objects were not disposed of."
+      },
+      {
+        "file": "stderr.log",
+        "message": "[22:22:48.527] err:   [40] common device objects were not disposed of."
+      }
+    ],
+    "warning_scope": "one 40-object diagnostic is duplicated into two logs; unresolved, not a leak-free claim"
+  },
+  "game": {
+    "execution": "snapshot_collected",
+    "renderer": "shaderapivk.dll",
+    "renderer_selection_stable": true,
+    "module_list_stable": true,
+    "module_count": 189,
+    "target_modules_with_read_errors": 0,
+    "unique_hook_candidates": 7,
+    "unique_private_global_candidates": 3,
+    "hook_installed": false,
+    "queue_abi_verified": false,
+    "rt_execution": "unrun",
+    "source_threading": "unrun",
+    "performance": "unrun"
+  },
+  "next_scope": "actual Source queue ABI and ordered game-view/draw binding, then static world RT in combined package A",
+  "repeat_same_triangle_collection_required": false
+}

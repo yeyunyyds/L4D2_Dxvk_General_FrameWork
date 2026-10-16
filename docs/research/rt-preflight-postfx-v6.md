@@ -1,5 +1,7 @@
 # 固定独立 RT 验收的后处理配置 v6
 
+后续结果：[v6 已通过 B580 独立静态 RT 视觉验收](rt-preflight-b580-static-pass.md)。以下保留 v5 两次失败及 v6 修正的诊断过程。
+
 用户的两份 v5 结果 `210725-920270cd`、`211018-d855ecdb` 均为已发布代码 `85df7f8`，小型 EXE、固定 runtime DLL 与 manifest 一致。两次各完成 13 项、1088 帧、26 次读回，耗时 35.63 / 35.34 秒；全部物体拾取成功，窗口销毁与 Shutdown 返回，没有原生异常或 minidump。实际 RT 设备均为 Intel Arc B580（8086:e20b）。两次独立 RT 进程针对同一个正在运行的游戏进程，不能据此声称游戏重启稳定性通过。原来的 40 个 common device objects 释放警告仍存在；同一条消息分别进入两个日志，不能累加为 80 个对象。
 
 ## 两次画面已经确认的变化
@@ -26,4 +28,4 @@ Windows native helper 直接调用生产 configure，检查禁用选项确实传
 
 发布代码 `58c732b` 已通过本地 RT 回归 56 项（54 通过、2 项要求 Windows）及两个 x64 Werror 交叉编译。Windows 原生协调器 28/28，游戏采集器 16 项中 15 通过、1 项 Linux 专用跳过；生产配置请求/失败中止、固定着色器 alpha 分支、窗口/DLL 生命周期和包内 DLL 加载均通过。已取回实际发布包校验 CRC、x64 EXE、源 SHA、四个脚本与 README 字节一致，并确认三个大依赖完全复用。[详细发布验证](../../research/rt-preflight-v6-validation.json)。
 
-[v6 ZIP 文件页面（固定发布版本）](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/75e75334074a15f2a912cc91396be2280d3733ec/downloads/rt-preflight-dev.zip)。以上构建/包检查的 GPU 执行仍为 unrun；v6 关闭后处理的 B580 输出尚待本次实测。
+[v6 ZIP 文件页面（固定发布版本）](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/75e75334074a15f2a912cc91396be2280d3733ec/downloads/rt-preflight-dev.zip)。以上构建/包检查本身不含 GPU 执行；后续用户结果 `222206-695a12d1` 的独立 GPU 视觉验收已通过，见本文开头链接。

@@ -4,15 +4,15 @@
 
 [多线程光追完整实施计划](docs/research/multithreaded-rt-implementation-plan.md)：重构有序帧／绘制数据和线程相关 Hook，沿用匹配 Remix 后端；默认把用户采集合并为 A（兼容性／静态 RT／队列）与 B（动态／画面／生命周期／性能）两批，每批一个入口、一个结果 ZIP。
 
-[RT 接入基础进展](docs/research/rt-foundation.md)：已固定 LDB 1.3.2 和自定义 Remix 源码候选，实现有序协议、Device 通道观察与开发采集协调器；x86 client／x64 Host 原生构建和两种架构的执行用例通过。Source 队列 Hook、实际 RT 和综合包 A 尚未完成。
+[RT 接入基础进展](docs/research/rt-foundation.md)：已固定 LDB 1.3.2 和自定义 Remix 源码候选，实现有序协议、Device 通道观察与开发采集协调器；x86 client／x64 Host 原生构建和两种架构的执行用例通过。Source 队列 Hook、游戏 RT 和综合包 A 尚未完成。
 
-[独立 RT 后处理修正 v6](docs/research/rt-preflight-postfx-v6.md)：v5 两次 B580 复测已恢复最终画面、处理后材质、自发光与独立灯光响应；默认光晕污染轮廓/移动检查，严格验收仍失败。v6 显式关闭诊断后处理，记录各项 API 请求，保留原图像阈值和一次 13 项合并测试。
+[B580 独立静态 RT 已通过](docs/research/rt-preflight-b580-static-pass.md)：v6 实测 13/13 项、26/26 次读回通过，自发光与独立灯光的轮廓/平移均满足原严格判据。游戏 RT、Source 多线程、性能及资源释放仍待验证；下一步转入实际游戏队列与静态世界接入。
 
-[光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前尚无 B580 光追验收。
+[光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前已通过独立最小场景，游戏光追仍未验收。
 
 具体体验目标：原生高压约 60～80 FPS 时，锁定 60 个真实帧，通过插帧稳定呈现 120 帧；以高压最低帧和实际送帧节奏验收。
 
-内置插帧扩展暂缓，现有实验包保留，尚未完成 B580 游戏插帧质量验收；当前也尚无 B580 光追验收。
+内置插帧扩展暂缓，现有实验包保留，尚未完成 B580 游戏插帧质量或游戏光追验收。
 
 [60→120 路线重评](docs/research/project-reassessment-60to120.md)：当前输入可信度、画质、GPU 预算与双呈现仍未达标。建议先验证成品方案是否满足目标；内置路线按明确门槛研发，停止仅围绕通过率小修。
 
