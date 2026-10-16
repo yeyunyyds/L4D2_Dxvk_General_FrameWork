@@ -31,7 +31,7 @@ index 5d00669..947fe99 100644
      return false;
    }
  
-+  if (worldLaunch) { return true; }
++  if (worldLaunch) { return ldb_rt::world_runtime::configureRaster(); }
    if (!ServerOptions::getUseVanillaDxvk()) {
      FixD3DRecordHRESULT("d3d9.dll", ghModule);
    }

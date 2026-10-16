@@ -7,8 +7,11 @@ struct State {
   bool active = false;
   void (*bind)(IDirect3DDevice9*) noexcept = nullptr;
   void (*capture)(IDirect3DDevice9*, uint64_t) noexcept = nullptr;
+  bool (*raytracing)(bool) noexcept = nullptr;
+  void (*draw)(IDirect3DDevice9*) noexcept = nullptr;
 };
 inline State& state() { static State value; return value; }
 HMODULE load(const draw_observe::Request& request) noexcept;
+bool configureRaster() noexcept;
 void shutdown() noexcept;
 } // namespace ldb_rt::world_runtime

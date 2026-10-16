@@ -87,6 +87,7 @@ def install(root,game,manifest):
         except (OSError,KeyError,TypeError,json.JSONDecodeError):continue
     known_observers={'c220626110df028be42f3df7732b116ae8c04c341fce8dd695362bc608b43b64',
                      '26507cdd3315268f6beb8c03ecf98b113c0135f423f5209d1f5ab17cdec80c11',
+                     '9b8436a1832eb1133ab2a0d94989e84c24bb633e55c606a7baec009d6a096d15',
                      manifest['binaries'][TARGETS[0]]['sha256']}
     if inherited is None and digest(game/TARGETS[0]) in known_observers:
         raise ValueError('Earlier observer found without its recovery receipt. Restore it from its original package folder first.')
@@ -240,6 +241,24 @@ def finish_capture(directory,root,pid,report,notify):
     report['result_scope']='consumer state / RPC ordering only; no Source producer queue or RT image acceptance'
 
 
+def startup_modules(directory,pid,notify):
+    """Retain bounded module lists even if no F9 trace ever starts."""
+    result={'scope':'read_only_startup_module_inventory_not_capture_completion',
+            'association':'game PID and discovered Host names; parent/session binding requires log review',
+            'processes':[]}
+    diagnostics={};game_pids(diagnostics)
+    targets=[(pid,'game')]+[(p['pid'],'host_candidate') for p in diagnostics.get('related_processes',[])
+                          if p['exe'].casefold()=='l4d2bridge64.exe'][:4]
+    for process_id,role in targets:
+        entry={'pid':process_id,'role':role};result['processes'].append(entry)
+        try:
+            with WindowsProcess(process_id) as process:
+                entry['identity']=process.identity();entry['modules']=process.modules()[:1024]
+        except (OSError,ValueError) as error:entry['error']=str(error)
+    save(directory/'startup-modules.json',result)
+    notify('Startup module inventory saved. This does not mean the F9 capture is complete.')
+
+
 def run(root=ROOT,game=None,restore_only=False,verify_only=False):
     if verify_only:
         verify_package(root);print('Package files and collector configuration verified.');return
@@ -268,7 +287,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         content=(f'LDB_RT_WORLD_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n' if world else
                  f'LDB_RT_DRAW_1\n{session:x}\n{directory.resolve()}\n').encode('utf-8')
         if world:
-            config='\n'.join(['rtx.enableRaytracing = True','rtx.useVertexCapture = False','rtx.upscalerType = 0',
+            config='\n'.join(['rtx.enableRaytracing = False','rtx.useVertexCapture = False','rtx.upscalerType = 0',
                 'rtx.enableRayReconstruction = False','rtx.sceneScale = 0.3937007874',
                 'rtx.fallbackLightMode = 2','rtx.fallbackLightType = 1','rtx.fallbackLightRadiance = 30,30,30','rtx.fallbackLightRadius = 5',
                 'rtx.bloom.enable = False','rtx.postfx.enable = False'])+'\n'
@@ -280,11 +299,17 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         notify('Enter a map, return to the game, and press F9 once. The '+('240' if world else '120')+'-Present capture stops automatically.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
-        deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic()
+        deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None
         while time.monotonic()<deadline and not done.exists():
             candidates=game_pids()
             if len(candidates)>1:raise ValueError('Multiple L4D2 processes found')
-            if candidates:pid=candidates[0];last_alive=time.monotonic()
+            if candidates:
+                pid=candidates[0];last_alive=time.monotonic()
+                if first_alive is None:first_alive=last_alive
+                if world and not startup_saved and last_alive-first_alive>=5:
+                    startup_saved=True
+                    try:startup_modules(directory,pid,notify)
+                    except OSError as error:notify('Startup module inventory unavailable: '+str(error))
             elif pid and time.monotonic()-last_alive>3:
                 raise RuntimeError('Game exited before capture completion; partial results retained')
             if world and (directory/'world-runtime.jsonl').is_file():
@@ -298,9 +323,19 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
                 notify('Waiting for F9 / capture completion; game PID: '+str(pid));last=time.monotonic()
             time.sleep(.5)
         if not done.is_file():raise TimeoutError('No completed capture; partial logs are retained')
+        marker=json.loads(done.read_text(encoding='utf-8'))
+        report['capture_marker']=marker
+        expected=240 if world else 120
+        marker_ok=marker.get('session')==session and marker.get('reason')==0 and marker.get('presents')==expected
+        if not marker_ok:
+            notify('INCOMPLETE: capture stopped before the required '+str(expected)+' Presents. Collecting available evidence.')
         finish_capture(directory,root,pid,report,notify)
+        if not marker_ok:
+            report['collection']='incomplete';report['errors'].append('Capture completion marker identity/count/reason mismatch')
         if world:
-            notify('Capture and live module probe finished. Please exit L4D2 normally; final logs will join this ONE ZIP.')
+            notify(('Capture segment and live module probe finished.' if report['collection']=='complete' else
+                    'INCOMPLETE capture; available trace and live module probe saved.')+
+                   ' Please exit L4D2 normally; final logs will join this ONE ZIP.')
             wait_stopped(notify)
             outputs=analyze_world(directory);save(directory/'world-analysis.json',outputs)
             report['world_outputs']=outputs['runtime_outputs']
@@ -310,17 +345,25 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
             if (outputs['runtime_outputs']!='pass' or report['world_normalization']!='pass'
                     or report['world_geometry_buffers']=='incomplete'):report['collection']='incomplete'
     except Exception as error:
+        report['collection']='incomplete'
         report['errors'].append(f'{type(error).__name__}: {error}');notify(report['errors'][-1])
     finally:
         if request and content and request.is_file() and request.read_bytes()==content:request.unlink()
         if world and location:
             try:collect_game_logs(location,directory,started_at)
-            except OSError as error:report['errors'].append('Game log collection: '+str(error))
-        output=archive_result(directory,report);print('Upload this ONE ZIP:',output,flush=True)
+            except OSError as error:
+                report['collection']='incomplete';report['errors'].append('Game log collection: '+str(error))
+        output=archive_result(directory,report)
+        print('Collection: '+report['collection'].upper()+('. RT images still require review.' if report['collection']=='complete' else
+              '. Partial evidence only; the test has NOT passed.'),flush=True)
+        print('Upload this ONE ZIP:',output,flush=True)
     return output
 
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--game',type=Path)
     mode=p.add_mutually_exclusive_group();mode.add_argument('--restore',action='store_true');mode.add_argument('--verify-only',action='store_true')
-    a=p.parse_args();run(game=a.game,restore_only=a.restore,verify_only=a.verify_only)
+    a=p.parse_args();output=run(game=a.game,restore_only=a.restore,verify_only=a.verify_only)
+    if output:
+        summary=json.loads((output.with_suffix('')/'summary.json').read_text(encoding='utf-8'))
+        raise SystemExit(0 if summary['collection']=='complete' else 2)

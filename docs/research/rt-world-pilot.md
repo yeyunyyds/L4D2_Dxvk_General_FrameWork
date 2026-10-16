@@ -18,13 +18,17 @@ Host 启动时读取本次 `LDB_RT_WORLD_1` 请求，只在该模式下加载包
 
 标准 `Direct3DCreate9` 入口保留 draw-call conversion。参考运行时的 API `dxvk_CreateD3D9` 会关闭 draw-call conversion，因此本路径不使用它创建游戏设备。API 只注册实际游戏设备、设置配置和读回结果，独立翻译单元避免与 Bridge 原有 API 版本混用。参考 API 的 `Shutdown` 会对注册的设备/Direct3D 对象反复 Release 到零，不能用于 Bridge 所拥有的设备；测试保留正常 Bridge 生命周期，资源释放验收继续未完成。
 
-显式关闭 `rtx.useVertexCapture`，使未转换的可编程 VS 绘制保留 raster 路径。暂不移植原地图灯光：设置名义 Source 英寸比例 `sceneScale=1/2.54`，并用相机球形诊断灯观察室内几何。该光照不是原版游戏效果。动态模型、武器、天空、透明和 HUD 的最终合成尚未接入完整策略，可能在最终 RT 输出中缺失。
+显式关闭 `rtx.useVertexCapture`，避免自动采集未知的游戏 VS。**这不会在光追开启时保留这些绘制的 raster 路径**：固定运行时会将它们判为 Ignored，并移除原 Draw。v1 从启动就打开 RT，导致菜单也被移除，详见 [启动黑屏回包分析](rt-world-093012-result.md)。v2 启动及 F9 前 30 Present 均关闭 RT，只有成功应用第一个合格世界 Draw 的状态作用域才请求开启；请求由运行时在帧边界应用。采集结束、失败或 Reset 请求关闭，并禁止继续转换。完整混合合成未完成，光追开启后动态模型、武器、天空、透明和 HUD 仍可能缺失。
+
+暂不移植原地图灯光：设置名义 Source 英寸比例 `sceneScale=1/2.54`，并用相机球形诊断灯观察室内几何。该光照不是原版游戏效果。
 
 ## 一个入口的一次测试
 
 发行包 `rt-world-pilot-dev.zip` 的 `run-test.cmd` 复用既有 preflight 缓存或下载固定 SHA 依赖，等待正常退出游戏，校验并继承相邻旧观察包的原始备份，安装 x86 client/x64 Host，再由 Steam 启动。没有改 backend 文件、Source CVar 或 Steam 启动选项；请求仅对本次 Host 启动选择 Remix。
 
-进图后按一次 F9。前 30 次 Present 保留未转换观察，之后尝试选定世界转换，总共 240 次 Present；这些都是同一个 Remix 后端，不能冒充普通 DXVK 的 R0 对照。30/120/240 后分别用 API 读回颜色、primary depth、primary world shading normal，输出为 640×400 最近邻缩放的 RGBA32F 和预览。目标先清零：参考 API 在没有源图时也可能返回成功，因此检查实际缓冲内容，不能只检查返回值。
+进图后按一次 F9。前 30 次 Present 保留未转换光栅观察，之后尝试选定世界转换并请求开启 RT，总共 240 次 Present；这些都是同一个 Remix 后端，不能冒充普通 DXVK 的 R0 对照。30/120/240 后分别用 API 读回颜色、primary depth、primary world shading normal，输出为 640×400 最近邻缩放的 RGBA32F 和预览。目标先清零：参考 API 在没有源图时也可能返回成功，因此检查实际缓冲内容，不能只检查返回值。
+
+v2 在 F9 前独立保留有界启动模块清单、Host 首次实际 Draw/绘制总数和 client 的请求/F9/前台 PID 记录。菜单若仍黑屏可直接正常退出，不要求盲操作；脚本会保存 INCOMPLETE 部分包。最终的完成提示和退出码区分完整采集与部分结果；模块清单成功或库加载成功都不表示 240 Present 已完成。用户主动退出与退出阶段 ReShade/驱动异常也分别记录，不能倒推成游戏此前自动崩溃。
 
 采集完成先读取仍在运行的模块和 0～255 context 槽位，再提示正常退出游戏，最终日志与数据合并为一个 ZIP。ConVar 只保存 SDK 布局候选、原始字段及模块身份，不把读到一个整数当作 ABI 或并行通过。退出、异常、模块失败和预算截断保留分项状态。旧 40,952-Draw 数据仍能由新版分析器复核。
 

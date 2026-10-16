@@ -27,6 +27,15 @@ def analyze(directory,previews=True):
     required=('loaded_pinned_runtime','initialize_api_0_6_4','register_game_device')
     for name in required:
         if not any(e.get('event')==name and e.get('code')==0 for e in events):errors.append('missing_success:'+name)
+    # The v2 startup gate makes a successful library load distinct from an RT
+    # request. Retain compatibility with v1 recordings which lack this policy.
+    gated=any(e.get('event')=='startup_raster_policy' for e in events)
+    if gated:
+        if not any(e.get('event')=='rtx.enableRaytracing' and e.get('value')=='False' and e.get('code')==0 for e in events):
+            errors.append('startup_rt_not_disabled')
+        on=[i for i,e in enumerate(events) if e.get('event')=='raytracing_requested_on' and e.get('code')==0]
+        off=[i for i,e in enumerate(events) if e.get('event')=='raytracing_requested_off' and e.get('code')==0]
+        if len(on)!=1 or not off or off[-1]<=on[0]:errors.append('missing_gated_rt_on_off_sequence')
     for e in events:
         if e.get('event')!='world_readback':continue
         frame,kind=e.get('frame'),e.get('kind');key=(frame,kind)
@@ -67,6 +76,7 @@ def analyze(directory,previews=True):
     nonzero=bool(world) and len(world)==4 and all(not s.get('zero_initialized_buffer_unchanged',True) for s in world)
     return {'schema':1,'scope':'reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance',
             'runtime_outputs':'pass' if not errors else 'incomplete','errors':errors,'samples':samples,
+            'startup_raster_gate':'requested_events_present_not_effective_state_proof' if gated else 'legacy_ungated',
             'nonzero_world_depth_and_normals':nonzero,
             'geometry_visual_review':'required' if nonzero else 'incomplete',
             'source_parallel_preparation':'unrun','performance':'unrun','game_rt':'requires_visual_and_thread_review',

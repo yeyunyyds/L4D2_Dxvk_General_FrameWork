@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "scope": "startup_black_screen_before_recorded_world_conversion",
+  "archive_sha256": "87ef51600a73497978501646cb2b3cba88ded076eebc9df96ece82e40764a4e4",
+  "archive_size": 14442,
+  "build_commit": "1bcbb2678bb5e9a0b3550209aea81b6a28db30dc",
+  "crc": "pass",
+  "user_report": {
+    "black_screen_from_main_menu": true,
+    "audio_present": true,
+    "blind_map_and_f9_attempted": true,
+    "exit": "user_initiated_after_console_prompt"
+  },
+  "draw_traces": 0,
+  "capture_completion_markers": 0,
+  "world_readback_files": 0,
+  "runtime_load": "success",
+  "api_0_6_4_initialization": "success",
+  "game_device_creation_hresult": "0x00000000",
+  "gpu": "Intel Arc B580",
+  "runtime_policy": {
+    "rtx.enableRaytracing": "True",
+    "rtx.useVertexCapture": "False"
+  },
+  "collector_summary": {
+    "schema": 1,
+    "scope": "selected_static_world_runtime_pilot",
+    "build_commit": "1bcbb2678bb5e9a0b3550209aea81b6a28db30dc",
+    "collection": "incomplete",
+    "errors": [
+      "RuntimeError: Game exited before capture completion; partial results retained"
+    ],
+    "game_rt": "attempted_requires_review",
+    "source_queue_execution": "unrun",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun"
+  },
+  "confirmed_integration_error": "RT enabled at startup while programmable VS draws are Ignored and dropped when vertex capture is disabled; ignored does not mean raster fallback",
+  "runtime_source_evidence": {
+    "commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "files": [
+      "src/d3d9/d3d9_rtx.cpp",
+      "src/d3d9/d3d9_device.cpp",
+      "src/dxvk/rtx_render/rtx_context.cpp"
+    ]
+  },
+  "separate_findings": {
+    "client": "VertexBuffer Lock command-aborted, uid4386, before orderly Host cleanup; cause unproven",
+    "host_exit": "access violation after shutdown cleanup, Intel/OpenGL/ReShade stack; user confirmed intentional exit, not evidence of earlier spontaneous crash",
+    "missing_f9_trace": "not yet explained; user reported key press; add independent focus/key/request evidence"
+  },
+  "game_rt": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun"
+}

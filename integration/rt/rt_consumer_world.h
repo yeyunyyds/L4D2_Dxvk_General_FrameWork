@@ -45,7 +45,7 @@ template<class Device> Decision target(Device* device, const draw_observe::Snaps
 }
 template<class Device, class Draw> HRESULT execute(Device* device, const draw_observe::Snapshot& s,
     D3DPRIMITIVETYPE type, bool userMemory, bool enabled, bool control, Draw&& physicalDraw,
-    Decision& decision, static_draw::Report& report) {
+    Decision& decision, static_draw::Report& report, bool (*raytracing)(bool) noexcept = nullptr) {
   decision = !enabled ? Decision::Disabled : control ? Decision::Control : classify(s);
   if (decision == Decision::Selected) { decision = target(device, s); }
   if (decision != Decision::Selected) { return physicalDraw(); }
@@ -54,6 +54,13 @@ template<class Device, class Draw> HRESULT execute(Device* device, const draw_ob
   input.width = s.viewport[2]; input.height = s.viewport[3];
   static_draw::Scope<Device> scope(device, input, type, userMemory);
   if (FAILED(scope.report().restore)) { report = scope.report(); return report.restore; }
+  // Request RT only after the shader/layout/state scope really succeeded.
+  // Unknown materials, rejected layouts and the control segment stay raster.
+  if (scope.report().converted && raytracing && !raytracing(true)) {
+    scope.finish(); report = scope.report(); report.converted = false; report.code = static_draw::Code::Disabled;
+    decision = Decision::Disabled;
+    return FAILED(report.restore) ? report.restore : physicalDraw();
+  }
   const HRESULT result = physicalDraw(); scope.finish(); report = scope.report();
   return FAILED(report.restore) ? report.restore : result;
 }

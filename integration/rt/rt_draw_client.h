@@ -81,6 +81,23 @@ class Collector {
   bool down = false, active = false, finished = false;
   std::set<uint32_t> materials;
   std::ofstream materialLog;
+  std::ofstream controlLog;
+  unsigned controlEvents = 0;
+  uint64_t heartbeatAt = 0, drawsSeen = 0;
+  bool rawDown = false;
+  void control(const char* name, uint64_t value = 0, uint64_t other = 0) {
+    if (!request.session || controlEvents >= 192) { return; }
+    if (!controlLog.is_open()) {
+      controlLog.open(request.output / ("rt-draw-control-" + std::to_string(GetCurrentProcessId()) + "-" +
+        std::to_string(reinterpret_cast<uintptr_t>(this)) + ".jsonl"), std::ios::binary);
+    }
+    if (controlLog) {
+      controlLog << "{\"event\":\"" << name << "\",\"session\":" << request.session
+        << ",\"pid\":" << GetCurrentProcessId() << ",\"tick_ms\":" << GetTickCount64()
+        << ",\"value\":" << value << ",\"other\":" << other << "}\n" << std::flush;
+      ++controlEvents;
+    }
+  }
   static std::string bytesHex(const void* data, size_t size) {
     static const char chars[] = "0123456789abcdef";
     std::string value; const auto* bytes = static_cast<const uint8_t*>(data);
@@ -125,19 +142,28 @@ public:
       // producer queue is locked and no lock survives the Draw RPC construction.
       std::unique_lock<std::mutex> guard(mutex);
       const auto now = GetTickCount64();
+      ++drawsSeen;
       if (now >= pollAt) {
         pollAt = now + 16;
         if (!active) {
           Request next;
           if (readRequest(next) && next.session != request.session) {
             request = std::move(next); ordinal = 0; materials.clear(); materialLog.close(); finished = false;
+            controlLog.close(); controlEvents = 0; heartbeatAt = 0; control("request_seen");
           }
           DWORD pid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &pid);
-          const bool pressed = pid == GetCurrentProcessId() && (GetAsyncKeyState(VK_F9) & 0x8000);
-          if (pressed && !down && request.session && !finished) { active = true; startedAt = now; }
+          const bool raw = (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
+          const bool pressed = pid == GetCurrentProcessId() && raw;
+          if (raw && !rawDown) { control("f9_key_down", pid, pressed ? 1 : 0); } rawDown = raw;
+          if (now >= heartbeatAt) { control("waiting_for_f9", pid, drawsSeen); heartbeatAt = now + 5000; }
+          if (pressed && !down && request.session && !finished) {
+            active = true; startedAt = now; control("capture_started", pid, drawsSeen);
+          }
           down = pressed;
         }
-        if (active && (now - startedAt > (request.world ? 300000u : 60000u) || (!request.world && fs::exists(doneFile(request))))) { active = false; finished = true; }
+        if (active && (now - startedAt > (request.world ? 300000u : 60000u) || fs::exists(doneFile(request)))) {
+          control("capture_stopped", ordinal); active = false; finished = true;
+        }
       }
       if (!active) { return {}; }
       Snapshot s; s.session = request.session; s.ordinal = ++ordinal; s.thread = GetCurrentThreadId();

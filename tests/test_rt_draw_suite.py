@@ -87,6 +87,22 @@ assert result['execution']=='incomplete'
         self.assertEqual(report['module_evidence'],'snapshot_collected')
         self.assertEqual(report['collection'],'incomplete')
 
+    def test_startup_inventory_survives_missing_f9_and_reports_inaccessible_host(self):
+        directory=self.root/'startup';directory.mkdir();messages=[]
+        def processes(diagnostics):
+            diagnostics['related_processes']=[{'pid':456,'exe':'L4D2Bridge64.exe'}]
+            return [123]
+        with patch.object(suite,'game_pids',side_effect=processes),patch.object(suite,'WindowsProcess') as process:
+            context=process.return_value.__enter__.return_value
+            context.identity.return_value={'alive':True}
+            context.modules.side_effect=[[{'name':'engine.dll'}],OSError('host exited')]
+            suite.startup_modules(directory,123,messages.append)
+        saved=json.loads((directory/'startup-modules.json').read_text())
+        self.assertEqual(saved['processes'][0]['modules'],[{'name':'engine.dll'}])
+        self.assertEqual(saved['processes'][1]['error'],'host exited')
+        self.assertIn('does not mean',messages[0])
+        self.assertFalse(list(directory.glob('rt-draw-done-*')))
+
 
 class InstallTests(unittest.TestCase):
     def setUp(self):

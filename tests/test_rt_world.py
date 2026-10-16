@@ -25,6 +25,17 @@ class ReadbackEvidenceTests(unittest.TestCase):
             self.assertFalse(report['nonzero_world_depth_and_normals'])
             self.assertEqual(report['geometry_visual_review'],'incomplete')
             self.assertNotEqual(report['game_rt'],'pass')
+            gated=[{'event':'startup_raster_policy','code':0},
+                   {'event':'rtx.enableRaytracing','code':0,'value':'False'}]+events
+            log=root/'world-runtime.jsonl'
+            log.write_text('\n'.join(json.dumps(e) for e in gated))
+            self.assertIn('missing_gated_rt_on_off_sequence',analyze(root,previews=False)['errors'])
+            gated.insert(2,{'event':'raytracing_requested_on','code':0})
+            gated.append({'event':'raytracing_requested_off','code':0})
+            log.write_text('\n'.join(json.dumps(e) for e in gated))
+            self.assertEqual(analyze(root,previews=False)['runtime_outputs'],'pass')
+            gated[1]['value']='True';log.write_text('\n'.join(json.dumps(e) for e in gated))
+            self.assertIn('startup_rt_not_disabled',analyze(root,previews=False)['errors'])
             (root/'world-240-2.rgba32f').write_bytes(struct.pack('<f',1))
             self.assertEqual(analyze(root,previews=False)['runtime_outputs'],'incomplete')
 

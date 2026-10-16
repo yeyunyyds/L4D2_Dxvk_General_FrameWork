@@ -124,6 +124,10 @@ public:
   }
   void finish(uint32_t reason) noexcept {
     if (finished) { return; }
+    if (request.world) {
+      if (world_runtime::state().raytracing) { (void)world_runtime::state().raytracing(false); }
+      world_runtime::state().active = false;
+    }
     try {
       if (pending) { ++failures; }
       Writer footer; footer.u64(draws); footer.u64(valid); footer.u64(presents); footer.u64(resets); footer.u64(failures); footer.u64(unobserved); footer.u32(reason);

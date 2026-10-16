@@ -6,6 +6,13 @@
 #include <iostream>
 using namespace ldb_rt::draw_observe;
 void require(bool value, const char* why) { if (!value) { throw std::runtime_error(why); } }
+bool requested = false, rejectActivation = false;
+unsigned requestsOn = 0, requestsOff = 0;
+bool raytracingRequest(bool enabled) noexcept {
+  if (enabled && rejectActivation) { return false; }
+  if (enabled != requested) { enabled ? ++requestsOn : ++requestsOff; requested = enabled; }
+  return true;
+}
 struct Surface : IDirect3DSurface9 {
   ULONG refs=1;
   D3DFORMAT format=D3DFMT_A8R8G8B8;
@@ -63,6 +70,7 @@ int main(int argc, char** argv) {
     { std::ofstream file(request,std::ios::binary);file << "LDB_RT_WORLD_1\n2b\n" << output.u8string() << '\n' << fakeRuntime.u8string() << '\n'; }
     require(readRequest(parsed) && parsed.world && parsed.session==43,"world launch request without private calls");
     ldb_rt::world_runtime::state().active=true; // Simulated-device conversion, never a GPU/runtime claim.
+    ldb_rt::world_runtime::state().raytracing=&raytracingRequest;
     device.surface.format=D3DFMT_A16B16G16R16F;device.stride=48;
     device.declaration.elements.pop_back();
     device.declaration.elements.push_back({2,0,D3DDECLTYPE_FLOAT4,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_POSITION,1});
@@ -70,6 +78,19 @@ int main(int argc, char** argv) {
     device.declaration.elements.push_back(D3DDECL_END());
     s.session=43;s.ordinal=0;s.material=0x1000;s.materialTable=0x2000;s.projection={1,0,0,0,0,1,0,0,0,0,-1.0001f,-1,0,0,-7.0007f,0};
     s.materialInfo.format=0x480003;s.materialInfo.flags=3;std::memcpy(s.materialInfo.shader.data(),"LightmappedGeneric_DX9",22);
+    {
+      ldb_rt::consumer_world::Decision decision;
+      ldb_rt::static_draw::Report report;
+      device.stride=44;
+      auto original=[&] { require(device.currentShader!=nullptr && !requested,"rejected path lost original raster shader"); return S_OK; };
+      require(SUCCEEDED(ldb_rt::consumer_world::execute(&device,s,D3DPT_TRIANGLELIST,false,true,false,original,decision,report,&raytracingRequest)) &&
+        !report.converted && report.code==ldb_rt::static_draw::Code::Layout && !requestsOn,"invalid layout must not request RT");
+      device.stride=48;rejectActivation=true;
+      require(SUCCEEDED(ldb_rt::consumer_world::execute(&device,s,D3DPT_TRIANGLELIST,false,true,false,original,decision,report,&raytracingRequest)) &&
+        !report.converted && decision==ldb_rt::consumer_world::Decision::Disabled && device.restored() && device.leasesReleased() &&
+        !requestsOn,"failed activation must restore before original raster Draw");
+      rejectActivation=false;
+    }
     uint32_t uid=1;
     for (unsigned frame=0;frame<240;++frame) {
       for (unsigned draw=0;draw<3;++draw) {
@@ -77,16 +98,24 @@ int main(int argc, char** argv) {
         s.maxZ=draw==2 ? .1f : 1.f;device.viewport.MaxZ=s.maxZ;
         const auto bytes=pack(s);observe(8,uid,&device,bytes.data(),bytes.size(),2,D3DPT_TRIANGLELIST,{0,0,3,0,1,0});
         const auto result=ldb_rt_host::drawCommand(8,uid,&device,D3DPT_TRIANGLELIST,false,[&] {
-          require((device.currentShader==nullptr)==(frame>=30 && draw==0),"world filter/control or shader state wrong at physical Draw");return S_OK;
+          require((device.currentShader==nullptr)==(frame>=30 && draw==0),"world filter/control or shader state wrong at physical Draw");
+          require(requested==(frame>=30),"RT request occurred before valid conversion or was lost");return S_OK;
         });
         require(SUCCEEDED(result) && device.restored() && device.leasesReleased(),"consumer conversion or restore failed");
         ldb_rt_host::drawResult(8,uid++,result);
       }
       ldb_rt_host::present(8,uid++,S_OK);
     }
+    require(!requested && requestsOn==1 && requestsOff==1 && !ldb_rt::world_runtime::state().active,"capture end must request raster restoration exactly once");
+    ++s.ordinal;s.materialInfo.format=0x480003;s.maxZ=1;device.viewport.MaxZ=1;
+    const auto after=pack(s);observe(8,uid,&device,after.data(),after.size(),2,D3DPT_TRIANGLELIST,{0,0,3,0,1,0});
+    require(SUCCEEDED(ldb_rt_host::drawCommand(8,uid,&device,D3DPT_TRIANGLELIST,false,[&] {
+      require(device.currentShader!=nullptr && !requested,"post-capture Draw re-enabled RT");return S_OK;
+    })) && requestsOn==1,"post-capture must stay raster");
     ldb_rt_host::destroy(8);
     require(!ldb_rt::world_runtime::state().active && fs::exists(doneFile(parsed)),"world closure");
     std::cout << "RT consumer world control/filter/layout/restore: PASS; game shader ABI and GPU RT unrun\n";
+    std::cout << "RT world startup gate/activation failure/raster restoration: PASS; GPU unrun\n";
     std::cout << "RT Draw native request/CNG/Host observation: PASS; game ABI/queue/RT unrun\n"; return 0;
   } catch(const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }
 }

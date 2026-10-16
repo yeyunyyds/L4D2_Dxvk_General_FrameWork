@@ -124,6 +124,10 @@ inline void draw(uint64_t device, uint32_t uid) noexcept { (void)takeDraw(device
 template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t uid, Device* graphics,
     D3DPRIMITIVETYPE type, bool userMemory, Draw&& physicalDraw) noexcept {
   try {
+    if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
+      auto& runtime = ldb_rt::world_runtime::state();
+      if (runtime.active && runtime.draw) { runtime.draw(graphics); }
+    }
     const auto consumer = ldb_rt::draw_observe::recorders().find(device);
     ldb_rt::draw_observe::Snapshot current;
     bool control = false;
@@ -132,7 +136,8 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
       ldb_rt::static_draw::Report report;
       bool called = false; HRESULT physical = E_ABORT;
       const auto result = ldb_rt::consumer_world::execute(graphics, current, type, userMemory,
-        ldb_rt::world_runtime::state().active, control, [&] { called = true; physical = physicalDraw(); return physical; }, decision, report);
+        ldb_rt::world_runtime::state().active, control, [&] { called = true; physical = physicalDraw(); return physical; }, decision, report,
+        ldb_rt::world_runtime::state().raytracing);
       consumer->second->conversion(uid, decision, report, called, physical);
       return result;
     }

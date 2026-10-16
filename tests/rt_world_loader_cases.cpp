@@ -15,10 +15,11 @@ int wmain(int argc,wchar_t** argv) {
     if(world_runtime::load(request) || world_runtime::state().active){throw std::runtime_error("wrong runtime accepted");}
     world_runtime::shutdown();
     request.runtime=runtime;request.output=output/"positive";fs::create_directory(request.output);
-    {std::ofstream file(request.output/"world.conf");file << "rtx.useVertexCapture = False\n";}
+    {std::ofstream file(request.output/"world.conf");file << "rtx.enableRaytracing = False\nrtx.useVertexCapture = False\n";}
     const auto module=world_runtime::load(request);
     if(!module || !world_runtime::state().active || !world_runtime::state().bind || !world_runtime::state().capture ||
-       !GetProcAddress(module,"Direct3DCreate9")){throw std::runtime_error("pinned loader/API initialization failed");}
+       !world_runtime::state().raytracing || !world_runtime::state().draw || world_runtime::state().raytracing(true) ||
+       !GetProcAddress(module,"Direct3DCreate9")){throw std::runtime_error("pinned loader/API startup gate failed");}
     // No device/window/GPU is created. In particular do not use API Shutdown,
     // which force-releases an externally-owned D3D9 device when registered.
     world_runtime::shutdown();

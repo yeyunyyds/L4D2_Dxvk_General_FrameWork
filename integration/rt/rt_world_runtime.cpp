@@ -16,12 +16,29 @@ draw_observe::Request launch;
 std::ofstream events;
 IDirect3DDevice9* registered = nullptr;
 bool initialized = false;
+bool raytracingRequested = false;
+uint64_t physicalDraws = 0;
+const std::pair<const char*, const char*> options[] = {
+  {"rtx.enableRaytracing", "False"}, {"rtx.useVertexCapture", "False"},
+  {"rtx.upscalerType", "0"}, {"rtx.enableRayReconstruction", "False"},
+  {"rtx.sceneScale", "0.3937007874"},
+  {"rtx.fallbackLightMode", "2"}, {"rtx.fallbackLightType", "1"},
+  {"rtx.fallbackLightRadiance", "30,30,30"}, {"rtx.fallbackLightRadius", "5"},
+  {"rtx.bloom.enable", "False"}, {"rtx.postfx.enable", "False"}
+};
 void event(const char* name, uint32_t code, const char* value = nullptr) {
   if (events) {
     events << "{\"event\":\"" << name << "\",\"code\":" << code;
     if (value) { events << ",\"value\":\"" << value << '"'; }
     events << "}\n" << std::flush;
   }
+}
+bool configure() {
+  for (const auto& option : options) {
+    const auto code = api.SetConfigVariable(option.first, option.second); event(option.first, uint32_t(code), option.second);
+    if (code != REMIXAPI_ERROR_CODE_SUCCESS) { return false; }
+  }
+  return true;
 }
 void bind(IDirect3DDevice9* device) noexcept {
   try {
@@ -30,6 +47,22 @@ void bind(IDirect3DDevice9* device) noexcept {
     event("register_game_device", uint32_t(result));
     if (result == REMIXAPI_ERROR_CODE_SUCCESS) { registered = device; }
   } catch (...) { }
+}
+bool raytracing(bool enabled) noexcept {
+  try {
+    if (!initialized || (enabled && !registered)) { return false; }
+    if (enabled == raytracingRequested) { return true; }
+    const auto result = api.SetConfigVariable("rtx.enableRaytracing", enabled ? "True" : "False");
+    // The pinned API queues option changes; the runtime applies them at a
+    // frame boundary. This records a request, never proof of effective RT.
+    event(enabled ? "raytracing_requested_on" : "raytracing_requested_off", uint32_t(result));
+    if (result != REMIXAPI_ERROR_CODE_SUCCESS) { return false; }
+    raytracingRequested = enabled; return true;
+  } catch (...) { return false; }
+}
+void draw(IDirect3DDevice9* device) noexcept {
+  bind(device);
+  if (!physicalDraws++) { event("first_game_draw", 0, "startup_raster_until_selected_world"); }
 }
 template<class T> struct Ref {
   T* value = nullptr;
@@ -74,6 +107,7 @@ void capture(IDirect3DDevice9* device, uint64_t frame) noexcept {
 HMODULE load(const draw_observe::Request& request) noexcept {
   try {
     state() = {};
+    initialized = false; registered = nullptr; raytracingRequested = false; physicalDraws = 0;
     launch = request;
     events.open(request.output / "world-runtime.jsonl", std::ios::binary);
     if (!events || !request.world || sizeof(void*) != 8) { return nullptr; }
@@ -102,28 +136,26 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     if (result != REMIXAPI_ERROR_CODE_SUCCESS || !api.SetConfigVariable || !api.Shutdown ||
         !api.dxvk_RegisterD3D9Device || !api.dxvk_CopyRenderingOutput) { return nullptr; }
     initialized = true;
-    const std::pair<const char*, const char*> options[] = {
-      {"rtx.enableRaytracing", "True"}, {"rtx.useVertexCapture", "False"},
-      {"rtx.upscalerType", "0"}, {"rtx.enableRayReconstruction", "False"},
-      // Source's nominal unit is one inch; Remix's reference unit is 1 cm.
-      {"rtx.sceneScale", "0.3937007874"},
-      // A camera-relative diagnostic light makes indoor geometry inspectable.
-      // Source map lights are deliberately not claimed as ported here.
-      {"rtx.fallbackLightMode", "2"}, {"rtx.fallbackLightType", "1"},
-      {"rtx.fallbackLightRadiance", "30,30,30"}, {"rtx.fallbackLightRadius", "5"},
-      {"rtx.bloom.enable", "False"}, {"rtx.postfx.enable", "False"}
-    };
-    for (const auto& option : options) {
-      const auto code = api.SetConfigVariable(option.first, option.second); event(option.first, uint32_t(code), option.second);
-      if (code != REMIXAPI_ERROR_CODE_SUCCESS) { return nullptr; }
-    }
-    state() = {true, &bind, &capture}; return module;
+    if (!configure()) { return nullptr; }
+    event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
+    state() = {true, &bind, &capture, &raytracing, &draw}; return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }
+}
+bool configureRaster() noexcept {
+  try {
+    // API setters can accept a request before the runtime creates its option
+    // layers. Reapply after standard Direct3DCreate9 initializes those layers;
+    // this also overrides an old user.conf through the actual user layer.
+    if (!initialized || !configure()) { return false; }
+    raytracingRequested = false; event("post_d3d9_startup_raster_request", 0); return true;
+  } catch (...) { event("post_d3d9_configuration_exception", uint32_t(E_FAIL)); return false; }
 }
 void shutdown() noexcept {
   // The game owns its device. Do not call the standalone API Shutdown path:
   // it force-releases the device and D3D9 object to zero. The Bridge owns both.
-  state() = {}; registered = nullptr;
+  (void)raytracing(false);
+  state() = {}; registered = nullptr; initialized = false;
+  if (events) { event("physical_draw_count", 0, std::to_string(physicalDraws).c_str()); }
   if (events) { event("host_cleanup", 0); events.close(); }
 }
 } // namespace ldb_rt::world_runtime

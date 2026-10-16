@@ -35,7 +35,7 @@ def package(source,output,python_package):
     with zipfile.ZipFile(ROOT/'.research/dist/rt-foundation-build-status.zip') as z:
         status=json.loads(z.read('status.json'))
     if (status['commit']!=commit or status['native_outcome']!='success' or status['consumer_draw_development_execution']!='pass'
-            or status.get('consumer_world_development_execution')!='pass'):
+            or status.get('consumer_world_development_execution')!='pass' or status.get('world_startup_gate_development_execution')!='pass'):
         raise ValueError('Current native paired observer and execution evidence required')
     if output.exists():raise FileExistsError('Preserve previous package directory')
     output.mkdir(parents=True)
@@ -75,7 +75,9 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_static_world_runtime_pilot','profile':'world_pilot','build_commit':commit,'bridge_baseline':'1.3.2',
+    manifest={'schema':1,'scope':'selected_static_world_runtime_pilot','profile':'world_pilot','pilot_revision':2,
+              'startup_raytracing':False,'rt_activation':'after_control_and_successful_world_scope_then_deferred_by_runtime',
+              'build_commit':commit,'bridge_baseline':'1.3.2',
               'build_id':build_id.decode(),'binaries':binaries,'runtime_dll_replaced':False,
               'private_game_methods_called':False,'game_rt':'unrun','source_queue_execution':'unrun',
               'source_parallel_preparation':'unrun','performance':'unrun',
@@ -120,6 +122,7 @@ def package(source,output,python_package):
                 'primary_sha256':sha(primary.read_bytes()),'primary_size':primary.stat().st_size,
                 'packaged_python_isolated_entry':'pass','packaged_collector_configuration':'pass',
                 'native_consumer_fixture_execution':'pass','pinned_runtime_dependency_load':'pass',
+                'world_startup_gate_development_execution':'pass',
                 'pinned_native_loader_api_initialization':'pass',
                 'game_rt':'unrun','actual_game_observation':'unrun'}
     (output/'publish-index.json').write_text(json.dumps(validation,indent=2)+'\n')
