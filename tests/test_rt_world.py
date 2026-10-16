@@ -5,10 +5,55 @@ import sys
 import tempfile
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from analyze_rt_world import analyze
+from analyze_rt_world import analyze, decode_normal
 
 
 class ReadbackEvidenceTests(unittest.TestCase):
+    def test_pinned_octahedral_encoding_axes_and_nan_bits(self):
+        for word,expected in [(0x7fff7fff,(0,0,1)),(0x7ffffffe,(1,0,0)),
+                              (0x00007fff,(0,-1,0)),(0x7fff0000,(-1,0,0)),(0,(0,0,-1))]:
+            for actual,wanted in zip(decode_normal(word),expected):self.assertAlmostEqual(actual,wanted)
+        self.assertIsNone(decode_normal(0xffff7fff))
+        self.assertIsNone(decode_normal(0x7fffffff))
+
+    def test_v5_combines_lighting_geometry_camera_and_failure_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary)
+            events=[{'event':name,'code':0} for name in ('loaded_pinned_runtime','initialize_api_0_6_4','register_game_device','lighting_comparison_policy')]
+            phases={30:'raster',120:'baseline_sphere',180:'strong_sphere',240:'distant'}
+            identity=[float(i%5==0) for i in range(16)]
+            for frame,phase in phases.items():
+                for kind in (0,1,2):
+                    name=f'world-{frame}-{kind}.rgba32f'
+                    if kind==0:raw=struct.pack('<4f',frame/1000,frame/1000,frame/1000,1)*(640*400)
+                    elif kind==1:raw=struct.pack('<4f',.5,0,0,1)*2+struct.pack('<4f',1,0,0,1)*(640*400-2)
+                    else:raw=struct.pack('<4I',0x7fff7fff,0,0,1)+struct.pack('<4I',0,0,0,1)*(640*400-1)
+                    (root/name).write_bytes(raw)
+                    events.append(dict(event='world_readback',frame=frame,phase=phase,kind=kind,file=name,width=640,height=400,
+                                       initialized_to_zero=True,written=True,copy_code=0,hresult=0))
+                events.append(dict(event='world_camera_sample',frame=frame,available=True,view=identity,projection=identity))
+                events.append(dict(event='lighting_phase_requested',after_present=frame,code=0,
+                                   phase={30:'baseline_sphere',120:'strong_sphere',180:'distant',240:'distant'}[frame]))
+            log=root/'world-runtime.jsonl'
+            def inspect():
+                log.write_text('\n'.join(json.dumps(e) for e in events));return analyze(root,previews=False)
+            report=inspect()
+            self.assertEqual(report['runtime_outputs'],'pass',report['errors'])
+            self.assertTrue(report['lighting_comparison']['same_camera_at_readbacks'])
+            self.assertTrue(report['nonzero_world_depth_and_normals'])
+            normal=next(s for s in report['samples'] if s['frame']==120 and s['kind']==2)
+            self.assertEqual(normal['decoded_normals']['valid_depth_mask_pixels'],2)
+            self.assertEqual(normal['decoded_normals']['unique_words_on_depth_hits'],2)
+            color=next(s for s in report['samples'] if s['frame']==180 and s['kind']==0)
+            self.assertAlmostEqual(color['luminance']['mean'],.18,places=6)
+            events[-1]['code']=1
+            self.assertIn('incomplete_or_failed_lighting_phase_requests',inspect()['errors'])
+            events[-1]['code']=0
+            next(e for e in events if e.get('event')=='world_camera_sample' and e['frame']==240)['view']=[2.]*16
+            self.assertFalse(inspect()['lighting_comparison']['same_camera_at_readbacks'])
+            events[:]=[e for e in events if e.get('frame')!=180]
+            self.assertEqual(inspect()['runtime_outputs'],'incomplete')
+
     def test_alpha_only_normals_are_not_geometry_even_with_nonzero_depth(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)

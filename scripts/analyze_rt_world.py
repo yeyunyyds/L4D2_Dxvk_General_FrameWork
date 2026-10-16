@@ -3,6 +3,7 @@ from array import array
 import hashlib
 import json
 import math
+import statistics
 from pathlib import Path
 import struct
 import sys
@@ -15,6 +16,33 @@ def png(path,width,height,rgb):
     rows=b''.join(b'\0'+rgb[y*width*3:(y+1)*width*3] for y in range(height))
     path.write_bytes(b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>2I5B',width,height,8,2,0,0,0))
                      +chunk(b'IDAT',zlib.compress(rows))+chunk(b'IEND',b''))
+
+
+def decode_normal(word):
+    """Pinned GBuffer Snorm2x16 uses unsigned offsets and 65534, not SNORM casts."""
+    low,high=word&65535,word>>16
+    if low==65535 or high==65535:return None
+    x,y=low/65534*2-1,high/65534*2-1
+    z=1-abs(x)-abs(y);t=max(-z,0)
+    x+=-t if x>=0 else t;y+=-t if y>=0 else t
+    length=math.sqrt(x*x+y*y+z*z)
+    return x/length,y/length,z/length
+
+
+def read_floats(path):
+    if not path.is_file() or path.stat().st_size!=640*400*16:return None
+    values=array('f');values.frombytes(path.read_bytes())
+    if sys.byteorder!='little':values.byteswap()
+    return values
+
+
+def luminance(values):
+    result=[.2126*values[i]+.7152*values[i+1]+.0722*values[i+2] for i in range(0,len(values),4)
+            if all(math.isfinite(v) for v in values[i:i+3])]
+    if not result:return {'finite_pixels':0}
+    return {'finite_pixels':len(result),'mean':statistics.fmean(result),'median':statistics.median(result),
+            'below_0_05_fraction':sum(v<.05 for v in result)/len(result),
+            'above_0_95_fraction':sum(v>.95 for v in result)/len(result)}
 
 
 def analyze(directory,previews=True):
@@ -36,14 +64,24 @@ def analyze(directory,previews=True):
         on=[i for i,e in enumerate(events) if e.get('event')=='raytracing_requested_on' and e.get('code')==0]
         off=[i for i,e in enumerate(events) if e.get('event')=='raytracing_requested_off' and e.get('code')==0]
         if len(on)!=1 or not off or off[-1]<=on[0]:errors.append('missing_gated_rt_on_off_sequence')
+    comparison=any(e.get('event')=='lighting_comparison_policy' for e in events)
+    frames=(30,120,180,240) if comparison else (30,120,240)
+    phase_names={30:'raster',120:'baseline_sphere',180:'strong_sphere',240:'distant'}
+    if comparison:
+        requested=[(e.get('after_present'),e.get('phase'),e.get('code')) for e in events if e.get('event')=='lighting_phase_requested']
+        if requested!=[(30,'baseline_sphere',0),(120,'strong_sphere',0),(180,'distant',0),(240,'distant',0)]:
+            errors.append('incomplete_or_failed_lighting_phase_requests')
     for e in events:
         if e.get('event')!='world_readback':continue
         frame,kind=e.get('frame'),e.get('kind');key=(frame,kind)
-        if frame not in (30,120,240) or kind not in (0,1,2) or key in seen:
+        if frame not in frames or kind not in (0,1,2) or key in seen:
             errors.append('invalid_or_duplicate_readback_identity');continue
         seen.add(key);name=f'world-{frame}-{kind}.rgba32f';file=directory/name
         sample={'frame':frame,'kind':kind,'file':name,'copy_code':e.get('copy_code'),'hresult':e.get('hresult')}
         samples.append(sample)
+        if comparison:
+            sample['phase']=e.get('phase')
+            if sample['phase']!=phase_names[frame]:errors.append('readback_phase_mismatch:'+name)
         if (e.get('file')!=name or (e.get('width'),e.get('height'))!=(640,400)
                 or e.get('initialized_to_zero') is not True or e.get('written') is not True
                 or e.get('copy_code')!=0 or e.get('hresult',0)&0x80000000
@@ -62,35 +100,83 @@ def analyze(directory,previews=True):
                       nonzero_finite_rgb_values=sum(math.isfinite(v) and v!=0 for i,v in enumerate(values) if i%4!=3),
                       nonzero_rgb_words=sum(v!=0 for i,v in enumerate(words) if i%4!=3),first_rgba_u32=list(words[:4]),
                       sampled_rgb_variants=variation,zero_initialized_buffer_unchanged=all(v==0 for v in values))
+        depth_values=values if kind==1 else read_floats(directory/f'world-{frame}-1.rgba32f') if kind==2 else None
+        depths=depth_values[0::4] if depth_values is not None else []
+        mask=[math.isfinite(v) and 0<v<1 for v in depths]
+        if kind==0:sample['luminance']=luminance(values)
+        if kind==1:
+            hits=[v for v,hit in zip(first,mask) if hit]
+            sample['projected_depth']={'valid_fraction':len(hits)/pixels,'min_hit':min(hits,default=None),'max_hit':max(hits,default=None)}
+        if kind==2:
+            normal_words=words[0::4]
+            decoded=[decode_normal(w) if hit else None for w,hit in zip(normal_words,mask)]
+            invalid=sum(hit and n is None for hit,n in zip(mask,decoded))
+            sample['decoded_normals']={'valid_depth_mask_pixels':sum(mask),'invalid_encoding_on_depth_hits':invalid,
+                'valid_fraction':sum(n is not None for n in decoded)/pixels,
+                'unique_words_on_depth_hits':len({w for w,hit in zip(normal_words,mask) if hit})}
+            if invalid:errors.append('invalid_packed_normal_on_depth_hit:'+name)
         if previews:
-            finite_depth=[v for v in first if math.isfinite(v) and 0<v<1e8]
-            depth_max=max(finite_depth,default=1)
             rgb=bytearray()
-            for i in range(0,len(values),4):
+            for pixel,i in enumerate(range(0,len(values),4)):
                 channels=values[i:i+3]
                 if kind==1:
-                    value=math.log1p(max(0,values[i]))/math.log1p(depth_max) if math.isfinite(values[i]) else 0
+                    # Projected depth z/w: white is the closest observed hit;
+                    # misses/clear zero/invalid are black. This is NOT distance.
+                    nearest=sample['projected_depth']['min_hit']
+                    value=(1-values[i])/max(1-(nearest or 0),1e-8) if mask[pixel] else 0
                     channels=(value,)*3
-                elif kind==2:channels=tuple(v*.5+.5 for v in channels)
+                elif kind==2:
+                    normal=decoded[pixel] if decoded else None
+                    channels=tuple(v*.5+.5 for v in normal) if normal is not None else (0,0,0)
                 rgb.extend(int(max(0,min(1,v))*255+.5) if math.isfinite(v) else 0 for v in channels)
             preview=directory/f'world-{frame}-{kind}.png';png(preview,640,400,bytes(rgb));sample['preview']=preview.name
-    expected={(f,k) for f in (30,120,240) for k in (0,1,2)}
+    expected={(f,k) for f in frames for k in (0,1,2)}
     if seen!=expected:errors.append('incomplete_control_and_world_output_set')
-    world=[s for s in samples if s['frame'] in (120,240) and s['kind'] in (1,2)]
-    nonzero=bool(world) and len(world)==4 and all(
-        s.get('positive_bounded_first_channel_fraction',0)>0 if s['kind']==1 else s.get('nonzero_rgb_words',0)>0
+    world=[s for s in samples if s['frame']!=30 and s['kind'] in (1,2)]
+    nonzero=bool(world) and len(world)==(len(frames)-1)*2 and all(
+        s.get('projected_depth',{}).get('valid_fraction',0)>0 if s['kind']==1 else s.get('decoded_normals',{}).get('valid_fraction',0)>0
         for s in world)
-    return {'schema':1,'scope':'reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance',
+    material_samples=[e for e in events if e.get('event')=='world_material_sample']
+    material_counts={phase:sum(e.get('phase')==phase for e in material_samples) for phase in phase_names.values() if phase!='raster'}
+    if comparison and any(n>64 for n in material_counts.values()):errors.append('material_sample_budget_exceeded')
+    cameras={e.get('frame'):e for e in events if e.get('event')=='world_camera_sample'}
+    movement=[]
+    if comparison:
+        base=cameras.get(120,{})
+        for frame in (180,240):
+            other=cameras.get(frame,{})
+            valid=base.get('available') is True and other.get('available') is True
+            differences=[]
+            for key in ('view','projection'):
+                a,b=base.get(key,[]),other.get(key,[])
+                if len(a)!=16 or len(b)!=16 or not all(isinstance(v,(int,float)) and math.isfinite(v) for v in a+b):
+                    valid=False
+                else:differences.extend(abs(x-y) for x,y in zip(a,b))
+            movement.append({'frame':frame,'camera_sample_available':valid,
+                             'max_matrix_delta':max(differences) if valid else None,
+                             'matched_within_1e_4':valid and max(differences)<1e-4})
+    return {'schema':2,'scope':'reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance',
             'runtime_outputs':'pass' if not errors else 'incomplete','errors':errors,'samples':samples,
             'startup_raster_gate':'requested_events_present_not_effective_state_proof' if gated else 'legacy_ungated',
             'rt_activation_requests':sum(e.get('event')=='raytracing_requested_on' and e.get('code')==0 for e in events),
             'nonzero_world_depth_and_normals':nonzero,
+            'lighting_comparison':{'present':comparison,'status':'requests_complete_requires_image_review' if comparison and not errors else 'incomplete' if comparison else 'not_requested',
+                'phases':phase_names if comparison else {},'camera_comparisons':movement,
+                'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),
+                'limits':'camera samples are last converted world Draw; matching endpoints do not prove a static scene, exposure convergence, or effective light settings'},
+            'material_audit':{'samples':len(material_samples),'counts':material_counts,'per_phase_limit':64,
+                'status':'samples_available' if all(material_counts.values()) else 'incomplete' if comparison else 'not_requested',
+                'texture_stage_fields':['COLOROP','COLORARG1','COLORARG2','ALPHAOP','ALPHAARG1','ALPHAARG2','TEXCOORDINDEX','TEXTURETRANSFORMFLAGS','RESULTARG'],
+                'query_failures':sum(bool(e.get('pixel_shader_hresult',0)&0x80000000) or any(
+                    t.get('query_failure_bits',0) or t.get('texture_hresult',0)&0x80000000 or t.get('srgb_hresult',0)&0x80000000
+                    for t in e.get('stages',[])) for e in material_samples),
+                'limits':'first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials'},
             'geometry_visual_review':'required' if nonzero else 'incomplete',
             'source_parallel_preparation':'unrun','performance':'unrun','game_rt':'requires_visual_and_thread_review',
-            'preview_mapping':{'color':'clamped RGB [0,1]','depth':'positive first channel logarithmic normalization',
-                               'normals':'legacy float-channel visualization, not decoded packed normals; raw uint32 bits retained'},
-            'normal_source_format_from_pinned_runtime':'VK_FORMAT_R32_UINT; first RGBA word may contain packed normal; transfer interpretation needs actual RT data',
-            'limits':'normal encoding and scene correspondence require review; no API return code or nonzero buffer proves ray dispatch by itself'}
+            'preview_mapping':{'color':'clamped RGB [0,1]','depth':'projected z/w; (1-depth)/(1-min_hit); clear/miss/invalid black; not linear distance',
+                               'normals':'offset Snorm2x16 /65534 then signed octahedral decode; RGB normal*.5+.5; same-frame 0<depth<1 mask'},
+            'normal_source_format_from_pinned_runtime':'VK_FORMAT_R32_UINT; first RGBA word is packed normal, including float NaN bit patterns; verified against pinned primary GBuffer and actual v4 readback',
+            'limits':'decoded normal/depth spatial correspondence still requires review; no API return code or nonzero buffer alone proves correct ray-traced game output'}
 
 
 if __name__=='__main__':

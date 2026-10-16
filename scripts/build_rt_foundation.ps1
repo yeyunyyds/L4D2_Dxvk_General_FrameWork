@@ -24,6 +24,7 @@ try {
     $drawPacket = Join-Path $repo 'tests/rt_draw_packet_cases.cpp'
     $drawNative = Join-Path $repo 'tests/rt_draw_native_cases.cpp'
     $transportCases = Join-Path $repo 'tests/rt_transport_cases.cpp'
+    $lightingCases = Join-Path $repo 'tests/rt_world_diagnostics_cases.cpp'
     $utilInclude = Join-Path $sourcePath 'bridge/src/util'
     $include = Join-Path $repo 'integration/rt'
     $queueCommand = ''
@@ -57,6 +58,8 @@ try {
       "& `"$dir/draw-packet.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$utilInclude`" `"$transportCases`" /Fe:`"$dir/transport.exe`" /Fo:`"$dir/transport.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/transport.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$lightingCases`" /Fe:`"$dir/world-lighting.exe`" /Fo:`"$dir/world-lighting.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& `"$dir/world-lighting.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$repo/tests`" `"$drawNative`" /Fe:`"$dir/draw-native.exe`" /Fo:`"$dir/draw-native.obj`" /link bcrypt.lib user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/draw-native.exe`" `"$dir/draw-observation`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& python `"$repo/scripts/analyze_rt_draw.py`" `"$dir/draw-observation`" --output `"$dir/draw-observation-review.json`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +

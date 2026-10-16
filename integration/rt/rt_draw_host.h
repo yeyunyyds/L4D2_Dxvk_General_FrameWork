@@ -3,6 +3,7 @@
 #include "rt_draw_request.h"
 #include "rt_consumer_world.h"
 #include "rt_world_runtime.h"
+#include "rt_world_diagnostics.h"
 #include <d3d9.h>
 #include <map>
 #include <type_traits>
@@ -98,6 +99,10 @@ public:
     snapshot = nextSnapshot; hasNext = false; control = presents < 30; return true;
   }
   void conversion(uint32_t uid, consumer_world::Decision decision, const static_draw::Report& report, bool called, HRESULT physical) {
+    // The conversion scope has restored the original public D3D9 state here.
+    if (report.converted && nativeDevice && world_runtime::state().active && world_runtime::state().audit) {
+      world_runtime::state().audit(nativeDevice, nextSnapshot);
+    }
     Writer w; w.u32(uint32_t(decision)); w.u32(uint32_t(report.code));
     w.u32(uint32_t(report.capture)); w.u32(uint32_t(report.apply)); w.u32(uint32_t(report.restore));
     w.u32(report.converted ? 1 : 0); w.u32(called ? 1 : 0); w.u32(uint32_t(physical));
@@ -113,7 +118,7 @@ public:
     if (finished) { return; } Writer w; w.u32(uint32_t(result)); record(3, uid, w.data);
     if (SUCCEEDED(result)) { ++presents; } else { ++failures; }
     if (request.world && world_runtime::state().active && world_runtime::state().capture && nativeDevice &&
-        (presents == 30 || presents == 120 || presents == 240)) { world_runtime::state().capture(nativeDevice, presents); }
+        world_diagnostics::readback(presents)) { world_runtime::state().capture(nativeDevice, presents); }
     trace.flush(); if (presents >= (request.world ? 240u : 120u)) { finish(0); }
   }
   void reset(uint32_t uid, HRESULT result) {
