@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "scope": "sharp_silhouette_config_and_native_checks_not_b580_acceptance",
+  "build_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+  "download_ref": "75e75334074a15f2a912cc91396be2280d3733ec",
+  "primary_size": 10945216,
+  "primary_sha256": "24867acab96ddae995c68e72b12175d475af2aa08c07900844643a24249e7a34",
+  "zip_crc": "pass",
+  "shipped_scripts_and_readme_exact_source_match": true,
+  "exe_architecture": "x64",
+  "original_three_large_payloads_reused": [
+    {
+      "name": "rt-prereq-payload-25802f8447a81def30122c8d.zip",
+      "sha256": "25802f8447a81def30122c8d8a6511ee7cec86b321826526c0d4ce35c5f94814",
+      "size": 78275253,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
+      "sha256": "cc8723b1f848c058238dcf27c0fa610a05654c707672341bfeae24ca127e7633",
+      "size": 95644514,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
+      "sha256": "b6201876eb36a3699d3c04ed97fe90b395c1ca803f839d2f586290bab7125f15",
+      "size": 89038588,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    }
+  ],
+  "diagnostic": {
+    "path": "bin/rt-runtime-smoke.exe",
+    "sha256": "88bfdd61c4735c670bb2a37292878ff65f3befb3f97692a87e12a813120cb2f5",
+    "size": 314368,
+    "build_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+    "source_sha256": "dd8dde3a979e4a604e0d26ffab06590891b047487186759e66dca848b179f850",
+    "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+    "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "native_checks": "pass",
+    "alpha_shader_contract": "pass",
+    "post_processing_contract": "pass",
+    "gpu_execution": "unrun"
+  },
+  "native_status": {
+    "schema": 1,
+    "commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+    "coordinator_tests": "success",
+    "diagnostic_native_checks": "success",
+    "restoration": "success",
+    "loader_build": "success",
+    "package_repair": "success",
+    "scope": "dependency_load_diagnostic",
+    "gpu_execution": "unrun"
+  },
+  "package_validation": {
+    "schema": 1,
+    "scope": "rt_prerequisites",
+    "collection": "complete",
+    "runtime_preparation": "pass",
+    "runtime_smoke": "unrun",
+    "game_binding": "unrun",
+    "game_rt": "unrun",
+    "source_threading": "unrun",
+    "performance": "unrun",
+    "b580_rt": "unrun",
+    "verify_only": true,
+    "errors": [],
+    "build_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+    "runtime_load": {
+      "dependency_load": "pass",
+      "api_export": "present",
+      "gpu_execution": "unrun"
+    },
+    "omitted_files": [],
+    "vulkan_loader": {
+      "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+      "commit": "fb78607414e154c7a5c01b23177ba719c8a44909",
+      "headers_commit": "409c16be502e39fe70dd6fe2d9ad4842ef2c9a53",
+      "scope": "app_local_standard_loader_not_gpu_driver",
+      "sha256": "31ee4674b814b712aaa9899005e9d8dde9a07a2e2cb6f6004daa7439e4027948",
+      "size": 687104
+    },
+    "native_build_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+    "rebuilt_diagnostic": {
+      "path": "bin/rt-runtime-smoke.exe",
+      "sha256": "88bfdd61c4735c670bb2a37292878ff65f3befb3f97692a87e12a813120cb2f5",
+      "size": 314368,
+      "build_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+      "source_sha256": "dd8dde3a979e4a604e0d26ffab06590891b047487186759e66dca848b179f850",
+      "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+      "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "native_checks": "pass",
+      "alpha_shader_contract": "pass",
+      "post_processing_contract": "pass",
+      "gpu_execution": "unrun"
+    },
+    "diagnostic_native_validation": {
+      "exe_sha256": "88bfdd61c4735c670bb2a37292878ff65f3befb3f97692a87e12a813120cb2f5",
+      "compiler_arch": "x64",
+      "schema": 1,
+      "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+      "source_sha256": "dd8dde3a979e4a604e0d26ffab06590891b047487186759e66dca848b179f850",
+      "native_checks": "pass",
+      "gpu_execution": "unrun",
+      "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "alpha_shader_contract": "pass",
+      "compiler_toolset": "14.29",
+      "scope": "diagnostic_helpers_real_dll_window_lifetime_and_negative_control_not_gpu",
+      "post_processing_contract": "pass",
+      "optimization": "/O2 /MT"
+    },
+    "primary_zip_sha256": "24867acab96ddae995c68e72b12175d475af2aa08c07900844643a24249e7a34"
+  },
+  "pinned_shader_alpha_sources": {
+    "schema": 1,
+    "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "sources": {
+      "src/dxvk/shaders/rtx/concept/surface/surface_shared.h": "878312d41d2333f89c78fa0d526f6400fff2f9bafb0cce3c25db5b94bff36fa3",
+      "src/dxvk/shaders/rtx/concept/surface_material/opaque_surface_material_blending.slangh": "a47f74b754a4af1cef1b19ea80fdeb8bbc7dc676516158d687003083e8e5bdc9"
+    },
+    "scope": "CPU execution of pinned nonblended alpha-test prefix; GPU unrun",
+    "translations": [
+      "Slang inout float to C++ reference",
+      "mark unused blending-only parameters used"
+    ],
+    "header_sha256": "6afac9dccd7e9857970732b8c93752c365cfcc5409076ef8164e9f0842559dea"
+  },
+  "previous_user_results": "research/rt-preflight-v5-two-runs-review.json",
+  "pixel_criteria_review": {
+    "pixel_motion_input_functions_unchanged": [
+      "read_ppm",
+      "warm",
+      "region",
+      "inspect",
+      "moved",
+      "inspect_dark",
+      "inspect_inputs",
+      "inspect_materials"
+    ],
+    "old_v5_results_remain_failed": true,
+    "all_old_v5_case_metrics_unchanged": true,
+    "next_focus_corrected": "visible_color_verify_silhouette_and_post_processing"
+  },
+  "local_rt_tests": {
+    "total": 56,
+    "passed": 54,
+    "skipped_requires_windows": 2
+  },
+  "native_tests": {
+    "preflight_total": 28,
+    "preflight_passed": 28,
+    "game_probe_total": 16,
+    "game_probe_passed": 15,
+    "game_probe_skipped_linux_only": 1,
+    "production_sharp_configuration_and_rejection": "pass",
+    "production_opaque_material_alpha_and_pinned_shader_contract": "pass",
+    "production_uv_and_vertex_input_validation": "pass",
+    "real_dll_window_lifetime_and_cpu_readback_helpers": "pass",
+    "owned_process_dump_helper": "pass",
+    "standard_d3d9_negative_control": "pass"
+  },
+  "new_b580_visual_execution": "unrun",
+  "v5_gpu_recovery": "two_runs_recovered_material_emission_and_independent_lighting; strict_silhouette_checks_still_failed",
+  "v6_post_processing_disable_gpu_result": "unrun",
+  "game_hook": "not_installed",
+  "source_threading": "unrun",
+  "performance": "unrun"
+}

@@ -659,7 +659,8 @@
         "module_list_stable": true,
         "module_count": 185,
         "hook_installed": false,
-        "queue_execution": "unrun"
+        "queue_execution": "unrun",
+        "pid": 4264
       },
       "supplementary_threshold_sweep": {
         "scope": "diagnostic sensitivity check only; existing acceptance unchanged",
@@ -873,7 +874,8 @@
             }
           ]
         }
-      }
+      },
+      "runtime_pid": 15964
     },
     {
       "input": {
@@ -1527,7 +1529,8 @@
         "module_list_stable": true,
         "module_count": 185,
         "hook_installed": false,
-        "queue_execution": "unrun"
+        "queue_execution": "unrun",
+        "pid": 4264
       },
       "supplementary_threshold_sweep": {
         "scope": "diagnostic sensitivity check only; existing acceptance unchanged",
@@ -1741,7 +1744,8 @@
             }
           ]
         }
-      }
+      },
+      "runtime_pid": 4616
     }
   ],
   "findings": {
@@ -1760,5 +1764,6 @@
     "source_threading": "unrun",
     "performance": "unrun"
   },
-  "next_change": "v6 disables bloom and postfx in every diagnostic case, records successful requests, preserves all pixel and motion thresholds; one run and one ZIP"
+  "next_change": "v6 disables bloom and postfx in every diagnostic case, records successful requests, preserves all pixel and motion thresholds; one run and one ZIP",
+  "repeatability_scope": "two separate standalone RT processes against the same running L4D2 process; no game restart stability claim"
 }
