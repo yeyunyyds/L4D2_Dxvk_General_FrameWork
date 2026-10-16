@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "scope": "data_only_consumer_decoder_profile_not_source_interface_call_binding",
+  "input_review": "research/rt-preflight-222206-review.json",
+  "module": {
+    "name": "shaderapivk.dll",
+    "sha256": "f3611dcb95625bb41dc38edd799607f85f18142bc23eab4e23162bcd50d72adb",
+    "mapped_size": 1044480,
+    "timestamp": 1782844915
+  },
+  "storage_rva": 826448,
+  "vtable_rva": 484972,
+  "method_anchors": {
+    "250": {
+      "target_address": 1391105184,
+      "semantics_verified": false,
+      "module": "shaderapivk.dll",
+      "target_rva": 103584,
+      "code_window": {
+        "window_rva": 103584,
+        "target_offset": 0,
+        "bytes": "558bec515356578bc18945fc8b88700200008b5d088b711cc1e606037108b9100000008bfbf3a58b88480200008b711cc1e6060371088d7b40b910000000f3a58b884c0200008b711cc1e6060371088dbb80000000b910000000f3a58b884c0d0000898bc00000008b90500d00008993c40000008b88540d0000898bc8000000"
+      }
+    },
+    "255": {
+      "target_address": 1391083472,
+      "semantics_verified": false,
+      "module": "shaderapivk.dll",
+      "target_rva": 81872,
+      "code_window": {
+        "window_rva": 81872,
+        "target_offset": 0,
+        "bytes": "8b81d42b0000c3cccccccccccccccccc558bec8b550c8b84916c32000085c074138b118b92d4010000508b450850ffd25dc208008b0db43ef6528b018b4024528b550852ffd05dc20800cccccccccccc558bec8b0db43ef6528b018b406c5dffe0cccccccccccccccccccccccccccccc558bec8b0db43ef6528b018b40705dff"
+      }
+    }
+  },
+  "matrix_stack_pointer_offsets": {
+    "world": 624,
+    "view": 584,
+    "projection": 588
+  },
+  "stack_fields": {
+    "base_pointer": 8,
+    "current_index": 28,
+    "matrix_stride": 64,
+    "maximum_index": 1024
+  },
+  "material_pointer_offset": 11220,
+  "private_methods_executed": false,
+  "acceptance": "file SHA, loaded vtable RVA, method RVA/code shape then bounded data reads; actual game execution pending",
+  "sdk_get_call_queue_slot_146": "not_selected: captured current functions are not a verified no-argument queue getter",
+  "game_rt": "unrun",
+  "source_queue_execution": "unrun",
+  "source_parallel_preparation": "unrun"
+}

@@ -8,6 +8,8 @@
 
 [B580 独立静态 RT 已通过](docs/research/rt-preflight-b580-static-pass.md)：v6 实测 13/13 项、26/26 次读回通过，自发光与独立灯光的轮廓/平移均满足原严格判据。游戏 RT、Source 多线程、性能及资源释放仍待验证；下一步转入实际游戏队列与静态世界接入。
 
+[真实游戏 Draw 观察接入](docs/research/rt-game-draw-observer.md)：配套 client/Host 把当前矩阵、材质和原 Draw 放进同一 RPC，保留原绘制；一次 F9 合并采集消费顺序、顶点布局与队列 ABI 证据。世界分类与主视图尚未确认，不启用游戏 RT。
+
 [光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前已通过独立最小场景，游戏光追仍未验收。
 
 具体体验目标：原生高压约 60～80 FPS 时，锁定 60 个真实帧，通过插帧稳定呈现 120 帧；以高压最低帧和实际送帧节奏验收。

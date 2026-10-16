@@ -1,0 +1,91 @@
+"""Package the verified native Draw observer and pinned self-contained Python."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import struct
+import subprocess
+import tempfile
+import urllib.request
+import zipfile
+from package_rt_preflight import python_files, PYTHON_URL
+from rt_draw_suite import TARGETS
+
+ROOT=Path(__file__).resolve().parents[1]
+
+
+def sha(data):return hashlib.sha256(data).hexdigest()
+
+
+def package(source,output,python_package):
+    commit=os.environ['GITHUB_SHA']
+    with zipfile.ZipFile(ROOT/'.research/dist/rt-foundation-build-status.zip') as z:
+        status=json.loads(z.read('status.json'))
+    if status['commit']!=commit or status['native_outcome']!='success' or status['consumer_draw_development_execution']!='pass':
+        raise ValueError('Current native paired observer and execution evidence required')
+    if output.exists():raise FileExistsError('Preserve previous package directory')
+    output.mkdir(parents=True)
+    if not python_package.is_file():
+        python_package.parent.mkdir(parents=True,exist_ok=True)
+        with urllib.request.urlopen(PYTHON_URL,timeout=60) as response:
+            data=response.read(40*1024*1024)
+        python_package.write_bytes(data)
+    entries=dict(python_files(python_package))
+    receipt=json.loads((source/'rt-source.json').read_text())
+    build_id=('ldb-rt-observer+'+receipt['fingerprint'][:16]).encode()
+    binaries={}
+    for arch,relative,target,machine in [('x86','client/d3d9.dll',TARGETS[0],0x14c),('x64','server/L4D2Bridge64.exe',TARGETS[1],0x8664)]:
+        data=(source/f'bridge/_rtRelease_{arch}/src'/relative).read_bytes()
+        if data[:2]!=b'MZ' or build_id not in data:raise ValueError('Missing paired native identity')
+        pe=struct.unpack_from('<I',data,60)[0]
+        if data[pe:pe+4]!=b'PE\0\0' or struct.unpack_from('<H',data,pe+4)[0]!=machine:raise ValueError('Wrong observer architecture')
+        expected=status['binaries']['development/'+arch+'/'+Path(relative).name]
+        if sha(data)!=expected:raise ValueError('Native evidence differs from product')
+        binaries[target]={'sha256':sha(data),'size':len(data),'machine':hex(machine)}
+        entries['payload/'+target]=data
+    for name in ['rt_draw_suite.py','analyze_rt_draw.py','rt_game_probe.py','rt_preflight.py','rt_visual.py','rt_suite.py']:
+        entries['scripts/'+name]=(ROOT/'scripts'/name).read_bytes()
+    for name in ['rt-source-audit.json','rt-source-queue-sdk.json']:
+        entries['research/'+name]=(ROOT/'research'/name).read_bytes()
+    entries['run-test.cmd']=(ROOT/'integration/rt/run-draw-test.cmd').read_bytes()
+    entries['restore.cmd']=(ROOT/'integration/rt/restore-draw-test.cmd').read_bytes()
+    entries['README.txt']=(ROOT/'integration/rt/draw-observer-readme.txt').read_bytes()
+    entries['licenses/Remix-LICENSE']=(source/'LICENSE').read_bytes()
+    entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
+                                                          'show',receipt['bridge_commit']+':LICENSE'])
+    manifest={'schema':1,'scope':'draw_consumer_observation','build_commit':commit,'bridge_baseline':'1.3.2',
+              'build_id':build_id.decode(),'binaries':binaries,'runtime_dll_replaced':False,
+              'private_game_methods_called':False,'game_rt':'unrun','source_queue_execution':'unrun',
+              'source_parallel_preparation':'unrun','performance':'unrun',
+              'files':{name:{'sha256':sha(data),'size':len(data)} for name,data in entries.items()}}
+    entries['draw-observer-manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()
+    primary=output/'rt-game-observe-dev.zip'
+    with zipfile.ZipFile(primary,'w',zipfile.ZIP_DEFLATED) as z:
+        for name,data in entries.items():z.writestr(name,data)
+    with zipfile.ZipFile(primary) as z:
+        if z.testzip() is not None:raise ValueError('Product CRC failed')
+        for name,entry in manifest['files'].items():
+            if sha(z.read(name))!=entry['sha256']:raise ValueError('Product member mismatch')
+    if os.name!='nt':raise OSError('Native packaged Python execution requires Windows')
+    with tempfile.TemporaryDirectory(prefix='rt-observer-package-') as directory:
+        with zipfile.ZipFile(primary) as z:z.extractall(directory)
+        root=Path(directory)
+        process=subprocess.run([str(root/'python/python.exe'),'-I',str(root/'scripts/rt_draw_suite.py'),'--help'],
+                               capture_output=True,text=True,timeout=30)
+        if process.returncode:raise ValueError('Packaged entry point failed: '+process.stderr)
+    validation={'schema':1,'commit':commit,'package_validation':'pass','launcher':primary.name,'payloads':[],
+                'primary_sha256':sha(primary.read_bytes()),'primary_size':primary.stat().st_size,
+                'packaged_python_isolated_entry':'pass','native_consumer_fixture_execution':'pass',
+                'game_rt':'unrun','actual_game_observation':'unrun'}
+    (output/'publish-index.json').write_text(json.dumps(validation,indent=2)+'\n')
+    print(json.dumps(validation,indent=2))
+
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--source',type=Path,default=ROOT/'.research/rt-observer-source')
+    p.add_argument('--output',type=Path,default=ROOT/'.research/dist/rt-game-observe')
+    p.add_argument('--python-package',type=Path,default=ROOT/'.research/python.3.12.10.nupkg')
+    a=p.parse_args();package(a.source.resolve(),a.output.resolve(),a.python_package.resolve())

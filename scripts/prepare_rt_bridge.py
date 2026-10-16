@@ -54,13 +54,14 @@ def prepare(output, bridge, upstream, detours):
     base_patch = output / 'ldb-baseline.patch'
     base_patch.write_bytes(patch)
     hooks = ROOT / 'integration/rt/bridge-hooks.patch'
-    for current in [base_patch, hooks]:
+    consumer_hooks = ROOT / 'integration/rt/consumer-hooks.patch'
+    for current in [base_patch, hooks, consumer_hooks]:
         subprocess.run(['git', '-C', str(output), 'apply', '--check', str(current)], check=True)
         subprocess.run(['git', '-C', str(output), 'apply', str(current)], check=True)
     base_patch.unlink()
-    inputs = {'bridge-hooks.patch': digest(hooks)}
-    for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h']),
-                        ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h'])]:
+    inputs = {'bridge-hooks.patch': digest(hooks), 'consumer-hooks.patch': digest(consumer_hooks)}
+    for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h']),
+                        ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h'])]:
         for name in names:
             source = ROOT / 'integration/rt' / name
             shutil.copy2(source, output / 'bridge/src' / role / name)

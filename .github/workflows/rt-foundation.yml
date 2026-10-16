@@ -61,3 +61,31 @@ jobs:
       - name: Publish evidence ZIP
         if: always()
         run: python scripts/publish_rt_build_status.py
+      - name: Package verified consumer observation entry
+        id: observer_package
+        if: steps.native.outcome == 'success'
+        shell: powershell
+        run: |
+          & cmd.exe /d /c 'python scripts/package_rt_draw.py > ci-rt-logs/draw-package.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content ci-rt-logs/draw-package.log
+          if ($result -ne 0) { throw 'Observer package verification failed' }
+      - name: Publish observer delivery evidence
+        if: always()
+        shell: python
+        env:
+          RT_NATIVE_OUTCOME: ${{ steps.native.outcome }}
+          RT_OBSERVER_OUTCOME: ${{ steps.observer_package.outcome }}
+        run: |
+          import json, os, pathlib, subprocess, sys, zipfile
+          p=pathlib.Path('.research/dist/rt-game-observe-build-status.zip')
+          p.parent.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(p,'w',zipfile.ZIP_DEFLATED) as z:
+              z.writestr('status.json',json.dumps({'commit':os.environ['GITHUB_SHA'],'native_outcome':os.environ['RT_NATIVE_OUTCOME'],'package_outcome':os.environ['RT_OBSERVER_OUTCOME'],'game_rt':'unrun','actual_game_observation':'unrun'}))
+              for f in pathlib.Path('ci-rt-logs').glob('*.log'): z.write(f,'logs/'+f.name)
+              index=pathlib.Path('.research/dist/rt-game-observe/publish-index.json')
+              if index.is_file(): z.write(index,'publish-index.json')
+          subprocess.run([sys.executable,'scripts/publish_rt_build_status.py','--package',str(p)],check=True)
+      - name: Publish consumer observation ZIP
+        if: success() && steps.native.outcome == 'success'
+        run: python scripts/publish_rt_build_status.py --packages-directory .research/dist/rt-game-observe

@@ -2,6 +2,7 @@
 
 #include "rt_protocol.h"
 #include "rt_static_draw.h"
+#include "rt_draw_host.h"
 
 #include <windows.h>
 #include <filesystem>
@@ -146,6 +147,7 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
   } catch (...) { return E_FAIL; }
 }
 inline void present(uint64_t device, uint32_t uid, HRESULT result) noexcept {
+  ldb_rt::draw_observe::present(device, uid, result);
   try {
     const auto it = observers().find(device);
     if (it == observers().end()) { return; }
@@ -168,6 +170,7 @@ inline void present(uint64_t device, uint32_t uid, HRESULT result) noexcept {
   } catch (...) { }
 }
 inline void reset(uint64_t device, uint32_t uid, HRESULT result) noexcept {
+  ldb_rt::draw_observe::reset(device, uid, result);
   try {
     const auto it = observers().find(device);
     if (it == observers().end()) { return; }
@@ -178,6 +181,7 @@ inline void reset(uint64_t device, uint32_t uid, HRESULT result) noexcept {
   } catch (...) { }
 }
 inline void drawResult(uint64_t device, uint32_t uid, HRESULT result) noexcept {
+  ldb_rt::draw_observe::drawResult(device, uid, result);
   try {
     const auto it = observers().find(device);
     if (it == observers().end()) { return; }
@@ -187,6 +191,6 @@ inline void drawResult(uint64_t device, uint32_t uid, HRESULT result) noexcept {
     if (FAILED(result)) { s.needsReset = true; s.resetAvailable = false; }
   } catch (...) { }
 }
-inline void destroy(uint64_t device) noexcept { observers().erase(device); }
+inline void destroy(uint64_t device) noexcept { ldb_rt::draw_observe::destroy(device); observers().erase(device); }
 
 } // namespace ldb_rt_host

@@ -17,8 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 MODULES = {'CLIENT_MOD': 'client.dll', 'ENGINE_MOD': 'engine.dll',
            'RENDERER_MOD': 'shaderapidx9.dll'}
 RENDERERS = ('shaderapidx9.dll', 'shaderapivk.dll')
-CLASSES = {'CMaterialSystem': [95, 96], 'CMatRenderContext': [29, 30, 146],
-           'CMatQueuedRenderContext': [29, 30, 146]}
+CLASSES = {'CMaterialSystem': [95, 96], 'CMatRenderContext': list(range(256)),
+           'CMatQueuedRenderContext': list(range(256))}
 EXECUTE = 0x20000000
 READ = 0x40000000
 MAX_IMAGE = 256 * 1024 * 1024

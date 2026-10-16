@@ -1,0 +1,245 @@
+diff --git a/bridge/src/client/d3d9_device.cpp b/bridge/src/client/d3d9_device.cpp
+index 2eea6fc..73a788b 100644
+--- a/bridge/src/client/d3d9_device.cpp
++++ b/bridge/src/client/d3d9_device.cpp
+@@ -2621,11 +2621,16 @@ HRESULT Direct3DDevice9Ex_LSS<EnableSync>::DrawPrimitive(D3DPRIMITIVETYPE Primit
+   if (!gbBridgeRunning.load(std::memory_order_acquire)) { return D3DERR_DEVICELOST; }
+   ZoneScoped;
+   LogFunctionCall();
++  const auto rtSnapshot = m_rtDrawObserver.snapshot(this);
+   UID currentUID = 0;
+   {
+-    ClientMessage c(Commands::IDirect3DDevice9Ex_DrawPrimitive, getId());
++    ClientMessage c(rtSnapshot.empty() ? Commands::IDirect3DDevice9Ex_DrawPrimitive : Commands::LdbRt_DrawPrimitive, getId());
+     currentUID = c.get_uid();
+     c.send_many(PrimitiveType, StartVertex, PrimitiveCount);
++    if (!rtSnapshot.empty()) {
++      c.send_data(uint32_t(rtSnapshot.size()));
++      c.send_data(uint32_t(rtSnapshot.size()), rtSnapshot.data());
++    }
+   }
+   WAIT_FOR_OPTIONAL_SERVER_RESPONSE("DrawPrimitive()", D3DERR_INVALIDCALL, currentUID);
+ } catch (const BridgeReadFailure&) { return D3DERR_DEVICELOST; }
+@@ -2635,11 +2640,16 @@ HRESULT Direct3DDevice9Ex_LSS<EnableSync>::DrawIndexedPrimitive(D3DPRIMITIVETYPE
+   if (!gbBridgeRunning.load(std::memory_order_acquire)) { return D3DERR_DEVICELOST; }
+   ZoneScoped;
+   LogFunctionCall();
++  const auto rtSnapshot = m_rtDrawObserver.snapshot(this);
+   UID currentUID = 0;
+   {
+-    ClientMessage c(Commands::IDirect3DDevice9Ex_DrawIndexedPrimitive, getId());
++    ClientMessage c(rtSnapshot.empty() ? Commands::IDirect3DDevice9Ex_DrawIndexedPrimitive : Commands::LdbRt_DrawIndexedPrimitive, getId());
+     currentUID = c.get_uid();
+     c.send_many(Type, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
++    if (!rtSnapshot.empty()) {
++      c.send_data(uint32_t(rtSnapshot.size()));
++      c.send_data(uint32_t(rtSnapshot.size()), rtSnapshot.data());
++    }
+   }
+   WAIT_FOR_OPTIONAL_SERVER_RESPONSE("DrawIndexedPrimitive()", D3DERR_INVALIDCALL, currentUID);
+ } catch (const BridgeReadFailure&) { return D3DERR_DEVICELOST; }
+@@ -2649,9 +2659,10 @@ HRESULT Direct3DDevice9Ex_LSS<EnableSync>::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
+   if (!gbBridgeRunning.load(std::memory_order_acquire)) { return D3DERR_DEVICELOST; }
+   ZoneScoped;
+   LogFunctionCall();
++  const auto rtSnapshot = m_rtDrawObserver.snapshot(this);
+   UID currentUID = 0;
+   {
+-    ClientMessage c(Commands::IDirect3DDevice9Ex_DrawPrimitiveUP, getId());
++    ClientMessage c(rtSnapshot.empty() ? Commands::IDirect3DDevice9Ex_DrawPrimitiveUP : Commands::LdbRt_DrawPrimitiveUP, getId());
+     currentUID = c.get_uid();
+     c.send_many(PrimitiveType, PrimitiveCount);
+ 
+@@ -2660,6 +2671,10 @@ HRESULT Direct3DDevice9Ex_LSS<EnableSync>::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
+ 
+     c.send_data(vertexDataSize, (void*) pVertexStreamZeroData);
+     c.send_data(VertexStreamZeroStride);
++    if (!rtSnapshot.empty()) {
++      c.send_data(uint32_t(rtSnapshot.size()));
++      c.send_data(uint32_t(rtSnapshot.size()), rtSnapshot.data());
++    }
+   }
+   WAIT_FOR_OPTIONAL_SERVER_RESPONSE("DrawPrimitiveUP()", D3DERR_INVALIDCALL, currentUID);
+ } catch (const BridgeReadFailure&) { return D3DERR_DEVICELOST; }
+@@ -2669,9 +2684,10 @@ HRESULT Direct3DDevice9Ex_LSS<EnableSync>::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
+   if (!gbBridgeRunning.load(std::memory_order_acquire)) { return D3DERR_DEVICELOST; }
+   ZoneScoped;
+   LogFunctionCall();
++  const auto rtSnapshot = m_rtDrawObserver.snapshot(this);
+   UID currentUID = 0;
+   {
+-    ClientMessage c(Commands::IDirect3DDevice9Ex_DrawIndexedPrimitiveUP, getId());
++    ClientMessage c(rtSnapshot.empty() ? Commands::IDirect3DDevice9Ex_DrawIndexedPrimitiveUP : Commands::LdbRt_DrawIndexedPrimitiveUP, getId());
+     currentUID = c.get_uid();
+     c.send_many(PrimitiveType, MinIndex, NumVertices, PrimitiveCount, IndexDataFormat, VertexStreamZeroStride);
+ 
+@@ -2682,6 +2698,10 @@ HRESULT Direct3DDevice9Ex_LSS<EnableSync>::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
+ 
+     c.send_data(indexDataSize, (void*) pIndexData);
+     c.send_data(vertexDataSize, (void*) pVertexStreamZeroData);
++    if (!rtSnapshot.empty()) {
++      c.send_data(uint32_t(rtSnapshot.size()));
++      c.send_data(uint32_t(rtSnapshot.size()), rtSnapshot.data());
++    }
+   }
+   WAIT_FOR_OPTIONAL_SERVER_RESPONSE("DrawIndexedPrimitiveUP()", D3DERR_INVALIDCALL, currentUID);
+ } catch (const BridgeReadFailure&) { return D3DERR_DEVICELOST; }
+diff --git a/bridge/src/client/d3d9_device.h b/bridge/src/client/d3d9_device.h
+index a4ba8ef..a042c35 100644
+--- a/bridge/src/client/d3d9_device.h
++++ b/bridge/src/client/d3d9_device.h
+@@ -26,6 +26,7 @@
+ #pragma once
+ 
+ #include "d3d9_device_base.h"
++#include "rt_draw_client.h"
+ 
+ #include "util_common.h"
+ #include "util_scopedlock.h"
+@@ -46,6 +47,7 @@ class Direct3DDevice9Ex_LSS: public BaseDirect3DDevice9Ex_LSS {
+   // when the bridge has been made thread-safe.
+   inline static LockType s_globalLock;
+ 
++
+ public:
+   void lock() override {
+     lockImpl();
+@@ -62,6 +64,7 @@ public:
+ #endif
+ 
+ protected:
++  ldb_rt::draw_observe::Collector m_rtDrawObserver;
+   bridge_reset::ClientState m_resetState;
+   HRESULT receiveResetResponse(const char* api, uint32_t uid);
+   // Releases the internal objects, if any.
+diff --git a/bridge/src/server/main.cpp b/bridge/src/server/main.cpp
+index a06e3dc..2ce359c 100644
+--- a/bridge/src/server/main.cpp
++++ b/bridge/src/server/main.cpp
+@@ -1635,6 +1635,7 @@ void ProcessDeviceCommandQueue() {
+       }
+       case IDirect3DDevice9Ex_GetNPatchMode:
+         break;
++      case LdbRt_DrawPrimitive:
+       case IDirect3DDevice9Ex_DrawPrimitive:
+       {
+         GET_RES(pD3DDevice, gpD3DDevices);
+@@ -1642,6 +1643,13 @@ void ProcessDeviceCommandQueue() {
+         PULL(D3DPRIMITIVETYPE, PrimitiveType);
+         PULL_U(StartVertex);
+         PULL_U(PrimitiveCount);
++        if (rpcHeader.command == LdbRt_DrawPrimitive) {
++          PULL_U(rtSnapshotBytes);
++          const void* rtSnapshot = nullptr;
++          PULL_DATA(rtSnapshotBytes, rtSnapshot);
++          ldb_rt::draw_observe::observe(rpcHeader.pHandle, currentUID, pD3DDevice, rtSnapshot,
++            packet_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 1, PrimitiveType, {uint32_t(StartVertex), uint32_t(PrimitiveCount), 0, 0, 0, 0});
++        }
+         const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, false, [&]() {
+           return pD3DDevice->DrawPrimitive(IN PrimitiveType, IN StartVertex, IN PrimitiveCount);
+         });
+@@ -1650,6 +1658,7 @@ void ProcessDeviceCommandQueue() {
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+       }
++      case LdbRt_DrawIndexedPrimitive:
+       case IDirect3DDevice9Ex_DrawIndexedPrimitive:
+       {
+         GET_RES(pD3DDevice, gpD3DDevices);
+@@ -1660,6 +1669,13 @@ void ProcessDeviceCommandQueue() {
+         PULL_U(NumVertices);
+         PULL_U(startIndex);
+         PULL_U(primCount);
++        if (rpcHeader.command == LdbRt_DrawIndexedPrimitive) {
++          PULL_U(rtSnapshotBytes);
++          const void* rtSnapshot = nullptr;
++          PULL_DATA(rtSnapshotBytes, rtSnapshot);
++          ldb_rt::draw_observe::observe(rpcHeader.pHandle, currentUID, pD3DDevice, rtSnapshot,
++            packet_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 2, Type, {uint32_t(BaseVertexIndex), uint32_t(MinVertexIndex), uint32_t(NumVertices), uint32_t(startIndex), uint32_t(primCount), 0});
++        }
+         const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, Type, false, [&]() {
+           return pD3DDevice->DrawIndexedPrimitive(IN Type, IN BaseVertexIndex, IN MinVertexIndex, IN NumVertices, IN startIndex, IN primCount);
+         });
+@@ -1668,6 +1684,7 @@ void ProcessDeviceCommandQueue() {
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+       }
++      case LdbRt_DrawPrimitiveUP:
+       case IDirect3DDevice9Ex_DrawPrimitiveUP:
+       {
+         GET_RES(pD3DDevice, gpD3DDevices);
+@@ -1677,6 +1694,13 @@ void ProcessDeviceCommandQueue() {
+         void* pVertexStreamZeroData = nullptr;
+         DeviceBridge::get_data(&pVertexStreamZeroData);
+         PULL_U(VertexStreamZeroStride);
++        if (rpcHeader.command == LdbRt_DrawPrimitiveUP) {
++          PULL_U(rtSnapshotBytes);
++          const void* rtSnapshot = nullptr;
++          PULL_DATA(rtSnapshotBytes, rtSnapshot);
++          ldb_rt::draw_observe::observe(rpcHeader.pHandle, currentUID, pD3DDevice, rtSnapshot,
++            packet_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 3, PrimitiveType, {uint32_t(PrimitiveCount), uint32_t(VertexStreamZeroStride), 0, 0, 0, 0});
++        }
+         const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, true, [&]() {
+           return pD3DDevice->DrawPrimitiveUP(IN PrimitiveType, IN PrimitiveCount, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
+         });
+@@ -1685,6 +1709,7 @@ void ProcessDeviceCommandQueue() {
+         SEND_OPTIONAL_SERVER_RESPONSE(hresult, currentUID);
+         break;
+       }
++      case LdbRt_DrawIndexedPrimitiveUP:
+       case IDirect3DDevice9Ex_DrawIndexedPrimitiveUP:
+       {
+         GET_RES(pD3DDevice, gpD3DDevices);
+@@ -1701,6 +1726,13 @@ void ProcessDeviceCommandQueue() {
+         void* pVertexStreamZeroData = nullptr;
+         DeviceBridge::get_data(&pVertexStreamZeroData);
+ 
++        if (rpcHeader.command == LdbRt_DrawIndexedPrimitiveUP) {
++          PULL_U(rtSnapshotBytes);
++          const void* rtSnapshot = nullptr;
++          PULL_DATA(rtSnapshotBytes, rtSnapshot);
++          ldb_rt::draw_observe::observe(rpcHeader.pHandle, currentUID, pD3DDevice, rtSnapshot,
++            packet_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 4, PrimitiveType, {uint32_t(MinVertexIndex), uint32_t(NumVertices), uint32_t(PrimitiveCount), uint32_t(IndexDataFormat), uint32_t(VertexStreamZeroStride), 0});
++        }
+         const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, true, [&]() {
+           return pD3DDevice->DrawIndexedPrimitiveUP(IN PrimitiveType, IN MinVertexIndex, IN NumVertices, IN PrimitiveCount, IN pIndexData, IN IndexDataFormat, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
+         });
+diff --git a/bridge/src/util/ipc_c32_message_queue.h b/bridge/src/util/ipc_c32_message_queue.h
+index d42b242..888cd76 100644
+--- a/bridge/src/util/ipc_c32_message_queue.h
++++ b/bridge/src/util/ipc_c32_message_queue.h
+@@ -17,6 +17,8 @@ inline bool asynchronous(Commands::D3D9Command command) {
+   using namespace Commands;
+   switch (command) {
+   case LdbRt_Metadata:
++  case LdbRt_DrawPrimitive:
++  case LdbRt_DrawIndexedPrimitive:
+   case IDirect3DDevice9Ex_SetRenderState:
+   case IDirect3DDevice9Ex_SetTexture:
+   case IDirect3DDevice9Ex_SetTextureStageState:
+diff --git a/bridge/src/util/util_commands.h b/bridge/src/util/util_commands.h
+index 7e6a1a2..71d66dd 100644
+--- a/bridge/src/util/util_commands.h
++++ b/bridge/src/util/util_commands.h
+@@ -452,6 +452,10 @@ namespace Commands {
+     // RT metadata uses explicit IDs below the transport marker range.
+     LdbRt_Hello = 0x1e10,
+     LdbRt_Metadata = 0x1e11,
++    LdbRt_DrawPrimitive = 0x1e20,
++    LdbRt_DrawIndexedPrimitive = 0x1e21,
++    LdbRt_DrawPrimitiveUP = 0x1e22,
++    LdbRt_DrawIndexedPrimitiveUP = 0x1e23,
+     // NV-DXVK end
+   };
+ 
+@@ -881,6 +885,10 @@ namespace Commands {
+   inline static std::string toString(const D3D9Command& command) {
+     if (command == LdbRt_Hello) { return "LdbRt_Hello"; }
+     if (command == LdbRt_Metadata) { return "LdbRt_Metadata"; }
++    if (command == LdbRt_DrawPrimitive) { return "LdbRt_DrawPrimitive"; }
++    if (command == LdbRt_DrawIndexedPrimitive) { return "LdbRt_DrawIndexedPrimitive"; }
++    if (command == LdbRt_DrawPrimitiveUP) { return "LdbRt_DrawPrimitiveUP"; }
++    if (command == LdbRt_DrawIndexedPrimitiveUP) { return "LdbRt_DrawIndexedPrimitiveUP"; }
+     return toName(command);
+   }
+ 

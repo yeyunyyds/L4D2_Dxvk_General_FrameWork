@@ -21,6 +21,8 @@ try {
     $protocol = Join-Path $repo 'tests/rt_protocol_cases.cpp'
     $hostCases = Join-Path $repo 'tests/rt_host_cases.cpp'
     $staticCases = Join-Path $repo 'tests/rt_static_draw_cases.cpp'
+    $drawPacket = Join-Path $repo 'tests/rt_draw_packet_cases.cpp'
+    $drawNative = Join-Path $repo 'tests/rt_draw_native_cases.cpp'
     $include = Join-Path $repo 'integration/rt'
     $queueCommand = ''
     if ($arch -eq 'x86') {
@@ -42,6 +44,11 @@ try {
     $command = ". .\build_common.ps1; SetupVS -Platform $arch -VcVarsVer $VcVarsVer; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$protocol`" /Fe:`"$dir/protocol.exe`" /Fo:`"$dir/protocol.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/protocol.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$drawPacket`" /Fe:`"$dir/draw-packet.exe`" /Fo:`"$dir/draw-packet.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& `"$dir/draw-packet.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$repo/tests`" `"$drawNative`" /Fe:`"$dir/draw-native.exe`" /Fo:`"$dir/draw-native.obj`" /link bcrypt.lib user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& `"$dir/draw-native.exe`" `"$dir/draw-observation`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& python `"$repo/scripts/analyze_rt_draw.py`" `"$dir/draw-observation`" --output `"$dir/draw-observation-review.json`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$staticCases`" /Fe:`"$dir/static-draw.exe`" /Fo:`"$dir/static-draw.obj`" /link user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/static-draw.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$hostCases`" /Fe:`"$dir/host.exe`" /Fo:`"$dir/host.obj`" /link uuid.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
