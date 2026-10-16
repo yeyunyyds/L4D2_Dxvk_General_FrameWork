@@ -1,0 +1,66 @@
+diff --git a/bridge/src/server/main.cpp b/bridge/src/server/main.cpp
+index 5d00669..947fe99 100644
+--- a/bridge/src/server/main.cpp
++++ b/bridge/src/server/main.cpp
+@@ -3997,8 +3997,14 @@ void CheckD3D9Type(HMODULE d3d9Module) {
+ }
+ 
+ bool InitializeD3D() {
++  ldb_rt::draw_observe::Request worldRequest;
++  const bool worldLaunch = ldb_rt::draw_observe::readRequest(worldRequest) && worldRequest.world;
+   // If vanilla dxvk is enabled attempt to load that first.
+-  if (ServerOptions::getUseVanillaDxvk()) {
++  if (worldLaunch) {
++    ghModule = ldb_rt::world_runtime::load(worldRequest);
++    if (!ghModule) { Logger::err("Pinned world runtime initialization failed; see world-runtime.jsonl"); return false; }
++    Logger::info("LDB_WORLD_RUNTIME pinned 0.6.4 API + normal D3D9 draw-call conversion");
++  } else if (ServerOptions::getUseVanillaDxvk()) {
+     Logger::info("Loading standard Non-RTX DXVK d3d9 dll.");
+     char serverPath[MAX_PATH] = {};
+     const DWORD pathLength = GetModuleFileNameA(nullptr, serverPath, MAX_PATH);
+@@ -4040,7 +4046,7 @@ bool InitializeD3D() {
+       Logger::info("D3D9 interface object creation succeeded!");
+     }
+     // Initialize remixApi
+-    if (GlobalOptions::getExposeRemixApi()) {
++    if (!worldLaunch && GlobalOptions::getExposeRemixApi()) {
+       remixapi_ErrorCode status = remixapi_lib_loadRemixDllAndInitialize(L"d3d9.dll", &remixapi::g_remix, &remixapi::g_remix_dll);
+       if (status != REMIXAPI_ERROR_CODE_SUCCESS) {
+         Logger::err(format_string("[RemixApi] RemixApi initialization failed: %d\n", status));
+@@ -4054,6 +4060,7 @@ bool InitializeD3D() {
+     return false;
+   }
+ 
++  if (worldLaunch) { return true; }
+   if (!ServerOptions::getUseVanillaDxvk()) {
+     FixD3DRecordHRESULT("d3d9.dll", ghModule);
+   }
+@@ -4420,6 +4427,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
+   l4d2_data::finish();
+   // NV-DXVK end
+   l4d2_color::finish();
++  ldb_rt::world_runtime::shutdown();
+   Logger::info("Shutdown cleanup successful, exiting now!");
+ 
+   const auto timeEnd = std::chrono::high_resolution_clock::now();
+diff --git a/bridge/src/server/meson.build b/bridge/src/server/meson.build
+index 2347f44..496cbb7 100644
+--- a/bridge/src/server/meson.build
++++ b/bridge/src/server/meson.build
+@@ -26,6 +26,7 @@
+ 
+ server_src = files([
+ 	'main.cpp',
++  'rt_world_runtime.cpp',
+ 	'module_processing.cpp',
+ 	'remix_api.cpp'
+ ])
+@@ -67,7 +68,7 @@ server_exe = executable(server_name, server_src, server_header, server_version,
+ sources             : [ bridge_version ],
+ build_by_default    : (cpu_family == 'x86_64') or (cpu_family == 'aarch64') or get_option('experimental_x86_server'),
+ link_args           : server_link_args,
+-dependencies        : [ thread_dep, util_dep, lib_version, tracy_dep ],
++dependencies        : [ thread_dep, util_dep, lib_version, tracy_dep, meson.get_compiler('cpp').find_library('bcrypt') ],
+ include_directories : [ bridge_include_path, util_include_path, public_include_path ],
+ win_subsystem       : 'windows')
+ # NV-DXVK end

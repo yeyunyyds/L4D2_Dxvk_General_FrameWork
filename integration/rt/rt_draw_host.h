@@ -1,8 +1,11 @@
 #pragma once
 #include "rt_draw_packet.h"
 #include "rt_draw_request.h"
+#include "rt_consumer_world.h"
+#include "rt_world_runtime.h"
 #include <d3d9.h>
 #include <map>
+#include <type_traits>
 
 namespace ldb_rt::draw_observe {
 template<class Device> Bytes pipeline(Device* device) {
@@ -45,6 +48,10 @@ class Recorder {
   fs::path file;
   uint64_t written = 0, draws = 0, valid = 0, presents = 0, resets = 0, failures = 0, unobserved = 0;
   uint32_t pendingUid = 0;
+  Snapshot nextSnapshot;
+  uint32_t nextUid = 0;
+  bool hasNext = false;
+  IDirect3DDevice9* nativeDevice = nullptr; // Bridge device lifetime, never AddRef'd here.
   bool finished = false, pending = false;
   void record(uint32_t event, uint32_t uid, const Bytes& payload = {}) {
     if (!trace || finished) { return; }
@@ -65,13 +72,19 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart)); record(0, 0, header.data);
+    Writer header; header.u32(request.world ? 2 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    if (request.world) { header.u32(240); header.u32(30); } record(0, 0, header.data);
   }
-  ~Recorder() { finish(3); }
+  ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
   template<class Device> void draw(Device* device, uint32_t uid, const Snapshot& snapshot, uint32_t kind,
       D3DPRIMITIVETYPE type, const std::array<uint32_t, 6>& args) {
-    if (finished) { return; }
     if (snapshot.session != request.session) { ++failures; return; }
+    nextSnapshot = snapshot; nextUid = uid; hasNext = true;
+    if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
+      nativeDevice = device;
+      if (request.world && world_runtime::state().active && world_runtime::state().bind) { world_runtime::state().bind(device); }
+    }
+    if (finished) { return; }
     if (written > 128 * 1024 * 1024) { finish(2); return; }
     Writer payload; payload.data = pack(snapshot); payload.u32(kind); payload.u32(uint32_t(type));
     for (auto arg : args) { payload.u32(arg); }
@@ -79,6 +92,16 @@ public:
     if (pending) { ++failures; }
     pending = true; pendingUid = uid;
     record(1, uid, payload.data); ++draws; if (snapshot.status == Status::Valid) { ++valid; }
+  }
+  bool take(uint32_t uid, Snapshot& snapshot, bool& control) {
+    if (!request.world || !hasNext || uid != nextUid) { return false; }
+    snapshot = nextSnapshot; hasNext = false; control = presents < 30; return true;
+  }
+  void conversion(uint32_t uid, consumer_world::Decision decision, const static_draw::Report& report, bool called, HRESULT physical) {
+    Writer w; w.u32(uint32_t(decision)); w.u32(uint32_t(report.code));
+    w.u32(uint32_t(report.capture)); w.u32(uint32_t(report.apply)); w.u32(uint32_t(report.restore));
+    w.u32(report.converted ? 1 : 0); w.u32(called ? 1 : 0); w.u32(uint32_t(physical));
+    record(6, uid, w.data);
   }
   void result(uint32_t uid, HRESULT result) {
     if (finished) { return; } Writer w; w.u32(uint32_t(result));
@@ -89,12 +112,15 @@ public:
   void present(uint32_t uid, HRESULT result) {
     if (finished) { return; } Writer w; w.u32(uint32_t(result)); record(3, uid, w.data);
     if (SUCCEEDED(result)) { ++presents; } else { ++failures; }
-    trace.flush(); if (presents >= 120) { finish(0); }
+    if (request.world && world_runtime::state().active && world_runtime::state().capture && nativeDevice &&
+        (presents == 30 || presents == 120 || presents == 240)) { world_runtime::state().capture(nativeDevice, presents); }
+    trace.flush(); if (presents >= (request.world ? 240u : 120u)) { finish(0); }
   }
   void reset(uint32_t uid, HRESULT result) {
     if (finished) { return; } Writer w; w.u32(uint32_t(result)); record(4, uid, w.data); ++resets;
     // This batch is an observation segment. Do not silently join generations.
     finish(4);
+    if (request.world) { world_runtime::state().active = false; }
   }
   void finish(uint32_t reason) noexcept {
     if (finished) { return; }
@@ -106,7 +132,8 @@ public:
         const auto temporary = fs::path(doneFile(request).wstring() + L".tmp");
         std::ofstream output(temporary, std::ios::binary);
         output << "{\"session\":" << request.session << ",\"reason\":" << reason << ",\"draws\":" << draws
-          << ",\"valid\":" << valid << ",\"presents\":" << presents << ",\"game_rt\":\"unrun\",\"source_queue\":\"unrun\"}\n";
+          << ",\"valid\":" << valid << ",\"presents\":" << presents << ",\"game_rt\":\""
+          << (request.world ? "attempted_requires_review" : "unrun") << "\",\"source_queue\":\"unrun\"}\n";
         output.close(); fs::rename(temporary, doneFile(request));
       }
     } catch (...) { finished = true; }

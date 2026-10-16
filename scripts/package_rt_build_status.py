@@ -22,6 +22,7 @@ if __name__ == '__main__':
               'game_binding_probe_native_execution': 'unrun',
               'static_draw_development_execution': 'unrun',
               'consumer_draw_development_execution': 'unrun',
+              'consumer_world_development_execution': 'unrun',
               'system_d3d9_nullref_state': {'x86': 'unrun', 'x64': 'unrun'},
               'artifact_validation': 'unrun'}
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -76,6 +77,11 @@ if __name__ == '__main__':
                 and all((source / ('checks-' + arch) / 'draw-observation-review.json').exists() for arch in ('x86', 'x64'))):
             if all(json.loads((source / ('checks-' + arch) / 'draw-observation-review.json').read_text())['pass'] for arch in ('x86', 'x64')):
                 status['consumer_draw_development_execution'] = 'pass'
+        if queue_log.exists() and queue_log.read_text(errors='replace').count('RT consumer world control/filter/layout/restore: PASS') == 2:
+            reviews=[source/('checks-'+arch)/'draw-observation-review.json' for arch in ('x86','x64')]
+            if all(p.is_file() and any(t.get('world_normalization')=='pass' for t in
+                   json.loads(p.read_text()).get('traces',{}).values()) for p in reviews):
+                status['consumer_world_development_execution']='pass'
         if (sdk_receipt.exists() and (source / 'checks-x86/source-queue.exe').exists() and queue_log.exists()
                 and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace')):
             status['sdk_queue_development_execution'] = 'pass'

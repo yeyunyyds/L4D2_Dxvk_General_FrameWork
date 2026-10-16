@@ -1,0 +1,743 @@
+{
+  "schema": 1,
+  "scope": "rt_prerequisites",
+  "build_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+  "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+  "runtime_execution": "unrun",
+  "game_hook": "not_installed",
+  "source_threading": "unrun",
+  "payloads": [
+    {
+      "name": "rt-prereq-payload-25802f8447a81def30122c8d.zip",
+      "sha256": "25802f8447a81def30122c8d8a6511ee7cec86b321826526c0d4ce35c5f94814",
+      "size": 78275253,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
+      "sha256": "cc8723b1f848c058238dcf27c0fa610a05654c707672341bfeae24ca127e7633",
+      "size": 95644514,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
+      "sha256": "b6201876eb36a3699d3c04ed97fe90b395c1ca803f839d2f586290bab7125f15",
+      "size": 89038588,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-008180112dfe090e53cf769b.zip",
+      "size": 259360,
+      "sha256": "008180112dfe090e53cf769bbf4f37c170b2b6070e8cbb8e3d96b3817ac4cb30",
+      "ref": "75e75334074a15f2a912cc91396be2280d3733ec"
+    }
+  ],
+  "runtime_files": {
+    "GFSDK_Aftermath_Lib.x64.dll": {
+      "size": 1865216,
+      "sha256": "4877a28a3edaa86257061d7de3d16f1aaa331bdd6e1b1446000553504d2fd3b1"
+    },
+    "NRC_Vulkan.dll": {
+      "size": 5421600,
+      "sha256": "2f6872c065f278f9073a9fc9ab94547d7a76c2cf4b97e25f3ed2511a96d2fe92"
+    },
+    "NRD.dll": {
+      "size": 18102784,
+      "sha256": "163d173133f56e8cef5186f1734ce7326e197fc5ef2712771d185843f7f6c27e"
+    },
+    "NvLowLatencyVk.dll": {
+      "size": 147496,
+      "sha256": "76e0c3ec8fae603ac6fbbcc05a6a511cce8794a44aeb310b819442233ad47331"
+    },
+    "ar.dll": {
+      "size": 220696,
+      "sha256": "ad3c1672cf43ea6c2113a6f8842e456cb00fc3862e7301c122793cab29d81395"
+    },
+    "arch.dll": {
+      "size": 192536,
+      "sha256": "58ff5db90d37c960f4d44ce2981e8150145ad8cbf98712bb7e155e2a49ffc5eb"
+    },
+    "boost_python310-vc142-mt-x64-1_76.dll": {
+      "size": 201752,
+      "sha256": "ef978ef4e6265f370a9a106d275f5da4c9591297148366f7f543c16efdb233a9"
+    },
+    "concrt140.dll": {
+      "size": 324208,
+      "sha256": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376"
+    },
+    "cudart64_12.dll": {
+      "size": 573952,
+      "sha256": "c2c9a9c22a9bcba90e261825968836787b331038047a26770cffb7a583c28344"
+    },
+    "d3d9.dll": {
+      "size": 210378240,
+      "sha256": "21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7"
+    },
+    "gf.dll": {
+      "size": 587800,
+      "sha256": "1dc4497b14dbe190beb2b57801759c2e56da379fff006ec4d55af7f732795c88"
+    },
+    "js.dll": {
+      "size": 115736,
+      "sha256": "3fdab9edb97f52b17b3da0ff0d92caef23673275fd69a56df4e7c891e777bbb9"
+    },
+    "kind.dll": {
+      "size": 53784,
+      "sha256": "060881340d83905dc65c656c5e39f9e879effbf47db9e8086c1bdeb154ace500"
+    },
+    "libxess.dll": {
+      "size": 77788528,
+      "sha256": "a49f487f15a815c1242b659182cc9365b6aff2d94051d25d5379316bdb11a2dd"
+    },
+    "msvcp140.dll": {
+      "size": 557728,
+      "sha256": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9"
+    },
+    "msvcp140_1.dll": {
+      "size": 35952,
+      "sha256": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d"
+    },
+    "msvcp140_2.dll": {
+      "size": 280200,
+      "sha256": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9"
+    },
+    "msvcp140_atomic_wait.dll": {
+      "size": 50304,
+      "sha256": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479"
+    },
+    "msvcp140_codecvt_ids.dll": {
+      "size": 31872,
+      "sha256": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18"
+    },
+    "ndr.dll": {
+      "size": 184344,
+      "sha256": "30fdebe93bcf84eac79c0c542e0bb66a4f66a8282e101b1843f32b81f198b378"
+    },
+    "nvngx_dlss.dll": {
+      "size": 48971304,
+      "sha256": "db5ef835056c524df3d629ba7eb518db4ff60d7174ddcaa766f6363e151ccd3f"
+    },
+    "nvngx_dlssd.dll": {
+      "size": 72978992,
+      "sha256": "395dd725bdd34bc7bf9cce7ae5a4d379a67d8ef436219bca4c6f1355d033336a"
+    },
+    "nvngx_dlssg.dll": {
+      "size": 7499376,
+      "sha256": "17e00fc66d32f348fa16d387d635ac1b994aa7317b3e6d968867d1ee77af3564"
+    },
+    "nvrtc-builtins64_128.dll": {
+      "size": 6356480,
+      "sha256": "a7afa2a40cbd3f922a33d8bf71c13cb26ca707c7016a9bc5fcde36759ba668f5"
+    },
+    "nvrtc64_120_0.dll": {
+      "size": 86728192,
+      "sha256": "02d2d7ef4690bf1a55dda1d3ac94c86ce8d16920071c87bcd3e70e94ef346e93"
+    },
+    "pcp.dll": {
+      "size": 1181720,
+      "sha256": "71ad4aeb6ff31002314a836add47cefb31169572f4e9cc62c4eb3b52896d703e"
+    },
+    "plug.dll": {
+      "size": 237592,
+      "sha256": "0367bbaffcd7889ede7617af5d7506f4da29e188016230598f5315f5c81e86d2"
+    },
+    "python310.dll": {
+      "size": 5055512,
+      "sha256": "8ca6c5ae3bea150892db021bb3267f9e01e5e4d5da40b3f75f1de7646cecdff1"
+    },
+    "rt-runtime-smoke.exe": {
+      "size": 291328,
+      "sha256": "16313c79783afe6251e82cc2b121393553d894394dc9c6cab4f7421032942b4d"
+    },
+    "rtxio.dll": {
+      "size": 2622976,
+      "sha256": "5f9dfce56bdf92c8ea5210f0eea17d29565a18a004a69070cc300d1e48e54409"
+    },
+    "sdf.dll": {
+      "size": 3629592,
+      "sha256": "872086ec506a5f886729ce054cc4ea97fa6c55fefd9c4c0cdf10b6adc3a2402d"
+    },
+    "sdr.dll": {
+      "size": 174104,
+      "sha256": "56cedd3452c1a7bcd34d18d01d0209adc1ed5fa622cc926c7014175f30d09b09"
+    },
+    "tbb.dll": {
+      "size": 278552,
+      "sha256": "fecc3a8f663d510b203025faede763df6cd329594631da3da24c0c7df62e6cf8"
+    },
+    "tbbmalloc.dll": {
+      "size": 138776,
+      "sha256": "366e2a44c5fd7e7408d6fc59838cba54111a7b3e271c8aedfa79585cb6321cec"
+    },
+    "tf.dll": {
+      "size": 811544,
+      "sha256": "316048130b822a7788975cd23bcb6d3ce47ff2596f0e7eb5571b1c2d4d8966e3"
+    },
+    "trace.dll": {
+      "size": 303128,
+      "sha256": "68101195b349ef58d3bbc629478e2322ce88f0034dae7b3fd13f5fbf5ac1ce68"
+    },
+    "usd.dll": {
+      "size": 4473368,
+      "sha256": "cd23fb819fb41302715938a8f61769688a650607016df9fde7f6ec2d156903c9"
+    },
+    "usd/ar/resources/plugInfo.json": {
+      "size": 624,
+      "sha256": "a626025da5f19e39c6c2e4f38dcd8b1df753c936aa1e48cf20653e1c2f2174ea"
+    },
+    "usd/glf/resources/plugInfo.json": {
+      "size": 311,
+      "sha256": "babfbbc25a3d64a333094f491dbf32b8115a78d0633ce9db97c2a03c01b37f3a"
+    },
+    "usd/glf/resources/shaders/pcfShader.glslfx": {
+      "size": 4903,
+      "sha256": "9e8120b533daf80284e0c7189de74237050a470cf046df6bfe7bea35bc96eaeb"
+    },
+    "usd/glf/resources/shaders/simpleLighting.glslfx": {
+      "size": 17483,
+      "sha256": "b95f1f6ad4131f68f0a0b12c262b583c4431b87940d795d5ab9d28c4e2694593"
+    },
+    "usd/hd/resources/plugInfo.json": {
+      "size": 249,
+      "sha256": "85c90cddba51c968d324cf7b7d05901143061c5d8b4d81af959727d736212b72"
+    },
+    "usd/hdGp/resources/plugInfo.json": {
+      "size": 708,
+      "sha256": "1493d09adb199c8437e631832da38d9f6c216d89af30dc350721620800a973c4"
+    },
+    "usd/hdSt/resources/plugInfo.json": {
+      "size": 2341,
+      "sha256": "c2a66dde94d34a833ad55b80aaf3279bec1fb0fbbe7876ac0ba755159a007283"
+    },
+    "usd/hdSt/resources/shaders/basisCurves.glslfx": {
+      "size": 33163,
+      "sha256": "6b578106e0dfa61e161e2ba8fba5f856e309076331c1e6e0f4851f01985f48d6"
+    },
+    "usd/hdSt/resources/shaders/compute.glslfx": {
+      "size": 15308,
+      "sha256": "175ed166ae59243b31d9277ae2f25526ff9b4488a9e50178bfb4ca8338a71a88"
+    },
+    "usd/hdSt/resources/shaders/domeLight.glslfx": {
+      "size": 9486,
+      "sha256": "55163245f9ca0888279a7b9feb7331c7b31605c3afdcf8a849949ee6fa6b8d27"
+    },
+    "usd/hdSt/resources/shaders/edgeId.glslfx": {
+      "size": 6745,
+      "sha256": "965ff583c5f420748384e98ecaeae9d78b6f9297f132fe02ee6d8ccfcdc4857e"
+    },
+    "usd/hdSt/resources/shaders/fallbackLighting.glslfx": {
+      "size": 2427,
+      "sha256": "42192be58f45a81e947f1417fef05bd9c258643a71637650b089387f93b61295"
+    },
+    "usd/hdSt/resources/shaders/fallbackLightingShader.glslfx": {
+      "size": 1568,
+      "sha256": "61163dea3d45daa35077c7b4ec7fdb86e7bfae5690ab4d1fee3e58db781cae04"
+    },
+    "usd/hdSt/resources/shaders/fallbackMaterialNetwork.glslfx": {
+      "size": 2230,
+      "sha256": "6237d6148b7e8324a72aa69581a9454b06d2084d6f3cde1c63b05b724c2e717b"
+    },
+    "usd/hdSt/resources/shaders/fallbackVolume.glslfx": {
+      "size": 3742,
+      "sha256": "62ac3900c197a0fcd22ee6f1aecfab24f766065e70688b90d610bea8eea8a747"
+    },
+    "usd/hdSt/resources/shaders/frustumCull.glslfx": {
+      "size": 10668,
+      "sha256": "1cc218775ed2fb04a38c0953e9605320e9e1725275c0104bf8926e1dbff73def"
+    },
+    "usd/hdSt/resources/shaders/imageShader.glslfx": {
+      "size": 3608,
+      "sha256": "c9c3e0d77315400a91639608f241947197f05aa7dc77a17eb0fe179df411804f"
+    },
+    "usd/hdSt/resources/shaders/instancing.glslfx": {
+      "size": 5861,
+      "sha256": "b01939e33d91605f41c1e7078c408a8e645c43094ca949e106192e2210934afe"
+    },
+    "usd/hdSt/resources/shaders/mesh.glslfx": {
+      "size": 35237,
+      "sha256": "22fea2e3567d41a2c9b49b6b03c6c465d6e1fb31334f19602d67c1aa16d360a6"
+    },
+    "usd/hdSt/resources/shaders/meshFaceCull.glslfx": {
+      "size": 1990,
+      "sha256": "31400e0f2d666fa93117288b996099e9a4f61ce1debeac5a849883d051b16d15"
+    },
+    "usd/hdSt/resources/shaders/meshNormal.glslfx": {
+      "size": 6718,
+      "sha256": "c01f9cc605933be808cf48a4f8f73e4c2498a5184a3af8eec70f872ad61f5fd1"
+    },
+    "usd/hdSt/resources/shaders/meshWire.glslfx": {
+      "size": 10885,
+      "sha256": "3bafb48abfb31ace49d5688dfd8a9251494807c5862b3f72c1093d1632e853c9"
+    },
+    "usd/hdSt/resources/shaders/pointId.glslfx": {
+      "size": 3042,
+      "sha256": "308b0ff1dbba257cea1dd577f4f683fe43a2c636f59a82de43e1a1a803a781a0"
+    },
+    "usd/hdSt/resources/shaders/points.glslfx": {
+      "size": 3691,
+      "sha256": "90581cd30dd5fcc9c00b7cd29a120c786e84e566504dad18416fbaf62da622d9"
+    },
+    "usd/hdSt/resources/shaders/ptexTexture.glslfx": {
+      "size": 13050,
+      "sha256": "28e33020f120b13da817ba5448035b1a5c3347301d2261abf016a7d25e1dcd19"
+    },
+    "usd/hdSt/resources/shaders/renderPass.glslfx": {
+      "size": 7861,
+      "sha256": "0948d7779dac86fcede4409725c6731a370ed5192a59e7442bf6806ac574b9ae"
+    },
+    "usd/hdSt/resources/shaders/renderPassShader.glslfx": {
+      "size": 2449,
+      "sha256": "eb08acbe3a789c7f3c2703ead78f187c375b01d16a3d9e58a90f35ded9c675b8"
+    },
+    "usd/hdSt/resources/shaders/simpleLightingShader.glslfx": {
+      "size": 1977,
+      "sha256": "888a938aba93ad9f2fc2784868aa0e7658b5cd7b574a85627098c99dbfc76ad6"
+    },
+    "usd/hdSt/resources/shaders/terminals.glslfx": {
+      "size": 14521,
+      "sha256": "fd4244bf768f089e2c6d2a9695f1932d2b327eace942cb07787cb1cf239a315f"
+    },
+    "usd/hdSt/resources/shaders/visibility.glslfx": {
+      "size": 3261,
+      "sha256": "be7816e420b9b9c78c102ac38905897958b902bdb962903c031a2bee369bc766"
+    },
+    "usd/hdSt/resources/shaders/volume.glslfx": {
+      "size": 21675,
+      "sha256": "f9c737171dc1450bb319627c7ea48db187b5d4216b592931e8c8e2cbda812255"
+    },
+    "usd/hdSt/resources/textures/fallbackBlackDomeLight.png": {
+      "size": 109,
+      "sha256": "16e067f64e1f157326aa23ec45db2550f3c372b322b4075166173148e3047cd0"
+    },
+    "usd/hdx/resources/plugInfo.json": {
+      "size": 312,
+      "sha256": "2d5c7fc738f1b278f3587ffba47e34f79de93ce978da659285a175fd8288bf87"
+    },
+    "usd/hdx/resources/shaders/boundingBox.glslfx": {
+      "size": 2337,
+      "sha256": "6f40d8680a5e2cd61e15b359e029ca37f64550384ec0a063d03cb2a601e8100b"
+    },
+    "usd/hdx/resources/shaders/colorChannel.glslfx": {
+      "size": 2358,
+      "sha256": "3d533ce3909fbffc241fb4393aba4ee792c83d68f297cfef38260525e83f2019"
+    },
+    "usd/hdx/resources/shaders/colorCorrection.glslfx": {
+      "size": 2225,
+      "sha256": "9cf38487e393dfeb9d5fbc7c48768b207564a21eb78a968621a3de50384957ba"
+    },
+    "usd/hdx/resources/shaders/fullscreen.glslfx": {
+      "size": 1952,
+      "sha256": "3592d33c1778fb13fb3d4a33d55a2f1c42ab81057b1f488e2fa417d36d0503c3"
+    },
+    "usd/hdx/resources/shaders/oitResolveImageShader.glslfx": {
+      "size": 3888,
+      "sha256": "1a1a355ce2ad759b42878ce51d6f5926a12865a368b0f497015d5e850c7cb1bc"
+    },
+    "usd/hdx/resources/shaders/outline.glslfx": {
+      "size": 5603,
+      "sha256": "e34bf50589edb927260ac8934bf79eff837a43bcc111156ff8fd601d1ad771d3"
+    },
+    "usd/hdx/resources/shaders/renderPass.glslfx": {
+      "size": 8780,
+      "sha256": "a23807bb1565bb70a2a592fe4d7a5c2d3d7869f1bb8f8a6a1c9fb5f93ca71d6f"
+    },
+    "usd/hdx/resources/shaders/renderPassColorAndSelectionShader.glslfx": {
+      "size": 2798,
+      "sha256": "0a3f83dbbfa9f91a7989b85d0c72231ec415380f5863c09ce3926470b2faf222"
+    },
+    "usd/hdx/resources/shaders/renderPassColorShader.glslfx": {
+      "size": 2597,
+      "sha256": "9406628d7774ab749aa24272333d508cf60800fc4478d0a3cd7e0da0c178166e"
+    },
+    "usd/hdx/resources/shaders/renderPassColorWithOccludedSelectionShader.glslfx": {
+      "size": 2765,
+      "sha256": "58a0af2251715072467d684c99c421c7256add1439593bd8cd7c16cad2d4f0c5"
+    },
+    "usd/hdx/resources/shaders/renderPassIdShader.glslfx": {
+      "size": 2491,
+      "sha256": "b73de8f29c1f5ba534468409e26a9b2f80cc8baea1a39adf8fb708688e4d2631"
+    },
+    "usd/hdx/resources/shaders/renderPassOitOpaqueShader.glslfx": {
+      "size": 2616,
+      "sha256": "0028a215019b5291cd7d4e991631a9b7f66f5d135dcf96be87956f66d7efed11"
+    },
+    "usd/hdx/resources/shaders/renderPassOitShader.glslfx": {
+      "size": 2697,
+      "sha256": "ad01b716baed3b17494447654cdf3d491a5ee54c6cb9bfe4f11acf3741526ee6"
+    },
+    "usd/hdx/resources/shaders/renderPassOitVolumeShader.glslfx": {
+      "size": 2698,
+      "sha256": "7745daee550b04b48b78c95a933961c292f8908b5cde04c9adc88beee0d90a50"
+    },
+    "usd/hdx/resources/shaders/renderPassPickingShader.glslfx": {
+      "size": 2501,
+      "sha256": "7268004967dcc9416280fe43755e492493712e1277b537ffcb6f22fed738e9b5"
+    },
+    "usd/hdx/resources/shaders/renderPassShadowShader.glslfx": {
+      "size": 2498,
+      "sha256": "bc248285da6328b2e5e84d9a6595a39ed2c4ce19b33a38f7d1a3b04134369097"
+    },
+    "usd/hdx/resources/shaders/selection.glslfx": {
+      "size": 19451,
+      "sha256": "f9121c24acd79bc4c3f6b548525f7e5ead3dfb391d6fa2121bbcf1f3fae697f6"
+    },
+    "usd/hdx/resources/shaders/skydome.glslfx": {
+      "size": 2759,
+      "sha256": "d28ef870b93c0aa5a0652817fcc6fb8a3c3259836c98d06ecdbb6caaa9f9e6b8"
+    },
+    "usd/hdx/resources/shaders/visualize.glslfx": {
+      "size": 3836,
+      "sha256": "0694598bf4f59535b660b7801a731f6e6b0de83a7c01508abcfe082716241fb3"
+    },
+    "usd/hdx/resources/textures/StinsonBeach.hdr": {
+      "size": 1463672,
+      "sha256": "4897697c757edc524dc9b7bcc692e8e05a7f02dbede3e30d2291dc0831dece17"
+    },
+    "usd/hdx/resources/textures/StinsonBeach.tex": {
+      "size": 2253151,
+      "sha256": "b7f29695ce58ae27c5124f09f0a254b6326bfd51c6b615b1dd9fbae796800d00"
+    },
+    "usd/hgiGL/resources/plugInfo.json": {
+      "size": 414,
+      "sha256": "1acd45782624e8ed036c3950879119b17eab5e07bcd547d40fac406e031b0fe6"
+    },
+    "usd/hio/resources/plugInfo.json": {
+      "size": 548,
+      "sha256": "df757cbfc4393e7560678489d148620c387f678dfdc1bc3b12a58fe9563151b0"
+    },
+    "usd/ndr/resources/plugInfo.json": {
+      "size": 608,
+      "sha256": "3805c95be132c0a8535d0220bbd6154f51f1482666b94e37534951e9355691ba"
+    },
+    "usd/plugInfo.json": {
+      "size": 56,
+      "sha256": "c285a05d159154e3ae201fa383c61766bc57c58aae6d5a70b7463b49e2dcbb2d"
+    },
+    "usd/plugins/RemixCategories/RemixCategories.dll": {
+      "size": 69120,
+      "sha256": "594b1642bb5ba36e9225d063dec594cf02136a2014251da797e705b05d59c060"
+    },
+    "usd/plugins/RemixCategories/generatedSchema.usda": {
+      "size": 13073,
+      "sha256": "731cddcd14167bb10e0da863f416abd14939b4c770e2d9b369fa3be4c3b478ba"
+    },
+    "usd/plugins/RemixCategories/resources/plugInfo.json": {
+      "size": 577,
+      "sha256": "d7370bea030b33f5cd77985025b2a6a73f2a96aab2149825b1018cbe633b90d8"
+    },
+    "usd/plugins/RemixParticleSystem/RemixParticleSystem.dll": {
+      "size": 200192,
+      "sha256": "da436d0ea0f33ab4f488460119c60bb983b8d437398c5e77f9e55b8d7559a2a5"
+    },
+    "usd/plugins/RemixParticleSystem/generatedSchema.usda": {
+      "size": 49208,
+      "sha256": "f5d1896e8261a9f0b2cad110101723e2eed6a305fa07ae3629190609c808b1b2"
+    },
+    "usd/plugins/RemixParticleSystem/resources/plugInfo.json": {
+      "size": 547,
+      "sha256": "02dc92d7d2cc52f1fab28026b0d411be02c50c169282676cb9e5212aaa87d25a"
+    },
+    "usd/plugins/plugInfo.json": {
+      "size": 51,
+      "sha256": "c42a8b0c30e7cc9f85349184a2273ad6f5b0f7e283b090f5497dc4668c1f1e40"
+    },
+    "usd/sdf/resources/plugInfo.json": {
+      "size": 1145,
+      "sha256": "123dc19aa6f74d3c33182af7614053d6e7e727155c72a65296764dbf120ed507"
+    },
+    "usd/usd/resources/codegenTemplates/api.h": {
+      "size": 2149,
+      "sha256": "9b960dc8373844983eaf5bb45eea7312fa6cf02ac2eb3a2d80985144e56c3c96"
+    },
+    "usd/usd/resources/codegenTemplates/plugInfo.json": {
+      "size": 372,
+      "sha256": "4a3704b9a0037edd2fc916117aca8e7230b7d685e361b1a6addd8740eeb19878"
+    },
+    "usd/usd/resources/codegenTemplates/schemaClass.cpp": {
+      "size": 12759,
+      "sha256": "eb65e89e4b5fae527da09324195fd68366a09a681d32edf40f980469759ea8a2"
+    },
+    "usd/usd/resources/codegenTemplates/schemaClass.h": {
+      "size": 17337,
+      "sha256": "3945d3fad8c3007d8ba93593049d72b6ee9878a3426bbe241dcaed1344f27c84"
+    },
+    "usd/usd/resources/codegenTemplates/tokens.cpp": {
+      "size": 1635,
+      "sha256": "78da0801b8d852c45ad6d13695d63354b4df8d000fca3a7cfd9303f32e9764ee"
+    },
+    "usd/usd/resources/codegenTemplates/tokens.h": {
+      "size": 3346,
+      "sha256": "086dde9d610b13627abb9966c538d96349bb2949c0d732c8643cb9e25c8215e0"
+    },
+    "usd/usd/resources/codegenTemplates/wrapSchemaClass.cpp": {
+      "size": 9728,
+      "sha256": "04c376ad50fdf134e984cecb5148d714623f52f2a2d6fe7692b1c2c9e90b21ae"
+    },
+    "usd/usd/resources/codegenTemplates/wrapTokens.cpp": {
+      "size": 2593,
+      "sha256": "f7efa2ecaf791557775683fdacede5680c30f8e99ed20a95c59c799036a3e8ed"
+    },
+    "usd/usd/resources/generatedSchema.usda": {
+      "size": 14365,
+      "sha256": "49ff0ac6a1ddf210a6308de5fbf3fe7608036ad8a87051281c516757da28c0dd"
+    },
+    "usd/usd/resources/plugInfo.json": {
+      "size": 5241,
+      "sha256": "0bdcbf6f25b80e8b44a0ea9294049c14af00f9c545a507788fae73398bb88848"
+    },
+    "usd/usd/resources/usd/schema.usda": {
+      "size": 17181,
+      "sha256": "28b72d5ba49187656e621fdd6de03cbdc09e705cbd97eae62313ca63d012fd27"
+    },
+    "usd/usdGeom/resources/generatedSchema.usda": {
+      "size": 219236,
+      "sha256": "2613b29d6450f6020a5967f6fd846272458f077d4546270e453ce900ed39fb22"
+    },
+    "usd/usdGeom/resources/plugInfo.json": {
+      "size": 15207,
+      "sha256": "bcefd16905a7f9101f10f3f3201094f75d42128f43ae456b84ca7b8396191a1e"
+    },
+    "usd/usdGeom/resources/usdGeom/schema.usda": {
+      "size": 120176,
+      "sha256": "eb2dd0e2959127afe1d51af40aac2773acdda12c8f88199187c33efa49b63e01"
+    },
+    "usd/usdHydra/resources/generatedSchema.usda": {
+      "size": 1018,
+      "sha256": "b562c027908ddffc2ab9ad394b1da1cca26268086d445f767e7d49ce0a896502"
+    },
+    "usd/usdHydra/resources/plugInfo.json": {
+      "size": 1343,
+      "sha256": "ac9aa61e6aa411481465be72b160b01c048bbe9f7025a336c7aec00645861b5f"
+    },
+    "usd/usdHydra/resources/shaders/empty.glslfx": {
+      "size": 1258,
+      "sha256": "ba4f5532dee066e6bb9a33fae311589551159f0086b7cb99ef54dc702cf156aa"
+    },
+    "usd/usdHydra/resources/shaders/shaderDefs.usda": {
+      "size": 6757,
+      "sha256": "1ac9ccb54418938f986bec36a85d0d5f2a3f625c28a8896cd6207d52ad47c609"
+    },
+    "usd/usdHydra/resources/usdHydra/schema.usda": {
+      "size": 7301,
+      "sha256": "c35a9e6bac8148d373c2c6107111ac71262cc1089ee8540ad28d2bb77020a9bb"
+    },
+    "usd/usdImaging/resources/plugInfo.json": {
+      "size": 11521,
+      "sha256": "9a1686dd145f1467b99c61b2b0e256337371d6503b91ad55b6921db39a741bb0"
+    },
+    "usd/usdImagingGL/resources/plugInfo.json": {
+      "size": 575,
+      "sha256": "394b7a6ba7455fc85383c4b6e39f61b53e79280b10f69f4a9ef3f51df3202e63"
+    },
+    "usd/usdImagingGL/resources/shaders/drawMode.glslfx": {
+      "size": 4357,
+      "sha256": "a92b597489b0a6999ed445d752cd367c1d44477db3015ced34f98ae0984c1729"
+    },
+    "usd/usdLux/resources/generatedSchema.usda": {
+      "size": 68183,
+      "sha256": "5cd4e7fe84dd0f84c1801edb8766a413578fccd6c4c5a92fbb8b3449759fe434"
+    },
+    "usd/usdLux/resources/plugInfo.json": {
+      "size": 9577,
+      "sha256": "e9dfbc98ba83a50d4c164289d961574e8a110cb8f1cb245d0f30801573ad0fc5"
+    },
+    "usd/usdLux/resources/usdLux/schema.usda": {
+      "size": 34569,
+      "sha256": "d7aad3cdbddd193323642725faa49ec6abf498a119d6a5fbeb69f2f5ce132a3d"
+    },
+    "usd/usdMedia/resources/generatedSchema.usda": {
+      "size": 10631,
+      "sha256": "f6a5798223378791aa7bf7c640fa14826347874c0a30e958b2be9b75f73bb3d3"
+    },
+    "usd/usdMedia/resources/plugInfo.json": {
+      "size": 901,
+      "sha256": "ff759d83d8391f99abe4581f37b0dfcbe916abe710c70f590578fce59669b2c8"
+    },
+    "usd/usdMedia/resources/usdMedia/schema.usda": {
+      "size": 8406,
+      "sha256": "9cb2c527dd404150eedcba6105e992adf8436315b4f7fc87e54fe618efdf47df"
+    },
+    "usd/usdMtlx/resources/plugInfo.json": {
+      "size": 1182,
+      "sha256": "c060876a2f8c85ebb3eb34b961920cc1651efa68f835675d64c50c9b9842c7d5"
+    },
+    "usd/usdPhysics/resources/generatedSchema.usda": {
+      "size": 41349,
+      "sha256": "c21cb72b830b1a1bea05533cacdfdd8c0a0fa25c8fdfd61f13db5bc923e4d544"
+    },
+    "usd/usdPhysics/resources/plugInfo.json": {
+      "size": 8039,
+      "sha256": "8e391029e131b2d0585424ebe916ad5c48fb94ff1c129825676ec42c572d54aa"
+    },
+    "usd/usdPhysics/resources/usdPhysics/schema.usda": {
+      "size": 28086,
+      "sha256": "675a284faea4bd5312189bf3eec2b540c93098fe9e7567a1858fcdbb91475069"
+    },
+    "usd/usdProc/resources/generatedSchema.usda": {
+      "size": 4615,
+      "sha256": "e40befb8207da911aaf8333123565fefdc7f4f68dcebaf223023b00b7515e14b"
+    },
+    "usd/usdProc/resources/plugInfo.json": {
+      "size": 914,
+      "sha256": "84bbe2afb4204f0c6208033753492b0d25dfb8334321ad74104395ce81c552b5"
+    },
+    "usd/usdProc/resources/usdProc/schema.usda": {
+      "size": 1260,
+      "sha256": "14a45dbf085f796ab94c15e5d8e67eba29daffa3f5950003da00e258dc141e28"
+    },
+    "usd/usdProcImaging/resources/plugInfo.json": {
+      "size": 634,
+      "sha256": "74b30744a4c4b17201aa4975cff72bf220dcfd4edef8e2583484e81be489be34"
+    },
+    "usd/usdRender/resources/generatedSchema.usda": {
+      "size": 21852,
+      "sha256": "677632d7067ec87670b1f2376bba98681f9910b0899ad1a6d9f498187a702b6b"
+    },
+    "usd/usdRender/resources/plugInfo.json": {
+      "size": 3203,
+      "sha256": "e526bea1bd370e49a8cd404f704dcd6555c3ac4d96d8e7f4bbd5a96aebe7c123"
+    },
+    "usd/usdRender/resources/usdRender/schema.usda": {
+      "size": 15246,
+      "sha256": "3ae12dc9c51c7d2cc5a5a9bf8fc0f8b5e39f67a6aa3cad2cc7899b2e3845df82"
+    },
+    "usd/usdRi/resources/generatedSchema.usda": {
+      "size": 2321,
+      "sha256": "fa813e4b3e072fdd1496c2aeec0d84354f1ea8faf7840c385bad4f9c22ec4c7a"
+    },
+    "usd/usdRi/resources/plugInfo.json": {
+      "size": 2128,
+      "sha256": "280a140aa076649e22a1b384abb58a736067224e7350a8565797a018c34f0742"
+    },
+    "usd/usdRi/resources/usdRi/schema.usda": {
+      "size": 4972,
+      "sha256": "f7883903507befc134998200d227c3c23542be1313db717a115bc1e2667cb7f0"
+    },
+    "usd/usdRiImaging/resources/plugInfo.json": {
+      "size": 1290,
+      "sha256": "586d44138d8b111bd0e11cfcd1a647948418502d378330075fc66395707116d3"
+    },
+    "usd/usdShade/resources/generatedSchema.usda": {
+      "size": 15535,
+      "sha256": "753e906451d4eacf7f57814233adf592c7fadccb230f5f178586168eaecb910c"
+    },
+    "usd/usdShade/resources/plugInfo.json": {
+      "size": 6039,
+      "sha256": "68a1d3bd5f701f0b191263b69773b6be16a7a5587fdbda246dcad75af52ed046"
+    },
+    "usd/usdShade/resources/usdShade/schema.usda": {
+      "size": 26605,
+      "sha256": "293b76b44794126657dcbcb6310371026c6d3ee2d94789b9e209c9c997269759"
+    },
+    "usd/usdSkel/resources/generatedSchema.usda": {
+      "size": 17548,
+      "sha256": "1faaf67fcac9c2d8cacb811a28dd6dcc04d1f336362b8fa4ce27c24891d8a2f3"
+    },
+    "usd/usdSkel/resources/plugInfo.json": {
+      "size": 3522,
+      "sha256": "9ff536b8190e3e81680c9dab141086d3ab0932b249376c135b46e17965696af0"
+    },
+    "usd/usdSkel/resources/usdSkel/schema.usda": {
+      "size": 11107,
+      "sha256": "65effc3298dc2d549a87325e9df4aefe23cdcf8b618abba0a6709c428fa86159"
+    },
+    "usd/usdSkelImaging/resources/plugInfo.json": {
+      "size": 921,
+      "sha256": "2d2171df66b3eecd1902bfdbb43b7fb782182efca3b20520d880beb7c500c3fe"
+    },
+    "usd/usdSkelImaging/resources/shaders/skinning.glslfx": {
+      "size": 3095,
+      "sha256": "bd55bb91e07f187871e5e935d4b8e1b2e38d4a719cd01f61da7ada2659ff23d5"
+    },
+    "usd/usdUI/resources/generatedSchema.usda": {
+      "size": 4492,
+      "sha256": "d5472460136611e0d174b74b4589eff2a0cf7a386d0725218ff4d8a34770d312"
+    },
+    "usd/usdUI/resources/plugInfo.json": {
+      "size": 1720,
+      "sha256": "52e826580cd712a67e0201601a9ba0b709312fa074f919a6b43d2dcb72230f19"
+    },
+    "usd/usdUI/resources/usdUI/schema.usda": {
+      "size": 5486,
+      "sha256": "b2afb6ef1f1acf62c8be1c5ea76b02ec945450678a70c0847b3afe39479d50d8"
+    },
+    "usd/usdVol/resources/generatedSchema.usda": {
+      "size": 24445,
+      "sha256": "077043527c9d19fe05d5079833fa66487006c16d210857aaee673b3e99bfa772"
+    },
+    "usd/usdVol/resources/plugInfo.json": {
+      "size": 2520,
+      "sha256": "cbd6f5f030eeae36efc39ac1a58bb4aa699637ae2a14c77bf5022ffa6c8d636c"
+    },
+    "usd/usdVol/resources/usdVol/schema.usda": {
+      "size": 5876,
+      "sha256": "af512ec904d5897dca96559cf72382396aa70fceb1171395173c2731224b8e6b"
+    },
+    "usd/usdVolImaging/resources/plugInfo.json": {
+      "size": 929,
+      "sha256": "1ab442359343d60229bd8d0e522c6d33fb1539e284a7c3d9277fd06ca33eb84a"
+    },
+    "usdGeom.dll": {
+      "size": 1133080,
+      "sha256": "2be5dc7179ebf103ae941044ecc2f68bc31f3b73090257b064be2082fe50af48"
+    },
+    "usdLux.dll": {
+      "size": 341016,
+      "sha256": "4e6784ff5b647d66dc9315d5dcf05c2179f9919609adad03fab37d73c7be40b6"
+    },
+    "usdRender.dll": {
+      "size": 133656,
+      "sha256": "5624a6c1886e979d3de359735b433ace58b614cad2c59400e5f631dc2cca95ef"
+    },
+    "usdShade.dll": {
+      "size": 540696,
+      "sha256": "b104f8687a948057526cdcaaf3df92b655d6b817214f5770a80a9396f5bb3448"
+    },
+    "usdSkel.dll": {
+      "size": 957464,
+      "sha256": "e7dc5383daef0b3465c138ef89053247d3ff11d96368e0674062450d81057195"
+    },
+    "vccorlib140.dll": {
+      "size": 352384,
+      "sha256": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd"
+    },
+    "vcruntime140.dll": {
+      "size": 124544,
+      "sha256": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066"
+    },
+    "vcruntime140_1.dll": {
+      "size": 49792,
+      "sha256": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f"
+    },
+    "vcruntime140_threads.dll": {
+      "size": 38528,
+      "sha256": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    "vt.dll": {
+      "size": 905752,
+      "sha256": "0981175ac33229b3358b8d64d633dbd7616146d51376b60a388aac60870a2564"
+    },
+    "work.dll": {
+      "size": 40984,
+      "sha256": "5c41ada21cd1cdcface40103366fa48a9f6bcb87ebb822efea5c227cd94eda30"
+    },
+    "vulkan-1.dll": {
+      "sha256": "31ee4674b814b712aaa9899005e9d8dde9a07a2e2cb6f6004daa7439e4027948",
+      "size": 687104
+    }
+  },
+  "python": {
+    "version": "3.12.10",
+    "url": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
+    "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8"
+  },
+  "native_build_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+  "code_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+  "vulkan_loader": {
+    "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+    "commit": "fb78607414e154c7a5c01b23177ba719c8a44909",
+    "headers_commit": "409c16be502e39fe70dd6fe2d9ad4842ef2c9a53",
+    "scope": "app_local_standard_loader_not_gpu_driver"
+  },
+  "world_use": "same runtime/dependencies as passed B580 standalone v6; game execution unrun"
+}

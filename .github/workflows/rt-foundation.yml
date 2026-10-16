@@ -85,6 +85,8 @@ jobs:
               for f in pathlib.Path('ci-rt-logs').glob('*.log'): z.write(f,'logs/'+f.name)
               index=pathlib.Path('.research/dist/rt-game-observe/publish-index.json')
               if index.is_file(): z.write(index,'publish-index.json')
+              loader=pathlib.Path('.research/dist/rt-game-observe/rt-world-loader-validation.zip')
+              if loader.is_file(): z.write(loader,'evidence/rt-world-loader-validation.zip')
           subprocess.run([sys.executable,'scripts/publish_rt_build_status.py','--package',str(p)],check=True)
       - name: Publish consumer observation ZIP
         if: success() && steps.native.outcome == 'success'

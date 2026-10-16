@@ -40,7 +40,8 @@ def prepare(output, bridge, upstream, detours):
     if output.exists():
         raise RuntimeError('Preserve existing output; select a new --output directory')
     baseline = json.loads((ROOT / 'integration/rt/baseline.json').read_text())
-    for path, prefix in [(bridge, 'bridge'), (upstream, 'upstream'), (detours, 'detours')]:
+    runtime = ROOT / '.research/sources/rtx-runtime'
+    for path, prefix in [(bridge, 'bridge'), (upstream, 'upstream'), (detours, 'detours'), (runtime, 'runtime')]:
         source_object(path, baseline[prefix + '_repository'], baseline[prefix + '_commit'])
     patch = git(bridge, 'show', baseline['bridge_commit'] + ':patches/l4d2-bridge.patch')
     if hashlib.sha256(patch).hexdigest() != baseline['bridge_patch_sha256']:
@@ -55,17 +56,24 @@ def prepare(output, bridge, upstream, detours):
     base_patch.write_bytes(patch)
     hooks = ROOT / 'integration/rt/bridge-hooks.patch'
     consumer_hooks = ROOT / 'integration/rt/consumer-hooks.patch'
-    for current in [base_patch, hooks, consumer_hooks]:
+    world_hooks = ROOT / 'integration/rt/world-hooks.patch'
+    for current in [base_patch, hooks, consumer_hooks, world_hooks]:
         subprocess.run(['git', '-C', str(output), 'apply', '--check', str(current)], check=True)
         subprocess.run(['git', '-C', str(output), 'apply', str(current)], check=True)
     base_patch.unlink()
-    inputs = {'bridge-hooks.patch': digest(hooks), 'consumer-hooks.patch': digest(consumer_hooks)}
-    for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h']),
-                        ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h'])]:
+    inputs = {'bridge-hooks.patch': digest(hooks), 'consumer-hooks.patch': digest(consumer_hooks), 'world-hooks.patch': digest(world_hooks)}
+    for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h', 'rt_material_decode.h', 'rt_file_hash.h']),
+                        ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h',
+                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_file_hash.h'])]:
         for name in names:
             source = ROOT / 'integration/rt' / name
             shutil.copy2(source, output / 'bridge/src' / role / name)
             inputs[name] = digest(source)
+    api = git(runtime, 'show', baseline['runtime_commit'] + ':public/include/remix/remix_c.h')
+    if hashlib.sha256(api).hexdigest() != '58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e':
+        raise RuntimeError('Pinned world API header differs')
+    (output / 'bridge/src/server/rt_world_remix_c.h').write_bytes(api)
+    inputs['rt_world_remix_c.h'] = hashlib.sha256(api).hexdigest()
     detours_archive = git(detours, 'archive', baseline['detours_commit'])
     destination = output / 'submodules/Detours'
     destination.mkdir(parents=True)

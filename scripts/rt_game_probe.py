@@ -462,6 +462,62 @@ def file_identity(path):
     return {'size': after.st_size, 'sha256': digest.hexdigest()}
 
 
+
+def convar_candidates(process, images):
+    """Read SDK-layout candidates; never equate a data layout with a current ABI."""
+    names=('mat_queue_mode','r_threaded_particles','r_threaded_renderables','r_threadeddetailprops',
+           'cl_threaded_bone_setup','r_threaded_client_shadow_manager')
+    result=[]
+    def string(address):
+        if not address:return None
+        try:
+            data=process.read(address,64)
+            if b'\0' not in data:return None
+            return data.split(b'\0',1)[0].decode('ascii')
+        except (OSError,UnicodeDecodeError):return None
+    def executable(address):return any(image.executable(address-image.base) for image in images.values())
+    for module,image in images.items():
+        for name in names:
+            needles=[]
+            for section in image.sections:
+                data=section['data']
+                if data is None:continue
+                position=0
+                while len(needles)<8:
+                    at=data.find(name.encode()+b'\0',position)
+                    if at<0:break
+                    needles.append(image.base+section['rva']+at);position=at+len(name)+1
+            for address in needles:
+                for section in image.sections:
+                    data=section['data']
+                    if section['name']!='.data' or data is None:continue
+                    position=0;references=0
+                    while references<16:
+                        at=data.find(struct.pack('<I',address),position)
+                        if at<0:break
+                        position=at+4;references+=1;obj=image.base+section['rva']+at-12
+                        if obj%4:continue
+                        try:
+                            raw=process.read(obj,64);table=u32(raw);root=u32(raw,28)
+                            if u32(raw,12)!=address or raw[8]!=1 or not root:continue
+                            if not executable(u32(process.read(table,4))):continue
+                            parent=process.read(root,64)
+                            if u32(parent,28)!=root or u32(parent)!=table:continue
+                            value={'module':module,'name':name,'object_rva':obj-image.base,'root_address':root,
+                                   'sdk_candidate_int':struct.unpack_from('<i',parent,48)[0],
+                                   'sdk_candidate_float':struct.unpack_from('<f',parent,44)[0],
+                                   'sdk_candidate_string':string(u32(parent,36)),
+                                   'sdk_candidate_default':string(u32(parent,32)),
+                                   'root_object_hex':parent.hex(),'current_abi_verified':False,'cvar_written':False}
+                            # JSON must not acquire non-standard NaN/Infinity values.
+                            import math
+                            if not math.isfinite(value['sdk_candidate_float']):value['sdk_candidate_float']=None
+                            result.append(value)
+                        except (OSError,ValueError,struct.error):continue
+    return {'scope':'read_only_sdk_layout_candidates_not_verified_cvar_or_parallel_execution',
+            'sdk_offsets':{'name':12,'parent':28,'default':32,'string':36,'float':44,'int':48},
+            'candidates':result,'source_parallel_preparation':'unrun','cvar_writes':False}
+
 def collect(pid, audit):
     report = {'schema': 1, 'scope': 'read_only_game_binding_candidates', 'execution': 'incomplete',
               'reference_mod_commit': json.loads((ROOT / 'integration/rt/baseline.json').read_text())['compat_commit'],
@@ -510,6 +566,14 @@ def collect(pid, audit):
                     stable &= not image.read_errors
                 except (OSError, ValueError, struct.error) as error:
                     item['error'] = str(error); stable = False
+            optional=[m for m in before if m['name']=='vstdlib.dll']
+            if len(optional)==1:
+                try:
+                    module=optional[0];images['vstdlib.dll']=MappedImage(process.read,module['base'],module['size'])
+                    report['optional_cvar_module']={'name':'vstdlib.dll','file':file_identity(module['path'])}
+                except (OSError,ValueError,struct.error) as error:
+                    report['optional_cvar_module']={'error':str(error)}
+            report['thread_cvar_candidates']=convar_candidates(process,images)
             report['private_global_candidates'] = []
             for reference in audit.get('global_references', []):
                 name = bindings[reference['module']]

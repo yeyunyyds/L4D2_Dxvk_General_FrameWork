@@ -11,7 +11,7 @@ import tempfile
 import urllib.request
 import zipfile
 from package_rt_preflight import python_files, PYTHON_URL
-from rt_draw_suite import TARGETS, SUPPORT_FILES, verify_package
+from rt_draw_suite import TARGETS, SUPPORT_FILES, verify_package, runtime_for_world
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -20,7 +20,7 @@ def sha(data):return hashlib.sha256(data).hexdigest()
 
 
 def observer_files():
-    names=['scripts/'+name for name in ['rt_draw_suite.py','analyze_rt_draw.py','rt_game_probe.py',
+    names=['scripts/'+name for name in ['rt_draw_suite.py','analyze_rt_draw.py','analyze_rt_world.py','rt_game_probe.py',
                                        'rt_preflight.py','rt_visual.py','rt_suite.py']]
     names+=list(SUPPORT_FILES)
     entries={name:(ROOT/name).read_bytes() for name in names}
@@ -34,7 +34,8 @@ def package(source,output,python_package):
     commit=os.environ['GITHUB_SHA']
     with zipfile.ZipFile(ROOT/'.research/dist/rt-foundation-build-status.zip') as z:
         status=json.loads(z.read('status.json'))
-    if status['commit']!=commit or status['native_outcome']!='success' or status['consumer_draw_development_execution']!='pass':
+    if (status['commit']!=commit or status['native_outcome']!='success' or status['consumer_draw_development_execution']!='pass'
+            or status.get('consumer_world_development_execution')!='pass'):
         raise ValueError('Current native paired observer and execution evidence required')
     if output.exists():raise FileExistsError('Preserve previous package directory')
     output.mkdir(parents=True)
@@ -57,17 +58,30 @@ def package(source,output,python_package):
         binaries[target]={'sha256':sha(data),'size':len(data),'machine':hex(machine)}
         entries['payload/'+target]=data
     entries.update(observer_files())
+    entries['integration/rt/world-runtime.json']=(ROOT/'integration/rt/world-runtime.json').read_bytes()
+    entries['README.txt']=(ROOT/'integration/rt/world-pilot-readme.txt').read_bytes()
+    # Preserve the full dependency notices from the exact, already-published
+    # native runtime product. The runtime binaries themselves are not rebuilt.
+    prerequisite=ROOT/'.research/world-prerequisite.zip'
+    if not prerequisite.is_file():
+        prerequisite.write_bytes(subprocess.check_output(['git','show','75e75334074a15f2a912cc91396be2280d3733ec:downloads/rt-preflight-dev.zip'],cwd=ROOT))
+    if sha(prerequisite.read_bytes())!='24867acab96ddae995c68e72b12175d475af2aa08c07900844643a24249e7a34':
+        raise ValueError('Prerequisite notices source differs from verified v6 product')
+    with zipfile.ZipFile(prerequisite) as prior:
+        for name in prior.namelist():
+            if name.startswith('licenses/') or name.startswith('payloads/'):
+                entries[name]=prior.read(name)
     entries['licenses/Remix-LICENSE']=(source/'LICENSE').read_bytes()
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'draw_consumer_observation','build_commit':commit,'bridge_baseline':'1.3.2',
+    manifest={'schema':1,'scope':'selected_static_world_runtime_pilot','profile':'world_pilot','build_commit':commit,'bridge_baseline':'1.3.2',
               'build_id':build_id.decode(),'binaries':binaries,'runtime_dll_replaced':False,
               'private_game_methods_called':False,'game_rt':'unrun','source_queue_execution':'unrun',
               'source_parallel_preparation':'unrun','performance':'unrun',
               'files':{name:{'sha256':sha(data),'size':len(data)} for name,data in entries.items()}}
     entries['draw-observer-manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()
-    primary=output/'rt-game-observe-dev.zip'
+    primary=output/'rt-world-pilot-dev.zip'
     with zipfile.ZipFile(primary,'w',zipfile.ZIP_DEFLATED) as z:
         for name,data in entries.items():z.writestr(name,data)
     with zipfile.ZipFile(primary) as z:
@@ -85,10 +99,28 @@ def package(source,output,python_package):
         process=subprocess.run([str(root/'python/python.exe'),'-I',str(root/'scripts/rt_draw_suite.py'),'--verify-only'],
                                capture_output=True,text=True,timeout=30)
         if process.returncode:raise ValueError('Packaged collector configuration failed: '+process.stderr)
+        catalog=json.loads(entries['integration/rt/world-runtime.json'])
+        cache=ROOT/'.research/world-payload-cache';cache.mkdir(parents=True,exist_ok=True)
+        from rt_preflight import check_file
+        for part in catalog['payloads']:
+            path=cache/part['name']
+            if not check_file(path,part):
+                path.write_bytes(subprocess.check_output(['git','show',part['ref']+':downloads/'+part['name']],cwd=ROOT))
+            if not check_file(path,part):raise ValueError('Immutable runtime dependency differs from pin')
+        runtime=runtime_for_world(root,print,payload_cache=cache)
+        loader=source/'checks-x64/world-loader.exe'
+        evidence=output/'world-loader-evidence'
+        process=subprocess.run([str(loader),str(runtime),str(evidence.resolve())],capture_output=True,text=True,timeout=60)
+        print(process.stdout,flush=True)
+        if process.returncode:raise ValueError('Native world loader initialization failed: '+process.stderr)
+        with zipfile.ZipFile(output/'rt-world-loader-validation.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for path in evidence.rglob('*'):
+                if path.is_file():z.write(path,path.relative_to(evidence))
     validation={'schema':1,'commit':commit,'package_validation':'pass','launcher':primary.name,'payloads':[],
                 'primary_sha256':sha(primary.read_bytes()),'primary_size':primary.stat().st_size,
                 'packaged_python_isolated_entry':'pass','packaged_collector_configuration':'pass',
-                'native_consumer_fixture_execution':'pass',
+                'native_consumer_fixture_execution':'pass','pinned_runtime_dependency_load':'pass',
+                'pinned_native_loader_api_initialization':'pass',
                 'game_rt':'unrun','actual_game_observation':'unrun'}
     (output/'publish-index.json').write_text(json.dumps(validation,indent=2)+'\n')
     print(json.dumps(validation,indent=2))

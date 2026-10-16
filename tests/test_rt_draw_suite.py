@@ -51,6 +51,15 @@ assert result['execution']=='incomplete'
         with self.assertRaisesRegex(ValueError,'checksum mismatch'):
             suite.verify_package(self.root)
 
+    def test_world_catalog_is_required_and_verified_before_install_or_download(self):
+        path=self.root/'draw-observer-manifest.json';manifest=json.loads(path.read_text());manifest['profile']='world_pilot'
+        suite.save(path,manifest)
+        with self.assertRaisesRegex(ValueError,'catalog missing'):suite.verify_package(self.root)
+        name='integration/rt/world-runtime.json'
+        data=(Path(suite.__file__).resolve().parents[1]/name).read_bytes()
+        (self.root/name).write_bytes(data);manifest['files'][name]={'sha256':sha(data)};suite.save(path,manifest)
+        self.assertEqual(suite.verify_package(self.root)['profile'],'world_pilot')
+
     def trace(self):
         directory=self.root/'results';directory.mkdir()
         events=draw_cases.DrawObservation().fixture()
@@ -112,6 +121,35 @@ class InstallTests(unittest.TestCase):
         (self.game/suite.TARGETS[0]).write_bytes(b'user update')
         with self.assertRaisesRegex(ValueError,'changed'):suite.restore(self.root)
         self.assertEqual((self.game/suite.TARGETS[0]).read_bytes(),b'user update')
+
+    def test_new_package_inherits_original_backup_instead_of_backing_up_the_observer(self):
+        suite.install(self.root,self.game,self.manifest)
+        other=self.root.parent/'new-world-package';other.mkdir()
+        manifest={'binaries':{}}
+        for i,name in enumerate(suite.TARGETS):
+            path=other/'payload'/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b'world'+bytes([i]))
+            manifest['binaries'][name]={'sha256':suite.digest(path)}
+        receipt=suite.install(other,self.game,manifest)
+        for i,name in enumerate(suite.TARGETS):self.assertEqual(Path(receipt['files'][name]['backup']).read_bytes(),b'old'+bytes([i]))
+        suite.restore(other)
+        for i,name in enumerate(suite.TARGETS):self.assertEqual((self.game/name).read_bytes(),b'old'+bytes([i]))
+
+    def test_failed_upgrade_rolls_back_previous_observer_and_can_restore_original(self):
+        suite.install(self.root,self.game,self.manifest)
+        other=self.root.parent/'failed-world-package';other.mkdir();manifest={'binaries':{}}
+        for i,name in enumerate(suite.TARGETS):
+            path=other/'payload'/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b'world'+bytes([i]))
+            manifest['binaries'][name]={'sha256':suite.digest(path)}
+        original=suite.replace_copy;calls=[]
+        def locked(source,target):
+            calls.append(target)
+            if len(calls)==2:raise PermissionError('fixture locked second upgrade file')
+            return original(source,target)
+        with patch.object(suite,'replace_copy',side_effect=locked):
+            with self.assertRaises(PermissionError):suite.install(other,self.game,manifest)
+        for i,name in enumerate(suite.TARGETS):self.assertEqual((self.game/name).read_bytes(),b'new'+bytes([i]))
+        suite.restore(other)
+        for i,name in enumerate(suite.TARGETS):self.assertEqual((self.game/name).read_bytes(),b'old'+bytes([i]))
 
     def test_isolated_launcher_can_import_its_shipped_helpers(self):
         p=subprocess.run([sys.executable,'-I',str(Path(suite.__file__)),'--help'],capture_output=True,text=True)

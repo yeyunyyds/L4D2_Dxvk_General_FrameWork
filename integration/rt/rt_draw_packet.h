@@ -1,11 +1,12 @@
 #pragma once
 #include "rt_protocol.h"
+#include "rt_material_decode.h"
 
 // Consumer observations deliberately have no Source frame/view classification.
 // They travel INSIDE the physical Draw RPC, never in a preceding side channel.
 namespace ldb_rt::draw_observe {
-constexpr uint32_t kDrawMagic = 0x314f444c, kDrawVersion = 1;
-constexpr size_t kSnapshotBytes = 264;
+constexpr uint32_t kDrawMagic = 0x314f444c, kDrawVersion = 2;
+constexpr size_t kSnapshotV1Bytes = 264, kSnapshotBytes = 344;
 enum class Status : uint32_t { Valid = 1, ModuleMissing, VersionMismatch, ReadFailed,
   StackInvalid, ChangedDuringRead, InvalidMatrices, NotSampled };
 struct Snapshot {
@@ -16,6 +17,7 @@ struct Snapshot {
   uint32_t material = 0, materialTable = 0;
   std::array<uint32_t, 4> viewport{};
   float minZ = 0, maxZ = 1;
+  material_decode::Info materialInfo;
 };
 inline Bytes pack(const Snapshot& s) {
   Writer w; w.u32(kDrawMagic); w.u32(kDrawVersion);
@@ -23,13 +25,17 @@ inline Bytes pack(const Snapshot& s) {
   for (const auto* matrix : {&s.world, &s.view, &s.projection}) { for (float x : *matrix) { w.f32(x); } }
   w.u32(s.material); w.u32(s.materialTable);
   for (auto x : s.viewport) { w.u32(x); } w.f32(s.minZ); w.f32(s.maxZ);
+  w.u64(s.materialInfo.format); w.u32(s.materialInfo.flags); w.u32(0);
+  for (char c : s.materialInfo.shader) { w.data.push_back(uint8_t(c)); }
   return w.data;
 }
 inline bool unpack(const void* data, size_t size, Snapshot& s) noexcept {
-  if (!data || size != kSnapshotBytes) { return false; }
+  if (!data || (size != kSnapshotBytes && size != kSnapshotV1Bytes)) { return false; }
   try {
     Reader r{static_cast<const uint8_t*>(data), size};
-    if (r.u32() != kDrawMagic || r.u32() != kDrawVersion) { return false; }
+    if (r.u32() != kDrawMagic) { return false; }
+    const auto version = r.u32();
+    if (!((version == 1 && size == kSnapshotV1Bytes) || (version == 2 && size == kSnapshotBytes))) { return false; }
     Snapshot v; v.session = r.u64(); v.ordinal = r.u64(); v.ticks = r.u64(); v.thread = r.u32();
     const auto status = r.u32();
     if (!v.session || !v.ordinal || !v.thread || status < 1 || status > 8) { return false; }
@@ -37,6 +43,14 @@ inline bool unpack(const void* data, size_t size, Snapshot& s) noexcept {
     for (auto* matrix : {&v.world, &v.view, &v.projection}) { for (float& x : *matrix) { x = r.f32(); } }
     v.material = r.u32(); v.materialTable = r.u32();
     for (auto& x : v.viewport) { x = r.u32(); } v.minZ = r.f32(); v.maxZ = r.f32();
+    if (version == 2) {
+      v.materialInfo.format = r.u64(); v.materialInfo.flags = r.u32();
+      if (r.u32() || v.materialInfo.flags & ~3u) { return false; }
+      if (r.offset > r.size || r.size - r.offset < v.materialInfo.shader.size()) { return false; }
+      std::memcpy(v.materialInfo.shader.data(), r.data + r.offset, v.materialInfo.shader.size()); r.offset += v.materialInfo.shader.size();
+      if (v.materialInfo.shader.back() || ((v.materialInfo.flags & material_decode::ShaderRead) &&
+          (!(v.materialInfo.flags & material_decode::FormatRead) || !v.materialInfo.shader[0]))) { return false; }
+    }
     if (!r.end()) { return false; }
     if (v.status == Status::Valid && (!invertible(v.view) || !invertible(v.projection) ||
         !v.viewport[2] || !v.viewport[3] || v.viewport[2] > 32768 || v.viewport[3] > 32768 ||

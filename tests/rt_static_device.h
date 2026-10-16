@@ -17,12 +17,12 @@ struct Declaration final : IDirect3DVertexDeclaration9 {
   ULONG refs = 1;
   DWORD fvf = 0;
   HRESULT result = S_OK;
-  std::array<D3DVERTEXELEMENT9, 5> elements{{
+  std::vector<D3DVERTEXELEMENT9> elements{
     {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
     {0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0},
     {0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
     {0, 32, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1}, D3DDECL_END()
-  }};
+  };
   HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, void** out) override { *out = nullptr; return E_NOINTERFACE; }
   ULONG STDMETHODCALLTYPE AddRef() override { return ++refs; }
   ULONG STDMETHODCALLTYPE Release() override { return --refs; }
@@ -30,7 +30,7 @@ struct Declaration final : IDirect3DVertexDeclaration9 {
   HRESULT STDMETHODCALLTYPE GetDeclaration(D3DVERTEXELEMENT9* out, UINT* count) override {
     if (FAILED(result)) { return result; }
     if (*count < elements.size()) { return E_INVALIDARG; }
-    *count = UINT(elements.size()); std::memcpy(out, elements.data(), sizeof(elements)); return S_OK;
+    *count = UINT(elements.size()); std::memcpy(out, elements.data(), elements.size() * sizeof(elements[0])); return S_OK;
   }
 };
 struct Buffer final : IDirect3DVertexBuffer9 {
@@ -88,6 +88,7 @@ struct Graphics {
     return S_OK;
   }
   HRESULT GetViewport(D3DVIEWPORT9* out) { *out = viewport; return operation(false); }
+  HRESULT GetRenderTarget(DWORD, IDirect3DSurface9** out) { *out = nullptr; return E_NOTIMPL; }
   HRESULT GetRenderState(D3DRENDERSTATETYPE type, DWORD* out) {
     switch (type) {
     case D3DRS_ALPHABLENDENABLE: *out = alpha; break;

@@ -1,6 +1,7 @@
 #pragma once
 #include "rt_draw_packet.h"
 #include "rt_draw_request.h"
+#include "rt_file_hash.h"
 #include <bcrypt.h>
 #include <d3d9.h>
 #include <mutex>
@@ -13,30 +14,16 @@ struct LocalMemory {
     return address && uint64_t(address) + bytes <= UINT32_MAX &&
       ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), output, bytes, &got) && got == bytes;
   }
-};
-inline std::string fileSha256(const fs::path& path) {
-  BCRYPT_ALG_HANDLE algorithm = nullptr; BCRYPT_HASH_HANDLE hash = nullptr;
-  struct Cleanup {
-    BCRYPT_ALG_HANDLE& a; BCRYPT_HASH_HANDLE& h;
-    ~Cleanup() { if (h) { BCryptDestroyHash(h); } if (a) { BCryptCloseAlgorithmProvider(a, 0); } }
-  } cleanup{algorithm, hash};
-  if (BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) < 0) { return {}; }
-  DWORD objectSize = 0, got = 0;
-  if (BCryptGetProperty(algorithm, BCRYPT_OBJECT_LENGTH, reinterpret_cast<PUCHAR>(&objectSize), sizeof(objectSize), &got, 0) < 0) { return {}; }
-  std::vector<unsigned char> object(objectSize);
-  if (BCryptCreateHash(algorithm, &hash, object.data(), objectSize, nullptr, 0, 0) < 0) { return {}; }
-  std::ifstream input(path, std::ios::binary); if (!input) { return {}; }
-  unsigned char block[65536];
-  while (input) {
-    input.read(reinterpret_cast<char*>(block), sizeof(block));
-    if (input.gcount() && BCryptHashData(hash, block, ULONG(input.gcount()), 0) < 0) { return {}; }
+  bool code(uint32_t address, void* output, size_t bytes) const noexcept {
+    MEMORY_BASIC_INFORMATION page{};
+    if (!VirtualQuery(reinterpret_cast<const void*>(uintptr_t(address)), &page, sizeof(page)) ||
+        page.Type != MEM_IMAGE || page.State != MEM_COMMIT || (page.Protect & (PAGE_GUARD | PAGE_NOACCESS)) ||
+        !(page.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) ||
+        uint64_t(address) + bytes > reinterpret_cast<uintptr_t>(page.BaseAddress) + page.RegionSize) { return false; }
+    return read(address, output, bytes);
   }
-  if (!input.eof()) { return {}; }
-  unsigned char bytes[32]{};
-  if (BCryptFinishHash(hash, bytes, sizeof(bytes), 0) < 0) { return {}; }
-  static const char hex[] = "0123456789abcdef"; std::string result;
-  for (auto c : bytes) { result += hex[c >> 4]; result += hex[c & 15]; } return result;
-}
+};
+using ldb_rt_file::fileSha256;
 
 // Data-only decoder for the exact shaderapivk.dll uploaded in the v6 run.
 // It never calls GetBufferedState, GetBoundMaterial or any unverified method.
@@ -75,6 +62,9 @@ public:
     uint32_t before = 0, after = 0;
     if (!memory.read(api + 0x2bd4, &before, 4)) { return Status::ReadFailed; }
     auto status = matrices(memory, api, s);
+    if (status == Status::Valid && before) { s.materialInfo = material_decode::decode(memory, before, [&] {
+      uint32_t tableValue = 0; memory.read(before, &tableValue, 4); return tableValue;
+    }()); }
     if (!memory.read(api + 0x2bd4, &after, 4)) { return Status::ReadFailed; }
     if (before != after) { return Status::ChangedDuringRead; }
     s.material = before;
@@ -119,7 +109,14 @@ class Collector {
       materialLog << "{\"slot\":" << slot << ",\"address\":" << (tableRead ? table[slot] : 0)
         << ",\"code\":\"" << (read ? bytesHex(code, sizeof(code)) : "") << "\"}";
     }
-    materialLog << "],\"method_calls_executed\":false}\n" << std::flush;
+    unsigned char shaderObject[128]{}, shaderCode[128]{};
+    const auto& info = s.materialInfo;
+    const bool shaderRead = info.shaderObject && memory.read(info.shaderObject, shaderObject, sizeof(shaderObject));
+    const bool codeRead = info.shaderMethod && memory.code(info.shaderMethod, shaderCode, sizeof(shaderCode));
+    materialLog << "],\"vertex_format\":" << info.format << ",\"decode_flags\":" << info.flags
+      << ",\"shader_name\":\"" << info.shader.data() << "\",\"shader_object\":\"" << (shaderRead ? bytesHex(shaderObject, sizeof(shaderObject)) : "")
+      << "\",\"shader_method\":" << info.shaderMethod << ",\"shader_code\":\"" << (codeRead ? bytesHex(shaderCode, sizeof(shaderCode)) : "")
+      << "\",\"method_calls_executed\":false}\n" << std::flush;
   }
 public:
   template<class Device> Bytes snapshot(Device* device) noexcept {
@@ -140,7 +137,7 @@ public:
           if (pressed && !down && request.session && !finished) { active = true; startedAt = now; }
           down = pressed;
         }
-        if (active && (now - startedAt > 60000 || fs::exists(doneFile(request)))) { active = false; finished = true; }
+        if (active && (now - startedAt > (request.world ? 300000u : 60000u) || (!request.world && fs::exists(doneFile(request))))) { active = false; finished = true; }
       }
       if (!active) { return {}; }
       Snapshot s; s.session = request.session; s.ordinal = ++ordinal; s.thread = GetCurrentThreadId();

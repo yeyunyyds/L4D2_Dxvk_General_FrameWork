@@ -9,6 +9,38 @@ import analyze_rt_draw as check
 
 
 class DrawObservation(unittest.TestCase):
+    def world_fixture(self):
+        identity=[float(i%5==0) for i in range(16)]
+        projection=[1.,0,0,0,0,1.,0,0,0,0,-1.0001,-1.,0,0,-7.0007,0]
+        declaration=bytes.fromhex('000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000')
+        snapshot=check.SNAPSHOT.pack(0x314f444c,2,42,1,50,11,1,*(identity*2+projection),0x1000,0x2000,0,0,640,360,0,1)
+        material=check.MATERIAL.pack(0x480003,3,0,b'LightmappedGeneric_DX9')
+        state=check.PIPELINE.pack(0,0,48,1,0,0,1,1,0,0,640,360,0,1,640,360,113,7)+declaration
+        events=[(0,0,struct.pack('<IQQQII',2,42,7,10000000,240,30))]
+        for i in range(240):
+            changed=bytearray(snapshot);struct.pack_into('<Q',changed,16,i+1)
+            converted=int(i>=30)
+            events.extend([(1,i*2+1,bytes(changed)+material+struct.pack('<8I',2,4,0,0,3,0,1,0)+state),
+                           (6,i*2+1,struct.pack('<8I',8 if converted else 1,9 if converted else 0,0,0,0,converted,1,0)),
+                           (2,i*2+1,struct.pack('<I',0)),(3,i*2+2,struct.pack('<I',0))])
+        events.append((8,0,struct.pack('<6QI',240,240,240,0,0,0,0)))
+        return events
+
+    def test_v2_world_control_and_exact_padded_declaration(self):
+        r=self.inspect(self.world_fixture())
+        self.assertTrue(r['pass'],r['errors'])
+        self.assertEqual(r['world_normalization'],'pass')
+        self.assertEqual(r['world_conversion']['converted'],210)
+        self.assertEqual(r['game_rt'],'unrun')
+
+    def test_world_report_cannot_hide_bad_uid_control_or_unsafe_material(self):
+        original=self.world_fixture()
+        wrong=original.copy();wrong[2]=(6,999,wrong[2][2])
+        control=original.copy();control[2]=(6,control[2][1],struct.pack('<8I',8,9,0,0,0,1,1,0))
+        material=original.copy();at=1+30*4;e,u,p=material[at];data=bytearray(p)
+        struct.pack_into('<Q',data,check.SNAPSHOT.size,0x80407);material[at]=(e,u,bytes(data))
+        for changed in (wrong,control,material):self.assertFalse(self.inspect(changed)['pass'])
+
     def fixture(self):
         matrix=[float(i%5==0) for i in range(16)]
         snapshot=check.SNAPSHOT.pack(0x314f444c,1,42,1,50,11,1,*(matrix*3),0x1000,0x2000,0,0,640,360,0,1)

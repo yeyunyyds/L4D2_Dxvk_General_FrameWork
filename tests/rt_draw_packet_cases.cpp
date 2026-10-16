@@ -15,6 +15,7 @@ struct Memory {
     if (changeTop && reads == 12) { const uint32_t changed = 1; std::memcpy(data.data() + 0x201c, &changed, 4); }
     return true;
   }
+  bool code(uint32_t address, void* out, size_t bytes) { return read(address, out, bytes); }
   template<class T> void put(size_t at, const T& v) { std::memcpy(data.data() + at, &v, sizeof(v)); }
 };
 Memory fixture() {
@@ -36,7 +37,9 @@ int main() {
     const auto bytes = pack(s); require(bytes.size() == kSnapshotBytes,"wire size");
     Snapshot copy; require(unpack(bytes.data(),bytes.size(),copy) && copy.world == s.world && copy.view == s.view,"wire roundtrip");
     require(!unpack(bytes.data(),bytes.size()-1,copy),"reject truncated snapshot");
-    auto malformed = bytes; malformed[4] = 2; require(!unpack(malformed.data(),malformed.size(),copy),"reject version");
+    auto malformed = bytes; malformed[4] = 3; require(!unpack(malformed.data(),malformed.size(),copy),"reject version");
+    auto legacy = bytes; legacy.resize(kSnapshotV1Bytes); legacy[4] = 1;
+    require(unpack(legacy.data(), legacy.size(), copy) && copy.materialInfo.flags == 0, "preserve version1 trace compatibility");
     s.projection.fill(0); const auto singular = pack(s);
     require(!unpack(singular.data(),singular.size(),copy),"valid flag cannot hide singular camera");
     for (unsigned failure = 1; failure <= 18; ++failure) {
@@ -48,6 +51,28 @@ int main() {
     m = fixture(); m.put(0x3100,std::numeric_limits<float>::quiet_NaN());
     require(matrices(m,0x1000,s) == Status::InvalidMatrices,"reject nonfinite view");
     m = fixture(); require(matrices(m,UINT32_MAX-4,s) == Status::ReadFailed,"bound address overflow");
+    {
+      Memory data;
+      data.put(0x4000, uint32_t(0x5000)); data.put(0x4038, uint64_t(0x480003)); data.put(0x4014, uint32_t(0x7000));
+      data.put(0x5050, uint32_t(0x6000)); data.put(0x50c4, uint32_t(0x6100));
+      const uint8_t format[] = {0x8b,0x41,0x38,0x8b,0x51,0x3c,0xc3};
+      const uint8_t getter[] = {0x83,0x79,0x14,0x00,0x74,0x09,0x8b,0x49,0x14,0x8b,0x01,0x8b,0x10,0xff,0xe2};
+      std::memcpy(data.data.data()+0x6000,format,sizeof(format)); std::memcpy(data.data.data()+0x6100,getter,sizeof(getter));
+      data.put(0x7000, uint32_t(0x7200)); data.put(0x7200, uint32_t(0x7300));
+      data.data[0x7300]=0xb8; data.put(0x7301,uint32_t(0x7400)); data.data[0x7305]=0xc3;
+      std::memcpy(data.data.data()+0x7400,"LightmappedGeneric_DX9",22);
+      const auto decoded = material_decode::decode(data,0x4000,0x5000);
+      require(decoded.flags==3 && decoded.format==0x480003 && material_decode::worldShader(decoded.shader),"bounded shader literal decoder");
+      const uint8_t fieldBody[]={0x8b,0x41,0x04,0xc3,0,0,0,0};
+      std::memcpy(data.data.data()+0x7300,fieldBody,sizeof(fieldBody));data.put(0x7004,uint32_t(0x7400));
+      require(material_decode::decode(data,0x4000,0x5000).flags==3,"bounded shader field decoder");
+      data.data[0x7300]=0xe8;
+      require(material_decode::decode(data,0x4000,0x5000).flags==1,"never execute or guess a call instruction");
+      data.data[0x7300]=0xb8;data.put(0x7301,uint32_t(0x7400));data.data[0x7305]=0xc3;std::memset(data.data.data()+0x7400,'A',64);
+      const auto tooLong=material_decode::decode(data,0x4000,0x5000);
+      require(tooLong.flags==1 && tooLong.shader[0]==0,"reject truncated classification string");
+      require(material_decode::decode(data,UINT32_MAX-4,0x5000).flags==0,"bound material address overflow");
+    }
     std::cout << "RT Draw packet and bounded matrix observation: PASS; game ABI/queue/RT unrun\n";
     return 0;
   } catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }

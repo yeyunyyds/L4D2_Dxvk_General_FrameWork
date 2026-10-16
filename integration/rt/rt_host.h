@@ -124,6 +124,18 @@ inline void draw(uint64_t device, uint32_t uid) noexcept { (void)takeDraw(device
 template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t uid, Device* graphics,
     D3DPRIMITIVETYPE type, bool userMemory, Draw&& physicalDraw) noexcept {
   try {
+    const auto consumer = ldb_rt::draw_observe::recorders().find(device);
+    ldb_rt::draw_observe::Snapshot current;
+    bool control = false;
+    if (consumer != ldb_rt::draw_observe::recorders().end() && consumer->second->take(uid, current, control)) {
+      ldb_rt::consumer_world::Decision decision;
+      ldb_rt::static_draw::Report report;
+      bool called = false; HRESULT physical = E_ABORT;
+      const auto result = ldb_rt::consumer_world::execute(graphics, current, type, userMemory,
+        ldb_rt::world_runtime::state().active, control, [&] { called = true; physical = physicalDraw(); return physical; }, decision, report);
+      consumer->second->conversion(uid, decision, report, called, physical);
+      return result;
+    }
     auto snapshot = takeDraw(device, uid);
     const auto it = observers().find(device);
     const bool enabled = it != observers().end() && it->second->staticDiagnostic && !it->second->failed;

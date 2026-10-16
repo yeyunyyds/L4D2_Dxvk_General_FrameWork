@@ -25,6 +25,13 @@ try {
     $drawNative = Join-Path $repo 'tests/rt_draw_native_cases.cpp'
     $include = Join-Path $repo 'integration/rt'
     $queueCommand = ''
+    $worldLoaderCommand = ''
+    if ($arch -eq 'x64') {
+      $worldCases = Join-Path $repo 'tests/rt_world_loader_cases.cpp'
+      $worldRuntime = Join-Path $repo 'integration/rt/rt_world_runtime.cpp'
+      $worldApiDir = Join-Path $sourcePath 'bridge/src/server'
+      $worldLoaderCommand = "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$worldApiDir`" `"$worldCases`" `"$worldRuntime`" /Fe:`"$dir/world-loader.exe`" /Fo:`"$dir/`" /link bcrypt.lib user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; "
+    }
     if ($arch -eq 'x86') {
       # The game SDK is x86. Host is x64; do not invent an x64 game ABI.
       $sdk = (Resolve-Path (Join-Path $repo '.research/rt-sdk-source')).Path
@@ -53,7 +60,7 @@ try {
       "& `"$dir/static-draw.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$hostCases`" /Fe:`"$dir/host.exe`" /Fo:`"$dir/host.obj`" /link uuid.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "`$env:LDB_RT_LOG_DIR = '$dir/trace'; & `"$dir/host.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
-      $queueCommand +
+      $queueCommand + $worldLoaderCommand +
       "& meson setup _rtRelease_$arch --buildtype release --backend ninja; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "Copy-Item Directory.Build.Props _rtRelease_$arch; & meson compile -C _rtRelease_$arch; exit `$LASTEXITCODE"
     Push-Location (Join-Path $sourcePath 'bridge')

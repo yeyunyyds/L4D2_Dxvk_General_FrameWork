@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from rt_game_probe import MappedImage, WindowsProcess, collect, file_identity, global_evidence, matches, pattern_bytes, unique_modules, select_renderer
+from rt_game_probe import MappedImage, WindowsProcess, collect, file_identity, global_evidence, matches, pattern_bytes, unique_modules, select_renderer, convar_candidates
 
 BASE = 0x12340000
 
@@ -61,6 +61,24 @@ def image(data, missing=()):
 
 
 class ProbeCases(unittest.TestCase):
+    def test_thread_cvar_data_is_only_a_candidate_and_rejects_non_root_parent(self):
+        data=fixture();data[0x3200:0x320f]=b'mat_queue_mode\0';data[0x3300:0x3302]=b'2\0'
+        put32(data,0x3400,BASE+0x2404);data[0x3408]=1
+        put32(data,0x340c,BASE+0x3200);put32(data,0x341c,BASE+0x3400,BASE+0x3300,BASE+0x3300)
+        struct.pack_into('<f',data,0x342c,2.);put32(data,0x3430,2)
+        class Reader:
+            def read(self,address,size):
+                at=address-BASE
+                if at<0 or at+size>len(data):raise OSError('fixture range')
+                return bytes(data[at:at+size])
+        result=convar_candidates(Reader(),{'materialsystem.dll':image(data)})
+        self.assertEqual(len(result['candidates']),1)
+        self.assertEqual(result['candidates'][0]['sdk_candidate_int'],2)
+        self.assertFalse(result['candidates'][0]['current_abi_verified'])
+        self.assertFalse(result['cvar_writes'])
+        put32(data,0x341c,BASE+0x3450)
+        self.assertEqual(convar_candidates(Reader(),{'materialsystem.dll':image(data)})['candidates'],[])
+
     def test_renderer_selection_rejects_two_loaded_renderers_and_conflicting_aliases(self):
         vk = {'name': 'shaderapivk.dll', 'path': 'game/shaderapivk.dll', 'base': BASE}
         dx = {'name': 'shaderapidx9.dll', 'path': 'game/shaderapidx9.dll', 'base': BASE + 0x10000}

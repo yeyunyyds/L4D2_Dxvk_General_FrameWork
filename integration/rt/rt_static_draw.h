@@ -65,25 +65,19 @@ template<class Device> class Scope final {
     }
     return true;
   }
-public:
-  Scope(Device* device, const DrawSnapshot* snapshot, D3DPRIMITIVETYPE type,
-        bool userMemory, bool enabled) noexcept : m_device(device) {
-    if (!enabled) { return; }
-    if (!snapshot) { m_report.code = Code::Unlabelled; return; }
-    if (snapshot->draw.categories != kStaticOpaqueWorld || snapshot->draw.modifiers ||
-        snapshot->camera.kind != ViewKind::Main) { m_report.code = Code::NotStaticWorld; return; }
+  void initialize(const D3DMATRIX& world, const std::array<float, 16>& viewValues,
+      const std::array<float, 16>& projectionValues, uint32_t width, uint32_t height,
+      D3DPRIMITIVETYPE type, bool userMemory) noexcept {
     if (userMemory || (type != D3DPT_TRIANGLELIST && type != D3DPT_TRIANGLESTRIP)) {
       m_report.code = Code::Topology; return;
     }
-    const auto& camera = snapshot->camera;
-    if (!device || !camera.width || !camera.height || !invertible(camera.view) || !invertible(camera.projection) ||
-        !std::isfinite(camera.nearPlane) || !std::isfinite(camera.farPlane) ||
-        camera.nearPlane <= 0 || camera.farPlane <= camera.nearPlane) {
+    if (!m_device || !width || !height || !invertible(viewValues) || !invertible(projectionValues)) {
       m_report.code = Code::Camera; return;
     }
-    for (float value : snapshot->draw.transform) {
+    for (const auto& row : world.m) { for (float value : row) {
       if (!std::isfinite(value)) { m_report.code = Code::Camera; return; }
-    }
+    } }
+    auto* device = m_device;
     D3DVIEWPORT9 viewport{};
     DWORD alpha = 0, test = 0, depthWrite = 0, depth = 0;
     if (!capture(device->GetViewport(&viewport)) ||
@@ -92,7 +86,7 @@ public:
         !capture(device->GetRenderState(D3DRS_ZWRITEENABLE, &depthWrite)) ||
         !capture(device->GetRenderState(D3DRS_ZENABLE, &depth))) { return; }
     if (alpha || test || !depthWrite || depth != D3DZB_TRUE ||
-        viewport.Width != camera.width || viewport.Height != camera.height) {
+        viewport.Width != width || viewport.Height != height || viewport.MinZ != 0 || viewport.MaxZ != 1) {
       m_report.code = Code::Pipeline; return;
     }
     if (!capture(device->GetVertexDeclaration(&m_declaration.value))) { return; }
@@ -107,14 +101,21 @@ public:
       {0, 32, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1},
       D3DDECL_END()
     };
-    // Reference mod: Source format 0x480003 (LightmappedGeneric world),
-    // XYZ | NORMAL | TEX2, stride 40. Do not apply its decal/sprite formats.
-    if (count != sizeof(expected) / sizeof(expected[0]) ||
-        std::memcmp(elements, expected, sizeof(expected))) { m_report.code = Code::Layout; return; }
+    const D3DVERTEXELEMENT9 observed[] = {
+      expected[0], expected[1], expected[2], expected[3],
+      {2, 0, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 1},
+      {2, 16, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 1}, D3DDECL_END()
+    };
+    const bool originalLayout = count == 5 && !std::memcmp(elements, expected, sizeof(expected));
+    const bool observedLayout = count == 7 && !std::memcmp(elements, observed, sizeof(observed));
+    if (!originalLayout && !observedLayout) { m_report.code = Code::Layout; return; }
     UINT offset = 0, stride = 0, frequency = 0;
     if (!capture(device->GetStreamSource(0, &m_buffer.value, &offset, &stride)) ||
         !capture(device->GetStreamSourceFreq(0, &frequency))) { return; }
-    if (!m_buffer.value || stride != 40 || frequency != 1 || offset % 4) {
+    // FVF describes the first 40 bytes, while stream stride can include padding.
+    // No stream binding or vertex data is rewritten. Auxiliary stream 2 is not
+    // referenced by this FVF and is restored via the original declaration.
+    if (!m_buffer.value || (stride != 40 && stride != 48) || (observedLayout && stride != 48) || frequency != 1 || offset % 4) {
       m_report.code = Code::Layout; return;
     }
     if (!capture(device->GetVertexShader(&m_shader.value)) ||
@@ -122,9 +123,8 @@ public:
         !capture(device->GetTransform(D3DTS_VIEW, &m_view)) ||
         !capture(device->GetTransform(D3DTS_PROJECTION, &m_projection))) { return; }
     D3DMATRIX view{}, projection{};
-    std::memcpy(&view, camera.view.data(), sizeof(view));
-    std::memcpy(&projection, camera.projection.data(), sizeof(projection));
-    const auto world = worldMatrix(snapshot->draw.transform);
+    std::memcpy(&view, viewValues.data(), sizeof(view));
+    std::memcpy(&projection, projectionValues.data(), sizeof(projection));
     // A failing setter may already have mutated state. Roll back all saved
     // fields, continue on restore errors, and never depend on cached globals.
     m_dirty = true;
@@ -134,6 +134,28 @@ public:
         !set(device->SetTransform(D3DTS_VIEW, &view)) ||
         !set(device->SetTransform(D3DTS_PROJECTION, &projection))) { return; }
     m_report.code = Code::Applied; m_report.converted = true;
+  }
+public:
+  // Consumer candidate input has no invented Source frame, view ID or category.
+  struct ConsumerInput {
+    D3DMATRIX world{};
+    std::array<float, 16> view{}, projection{};
+    uint32_t width = 0, height = 0;
+  };
+  Scope(Device* device, const ConsumerInput& input, D3DPRIMITIVETYPE type, bool userMemory) noexcept : m_device(device) {
+    initialize(input.world, input.view, input.projection, input.width, input.height, type, userMemory);
+  }
+  Scope(Device* device, const DrawSnapshot* snapshot, D3DPRIMITIVETYPE type,
+        bool userMemory, bool enabled) noexcept : m_device(device) {
+    if (!enabled) { return; }
+    if (!snapshot) { m_report.code = Code::Unlabelled; return; }
+    if (snapshot->draw.categories != kStaticOpaqueWorld || snapshot->draw.modifiers ||
+        snapshot->camera.kind != ViewKind::Main) { m_report.code = Code::NotStaticWorld; return; }
+    const auto& camera = snapshot->camera;
+    if (!std::isfinite(camera.nearPlane) || !std::isfinite(camera.farPlane) ||
+        camera.nearPlane <= 0 || camera.farPlane <= camera.nearPlane) { m_report.code = Code::Camera; return; }
+    initialize(worldMatrix(snapshot->draw.transform), camera.view, camera.projection,
+               camera.width, camera.height, type, userMemory);
   }
   Scope(const Scope&) = delete;
   Scope& operator=(const Scope&) = delete;
