@@ -32,9 +32,27 @@ int wmain(int argc, wchar_t** argv) {
     const auto center = (kHeight / 2) * pitch + (kWidth / 2) * 4;
     pixels[center] = 10; pixels[center + 1] = 30; pixels[center + 2] = 200;
     D3DLOCKED_RECT locked{INT(pitch), pixels.data()};
-    const auto stats = writeImage(locked, output / "independent-color.ppm");
-    require(stats.hasSignal() && stats.nonblack == 1, "readback stats");
+    auto stats = writeImage(locked, output / "hot-pixel.ppm");
+    require(!stats.hasSignal() && stats.nonblack == 1, "one hot pixel must fail visual filter");
     require(stats.center[0] == 200 && stats.center[1] == 30 && stats.center[2] == 10, "BGRA to RGB");
+    // The observed GPU failure had only 1..5/255. It must not be accepted.
+    for (unsigned y = 0; y < kHeight; ++y) {
+      for (unsigned x = 0; x < kWidth; ++x) {
+        const auto at = y * pitch + x * 4;
+        pixels[at] = 2; pixels[at + 1] = 3; pixels[at + 2] = uint8_t(1 + x % 5);
+      }
+    }
+    require(!writeImage(locked, output / "near-black.ppm").hasSignal(), "near-black dither must fail");
+    // A broad, centered orange shape with a dark background exercises the
+    // native first filter; the independent Python tests verify full geometry.
+    for (unsigned y = 120; y < 240; ++y) {
+      for (unsigned x = 220; x < 420; ++x) {
+        const auto at = y * pitch + x * 4;
+        pixels[at] = 10; pixels[at + 1] = 80; pixels[at + 2] = 200;
+      }
+    }
+    stats = writeImage(locked, output / "independent-color.ppm");
+    require(stats.hasSignal(), "visible warm region must reach independent geometry checks");
     require(!pick.called.load(), "readback must not require a picking callback");
     outcome.captures = 1; outcome.signal = stats.hasSignal();
     const auto status = output / "status.json";

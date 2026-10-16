@@ -9,6 +9,7 @@ on:
       - scripts/rt_preflight.py
       - scripts/rt_game_probe.py
       - scripts/rt_suite.py
+      - scripts/rt_visual.py
       - integration/rt/preflight-readme.txt
       - tests/test_rt_preflight.py
       - tests/test_rt_game_probe.py

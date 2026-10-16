@@ -15,6 +15,7 @@ import urllib.error
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import rt_preflight as runner
+import rt_visual as visual
 from package_rt_preflight import payloads
 
 
@@ -212,21 +213,97 @@ class PreflightCases(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'diagnostic SHA256'):
             runner.smoke_program(self.root, manifest, self.root / 'cache/runtime')
 
-    def test_image_alone_or_hit_alone_or_crashed_cleanup_cannot_pass(self):
+    @staticmethod
+    def triangle(shift=0, color=(220, 90, 20)):
+        # Independently rasterized screen triangle, derived from its documented
+        # projected vertices (~112,284),(320,-28),(528,284), not checker masks.
+        pixels = bytearray(bytes((2, 3, 4)) * (640 * 360))
+        for y in range(284):
+            half = (y + 28) * 2 / 3
+            start = max(0, int(320 + shift - half) + 1)
+            end = min(640, int(320 + shift + half))
+            pixels[(y * 640 + start) * 3:(y * 640 + end) * 3] = bytes(color) * (end - start)
+        return b'P6\n640 360\n255\n' + pixels
+
+    def matrix_fixture(self):
         stage = self.root / 'runtime'; smoke = stage / 'smoke'; smoke.mkdir(parents=True)
-        image = smoke / 'final-color.ppm'; image.write_bytes(b'fixture ppm')
-        good = {'result':'static_hit_and_color_readback','cleanup':'complete','pick_hit':True,
-                'image_has_signal':True,'readback_successes':1}
+        good = {'result':'static_visible_triangle_readback', 'cleanup':'complete', 'pick_hit':True,
+                'image_has_signal':True, 'stable_image_signal':True, 'readback_successes':2}
+        (smoke / 'status.json').write_text(json.dumps(good))
+        for name in visual.ALL_CASES:
+            case = smoke / name; case.mkdir()
+            (case / 'status.json').write_text(json.dumps(good))
+            for part in ('early', 'final'):
+                (case / (part + '-color.ppm')).write_bytes(self.triangle(104 if name == 'translated' else 0))
+        (smoke / 'matrix.json').write_text(json.dumps({'selected_profile':'baseline','translated_offset_x':1.0}))
+        (smoke / 'final-color.ppm').write_bytes(self.triangle())
+        return stage, smoke, good
+
+    def test_image_alone_or_hit_alone_or_crashed_cleanup_cannot_pass(self):
+        stage, smoke, good = self.matrix_fixture()
         (stage / 'frame_trace.jsonl').write_text('{"camera_valid":true,"shader_compile_inflight_count":5}\n')
-        for changes in [{'pick_hit':False},{'readback_successes':0},{'image_has_signal':False},{'cleanup':'pending'},{}]:
-            with self.subTest(changes=changes):
-                (smoke / 'status.json').write_text(json.dumps(good | changes))
-                passed, evidence = runner.smoke_evidence(stage, {'execution':'pass'})
-                self.assertEqual(passed, not bool(changes))
-                self.assertEqual(evidence['readiness_trace'][0]['shader_compile_inflight_count'],5)
-        self.assertFalse(runner.smoke_evidence(stage, {'execution':'fail'})[0])
-        image.unlink()
-        self.assertFalse(runner.smoke_evidence(stage, {'execution':'pass'})[0])
+        # Root status is an additional requirement; the pixel checker is tested
+        # separately below, keeping these status permutations fast and focused.
+        with patch.object(runner, 'evaluate_matrix', return_value={'pass':True}):
+            for changes in [{'pick_hit':False},{'stable_image_signal':False},{'cleanup':'pending'},{}]:
+                with self.subTest(changes=changes):
+                    (smoke / 'status.json').write_text(json.dumps(good | changes))
+                    passed, evidence = runner.smoke_evidence(stage, {'execution':'pass'})
+                    self.assertEqual(passed, not bool(changes))
+                    self.assertEqual(evidence['readiness_trace'][0]['shader_compile_inflight_count'],5)
+            self.assertFalse(runner.smoke_evidence(stage, {'execution':'fail'})[0])
+            (smoke / 'crash.json').write_text('{}')
+            self.assertFalse(runner.smoke_evidence(stage, {'execution':'pass'})[0])
+
+    def test_projected_triangle_and_translation_are_checked_from_pixels(self):
+        stage, smoke, good = self.matrix_fixture()
+        passed, evidence = runner.smoke_evidence(stage, {'execution':'pass'})
+        self.assertTrue(passed, evidence)
+        self.assertTrue(evidence['visual_acceptance']['movement']['pass'])
+        self.assertTrue((stage / 'visual-acceptance.json').is_file())
+        # A correct hit/status does not make a stale unshifted image pass.
+        (smoke / 'translated/final-color.ppm').write_bytes(self.triangle())
+        self.assertFalse(visual.moved(smoke / 'baseline/final-color.ppm', smoke / 'translated/final-color.ppm')['pass'])
+        self.assertFalse(visual.inspect(smoke / 'translated/final-color.ppm', 1.0)['pass'])
+
+    def test_near_black_gray_hot_pixel_and_flat_orange_fail_despite_status(self):
+        image = self.root / 'image.ppm'
+        header = b'P6\n640 360\n255\n'
+        hot = bytearray(bytes((2, 3, 4)) * (640 * 360))
+        hot[(180 * 640 + 320) * 3:(180 * 640 + 320) * 3 + 3] = bytes((255, 100, 20))
+        fixtures = {'observed_near_black': bytes((1, 4, 5)) * (640 * 360),
+                    'gray': bytes((80, 80, 80)) * (640 * 360), 'hot_pixel': hot,
+                    'flat_orange': bytes((220, 90, 20)) * (640 * 360)}
+        for name, data in fixtures.items():
+            with self.subTest(name=name):
+                image.write_bytes(header + data)
+                self.assertFalse(visual.inspect(image)['pass'])
+        image.write_bytes(self.triangle(color=(20, 100, 220)))
+        self.assertFalse(visual.inspect(image)['pass'])
+        image.write_bytes(header + bytes(100))
+        self.assertFalse(visual.inspect(image)['pass'])
+
+    def test_debug_views_and_one_good_sample_cannot_supply_acceptance(self):
+        stage, smoke, good = self.matrix_fixture()
+        black = b'P6\n640 360\n255\n' + bytes((1, 4, 5)) * (640 * 360)
+        for name in visual.NORMAL_CASES:
+            # A second bad image must invalidate a seemingly good first image.
+            (smoke / name / 'final-color.ppm').write_bytes(black)
+        result = visual.evaluate_matrix(smoke)
+        self.assertFalse(result['pass'])
+        self.assertTrue(result['cases']['albedo']['pass'])
+        self.assertTrue(result['cases']['emission']['pass'])
+        # Passing debug captures cannot be selected as the normal control.
+        (smoke / 'matrix.json').write_text(json.dumps({'selected_profile':'emission','translated_offset_x':1.0}))
+        self.assertIn('Invalid normal profile', visual.evaluate_matrix(smoke)['error'])
+
+    def test_resource_warning_survives_a_successful_owned_shutdown(self):
+        stage, smoke, good = self.matrix_fixture()
+        (stage / 'runtime.log').write_text('[40] common device objects were not disposed of.\n')
+        with patch.object(runner, 'evaluate_matrix', return_value={'pass':True}):
+            passed, details = runner.smoke_evidence(stage, {'execution':'pass'})
+        self.assertTrue(passed)
+        self.assertEqual(len(details['resource_warnings']), 1)
 
     def test_owned_child_output_budget_stops_verbose_process(self):
         result = runner.run_owned([sys.executable, '-c', 'import time; print("x"*10000, flush=True); time.sleep(30)'],

@@ -71,7 +71,7 @@ def repackage(candidate, loader, loader_source, headers_source, output, diagnost
                                   'api_commit':native['api_commit'], 'native_checks':'pass', 'gpu_execution':'unrun'}
         primary = output / 'rt-preflight-dev.zip'
         replacements = {name: ROOT / name for name in (
-            'scripts/rt_preflight.py', 'scripts/rt_game_probe.py', 'scripts/rt_suite.py',
+            'scripts/rt_preflight.py', 'scripts/rt_game_probe.py', 'scripts/rt_suite.py', 'scripts/rt_visual.py',
             'integration/rt/baseline.json', 'research/rt-source-audit.json', 'research/rt-source-queue-sdk.json')}
         replacements['README.txt'] = ROOT / 'integration/rt/preflight-readme.txt'
         replacements['bin/rt-runtime-smoke.exe'] = diagnostic
