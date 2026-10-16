@@ -2,7 +2,7 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/dcbbb37a384559c57ed67c8116f4270709df7a7b/downloads/rt-world-pilot-dev.zip)。当前为 v2，构建提交为 `f241cdcbbb0ff78c4f29b3169bd1f2572ec8decb`，包大小 11,880,160 字节，SHA256 为 `adc9ef14de850e6af20aa2b8661618db44d9cc99fe3333ebb8970d47e53d7b6e`。该链接固定到本次已核验产物，不随下载分支更新而改变。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/039eb815d49044f6ecd6699ceeab62566edd5517/downloads/rt-world-pilot-dev.zip)。当前为 v3，构建提交为 `b93b2c068af1d525e3b06543ab89905f07f6982e`，包大小 11,880,824 字节，SHA256 为 `7a0a3373a6d10016744d1d90cbe372352edc314c993bca8b352ed6a1514bccc9`。该链接固定到本次已核验产物，不随下载分支更新而改变。
 
 ## 从数据到实际转换
 
@@ -44,6 +44,8 @@ v1 的 [历史交付核验记录](../../research/rt-world-pilot-validation.json)
 
 发行验证曾发现 Windows 依赖 DLL 被父 Python 进程保留，导致临时目录清理失败；现将加载/导出检查放在独立进程执行，退出后释放其依赖，重新完成 Windows 打包、目录清理和发布。此修正不调用 GPU 或私有游戏方法。
 
-当前 [v2 交付核验记录](../../research/rt-world-pilot-v2-validation.json) 已核对固定 GitHub 成品的 CRC、全部成员哈希、源码/配置/README、配套二进制与原生指纹，并重新分析双架构观察/转换 trace。Windows x86/x64 均实际执行启动开关保护、拒绝布局、开启失败时恢复原 Draw、完成后关闭且禁止重新开启的用例；系统 NULLREF 状态、固定 DLL/API 初始化、包内 Python 与完整配置检查也通过。本地 Python 为 76 项通过、2 项需 Windows 而跳过。以上不替代菜单画面、API 帧边界实际生效、游戏 RT 或 Source 并行的实机验收。
+[v2 历史交付核验记录](../../research/rt-world-pilot-v2-validation.json) 已核对固定 GitHub 成品的 CRC、全部成员哈希、源码/配置/README、配套二进制与原生指纹，并重新分析双架构观察/转换 trace。Windows x86/x64 均实际执行启动开关保护、拒绝布局、开启失败时恢复原 Draw、完成后关闭且禁止重新开启的用例；系统 NULLREF 状态、固定 DLL/API 初始化、包内 Python 与完整配置检查也通过。本地 Python 为 76 项通过、2 项需 Windows 而跳过。以上不替代菜单画面、API 帧边界实际生效、游戏 RT 或 Source 并行的实机验收。
 
 v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190 Draw 完整、地图最终画面正常，但所有世界格式候选的标准 shader getter 是尚未支持的 A1 指针读取，导致零转换、RT 未请求开启。v3 补齐该只读解码，并记录名称槽/地址。另将法线原始 uint32 与 alpha 分开统计，避免把固定 `(0,0,0,1)` 字节模式当有效几何；固定运行时的 primary normal 源为 R32_UINT 打包编码，旧 PNG 的 float 通道映射不能作为向量法线验收，原始字节始终保留供后续离线解码。
+
+当前 [v3 交付核验记录](../../research/rt-world-pilot-v3-validation.json) 已从固定 GitHub 提交重新下载并校验 CRC/全部成员哈希、包内脚本和配置、配套二进制/源码指纹。Windows x86/x64 均执行了有界 A1 名称读取、全局指针变化、溢出、空名称和自定义 shader 拒绝用例，启动开关/状态恢复与 NULLREF 检查继续通过；包内 Python、固定 DLL/API 和完整依赖加载检查通过。本地为 77 项通过、2 项需 Windows 而跳过，实际 v2 原始回包由新版分析器重析后仍明确报告零 RT 开启、零世界转换、全零深度及 alpha-only 法线不构成几何信号。v3 实际名称和 RT 世界画面待下一次实机结果确认。

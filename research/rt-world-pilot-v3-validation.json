@@ -1,0 +1,296 @@
+{
+  "schema": 1,
+  "scope": "selected_static_world_runtime_pilot_build_package_and_native_fixture_validation",
+  "build_commit": "b93b2c068af1d525e3b06543ab89905f07f6982e",
+  "download_ref": "039eb815d49044f6ecd6699ceeab62566edd5517",
+  "filename": "rt-world-pilot-dev.zip",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/039eb815d49044f6ecd6699ceeab62566edd5517/downloads/rt-world-pilot-dev.zip",
+  "size": 11880824,
+  "sha256": "7a0a3373a6d10016744d1d90cbe372352edc314c993bca8b352ed6a1514bccc9",
+  "zip_crc": "pass",
+  "all_manifest_members_verified": true,
+  "shipped_scripts_cmd_configuration_readme_exact_match": true,
+  "source_inputs_match_native_receipt": true,
+  "native_status": {
+    "commit": "b93b2c068af1d525e3b06543ab89905f07f6982e",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "foundation_status": {
+    "schema": 1,
+    "commit": "b93b2c068af1d525e3b06543ab89905f07f6982e",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "9a8e7489789b11cae303b755d8ccab03b39bc15011a8c7c8d080d3cd37e1cdae",
+      "development/x86/d3d9.dll": "27349fe2def9ade2aaa637b32189db09e71fc41f79afdf9e06fd8e3c2e6c3d87"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "consumer_draw_development_execution": "pass",
+    "consumer_world_development_execution": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "package_validation": {
+    "schema": 1,
+    "commit": "b93b2c068af1d525e3b06543ab89905f07f6982e",
+    "package_validation": "pass",
+    "launcher": "rt-world-pilot-dev.zip",
+    "payloads": [],
+    "primary_sha256": "7a0a3373a6d10016744d1d90cbe372352edc314c993bca8b352ed6a1514bccc9",
+    "primary_size": 11880824,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "pinned_native_loader_api_initialization": "pass",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "sha256": "27349fe2def9ade2aaa637b32189db09e71fc41f79afdf9e06fd8e3c2e6c3d87",
+      "size": 1408000,
+      "machine": "0x14c"
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "sha256": "9a8e7489789b11cae303b755d8ccab03b39bc15011a8c7c8d080d3cd37e1cdae",
+      "size": 1384448,
+      "machine": "0x8664"
+    }
+  },
+  "build_id": "ldb-rt-observer+61d74af0008b8f80",
+  "runtime_sha256": "21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7",
+  "local_python_tests": {
+    "total": 79,
+    "passed": 77,
+    "windows_required_skipped": 2
+  },
+  "native_fixture_independent_reviews": {
+    "x86": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30
+        },
+        "footer": {
+          "draws": 720,
+          "valid": 720,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210
+        },
+        "world_conversion": {
+          "reports": 720,
+          "converted": 210
+        },
+        "world_normalization": "pass"
+      }
+    },
+    "x64": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30
+        },
+        "footer": {
+          "draws": 720,
+          "valid": 720,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210
+        },
+        "world_conversion": {
+          "reports": 720,
+          "converted": 210
+        },
+        "world_normalization": "pass"
+      }
+    }
+  },
+  "pinned_loader_validation": {
+    "wrong_sha_rejected": true,
+    "positive_initialization_events": [
+      {
+        "event": "loaded_pinned_runtime",
+        "code": 0
+      },
+      {
+        "event": "initialize_api_0_6_4",
+        "code": 0
+      },
+      {
+        "event": "rtx.enableRaytracing",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.useVertexCapture",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.upscalerType",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "rtx.enableRayReconstruction",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.sceneScale",
+        "code": 0,
+        "value": "0.3937007874"
+      },
+      {
+        "event": "rtx.fallbackLightMode",
+        "code": 0,
+        "value": "2"
+      },
+      {
+        "event": "rtx.fallbackLightType",
+        "code": 0,
+        "value": "1"
+      },
+      {
+        "event": "rtx.fallbackLightRadiance",
+        "code": 0,
+        "value": "30,30,30"
+      },
+      {
+        "event": "rtx.fallbackLightRadius",
+        "code": 0,
+        "value": "5"
+      },
+      {
+        "event": "rtx.bloom.enable",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.postfx.enable",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "startup_raster_policy",
+        "code": 0,
+        "value": "RT_off_until_valid_converted_draw_after_control"
+      },
+      {
+        "event": "physical_draw_count",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "host_cleanup",
+        "code": 0
+      }
+    ],
+    "gpu_device_created": false
+  },
+  "old_actual_draw_trace_regression": {
+    "pass": true,
+    "draws": 40952,
+    "presents": 120
+  },
+  "actual_game_world_execution": "unrun",
+  "game_rt": "unrun",
+  "source_queue_execution": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun",
+  "pilot_revision": 3,
+  "startup_raytracing": false,
+  "material_decoder_scope": "exact A1 absolute pointer load and ret; bounded pointer/name/code reread; no private method calls; world whitelist unchanged",
+  "packed_normal_gate": "alpha-only raw uint32 pattern cannot satisfy nonzero RGB/packed-word signal",
+  "prior_actual_capture_review": "research/rt-world-100133-review.json",
+  "prior_actual_capture_draws": 97190,
+  "prior_actual_capture_presents": 240,
+  "actual_name_string_for_captured_stdshader_global": "unavailable in prior packet; requires next real process read"
+}
