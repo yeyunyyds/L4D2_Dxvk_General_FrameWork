@@ -19,10 +19,24 @@ from rt_game_probe import WindowsProcess, collect
 from rt_preflight import game_pids
 
 TARGETS=('bin/dxvk_d3d9.dll','bin/.l4d2bridge/L4D2Bridge64.exe')
+SUPPORT_FILES=('integration/rt/baseline.json','research/rt-source-audit.json',
+               'research/rt-source-queue-sdk.json')
 
 
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def save(path,value):Path(path).write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+
+def verify_package(root):
+    manifest=json.loads((root/'draw-observer-manifest.json').read_text(encoding='utf-8'))
+    for name,entry in manifest['files'].items():
+        if digest(root/name)!=entry['sha256']:raise ValueError('Package checksum mismatch: '+name)
+    for name in SUPPORT_FILES:
+        if name not in manifest['files']:raise ValueError('Required collector configuration missing from manifest: '+name)
+        json.loads((root/name).read_text(encoding='utf-8'))
+    baseline=json.loads((root/SUPPORT_FILES[0]).read_text(encoding='utf-8'))
+    if not baseline.get('compat_commit'):raise ValueError('Collector reference commit missing')
+    return manifest
 
 
 def replace_copy(source,target):
@@ -127,13 +141,42 @@ def archive_result(directory,report):
     return output
 
 
-def run(root=ROOT,game=None,restore_only=False):
+def finish_capture(directory,root,pid,report,notify):
+    # The completed Draw evidence is independent of the subsequent live probe.
+    # Always persist its analysis, including when the process exits meanwhile.
+    traces={}
+    for path in sorted(directory.glob('rt-draw-host-*.bin')):
+        try:
+            traces[path.name]=analyze(path)
+        except Exception as error:
+            traces[path.name]={'pass':False,'errors':[f'{type(error).__name__}: {error}']}
+            report['errors'].append('Draw analysis failed: '+path.name+': '+str(error))
+    save(directory/'draw-analysis.json',traces)
+    report['draw_observation']='pass' if traces and all(t['pass'] for t in traces.values()) else 'fail_or_partial'
+    notify('Draw observation: '+report['draw_observation']+'. Reading module and queue ABI evidence...')
+    binding={'execution':'incomplete'}
+    try:
+        if not pid:raise ValueError('No game process available for the live module probe')
+        binding=collect(pid,json.loads((root/'research/rt-source-audit.json').read_text(encoding='utf-8')))
+        if binding.get('execution')!='snapshot_collected':
+            report['errors'].append('Live module evidence incomplete; completed Draw analysis retained')
+    except Exception as error:
+        binding['error']=f'{type(error).__name__}: {error}'
+        report['errors'].append('Live module probe failed: '+binding['error'])
+        notify(report['errors'][-1])
+    save(directory/'game-binding.json',binding)
+    report['module_evidence']=binding['execution']
+    report['collection']='complete' if report['draw_observation']=='pass' and binding['execution']=='snapshot_collected' else 'incomplete'
+    report['result_scope']='consumer state / RPC ordering only; no Source producer queue or RT image acceptance'
+
+
+def run(root=ROOT,game=None,restore_only=False,verify_only=False):
+    if verify_only:
+        verify_package(root);print('Package files and collector configuration verified.');return
     if os.name!='nt':raise OSError('This launcher requires Windows x64')
     if restore_only:
         wait_stopped(print);location=restore(root);print('Original client/Host restored:',location);return
-    manifest=json.loads((root/'draw-observer-manifest.json').read_text(encoding='utf-8'))
-    for name,entry in manifest['files'].items():
-        if digest(root/name)!=entry['sha256']:raise ValueError('Package checksum mismatch: '+name)
+    manifest=verify_package(root)
     name='rt-draw-'+time.strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(4)
     directory=root/'results'/name;directory.mkdir(parents=True)
     report={'schema':1,'scope':'actual_draw_consumer_observation','build_commit':manifest['build_commit'],
@@ -165,15 +208,7 @@ def run(root=ROOT,game=None,restore_only=False):
                 notify('Waiting for F9 / capture completion; game PID: '+str(pid));last=time.monotonic()
             time.sleep(.5)
         if not done.is_file():raise TimeoutError('No completed capture; partial logs are retained')
-        notify('Capture ended. Reading module and queue ABI evidence...')
-        if pid:
-            binding=collect(pid,json.loads((root/'research/rt-source-audit.json').read_text()))
-            save(directory/'game-binding.json',binding)
-        traces={p.name:analyze(p) for p in directory.glob('rt-draw-host-*.bin')}
-        save(directory/'draw-analysis.json',traces)
-        report['draw_observation']='pass' if traces and all(t['pass'] for t in traces.values()) else 'fail_or_partial'
-        report['collection']='complete'
-        report['result_scope']='consumer state / RPC ordering only; no Source producer queue or RT image acceptance'
+        finish_capture(directory,root,pid,report,notify)
     except Exception as error:
         report['errors'].append(f'{type(error).__name__}: {error}');notify(report['errors'][-1])
     finally:
@@ -183,5 +218,6 @@ def run(root=ROOT,game=None,restore_only=False):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--game',type=Path);p.add_argument('--restore',action='store_true')
-    a=p.parse_args();run(game=a.game,restore_only=a.restore)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--game',type=Path)
+    mode=p.add_mutually_exclusive_group();mode.add_argument('--restore',action='store_true');mode.add_argument('--verify-only',action='store_true')
+    a=p.parse_args();run(game=a.game,restore_only=a.restore,verify_only=a.verify_only)

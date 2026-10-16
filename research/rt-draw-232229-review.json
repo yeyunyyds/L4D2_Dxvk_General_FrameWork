@@ -1,0 +1,396 @@
+{
+  "schema": 1,
+  "scope": "actual_game_draw_consumer_review_not_game_rt_or_source_parallel_acceptance",
+  "input": {
+    "filename": "rt-draw-20261015-232229-4cce94bf.zip",
+    "size": 1462794,
+    "sha256": "cb19c3fab8ae652e4597347746a321170a7f2b81f26e807e05bee09a10a98824",
+    "zip_crc": "pass",
+    "omitted_files": []
+  },
+  "observer_build_commit": "73b834aeee95550d3cc9f906d5c733bc3ad38303",
+  "installed_pair_matches_published_manifest": true,
+  "uploaded_collection": "incomplete",
+  "uploaded_collection_error": "FileNotFoundError: integration/rt/baseline.json missing from distributed observer package",
+  "uploaded_draw_analysis": "absent_due_to_live_probe_running_before_offline_analysis",
+  "independent_draw_analysis": {
+    "schema": 1,
+    "scope": "draw_rpc_consumer_observation_not_source_queue_or_game_rt",
+    "pass": true,
+    "errors": [],
+    "header": {
+      "session": 146667348561346772,
+      "device": 2,
+      "frequency": 10000000
+    },
+    "footer": {
+      "draws": 40952,
+      "valid": 40952,
+      "presents": 120,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "status_counts": {
+      "valid": 40952
+    },
+    "draw_kinds": {
+      "2": 40952
+    },
+    "host_thread": 23904,
+    "client_draw_threads": [
+      23416
+    ],
+    "viewport_mismatches": 0,
+    "pipeline_query_failure_draws": 0,
+    "source_queue_execution": "unrun",
+    "source_parallel_preparation": "unrun",
+    "static_world_classification": "unverified",
+    "game_rt": "unrun",
+    "performance": "unrun"
+  },
+  "trace": {
+    "filename": "rt-draw-host-16480-2.bin",
+    "size": 20532568,
+    "sha256": "4433e7be2a42bde355feaa8826344d87f0b845f9d3b754988c40144f1976d537",
+    "host_qpc_span_seconds": 1.4265203,
+    "qpc_span_use": "consumer processing span only; not GPU timing, latency, engine frame rate or performance acceptance",
+    "draws_per_present_min": 329,
+    "draws_per_present_max": 364
+  },
+  "view_evidence": {
+    "camera_groups": 42,
+    "classification": "projection/depth-range/target candidates only; no verified Source view ID",
+    "draw_categories": [
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          1024,
+          1024,
+          21
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 2520
+      },
+      {
+        "projection_shape": "perspective",
+        "render_target": [
+          1920,
+          1200,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 1200
+      },
+      {
+        "projection_shape": "perspective",
+        "render_target": [
+          1920,
+          1200,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": true,
+        "draws": 7407
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          1920,
+          1200,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 120
+      },
+      {
+        "projection_shape": "perspective",
+        "render_target": [
+          1920,
+          1200,
+          113
+        ],
+        "viewport_max_z": 0.10000000149011612,
+        "opaque_depth_write": true,
+        "draws": 1080
+      },
+      {
+        "projection_shape": "perspective",
+        "render_target": [
+          1920,
+          1200,
+          113
+        ],
+        "viewport_max_z": 0.10000000149011612,
+        "opaque_depth_write": false,
+        "draws": 1680
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          480,
+          300,
+          21
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 360
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          960,
+          600,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 240
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          480,
+          300,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 240
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          240,
+          150,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 240
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          120,
+          75,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 240
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          60,
+          37,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 240
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          30,
+          18,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 240
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          15,
+          9,
+          113
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 120
+      },
+      {
+        "projection_shape": "orthographic",
+        "render_target": [
+          1920,
+          1200,
+          21
+        ],
+        "viewport_max_z": 1.0,
+        "opaque_depth_write": false,
+        "draws": 25025
+      }
+    ]
+  },
+  "vertex_layouts": {
+    "5e34ffc65e3782a1": {
+      "stride": 32,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c00060001000000100004000200000014000500030000001800010005000000140005000600020000000300000102001000050003010300000000000002ff00000011000000",
+      "draws": 3360,
+      "opaque_depth_draws": 840,
+      "query_failure_draws": 0
+    },
+    "050a3048f4afc195": {
+      "stride": 32,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c000100050002000000030000010200100002000301ff00000011000000",
+      "draws": 2880,
+      "opaque_depth_draws": 0,
+      "query_failure_draws": 0
+    },
+    "74fe80892a0566d9": {
+      "stride": 48,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+      "draws": 2127,
+      "opaque_depth_draws": 2127,
+      "query_failure_draws": 0
+    },
+    "dc9613dbd8fc25e4": {
+      "stride": 64,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280002000600000034000200070002000000030000010200100002000301ff00000011000000",
+      "draws": 120,
+      "opaque_depth_draws": 120,
+      "query_failure_draws": 0
+    },
+    "df7fa0f2f9bcc92b": {
+      "stride": 80,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280001000502000030000200060000003c000200070002000000030000010200100002000301ff00000011000000",
+      "draws": 1200,
+      "opaque_depth_draws": 1200,
+      "query_failure_draws": 0
+    },
+    "1d4581f43b7bb1df": {
+      "stride": 32,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c000200030000001800010005000100000004000a01020000000300000102001000020003010300000000000002ff00000011000000",
+      "draws": 720,
+      "opaque_depth_draws": 720,
+      "query_failure_draws": 0
+    },
+    "bf5120788b1a62b3": {
+      "stride": 32,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c0006000100000010000400020000001400050003000000180001000500000014000500060002000000030000010200100002000301ff00000011000000",
+      "draws": 240,
+      "opaque_depth_draws": 240,
+      "query_failure_draws": 0
+    },
+    "9d25679c3f8bccbf": {
+      "stride": 32,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c0006000100000010000400020000001400050003000000180001000500000014000500060002000000030000010200100005000301ff00000011000000",
+      "draws": 2520,
+      "opaque_depth_draws": 2520,
+      "query_failure_draws": 0
+    },
+    "37634ca437a277fb": {
+      "stride": 32,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c0005000300000010000100050000000c00050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+      "draws": 480,
+      "opaque_depth_draws": 480,
+      "query_failure_draws": 0
+    },
+    "82eb0cc49b57c845": {
+      "stride": 32,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c0005000300000010000100050000000c0005000600020000000300000102001000050003010300000000000002ff00000011000000",
+      "draws": 240,
+      "opaque_depth_draws": 240,
+      "query_failure_draws": 0
+    },
+    "51ab06976cb2e597": {
+      "stride": 48,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c0004000a00000010000200050000001c000200050102000000030000010200100002000301ff00000011000000",
+      "draws": 240,
+      "opaque_depth_draws": 0,
+      "query_failure_draws": 0
+    },
+    "2db87db24e7628b9": {
+      "stride": 48,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c00020003000000180004000a0000001c0001000500000024000100050102000000030000010200100002000301ff00000011000000",
+      "draws": 120,
+      "opaque_depth_draws": 0,
+      "query_failure_draws": 0
+    },
+    "a6f005e101d21245": {
+      "stride": 48,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c00020003000000180004000a0000001c0001000500020000000300000102001000020003010300000000000002ff00000011000000",
+      "draws": 25025,
+      "opaque_depth_draws": 0,
+      "query_failure_draws": 0
+    },
+    "f13fc1c81d0adfcc": {
+      "stride": 32,
+      "frequency": 1,
+      "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+      "draws": 1680,
+      "opaque_depth_draws": 0,
+      "query_failure_draws": 0
+    }
+  },
+  "material_evidence": {
+    "unique_objects": 117,
+    "all_draw_materials_have_object_and_matching_vtable": true,
+    "crosslink_failures": 0,
+    "method_calls_executed": false,
+    "slot20_code_prefix": "8b41388b513cc3",
+    "slot20_data_getter": "EAX=[ECX+0x38], EDX=[ECX+0x3c], ret; observed current objects only, no generalized interface ABI claim",
+    "first_object_vertex_formats_joined_to_draws": {
+      "0x80401": 2520,
+      "0x80001": 2880,
+      "0x480003": 2127,
+      "0x480033": 120,
+      "0x2480033": 1200,
+      "0x80503": 2880,
+      "0xa0403": 3840,
+      "0x6c0005": 240,
+      "0x480007": 120,
+      "0x80407": 25025
+    },
+    "join_limitations": "one object snapshot per material address, not a per-draw value or object-generation proof",
+    "material_names": "unavailable: slot0 jumps to string/symbol decoder outside supplied window",
+    "shader_names": "unavailable: slot49 follows object+0x14 shader pointer; pointee was not captured"
+  },
+  "world_format_candidates": {
+    "reference_vertex_format": "0x480003",
+    "draws": 2127,
+    "unique_materials": 18,
+    "presents_with_candidates": 120,
+    "layout_key": "74fe80892a0566d9",
+    "stream0_stride": 48,
+    "stream0_relevant_elements": {
+      "position": "FLOAT3 at 0",
+      "normal": "FLOAT3 at 12",
+      "texcoord0": "FLOAT2 at 24",
+      "texcoord1": "FLOAT2 at 32"
+    },
+    "extra_declaration_streams": [
+      2
+    ],
+    "existing_converter_accepts": false,
+    "rejection_reason": "existing guard requires exact stride 40 and stream0-only declaration; observed stride48/multi-stream declaration differs",
+    "static_world_classification": "unverified; format/pipeline match is only a candidate, not object provenance"
+  },
+  "live_module_probe": "not_run: failed before opening target; no expanded context windows in this archive",
+  "source_queue_execution": "unrun",
+  "source_parallel_preparation": "unrun",
+  "game_rt": "unrun",
+  "performance": "unrun",
+  "next_action": "fix packaging and independent finalization; adapt actual layout and bounded material decoding, then combine missing ABI/thread evidence with first static-world RT test; no repeat standalone triangle or same Draw capture required"
+}

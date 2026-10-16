@@ -10,6 +10,8 @@
 
 [真实游戏 Draw 观察接入](docs/research/rt-game-draw-observer.md)：配套 client/Host 把当前矩阵、材质和原 Draw 放进同一 RPC，保留原绘制；一次 F9 合并采集消费顺序、顶点布局与队列 ABI 证据。世界分类与主视图尚未确认，不启用游戏 RT。
 
+[首轮真实 Draw 复核](docs/research/rt-draw-232229-result.md)：120 帧、40,952 次 Draw 的矩阵/视口/跨进程关联通过；发现世界候选实际 stride 48，与原转换器的 40 字节假设不同。收尾打包漏配置已定位，模块/Source 并行和游戏 RT 仍待验证；无需单独重复本段采集。
+
 [光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前已通过独立最小场景，游戏光追仍未验收。
 
 具体体验目标：原生高压约 60～80 FPS 时，锁定 60 个真实帧，通过插帧稳定呈现 120 帧；以高压最低帧和实际送帧节奏验收。

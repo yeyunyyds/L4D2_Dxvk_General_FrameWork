@@ -11,12 +11,23 @@ import tempfile
 import urllib.request
 import zipfile
 from package_rt_preflight import python_files, PYTHON_URL
-from rt_draw_suite import TARGETS
+from rt_draw_suite import TARGETS, SUPPORT_FILES, verify_package
 
 ROOT=Path(__file__).resolve().parents[1]
 
 
 def sha(data):return hashlib.sha256(data).hexdigest()
+
+
+def observer_files():
+    names=['scripts/'+name for name in ['rt_draw_suite.py','analyze_rt_draw.py','rt_game_probe.py',
+                                       'rt_preflight.py','rt_visual.py','rt_suite.py']]
+    names+=list(SUPPORT_FILES)
+    entries={name:(ROOT/name).read_bytes() for name in names}
+    for target,source in [('run-test.cmd','run-draw-test.cmd'),('restore.cmd','restore-draw-test.cmd'),
+                          ('README.txt','draw-observer-readme.txt')]:
+        entries[target]=(ROOT/'integration/rt'/source).read_bytes()
+    return entries
 
 
 def package(source,output,python_package):
@@ -45,13 +56,7 @@ def package(source,output,python_package):
         if sha(data)!=expected:raise ValueError('Native evidence differs from product')
         binaries[target]={'sha256':sha(data),'size':len(data),'machine':hex(machine)}
         entries['payload/'+target]=data
-    for name in ['rt_draw_suite.py','analyze_rt_draw.py','rt_game_probe.py','rt_preflight.py','rt_visual.py','rt_suite.py']:
-        entries['scripts/'+name]=(ROOT/'scripts'/name).read_bytes()
-    for name in ['rt-source-audit.json','rt-source-queue-sdk.json']:
-        entries['research/'+name]=(ROOT/'research'/name).read_bytes()
-    entries['run-test.cmd']=(ROOT/'integration/rt/run-draw-test.cmd').read_bytes()
-    entries['restore.cmd']=(ROOT/'integration/rt/restore-draw-test.cmd').read_bytes()
-    entries['README.txt']=(ROOT/'integration/rt/draw-observer-readme.txt').read_bytes()
+    entries.update(observer_files())
     entries['licenses/Remix-LICENSE']=(source/'LICENSE').read_bytes()
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
@@ -73,12 +78,17 @@ def package(source,output,python_package):
     with tempfile.TemporaryDirectory(prefix='rt-observer-package-') as directory:
         with zipfile.ZipFile(primary) as z:z.extractall(directory)
         root=Path(directory)
+        verify_package(root)
         process=subprocess.run([str(root/'python/python.exe'),'-I',str(root/'scripts/rt_draw_suite.py'),'--help'],
                                capture_output=True,text=True,timeout=30)
         if process.returncode:raise ValueError('Packaged entry point failed: '+process.stderr)
+        process=subprocess.run([str(root/'python/python.exe'),'-I',str(root/'scripts/rt_draw_suite.py'),'--verify-only'],
+                               capture_output=True,text=True,timeout=30)
+        if process.returncode:raise ValueError('Packaged collector configuration failed: '+process.stderr)
     validation={'schema':1,'commit':commit,'package_validation':'pass','launcher':primary.name,'payloads':[],
                 'primary_sha256':sha(primary.read_bytes()),'primary_size':primary.stat().st_size,
-                'packaged_python_isolated_entry':'pass','native_consumer_fixture_execution':'pass',
+                'packaged_python_isolated_entry':'pass','packaged_collector_configuration':'pass',
+                'native_consumer_fixture_execution':'pass',
                 'game_rt':'unrun','actual_game_observation':'unrun'}
     (output/'publish-index.json').write_text(json.dumps(validation,indent=2)+'\n')
     print(json.dumps(validation,indent=2))
