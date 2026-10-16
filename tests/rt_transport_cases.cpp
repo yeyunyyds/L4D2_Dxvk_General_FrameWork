@@ -6,7 +6,16 @@
 #include <memory>
 #include <thread>
 namespace bridge_util { enum class Result { Success, Timeout, Failure }; }
+#ifdef _MSC_VER
+// The pinned IPC ABI deliberately pads control fields to cache lines; its
+// sizeof/offsetof static_asserts validate that layout. Keep /W4 /WX elsewhere.
+#pragma warning(push)
+#pragma warning(disable: 4324)
+#endif
 #include "ipc_full/message_queue.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 std::atomic<bool> gbBridgeRunning{true};
 using Queue = ldb_full::MessageQueue;
