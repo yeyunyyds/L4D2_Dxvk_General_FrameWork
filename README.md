@@ -6,7 +6,7 @@
 
 [RT 接入基础进展](docs/research/rt-foundation.md)：已固定 LDB 1.3.2 和自定义 Remix 源码候选，实现有序协议、Device 通道观察与开发采集协调器；x86 client／x64 Host 原生构建和两种架构的执行用例通过。Source 队列 Hook、实际 RT 和综合包 A 尚未完成。
 
-[UV 修正与光照对照 v4](docs/research/rt-preflight-uv-lighting-v4.md)：B580 原始材质视图正确，但正常画面与自发光尚未通过。修正触发未初始化切线读取的全零 UV；一次自动完成 13 项，分别检查处理后材质、无效值、自发光及独立光源开关/平移，上传一个结果 ZIP。是否解决黑屏仍待新版实机验证。
+[不透明材质 alpha 修正 v5](docs/research/rt-preflight-alpha-v5.md)：v4 确认有效 UV 未解决黑屏；已定位并修正测试材质的 alphaTestType=0（NEVER）遗漏。固定源码的 CPU alpha 分支复现旧参数拒绝、修正参数接受；仍用一次 13 项合并测试验证 B580 正常画面与独立光照。
 
 [光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前尚无 B580 光追验收。
 

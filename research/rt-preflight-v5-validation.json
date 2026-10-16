@@ -1,0 +1,363 @@
+{
+  "schema": 1,
+  "scope": "opaque_alpha_fix_and_native_shader_prefix_checks_not_b580_acceptance",
+  "build_commit": "85df7f82efac32261064b47ebff5053f221eaad8",
+  "download_ref": "a6f837eaa104b68d1eef27a009cb9c9cac882231",
+  "primary_size": 10943429,
+  "primary_sha256": "7be889b8d51ba22925250e8a7155b72fe1b83ff7611034813524488284754880",
+  "zip_crc": "pass",
+  "shipped_scripts_and_readme_exact_source_match": true,
+  "exe_architecture": "x64",
+  "original_three_large_payloads_reused": [
+    {
+      "name": "rt-prereq-payload-25802f8447a81def30122c8d.zip",
+      "sha256": "25802f8447a81def30122c8d8a6511ee7cec86b321826526c0d4ce35c5f94814",
+      "size": 78275253,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
+      "sha256": "cc8723b1f848c058238dcf27c0fa610a05654c707672341bfeae24ca127e7633",
+      "size": 95644514,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
+      "sha256": "b6201876eb36a3699d3c04ed97fe90b395c1ca803f839d2f586290bab7125f15",
+      "size": 89038588,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    }
+  ],
+  "diagnostic": {
+    "path": "bin/rt-runtime-smoke.exe",
+    "sha256": "5f85c55d3b7e9eb37bb9b1791973e108f571f39058bc3d04a6b4071fe0a9aaeb",
+    "size": 312832,
+    "build_commit": "85df7f82efac32261064b47ebff5053f221eaad8",
+    "source_sha256": "cb246dce86f1fa9543492bb574ca05906b6911169e5b611c1afad39654bf3f5b",
+    "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+    "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "native_checks": "pass",
+    "alpha_shader_contract": "pass",
+    "gpu_execution": "unrun"
+  },
+  "native_status": {
+    "schema": 1,
+    "commit": "85df7f82efac32261064b47ebff5053f221eaad8",
+    "coordinator_tests": "success",
+    "diagnostic_native_checks": "success",
+    "restoration": "success",
+    "loader_build": "success",
+    "package_repair": "success",
+    "scope": "dependency_load_diagnostic",
+    "gpu_execution": "unrun"
+  },
+  "package_validation": {
+    "schema": 1,
+    "scope": "rt_prerequisites",
+    "collection": "complete",
+    "runtime_preparation": "pass",
+    "runtime_smoke": "unrun",
+    "game_binding": "unrun",
+    "game_rt": "unrun",
+    "source_threading": "unrun",
+    "performance": "unrun",
+    "b580_rt": "unrun",
+    "verify_only": true,
+    "errors": [],
+    "build_commit": "85df7f82efac32261064b47ebff5053f221eaad8",
+    "runtime_load": {
+      "dependency_load": "pass",
+      "api_export": "present",
+      "gpu_execution": "unrun"
+    },
+    "omitted_files": [],
+    "vulkan_loader": {
+      "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+      "commit": "fb78607414e154c7a5c01b23177ba719c8a44909",
+      "headers_commit": "409c16be502e39fe70dd6fe2d9ad4842ef2c9a53",
+      "scope": "app_local_standard_loader_not_gpu_driver",
+      "sha256": "89303dbc8c491414c3cc4414bde29bb51e4188cac9f514f59673fb428d0dc724",
+      "size": 687104
+    },
+    "native_build_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+    "rebuilt_diagnostic": {
+      "path": "bin/rt-runtime-smoke.exe",
+      "sha256": "5f85c55d3b7e9eb37bb9b1791973e108f571f39058bc3d04a6b4071fe0a9aaeb",
+      "size": 312832,
+      "build_commit": "85df7f82efac32261064b47ebff5053f221eaad8",
+      "source_sha256": "cb246dce86f1fa9543492bb574ca05906b6911169e5b611c1afad39654bf3f5b",
+      "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+      "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "native_checks": "pass",
+      "alpha_shader_contract": "pass",
+      "gpu_execution": "unrun"
+    },
+    "diagnostic_native_validation": {
+      "alpha_shader_contract": "pass",
+      "optimization": "/O2 /MT",
+      "compiler_arch": "x64",
+      "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+      "compiler_toolset": "14.29",
+      "exe_sha256": "5f85c55d3b7e9eb37bb9b1791973e108f571f39058bc3d04a6b4071fe0a9aaeb",
+      "scope": "diagnostic_helpers_real_dll_window_lifetime_and_negative_control_not_gpu",
+      "gpu_execution": "unrun",
+      "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "schema": 1,
+      "source_sha256": "cb246dce86f1fa9543492bb574ca05906b6911169e5b611c1afad39654bf3f5b",
+      "native_checks": "pass"
+    },
+    "primary_zip_sha256": "7be889b8d51ba22925250e8a7155b72fe1b83ff7611034813524488284754880"
+  },
+  "pinned_shader_alpha_sources": {
+    "schema": 1,
+    "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "sources": {
+      "src/dxvk/shaders/rtx/concept/surface/surface_shared.h": "878312d41d2333f89c78fa0d526f6400fff2f9bafb0cce3c25db5b94bff36fa3",
+      "src/dxvk/shaders/rtx/concept/surface_material/opaque_surface_material_blending.slangh": "a47f74b754a4af1cef1b19ea80fdeb8bbc7dc676516158d687003083e8e5bdc9"
+    },
+    "scope": "CPU execution of pinned nonblended alpha-test prefix; GPU unrun",
+    "translations": [
+      "Slang inout float to C++ reference",
+      "mark unused blending-only parameters used"
+    ],
+    "header_sha256": "6afac9dccd7e9857970732b8c93752c365cfcc5409076ef8164e9f0842559dea"
+  },
+  "previous_user_result": {
+    "schema": 1,
+    "input": {
+      "filename": "rt-preflight-20261015-204652-f0253de7.zip",
+      "sha256": "80e21807a4aec0b401a14524f7877fa7db75f75bf2fb094808578999b0b92d9f",
+      "size": 2249306
+    },
+    "build_commit": "17f22a363d8604f768aa49ead47cb8632d52befe",
+    "package_matches_published_v4": true,
+    "zip_crc": "pass",
+    "collection_complete": true,
+    "frames": 1088,
+    "readbacks": 26,
+    "duration_seconds": 34.34400000000096,
+    "exit_code": 1,
+    "adapter": {
+      "name": "Intel Arc B580",
+      "vendor_id": "0x8086",
+      "device_id": "0xe20b"
+    },
+    "cases": {
+      "baseline": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          1,
+          5
+        ]
+      },
+      "explicit_blend": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          1,
+          5
+        ]
+      },
+      "fixed_exposure": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          7,
+          17
+        ]
+      },
+      "high_emission": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          6,
+          17
+        ]
+      },
+      "albedo": {
+        "pass": true,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          0,
+          230
+        ]
+      },
+      "processed_albedo": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          0,
+          0
+        ]
+      },
+      "emission": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          0,
+          0
+        ]
+      },
+      "invalid_values": {
+        "pass": true,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          0,
+          0
+        ]
+      },
+      "light_off": {
+        "pass": true,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          0,
+          17
+        ]
+      },
+      "light_on": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          5,
+          14
+        ]
+      },
+      "light_translated": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          4,
+          11
+        ]
+      },
+      "light_off_after": {
+        "pass": true,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          0,
+          14
+        ]
+      },
+      "translated": {
+        "pass": false,
+        "pick_hit": true,
+        "readbacks": 2,
+        "image_min_max": [
+          1,
+          4
+        ]
+      }
+    },
+    "independent_visual_recompute": "exact_match",
+    "mesh_inputs": {
+      "pass": true,
+      "uv_determinant_recomputed": 1.0,
+      "input": {
+        "schema": 1,
+        "uv_determinant": 1,
+        "uvs": [
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "normals": [
+          [
+            0,
+            0,
+            -1
+          ],
+          [
+            0,
+            0,
+            -1
+          ],
+          [
+            0,
+            0,
+            -1
+          ]
+        ]
+      }
+    },
+    "conclusions": {
+      "uv_fix_resolved_black_image": false,
+      "raw_albedo": "pass",
+      "processed_albedo": "all_zero",
+      "emission_debug": "all_zero",
+      "invalid_values_debug": "all_zero_no_invalid_reported",
+      "independent_lighting": "fail",
+      "game_module_snapshot": "collected",
+      "identical_recapture_needed": false,
+      "cause_found_in_diagnostic_source": "zeroed opaque alphaTestType=0 (NEVER), useDrawCallAlphaState=false overrides instance alpha state",
+      "cause_scope": "confirmed material initialization defect; corrected hardware output still requires verification",
+      "game_rt": "unrun",
+      "source_threading": "unrun",
+      "performance": "unrun"
+    },
+    "resource_warning": "40 common device objects not disposed, duplicated across two logs; unresolved",
+    "crash_report_present": false,
+    "minidump_present": false,
+    "alpha_cpu_reproduction": {
+      "fixture_source_receipt": {
+        "schema": 1,
+        "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+        "sources": {
+          "src/dxvk/shaders/rtx/concept/surface/surface_shared.h": "878312d41d2333f89c78fa0d526f6400fff2f9bafb0cce3c25db5b94bff36fa3",
+          "src/dxvk/shaders/rtx/concept/surface_material/opaque_surface_material_blending.slangh": "a47f74b754a4af1cef1b19ea80fdeb8bbc7dc676516158d687003083e8e5bdc9"
+        },
+        "scope": "CPU execution of pinned nonblended alpha-test prefix; GPU unrun",
+        "translations": [
+          "Slang inout float to C++ reference",
+          "mark unused blending-only parameters used"
+        ],
+        "header_sha256": "9a3542cd69a516c103d11ada988af8b6a6405baaac3a20b436543ae12ba7d6c2"
+      },
+      "local_execution": "PINNED_SHADER_NONBLENDED_ALPHA: NEVER(0)=0; ALWAYS(7)=1",
+      "gpu_execution": "unrun"
+    }
+  },
+  "local_rt_tests": {
+    "total": 55,
+    "passed": 53,
+    "skipped_requires_windows": 2
+  },
+  "native_tests": {
+    "preflight_total": 27,
+    "preflight_passed": 27,
+    "game_probe_total": 16,
+    "game_probe_passed": 15,
+    "game_probe_skipped_linux_only": 1,
+    "production_opaque_material_alpha_and_pinned_shader_contract": "pass",
+    "production_uv_and_vertex_input_validation": "pass",
+    "real_dll_window_lifetime_and_cpu_readback_helpers": "pass",
+    "owned_process_dump_helper": "pass",
+    "standard_d3d9_negative_control": "pass"
+  },
+  "new_b580_visual_execution": "unrun",
+  "opaque_alpha_initialization_defect": "confirmed_and_fixed; corrected_hardware_output_unrun",
+  "game_hook": "not_installed",
+  "source_threading": "unrun",
+  "performance": "unrun"
+}

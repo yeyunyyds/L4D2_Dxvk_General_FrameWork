@@ -1,5 +1,7 @@
 # UV 修正与独立光照对照 v4
 
+后续 v4 实测确认 UV 修正未解决黑屏：原始颜色正确，处理后颜色全零。当前入口为 [不透明材质 alpha 修正 v5](rt-preflight-alpha-v5.md)，修正新确认的 NEVER alpha 初始化遗漏。以下保留 v4 的输入修正与对照设计历史。
+
 上一份实测 `rt-preflight-20261015-202040-3a98d4d7.zip` 对应 `20d4d6c`，在实际 Intel Arc B580 上完成 608 帧、14 次读回，约 20.84 秒。每项均命中自己的物体 ID，模块快照完整。原始材质视图正确显示三角形，中心 RGB 为 `[230,123,65]`；自发光视图的两张图全部为零，四种正常画面均不合格。固定曝光和将自发光强度 4 提高到 64 没有恢复画面。结果足以继续定位，无需原样重采。
 
 源码审查确认旧测试的三个 UV 都为零。固定 runtime `b73eb230` 的 [genTangSpace](https://github.com/xoxor4d/dxvk-remix/blob/b73eb23053aa50d3787b0c6c8b4b8ae49962880e/src/dxvk/shaders/rtx/utility/math.slangh#L415) 中，`rawTangent` / `rawBitangent` 只在 UV 行列式非零时赋值，但在退化 UV 回退之前已被读取并用于 raw tangent 输出。输入全零 UV 会触发这条读取未赋值变量的路径。

@@ -1,0 +1,216 @@
+{
+  "schema": 1,
+  "input": {
+    "filename": "rt-preflight-20261015-204652-f0253de7.zip",
+    "sha256": "80e21807a4aec0b401a14524f7877fa7db75f75bf2fb094808578999b0b92d9f",
+    "size": 2249306
+  },
+  "build_commit": "17f22a363d8604f768aa49ead47cb8632d52befe",
+  "package_matches_published_v4": true,
+  "zip_crc": "pass",
+  "collection_complete": true,
+  "frames": 1088,
+  "readbacks": 26,
+  "duration_seconds": 34.34400000000096,
+  "exit_code": 1,
+  "adapter": {
+    "name": "Intel Arc B580",
+    "vendor_id": "0x8086",
+    "device_id": "0xe20b"
+  },
+  "cases": {
+    "baseline": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        1,
+        5
+      ]
+    },
+    "explicit_blend": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        1,
+        5
+      ]
+    },
+    "fixed_exposure": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        7,
+        17
+      ]
+    },
+    "high_emission": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        6,
+        17
+      ]
+    },
+    "albedo": {
+      "pass": true,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        0,
+        230
+      ]
+    },
+    "processed_albedo": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        0,
+        0
+      ]
+    },
+    "emission": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        0,
+        0
+      ]
+    },
+    "invalid_values": {
+      "pass": true,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        0,
+        0
+      ]
+    },
+    "light_off": {
+      "pass": true,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        0,
+        17
+      ]
+    },
+    "light_on": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        5,
+        14
+      ]
+    },
+    "light_translated": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        4,
+        11
+      ]
+    },
+    "light_off_after": {
+      "pass": true,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        0,
+        14
+      ]
+    },
+    "translated": {
+      "pass": false,
+      "pick_hit": true,
+      "readbacks": 2,
+      "image_min_max": [
+        1,
+        4
+      ]
+    }
+  },
+  "independent_visual_recompute": "exact_match",
+  "mesh_inputs": {
+    "pass": true,
+    "uv_determinant_recomputed": 1.0,
+    "input": {
+      "schema": 1,
+      "uv_determinant": 1,
+      "uvs": [
+        [
+          0,
+          1
+        ],
+        [
+          0.5,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "normals": [
+        [
+          0,
+          0,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1
+        ]
+      ]
+    }
+  },
+  "conclusions": {
+    "uv_fix_resolved_black_image": false,
+    "raw_albedo": "pass",
+    "processed_albedo": "all_zero",
+    "emission_debug": "all_zero",
+    "invalid_values_debug": "all_zero_no_invalid_reported",
+    "independent_lighting": "fail",
+    "game_module_snapshot": "collected",
+    "identical_recapture_needed": false,
+    "cause_found_in_diagnostic_source": "zeroed opaque alphaTestType=0 (NEVER), useDrawCallAlphaState=false overrides instance alpha state",
+    "cause_scope": "confirmed material initialization defect; corrected hardware output still requires verification",
+    "game_rt": "unrun",
+    "source_threading": "unrun",
+    "performance": "unrun"
+  },
+  "resource_warning": "40 common device objects not disposed, duplicated across two logs; unresolved",
+  "crash_report_present": false,
+  "minidump_present": false,
+  "alpha_cpu_reproduction": {
+    "fixture_source_receipt": {
+      "schema": 1,
+      "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "sources": {
+        "src/dxvk/shaders/rtx/concept/surface/surface_shared.h": "878312d41d2333f89c78fa0d526f6400fff2f9bafb0cce3c25db5b94bff36fa3",
+        "src/dxvk/shaders/rtx/concept/surface_material/opaque_surface_material_blending.slangh": "a47f74b754a4af1cef1b19ea80fdeb8bbc7dc676516158d687003083e8e5bdc9"
+      },
+      "scope": "CPU execution of pinned nonblended alpha-test prefix; GPU unrun",
+      "translations": [
+        "Slang inout float to C++ reference",
+        "mark unused blending-only parameters used"
+      ],
+      "header_sha256": "9a3542cd69a516c103d11ada988af8b6a6405baaac3a20b436543ae12ba7d6c2"
+    },
+    "local_execution": "PINNED_SHADER_NONBLENDED_ALPHA: NEVER(0)=0; ALWAYS(7)=1",
+    "gpu_execution": "unrun"
+  }
+}
