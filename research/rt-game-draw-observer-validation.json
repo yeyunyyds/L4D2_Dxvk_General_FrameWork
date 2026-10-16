@@ -1,0 +1,297 @@
+{
+  "schema": 1,
+  "scope": "paired_draw_consumer_build_and_package_checks_not_game_execution",
+  "build_commit": "73b834aeee95550d3cc9f906d5c733bc3ad38303",
+  "download_ref": "8330fe189a01a499f008f52497f04659f5559388",
+  "size": 11263270,
+  "sha256": "9355d690a7e4bb164a7d02a7f399569611987aed9eef3af2da91ff9b2809d12b",
+  "zip_crc": "pass",
+  "all_manifest_members_verified": true,
+  "shipped_scripts_cmd_and_readme_exact_match": true,
+  "source_inputs_match_native_receipt": true,
+  "native_status": {
+    "commit": "73b834aeee95550d3cc9f906d5c733bc3ad38303",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "foundation_status": {
+    "schema": 1,
+    "commit": "73b834aeee95550d3cc9f906d5c733bc3ad38303",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "b3e7e6bc33ae4d903a8e01be744d4a5ff2eb908f837c5221c0d697eb94ec621a",
+      "development/x86/d3d9.dll": "c220626110df028be42f3df7732b116ae8c04c341fce8dd695362bc608b43b64"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "consumer_draw_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "package_validation": {
+    "schema": 1,
+    "commit": "73b834aeee95550d3cc9f906d5c733bc3ad38303",
+    "package_validation": "pass",
+    "launcher": "rt-game-observe-dev.zip",
+    "payloads": [],
+    "primary_sha256": "9355d690a7e4bb164a7d02a7f399569611987aed9eef3af2da91ff9b2809d12b",
+    "primary_size": 11263270,
+    "packaged_python_isolated_entry": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "sha256": "c220626110df028be42f3df7732b116ae8c04c341fce8dd695362bc608b43b64",
+      "size": 1400320,
+      "machine": "0x14c"
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "sha256": "b3e7e6bc33ae4d903a8e01be744d4a5ff2eb908f837c5221c0d697eb94ec621a",
+      "size": 1353728,
+      "machine": "0x8664"
+    }
+  },
+  "build_id": "ldb-rt-observer+39710379dd7fe80f",
+  "local_python_tests": {
+    "total": 64,
+    "passed": 62,
+    "windows_required_skipped": 2
+  },
+  "native_fixture_independent_reviews": {
+    "x86": {
+      "schema": 1,
+      "scope": "draw_rpc_consumer_observation_not_source_queue_or_game_rt",
+      "pass": true,
+      "errors": [],
+      "header": {
+        "session": 42,
+        "device": 7,
+        "frequency": 10000000
+      },
+      "footer": {
+        "draws": 120,
+        "valid": 120,
+        "presents": 120,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "status_counts": {
+        "valid": 120
+      },
+      "draw_kinds": {
+        "2": 120
+      },
+      "host_thread": 7116,
+      "client_draw_threads": [
+        7116
+      ],
+      "viewport_mismatches": 0,
+      "pipeline_query_failure_draws": 0,
+      "camera_groups": {
+        "44902034016c922b": {
+          "view": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "projection": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "client_viewport": [
+            0,
+            0,
+            1920,
+            1080,
+            0.0,
+            1.0
+          ],
+          "host_viewport": [
+            0,
+            0,
+            1920,
+            1080,
+            0.0,
+            1.0
+          ],
+          "render_target": [
+            1920,
+            1080,
+            21
+          ],
+          "draws": 120
+        }
+      },
+      "vertex_layouts": {
+        "11fbde813277772c": {
+          "stride": 40,
+          "frequency": 1,
+          "declaration_hex": "000000000200000000000c000200030000001800010005000000200001000501ff00000011000000",
+          "draws": 120,
+          "opaque_depth_draws": 120,
+          "query_failure_draws": 0
+        }
+      },
+      "source_queue_execution": "unrun",
+      "source_parallel_preparation": "unrun",
+      "static_world_classification": "unverified",
+      "game_rt": "unrun",
+      "performance": "unrun"
+    },
+    "x64": {
+      "schema": 1,
+      "scope": "draw_rpc_consumer_observation_not_source_queue_or_game_rt",
+      "pass": true,
+      "errors": [],
+      "header": {
+        "session": 42,
+        "device": 7,
+        "frequency": 10000000
+      },
+      "footer": {
+        "draws": 120,
+        "valid": 120,
+        "presents": 120,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "status_counts": {
+        "valid": 120
+      },
+      "draw_kinds": {
+        "2": 120
+      },
+      "host_thread": 5304,
+      "client_draw_threads": [
+        5304
+      ],
+      "viewport_mismatches": 0,
+      "pipeline_query_failure_draws": 0,
+      "camera_groups": {
+        "44902034016c922b": {
+          "view": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "projection": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "client_viewport": [
+            0,
+            0,
+            1920,
+            1080,
+            0.0,
+            1.0
+          ],
+          "host_viewport": [
+            0,
+            0,
+            1920,
+            1080,
+            0.0,
+            1.0
+          ],
+          "render_target": [
+            1920,
+            1080,
+            21
+          ],
+          "draws": 120
+        }
+      },
+      "vertex_layouts": {
+        "11fbde813277772c": {
+          "stride": 40,
+          "frequency": 1,
+          "declaration_hex": "000000000200000000000c000200030000001800010005000000200001000501ff00000011000000",
+          "draws": 120,
+          "opaque_depth_draws": 120,
+          "query_failure_draws": 0
+        }
+      },
+      "source_queue_execution": "unrun",
+      "source_parallel_preparation": "unrun",
+      "static_world_classification": "unverified",
+      "game_rt": "unrun",
+      "performance": "unrun"
+    }
+  },
+  "actual_game_observation": "unrun",
+  "source_queue_execution": "unrun",
+  "source_parallel_preparation": "unrun",
+  "game_rt": "unrun",
+  "performance": "unrun"
+}

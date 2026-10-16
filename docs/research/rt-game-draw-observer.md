@@ -32,3 +32,11 @@ Client 采集对象只保护本设备的诊断数据；没有全局引擎渲染�
 本地新增的有界矩阵/协议用例、Python Draw 分析与安装恢复用例已执行；Windows 构建同时执行两个架构的 CNG、请求解析、真实文件落盘、Host getter 与 COM 引用检查，并独立解析生成的 trace。这些使用受控内存和模拟 D3D9 对象，**不是实际游戏跨进程执行**；后者需下一包用户结果确认。游戏队列、准备线程并行、世界分类、游戏 RT 和性能继续标为未验收。
 
 如果本轮游戏数据对应正确，下一步直接利用已收集的视图/材质/声明与队列代码证据完成静态世界绑定，不再追加独立三角形或逐场景单项采集。本包是综合包 A 的消费端观察接入，尚不是完整 R0/R1/R2 静态世界 RT 综合包 A。
+
+## 构建与发布记录
+
+代码 `73b834aeee95550d3cc9f906d5c733bc3ad38303` 已完成 MSVC Release x86 client / x64 Host 构建；两个架构的有界矩阵、真实 CNG、请求文件、Host getter/COM 引用及 120 次 Present 的 fixture 落盘检查均通过。已将两份原生二进制 trace 取回云端重新解析，均通过。该用例是同进程模拟设备，不能替代游戏内跨进程执行。
+
+本地 Python 64 项中 62 通过、2 项要求 Windows；矩阵核心 Linux 严格编译/执行与 Windows x64 Werror 交叉编译通过。最终包内固定 Python 的隔离启动检查已在 Windows 执行，源码输入 SHA、PE 架构/build ID、包内每个文件的 SHA、脚本/入口/README 字节一致性以及 ZIP CRC 均已核验。首次 Host 编译发现的宏生成长度变量名错误已修正，最终配套构建与发布验证使用上述代码版本。
+
+[下载文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/8330fe189a01a499f008f52497f04659f5559388/downloads/rt-game-observe-dev.zip)：11263270 字节，SHA256 `9355d690a7e4bb164a7d02a7f399569611987aed9eef3af2da91ff9b2809d12b`。详细机器记录见 [观察包验证](../../research/rt-game-draw-observer-validation.json)。实际游戏消费数据、Source 队列/并行、游戏 RT 与性能仍待用户本轮实测。
