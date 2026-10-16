@@ -2,7 +2,7 @@
 
 已发布的 [rt-preflight-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/rt-preflight-dev.zip) 将当前游戏绑定证据与固定自定义 Remix 的静态 RT 冒烟测试合为一次运行、一个结果 ZIP。它不是 R0／R1／R2 综合包 A。游戏 Hook、实际引擎队列插入、世界转换、线程及性能仍未验收。
 
-当前为 [七项合并视觉验收 v3](rt-preflight-visual-v3.md)，发布代码 `20d4d6c`，原生与发布检查已通过。上一份 B580 结果已执行 Ray Query、命中和读回，但近黑画面未通过视觉检查；旧版的自动通过不能视为视觉验收。新入口只需覆盖原目录、保留缓存、运行一次，自动完成材质/曝光/自发光对照和物体平移控制。
+当前为 [UV 修正与光照对照 v4](rt-preflight-uv-lighting-v4.md)。上一份实测确认原始材质视图正确、自发光视图全黑；本版修正退化 UV 输入，并合并处理后材质、无效值与独立光源开关/平移测试。自发光与独立光照分别验收；仍只需覆盖原目录、保留缓存、运行一次。
 
 当前源码检查得到两个具体结论：
 

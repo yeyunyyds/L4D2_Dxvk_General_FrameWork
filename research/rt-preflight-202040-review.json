@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "input": {
+    "filename": "rt-preflight-20261015-202040-3a98d4d7.zip",
+    "sha256": "3b5296de8afa55e064be1768cbccc527d53d91b70822f723de37ee62ab0addcd",
+    "size": 1561427
+  },
+  "build_commit": "20d4d6c5c5424ecc9adeb7513c2124d911ed5312",
+  "test_frames": 608,
+  "readbacks": 14,
+  "runtime_process": {
+    "execution": "fail",
+    "exit_code": 1,
+    "duration_seconds": 20.84400000000096
+  },
+  "adapter": {
+    "name": "Intel Arc B580",
+    "vendor_id": "0x8086",
+    "device_id": "0xe20b"
+  },
+  "conclusions": {
+    "upload_and_run": "correct_complete",
+    "ray_query_and_per_case_expected_picking": "pass",
+    "projected_triangle_raw_albedo": "pass_both_images",
+    "raw_albedo_center_rgb": [
+      230,
+      123,
+      65
+    ],
+    "emission_debug_image": "all_zero_both_images",
+    "normal_final_color": "fail_all_four_profiles",
+    "mixed_state_change_restored_color": false,
+    "fixed_exposure_restored_color": false,
+    "emission_4_to_64_restored_color": false,
+    "next_focus": "trace_material_emission_values_to_surface_material_and_shader_interaction; exact_loss_point_unproven",
+    "reason_to_repeat_identical_capture": false,
+    "source_threading": "unrun",
+    "game_rt": "unrun",
+    "performance": "unrun"
+  },
+  "game": {
+    "execution": "snapshot_collected",
+    "renderer": "shaderapivk.dll",
+    "module_list_stable": true,
+    "renderer_selection_stable": true,
+    "hook_install_allowed": false
+  },
+  "resource_disposal_warning": "40 common device objects not disposed; duplicated in runtime and stderr log; unresolved",
+  "source_review": {
+    "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "path": "src/dxvk/shaders/rtx/utility/math.slangh",
+    "sha256": "d3802e0ec7b10ac46af43860abbd3b3157dc2991fb0eeba4d262dee3bae325d8",
+    "function": "genTangSpace",
+    "observed_defect": "rawTangent and rawBitangent assigned only when UV determinant is nonzero, then read before the degenerate UV fallback",
+    "old_diagnostic_input": "three UV coordinates all (0,0)",
+    "correction": "nondegenerate UVs (0,1),(0.5,0),(1,1), determinant 1; finite input/unit normal guard before CreateMesh",
+    "causal_status": "upstream read-before-initialization confirmed by source; sole cause of B580 emission failure not proven"
+  }
+}
