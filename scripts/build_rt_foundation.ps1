@@ -4,7 +4,7 @@ if ($VcVarsVer -notmatch '^\d+\.\d+$') { throw 'Invalid toolset selector' }
 $repo = Split-Path $PSScriptRoot -Parent
 $sourcePath = (Resolve-Path (Join-Path $repo $Source)).Path
 $receipt = Get-Content (Join-Path $sourcePath 'rt-source.json') -Raw | ConvertFrom-Json
-foreach ($role in @('client', 'server')) {
+foreach ($role in @('client', 'server', 'util')) {
   foreach ($item in $receipt.inputs_sha256.PSObject.Properties) {
     $path = Join-Path $sourcePath "bridge/src/$role/$($item.Name)"
     if (Test-Path $path) {
@@ -23,6 +23,8 @@ try {
     $staticCases = Join-Path $repo 'tests/rt_static_draw_cases.cpp'
     $drawPacket = Join-Path $repo 'tests/rt_draw_packet_cases.cpp'
     $drawNative = Join-Path $repo 'tests/rt_draw_native_cases.cpp'
+    $transportCases = Join-Path $repo 'tests/rt_transport_cases.cpp'
+    $utilInclude = Join-Path $sourcePath 'bridge/src/util'
     $include = Join-Path $repo 'integration/rt'
     $queueCommand = ''
     $worldLoaderCommand = ''
@@ -53,6 +55,8 @@ try {
       "& `"$dir/protocol.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$drawPacket`" /Fe:`"$dir/draw-packet.exe`" /Fo:`"$dir/draw-packet.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/draw-packet.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$utilInclude`" `"$transportCases`" /Fe:`"$dir/transport.exe`" /Fo:`"$dir/transport.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& `"$dir/transport.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$repo/tests`" `"$drawNative`" /Fe:`"$dir/draw-native.exe`" /Fo:`"$dir/draw-native.obj`" /link bcrypt.lib user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/draw-native.exe`" `"$dir/draw-observation`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& python `"$repo/scripts/analyze_rt_draw.py`" `"$dir/draw-observation`" --output `"$dir/draw-observation-review.json`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +

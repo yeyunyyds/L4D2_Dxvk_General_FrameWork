@@ -1,0 +1,94 @@
+diff --git a/bridge/src/util/ipc_full/message_queue.h b/bridge/src/util/ipc_full/message_queue.h
+index 72969e6..1d38109 100644
+--- a/bridge/src/util/ipc_full/message_queue.h
++++ b/bridge/src/util/ipc_full/message_queue.h
+@@ -4,6 +4,7 @@
+ // specifications provided by yeyunyyds.
+ #pragma once
+ #include "upload_pool.h"
++#include "../rt_transport_policy.h"
+ #include "util_commands.h"
+ #include <array>
+ #include <deque>
+@@ -112,7 +113,7 @@ class MessageQueue {
+               return allocated || (allocated = m_pool.allocate(wanted, m_writeLease)) || !healthy() ||
+                      !gbBridgeRunning.load(std::memory_order_acquire);
+             },
+-            2000, 128, m_channel.shared().cold.consumerPid.load(), metrics);
++            ldb_rt::transport_wait::producerMs(), 128, m_channel.shared().cold.consumerPid.load(), metrics);
+         if (r != ldb_ipc_v2::Result::Success || !allocated || !healthy()) {
+           return false;
+         }
+@@ -135,7 +136,7 @@ class MessageQueue {
+             return grown || (grown = m_pool.grow(m_writeLease, std::max(end, m_declared), m_borrowed)) ||
+                    !healthy() || !gbBridgeRunning.load(std::memory_order_acquire);
+           },
+-          2000, 128, m_channel.shared().cold.consumerPid.load(), metrics);
++          ldb_rt::transport_wait::producerMs(), 128, m_channel.shared().cold.consumerPid.load(), metrics);
+       if (r != ldb_ipc_v2::Result::Success || !grown || !healthy()) {
+         return false;
+       }
+@@ -161,7 +162,7 @@ public:
+       : m_name(name), m_writerSide(writer), m_channel(name + "-full", config(name), false, true),
+         m_pool(name + "-uploads", budget(bytes), writer, config(name)) {
+     if (writer) {
+-      m_writer = std::make_unique<ldb_ipc_v2::Writer>(m_channel, 2000, 128);
++      m_writer = std::make_unique<ldb_ipc_v2::Writer>(m_channel, ldb_rt::transport_wait::producerMs(), 128);
+     } else {
+       uint32_t empty = 0;
+       if (!m_channel.shared().cold.consumerPid.compare_exchange_strong(empty, ldb_ipc_v2::processId())) {
+@@ -180,6 +181,7 @@ public:
+   }
+   MessageQueue(const MessageQueue &) = delete;
+   bool healthy() const { return m_channel.healthy(); }
++  uint32_t transportFault() const { return m_channel.shared().fault.load(std::memory_order_acquire); }
+   void fault() { session().fault(); }
+   uint32_t capacity() const { return m_pool.capacity(); }
+   uint32_t *dataBase() { return reinterpret_cast<uint32_t *>(m_pool.base()); }
+diff --git a/bridge/src/util/util_bridgecommand.cpp b/bridge/src/util/util_bridgecommand.cpp
+index 32b56b7..837a511 100644
+--- a/bridge/src/util/util_bridgecommand.cpp
++++ b/bridge/src/util/util_bridgecommand.cpp
+@@ -26,6 +26,8 @@
+  */
+ #include "util_bridgecommand.h"
+ #include "device_reset.h"
++#include "rt_draw_request.h"
++#include "rt_transport_policy.h"
+ #include "log/log_strings.h"
+ // NV-DXVK start: Full IPC v2 publication and replies.
+ #define DECL_BRIDGE_FUNC(T, N, ...) template <typename BridgeId> T Bridge<BridgeId>::N(__VA_ARGS__)
+@@ -34,6 +36,11 @@ DECL_BRIDGE_FUNC(void, init, const std::string name, const size_t wm, const size
+   if (s_pWriterChannel || s_pReaderChannel) {
+     throw std::logic_error("duplicate Bridge initialization");
+   }
++  ldb_rt::draw_observe::Request rtRequest;
++  const bool world = ldb_rt::draw_observe::readRequest(rtRequest) && rtRequest.world;
++  ldb_rt::transport_wait::configure(world);
++  Logger::info(format_string("LDB_RT_IPC_PROFILE channel=%s profile=%s producer_wait_ms=%u peer_checks=enabled",
++                             name.c_str(), world ? "world_pilot" : "normal", ldb_rt::transport_wait::producerMs()));
+   auto writer = std::make_unique<WriterChannel>(name + kWriterChannelName, wm, wc, wd);
+   auto reader = std::make_unique<ReaderChannel>(name + kReaderChannelName, rm, rc, rd);
+ #ifdef REMIX_BRIDGE_CLIENT
+@@ -46,6 +53,8 @@ DECL_BRIDGE_FUNC(void, init, const std::string name, const size_t wm, const size
+ }
+ DECL_BRIDGE_FUNC(void, reportFault, const char *reason, uint32_t command, uint32_t uid, uint64_t words,
+                  uint64_t begin, uint64_t initial) noexcept {
++  const auto writeFault = s_pWriterChannel ? s_pWriterChannel->commands->transportFault() : 0u;
++  const auto readFault = s_pReaderChannel ? s_pReaderChannel->commands->transportFault() : 0u;
+   const bool running = gbBridgeRunning.exchange(false, std::memory_order_acq_rel);
+   if (s_pWriterChannel) {
+     s_pWriterChannel->commands->fault();
+@@ -57,9 +66,10 @@ DECL_BRIDGE_FUNC(void, reportFault, const char *reason, uint32_t command, uint32
+     return;
+   }
+   try {
+-    Logger::err(format_string("IPC_FULL_FAULT build=%s command=%u uid=%u request_words=%llu result=%s",
++    Logger::err(format_string("IPC_FULL_FAULT build=%s command=%u uid=%u request_words=%llu result=%s write_transport_fault=%u read_transport_fault=%u producer_wait_ms=%u",
+                               bridge_data::buildIdentity, command, uid,
+-                              static_cast<unsigned long long>(words), reason));
++                              static_cast<unsigned long long>(words), reason, writeFault, readFault,
++                              ldb_rt::transport_wait::producerMs()));
+   } catch (...) {
+   }
+   (void)begin;

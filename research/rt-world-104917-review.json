@@ -301,11 +301,11 @@
     }
   },
   "footer_reason_interpretation": "3 means Recorder destructor; it is not a crash code or evidence of Reset/device loss.",
-  "root_cause": "undetermined_without_bridge_logs",
+  "root_cause": "client_command_submission_fault_then_orderly_host_exit; specific_v3_transport_fault_not_recorded",
   "hypotheses": [
     {
       "description": "First RT pipeline initialization blocks Host progress long enough for a client IPC response deadline.",
-      "status": "unconfirmed",
+      "status": "superseded_by_bridge_logs_first_error_is_command_submission_not_reply_deadline",
       "basis": "Approximately 17.6 s final Present interval, RT pipeline initialization log, and bounded UID response waits in pinned LDB source.",
       "required_evidence": [
         "bridge32.log reply-deadline / IPC fault or peer exit",
@@ -350,9 +350,57 @@
       "real_game_validation": "unrun_cloud_has_no_L4D2_or_B580"
     }
   },
-  "next_evidence": "Existing final rt-world-20261016-104917-4f080893.zip, or the same-run bridge32.log and bridge64.log; no rerun requested.",
+  "next_evidence": "v4 one-entry, one-F9, one-ZIP retest after build/product verification; existing logs are sufficient to choose the scoped transport fix.",
   "game_rt": "incomplete_requires_review",
   "source_queue_execution": "unrun",
   "source_parallel_preparation": "unrun",
-  "performance": "unrun"
+  "performance": "unrun",
+  "bridge_log_supplement": {
+    "same_run_verified": true,
+    "session_guid": "8fe642f1-28ed-4eec-ae64-8c246fc15151",
+    "build_id": "ldb-rt-observer+61d74af0008b8f80",
+    "inputs": [
+      {
+        "file": "bridge32.log",
+        "size": 9659,
+        "sha256": "4985360a6ce7753721e8471efe5bffc04ec368af4480af5de15081766285aa1a"
+      },
+      {
+        "file": "bridge64.log",
+        "size": 1084812,
+        "sha256": "0cd0ce98272714dec0106940073a0c6d2a561b5af26281345c88ab23241dad0a"
+      }
+    ],
+    "first_fault": {
+      "local_time": "10:51:06.080",
+      "side": "client",
+      "marker": "IPC_FULL_FAULT",
+      "command": 148,
+      "api": "IDirect3DDevice9Ex_SetStreamSource",
+      "reported_uid": 2,
+      "reported_uid_semantics": "This Command::abort path passes object handle, not RPC sequence UID.",
+      "result": "command-aborted",
+      "lower_transport_fault": "not_recorded_in_v3"
+    },
+    "host": {
+      "first_cleanup_resource_dump_local_time": "10:51:21.640",
+      "cleanup_complete_local_time": "10:51:22.825",
+      "exit_code": "0x00000000",
+      "peer_exit_report_utc": "2026-10-16T17:51:23.460Z",
+      "peer_exit_report_local_time": "10:51:23.460",
+      "exception_report_found": false
+    },
+    "interpretation": "First recorded fault is client command submission; Host subsequently exits through cleanup. CPU crash dialog is the generic peer-exit handler classification, not a CPU exception report.",
+    "source_path": [
+      "Command::abort",
+      "Bridge::reportFault disables local Bridge and faults shared channels",
+      "Host observes unhealthy channel after returning from runtime work",
+      "Host cleanup/exit 0",
+      "client peer-exit callback shows crash dialog"
+    ],
+    "producer_wait_default_ms": 2000,
+    "root_hypothesis": "Ring-capacity wait expires while first RT initialization blocks Host; confirmed reproducible with production queue, actual v3 lower-level fault not recorded.",
+    "prior_reply_deadline_hypothesis": "not_supported_by_uploaded_log; actual marker is command-aborted, not reply-deadline",
+    "v4_fix": "Only validated world launch selects 60000 ms producer ring/upload-capacity budget; normal profile retains 2000 ms. Peer close/fault checks remain, and faults log underlying transport codes."
+  }
 }

@@ -18,7 +18,7 @@ F9 记录与游戏前台 PID 一致。24,314 次 Draw 的快照全部 valid，34
 
 同一时段 `remix-dxvk.log` 在 10:51:20.116 记录三种 Ray Query 管线初始化，10:51:20.124 记录 ReSTIR GI activated。此前 runtime API 请求开启 RT 返回 0，收尾请求关闭也返回 0。这比 v2 的零转换推进了一步，但不证明实际 ray dispatch 或正确光追画面。
 
-## 目前不能确定崩溃根因
+## 仅有中间结果包时的归因边界
 
 现有包没有 `bridge32.log`、`bridge64.log`、异常报告、最终 `summary.json` 和日志清单。Remix 日志没有明确的 Vulkan 设备丢失或原生异常记录；缺少错误不等于排除该错误。40 个 common device objects 未释放属于收尾记录，上一轮正常退出也出现过 39 个，不能据此认定为本次首发故障。
 
@@ -35,3 +35,19 @@ F9 记录与游戏前台 PID 一致。24,314 次 Draw 的快照全部 valid，34
 修正后的本地 Python 全套 82 项中 80 项通过，2 项要求 Windows 而跳过；其中采集器 16 项全部通过。云端没有游戏/B580，本次测试不构成实机崩溃修复验收。
 
 实际游戏 RT、完整世界分类、Source 准备线程并行、资源释放和性能均未验收。
+
+## 补充 Bridge 日志后的定位与 v4 修正
+
+后补 `bridge32.log` 为 9,659 字节，`bridge64.log` 为 1,084,812 字节。两份日志的构建身份均为已核验 v3 的 `ldb-rt-observer+61d74af0008b8f80`，GUID 均为 `8fe642f1-28ed-4eec-ae64-8c246fc15151`；client PID 11272、Host PID 17040 与原 trace 一致，确认属于同次运行。日志 SHA 和逐项结论追加在结构化复核记录中。
+
+最早故障是 client 于 10:51:06.080 写出的 `IPC_FULL_FAULT ... command=148 uid=2 ... result=command-aborted`。148 是 `IDirect3DDevice9Ex_SetStreamSource`，不是等待应答的 `reply-deadline`。该路径把对象句柄作为日志 uid 字段传入，因此 `2` 是 device handle，不能误读为第二个 RPC。Host 到 10:51:21.640 才开始清理资源，10:51:22.825 记录正常收尾；client 于 10:51:23.460 记录 Host 退出码 `0x00000000` 并弹出 CPU crash 窗口。这里的 CPU 类型是通用 peer-exit 处理器分类，没有对应 CPU 异常报告。
+
+源码链路是命令提交失败后 `Command::abort` → `Bridge::reportFault` 关闭 client Bridge 并标记共享通道故障；Host 从阻塞的后端工作返回后观察故障、正常清理退出；游戏的 peer-exit 回调显示崩溃窗口。首发故障应定位于 client 提交/IPC 路径，不能把收尾对象清单或弹窗分类认定为 RT/CPU 原生异常。
+
+固定 full IPC adapter 的命令环生产端与上传池容量等待均硬编码 2,000 ms，命令环只有 64 个 4 KiB 块。首次 RT 初始化使消费端长时间不能推进，而 client 继续提交直至容量耗尽，随后 2 秒等待失败，与本次时间关系吻合。旧日志没有输出共享 transport fault，尚不能从实机日志单独证明具体是哪一个底层条件；先前“10 秒同步应答截止时间”的假设不符合实际首条错误，已撤回。
+
+v4 只在校验通过的 `LDB_RT_WORLD_1` 启动请求下，将命令环和上传池的生产端容量等待设为有限的 60,000 ms；普通观察仍为 2,000 ms。保持同一 IPC 顺序、容量、peer 检查、关闭/故障唤醒和 Source 线程配置，不增加无限重试。日志增加启动 profile/预算，以及覆盖 shared fault 前的读/写 transport fault，若仍失败可区分 Timeout、PeerExited 和其他故障。之前的退出前日志快照也一并进入 v4。
+
+回归直接使用准备后的生产 full IPC adapter、实际共享映射和事件：填满 64 个命令块，复现默认 2 秒超时；world profile 下暂停消费者 2.3 秒后逐条验证 65 个 SetStreamSource 的 FIFO/完整参数，确认没有丢失或重复；对端关闭时不到 2 秒就中断扩展等待。Linux 实际执行通过、Windows x64 严格交叉编译通过；双架构 Windows 执行作为发行门槛，不能用上述结果代替 B580 实际 RT 验收。
+
+本次已有日志已足够选择这项有限等待修正，不再要求补采一轮纯日志。v4 构建/发行核验完成后，仍用一个入口、一次 F9、一个 ZIP 同时检查是否跨过初始化、240 Present 及实际读回。尚未确认修复本次实机故障。
