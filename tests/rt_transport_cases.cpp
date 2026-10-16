@@ -7,10 +7,11 @@
 #include <thread>
 namespace bridge_util { enum class Result { Success, Timeout, Failure }; }
 #ifdef _MSC_VER
-// The pinned IPC ABI deliberately pads control fields to cache lines; its
-// sizeof/offsetof static_asserts validate that layout. Keep /W4 /WX elsewhere.
+// Pinned headers deliberately pad cache lines and assign while rechecking wait
+// predicates. ABI assertions and the behavior below validate those choices.
+// Keep /W4 /WX for all other diagnostics and for this fixture's own code.
 #pragma warning(push)
-#pragma warning(disable: 4324)
+#pragma warning(disable: 4324 4706)
 #endif
 #include "ipc_full/message_queue.h"
 #ifdef _MSC_VER
