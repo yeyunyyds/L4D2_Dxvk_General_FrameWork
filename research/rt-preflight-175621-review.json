@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "input": {
+    "filename": "rt-preflight-20261015-175621-a33a2cc2.zip",
+    "sha256": "976c78ac003446387db967e97f1ad5c23a081895be41068babd353df1427847a"
+  },
+  "build_commit": "0673ced1eb1f8e6f985fa90b894714acc1693195",
+  "verdict": {
+    "b580_static_ray_query_execution": "pass",
+    "expected_object_picking": "pass",
+    "backbuffer_readback": "pass",
+    "expected_emissive_triangle_visual": "fail_near_black",
+    "normal_exit": "pass",
+    "game_module_snapshot": "complete",
+    "game_interface_abi": "unverified",
+    "game_rt": "unrun",
+    "source_threading": "unrun",
+    "performance": "unrun",
+    "resource_disposal": "runtime warned 40 common device objects not disposed; unresolved"
+  },
+  "adapter": {
+    "vendor_id": "0x8086",
+    "device_id": "0xe20b",
+    "name_from_log": "Intel Arc B580"
+  },
+  "image_review": {
+    "ppm_shape": [
+      360,
+      640,
+      3
+    ],
+    "ppm_rgb_min": [
+      1,
+      1,
+      2
+    ],
+    "ppm_rgb_max": [
+      4,
+      5,
+      5
+    ],
+    "ppm_rgb_mean": [
+      3.5469791666666666,
+      3.7884114583333335,
+      3.9363758680555554
+    ],
+    "ppm_unique_rgb_colors": 10,
+    "ppm_center_rgb": [
+      4,
+      4,
+      4
+    ],
+    "dds_format": "A16B16G16R16F",
+    "dds_rgb_max": [
+      0.002048492431640625,
+      0.0020656585693359375,
+      0.0020751953125
+    ],
+    "dds_center_rgba": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "both_images_visually_reviewed": true,
+    "conclusion": "Expected orange emissive triangle absent. Existing hasSignal condition accepts near-black noise; automatic pass is insufficient for visual acceptance."
+  },
+  "new_visual_check": {
+    "pass": false,
+    "interior_orange_fraction": 0.0,
+    "exterior_orange_fraction": 0.0,
+    "red_contrast": 0.14262767903380258,
+    "interior_pixels": 31828,
+    "exterior_pixels": 126450,
+    "minimum": 1,
+    "maximum": 5
+  }
+}

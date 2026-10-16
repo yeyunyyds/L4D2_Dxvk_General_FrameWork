@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "scope": "consolidated_visual_diagnostic_native_checks_and_publication_not_b580_acceptance",
+  "build_commit": "20d4d6c5c5424ecc9adeb7513c2124d911ed5312",
+  "download_ref": "b413ed312a4783a076fa85abb62f0f944f65eac7",
+  "primary_size": 10939880,
+  "primary_sha256": "2f8555b29f450ff40851b3c6e4e4c5dff9d835a6d0c853738fdfda6f097c0821",
+  "zip_crc": "pass",
+  "shipped_scripts_and_readme_exact_source_match": true,
+  "original_three_large_payloads_reused": [
+    {
+      "name": "rt-prereq-payload-25802f8447a81def30122c8d.zip",
+      "sha256": "25802f8447a81def30122c8d8a6511ee7cec86b321826526c0d4ce35c5f94814",
+      "size": 78275253,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
+      "sha256": "cc8723b1f848c058238dcf27c0fa610a05654c707672341bfeae24ca127e7633",
+      "size": 95644514,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    },
+    {
+      "name": "rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
+      "sha256": "b6201876eb36a3699d3c04ed97fe90b395c1ca803f839d2f586290bab7125f15",
+      "size": 89038588,
+      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+    }
+  ],
+  "diagnostic": {
+    "path": "bin/rt-runtime-smoke.exe",
+    "sha256": "ed4dc69f606bac586e3818565daf7761fe5f560b5d46132cfa82dcfc73c0286a",
+    "size": 308224,
+    "build_commit": "20d4d6c5c5424ecc9adeb7513c2124d911ed5312",
+    "source_sha256": "feb1997b0c294d152a74189687cf7673032c044b4398481d70960e3e1ff5e41b",
+    "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+    "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "native_checks": "pass",
+    "gpu_execution": "unrun"
+  },
+  "native_status": {
+    "schema": 1,
+    "commit": "20d4d6c5c5424ecc9adeb7513c2124d911ed5312",
+    "coordinator_tests": "success",
+    "diagnostic_native_checks": "success",
+    "restoration": "success",
+    "loader_build": "success",
+    "package_repair": "success",
+    "scope": "dependency_load_diagnostic",
+    "gpu_execution": "unrun"
+  },
+  "package_validation": {
+    "schema": 1,
+    "scope": "rt_prerequisites",
+    "collection": "complete",
+    "runtime_preparation": "pass",
+    "runtime_smoke": "unrun",
+    "game_binding": "unrun",
+    "game_rt": "unrun",
+    "source_threading": "unrun",
+    "performance": "unrun",
+    "b580_rt": "unrun",
+    "verify_only": true,
+    "errors": [],
+    "build_commit": "20d4d6c5c5424ecc9adeb7513c2124d911ed5312",
+    "runtime_load": {
+      "dependency_load": "pass",
+      "api_export": "present",
+      "gpu_execution": "unrun"
+    },
+    "omitted_files": [],
+    "vulkan_loader": {
+      "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+      "commit": "fb78607414e154c7a5c01b23177ba719c8a44909",
+      "headers_commit": "409c16be502e39fe70dd6fe2d9ad4842ef2c9a53",
+      "scope": "app_local_standard_loader_not_gpu_driver",
+      "sha256": "bce724d9dd9523459666cadc51404004a72eaceaf7e87422ea25b5a9da47771f",
+      "size": 687104
+    },
+    "native_build_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
+    "rebuilt_diagnostic": {
+      "path": "bin/rt-runtime-smoke.exe",
+      "sha256": "ed4dc69f606bac586e3818565daf7761fe5f560b5d46132cfa82dcfc73c0286a",
+      "size": 308224,
+      "build_commit": "20d4d6c5c5424ecc9adeb7513c2124d911ed5312",
+      "source_sha256": "feb1997b0c294d152a74189687cf7673032c044b4398481d70960e3e1ff5e41b",
+      "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+      "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "native_checks": "pass",
+      "gpu_execution": "unrun"
+    },
+    "diagnostic_native_validation": {
+      "optimization": "/O2 /MT",
+      "compiler_arch": "x64",
+      "api_sha256": "58867d1dbc7a0980e3a5241750f573c9c8b38cb8f9aee1aba4fcb93bd78ec20e",
+      "compiler_toolset": "14.29",
+      "exe_sha256": "ed4dc69f606bac586e3818565daf7761fe5f560b5d46132cfa82dcfc73c0286a",
+      "scope": "diagnostic_helpers_real_dll_window_lifetime_and_negative_control_not_gpu",
+      "gpu_execution": "unrun",
+      "api_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+      "schema": 1,
+      "source_sha256": "feb1997b0c294d152a74189687cf7673032c044b4398481d70960e3e1ff5e41b",
+      "native_checks": "pass"
+    },
+    "primary_zip_sha256": "2f8555b29f450ff40851b3c6e4e4c5dff9d835a6d0c853738fdfda6f097c0821"
+  },
+  "previous_b580_result": {
+    "filename": "rt-preflight-20261015-175621-a33a2cc2.zip",
+    "sha256": "976c78ac003446387db967e97f1ad5c23a081895be41068babd353df1427847a",
+    "ray_query_and_picking": "pass",
+    "visual": "fail_near_black",
+    "independent_new_visual_check": {
+      "pass": false,
+      "interior_orange_fraction": 0.0,
+      "exterior_orange_fraction": 0.0,
+      "red_contrast": 0.14262767903380258,
+      "interior_pixels": 31828,
+      "exterior_pixels": 126450,
+      "minimum": 1,
+      "maximum": 5
+    }
+  },
+  "local_rt_tests": {
+    "total": 51,
+    "passed": 49,
+    "skipped_requires_windows": 2
+  },
+  "native_tests": {
+    "preflight_total": 23,
+    "preflight_passed": 23,
+    "game_probe_total": 16,
+    "game_probe_passed": 15,
+    "game_probe_skipped_linux_only": 1,
+    "real_dll_window_lifetime_and_cpu_readback_helpers": "pass",
+    "owned_process_dump_helper": "pass",
+    "standard_d3d9_negative_control": "pass"
+  },
+  "new_b580_visual_execution": "unrun",
+  "game_hook": "not_installed",
+  "source_threading": "unrun",
+  "performance": "unrun"
+}

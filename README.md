@@ -6,6 +6,8 @@
 
 [RT 接入基础进展](docs/research/rt-foundation.md)：已固定 LDB 1.3.2 和自定义 Remix 源码候选，实现有序协议、Device 通道观察与开发采集协调器；x86 client／x64 Host 原生构建和两种架构的执行用例通过。Source 队列 Hook、实际 RT 和综合包 A 尚未完成。
 
+[七项合并视觉验收 v3](docs/research/rt-preflight-visual-v3.md)：B580 独立场景已确认 Ray Query、拾取与读回，但近黑画面未通过视觉验收；更新包一次自动完成材质、曝光、自发光和物体平移对照，上传一个结果 ZIP。Windows 原生与发布检查已通过，新版实机视觉结果待测。
+
 [光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前尚无 B580 光追验收。
 
 具体体验目标：原生高压约 60～80 FPS 时，锁定 60 个真实帧，通过插帧稳定呈现 120 帧；以高压最低帧和实际送帧节奏验收。

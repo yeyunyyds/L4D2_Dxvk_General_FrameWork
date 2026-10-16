@@ -2,6 +2,8 @@
 
 已发布的 [rt-preflight-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/zip-host-capture/downloads/rt-preflight-dev.zip) 将当前游戏绑定证据与固定自定义 Remix 的静态 RT 冒烟测试合为一次运行、一个结果 ZIP。它不是 R0／R1／R2 综合包 A。游戏 Hook、实际引擎队列插入、世界转换、线程及性能仍未验收。
 
+当前为 [七项合并视觉验收 v3](rt-preflight-visual-v3.md)，发布代码 `20d4d6c`，原生与发布检查已通过。上一份 B580 结果已执行 Ray Query、命中和读回，但近黑画面未通过视觉检查；旧版的自动通过不能视为视觉验收。新入口只需覆盖原目录、保留缓存、运行一次，自动完成材质/曝光/自发光对照和物体平移控制。
+
 当前源码检查得到两个具体结论：
 
 - 固定参考 mod 在 `CMeshDX8` 实际绘制前使用 ShaderAPI 的 `GetBufferedState`，并从该状态取 world／view／projection；源码明确说明在较早的 `on_renderview` 设置相机曾造成一帧落后。因此，移植优先取实际消费位置的数据；主线程产生的视图身份仍需通过同一 context 的队列有序传递。
