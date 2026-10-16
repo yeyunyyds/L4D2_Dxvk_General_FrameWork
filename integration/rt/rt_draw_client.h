@@ -126,7 +126,7 @@ public:
     try {
       // Only this device's diagnostic bookkeeping is protected. No engine
       // producer queue is locked and no lock survives the Draw RPC construction.
-      std::lock_guard<std::mutex> guard(mutex);
+      std::unique_lock<std::mutex> guard(mutex);
       const auto now = GetTickCount64();
       if (now >= pollAt) {
         pollAt = now + 16;
@@ -146,11 +146,14 @@ public:
       Snapshot s; s.session = request.session; s.ordinal = ++ordinal; s.thread = GetCurrentThreadId();
       LARGE_INTEGER ticks{}; QueryPerformanceCounter(&ticks); s.ticks = uint64_t(ticks.QuadPart);
       s.status = binding.capture(s);
+      if (s.status == Status::Valid) { material(s); }
+      // Avoid taking the device's public-API lock while holding this diagnostic
+      // lock. The Host independently compares the viewport of the actual Draw.
+      guard.unlock();
       D3DVIEWPORT9 vp{};
       if (SUCCEEDED(device->GetViewport(&vp))) {
         s.viewport = {vp.X, vp.Y, vp.Width, vp.Height}; s.minZ = vp.MinZ; s.maxZ = vp.MaxZ;
       } else { s.status = Status::ReadFailed; }
-      if (s.status == Status::Valid) { material(s); }
       return pack(s);
     } catch (...) { return {}; } // Diagnostic failures never suppress a game Draw.
   }

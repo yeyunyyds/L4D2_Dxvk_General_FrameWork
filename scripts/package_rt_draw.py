@@ -53,6 +53,7 @@ def package(source,output,python_package):
     entries['restore.cmd']=(ROOT/'integration/rt/restore-draw-test.cmd').read_bytes()
     entries['README.txt']=(ROOT/'integration/rt/draw-observer-readme.txt').read_bytes()
     entries['licenses/Remix-LICENSE']=(source/'LICENSE').read_bytes()
+    entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
     manifest={'schema':1,'scope':'draw_consumer_observation','build_commit':commit,'bridge_baseline':'1.3.2',

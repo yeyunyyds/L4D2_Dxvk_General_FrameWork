@@ -113,7 +113,7 @@ index a4ba8ef..a042c35 100644
    HRESULT receiveResetResponse(const char* api, uint32_t uid);
    // Releases the internal objects, if any.
 diff --git a/bridge/src/server/main.cpp b/bridge/src/server/main.cpp
-index a06e3dc..2ce359c 100644
+index a06e3dc..5d00669 100644
 --- a/bridge/src/server/main.cpp
 +++ b/bridge/src/server/main.cpp
 @@ -1635,6 +1635,7 @@ void ProcessDeviceCommandQueue() {
@@ -133,7 +133,7 @@ index a06e3dc..2ce359c 100644
 +          const void* rtSnapshot = nullptr;
 +          PULL_DATA(rtSnapshotBytes, rtSnapshot);
 +          ldb_rt::draw_observe::observe(rpcHeader.pHandle, currentUID, pD3DDevice, rtSnapshot,
-+            packet_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 1, PrimitiveType, {uint32_t(StartVertex), uint32_t(PrimitiveCount), 0, 0, 0, 0});
++            rtSnapshot_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 1, PrimitiveType, {uint32_t(StartVertex), uint32_t(PrimitiveCount), 0, 0, 0, 0});
 +        }
          const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, false, [&]() {
            return pD3DDevice->DrawPrimitive(IN PrimitiveType, IN StartVertex, IN PrimitiveCount);
@@ -155,7 +155,7 @@ index a06e3dc..2ce359c 100644
 +          const void* rtSnapshot = nullptr;
 +          PULL_DATA(rtSnapshotBytes, rtSnapshot);
 +          ldb_rt::draw_observe::observe(rpcHeader.pHandle, currentUID, pD3DDevice, rtSnapshot,
-+            packet_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 2, Type, {uint32_t(BaseVertexIndex), uint32_t(MinVertexIndex), uint32_t(NumVertices), uint32_t(startIndex), uint32_t(primCount), 0});
++            rtSnapshot_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 2, Type, {uint32_t(BaseVertexIndex), uint32_t(MinVertexIndex), uint32_t(NumVertices), uint32_t(startIndex), uint32_t(primCount), 0});
 +        }
          const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, Type, false, [&]() {
            return pD3DDevice->DrawIndexedPrimitive(IN Type, IN BaseVertexIndex, IN MinVertexIndex, IN NumVertices, IN startIndex, IN primCount);
@@ -177,7 +177,7 @@ index a06e3dc..2ce359c 100644
 +          const void* rtSnapshot = nullptr;
 +          PULL_DATA(rtSnapshotBytes, rtSnapshot);
 +          ldb_rt::draw_observe::observe(rpcHeader.pHandle, currentUID, pD3DDevice, rtSnapshot,
-+            packet_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 3, PrimitiveType, {uint32_t(PrimitiveCount), uint32_t(VertexStreamZeroStride), 0, 0, 0, 0});
++            rtSnapshot_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 3, PrimitiveType, {uint32_t(PrimitiveCount), uint32_t(VertexStreamZeroStride), 0, 0, 0, 0});
 +        }
          const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, true, [&]() {
            return pD3DDevice->DrawPrimitiveUP(IN PrimitiveType, IN PrimitiveCount, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
@@ -199,7 +199,7 @@ index a06e3dc..2ce359c 100644
 +          const void* rtSnapshot = nullptr;
 +          PULL_DATA(rtSnapshotBytes, rtSnapshot);
 +          ldb_rt::draw_observe::observe(rpcHeader.pHandle, currentUID, pD3DDevice, rtSnapshot,
-+            packet_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 4, PrimitiveType, {uint32_t(MinVertexIndex), uint32_t(NumVertices), uint32_t(PrimitiveCount), uint32_t(IndexDataFormat), uint32_t(VertexStreamZeroStride), 0});
++            rtSnapshot_len == rtSnapshotBytes ? rtSnapshotBytes : 0, 4, PrimitiveType, {uint32_t(MinVertexIndex), uint32_t(NumVertices), uint32_t(PrimitiveCount), uint32_t(IndexDataFormat), uint32_t(VertexStreamZeroStride), 0});
 +        }
          const auto hresult = ldb_rt_host::drawCommand(rpcHeader.pHandle, currentUID, pD3DDevice, PrimitiveType, true, [&]() {
            return pD3DDevice->DrawIndexedPrimitiveUP(IN PrimitiveType, IN MinVertexIndex, IN NumVertices, IN PrimitiveCount, IN pIndexData, IN IndexDataFormat, IN pVertexStreamZeroData, IN VertexStreamZeroStride);
