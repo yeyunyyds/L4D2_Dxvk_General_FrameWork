@@ -4,6 +4,8 @@
 
 已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/90598699fda203b1d6cbb1e0725136bda7c38ebf/downloads/rt-world-pilot-dev.zip)。当前为 v4，构建提交为 `a45ab966f680ce6acbd5e86127d6640fd5164648`，包大小 11,883,112 字节，SHA256 为 `b103fca27fd1fb4effdcddef13b51dc7913f980f05552327b83a0eebc25a6b8e`。该链接固定到本次已核验产物，不随下载分支更新而改变。
 
+[v4 实机完整回包](rt-world-130102-result.md) 已独立复核通过 240 Present、193,262 Draw、11,805 次受限世界转换，9 份读回齐全、无状态恢复错误、无本轮 IPC fault。按实际 primary GBuffer 编码离线解出的法线/深度轮廓与地图表面相符，受限静态世界的 RT 输出链路已跑通。读回仍偏暗，武器/HUD 等内容缺失；完整场景、照明材质正确性、Source 准备线程并行、资源释放和性能继续待验收。基础数据已经足够，下一步转向画面正确性与覆盖补全。
+
 ## 从数据到实际转换
 
 实际 Draw 的同一 RPC 携带 v2 快照：原有矩阵/材质/viewport，以及当次读取的 64 位格式、解码状态和有界 shader 名称。v1 trace 继续可读。格式 getter 必须与已采到的 `mov eax,[ecx+0x38]; mov edx,[ecx+0x3c]; ret` 匹配；shader getter 必须与已采到的 `this+0x14` 路径匹配。随后识别返回字符串字面量、读取对象内小偏移指针，或 v3 补充的 `A1 <absolute>; ret` 全局字符串指针叶函数。全局指针槽和指向的名称都复读，发生变化则拒绝；槽地址从当前已验证代码读取，不硬编码 ASLR 地址。代码必须位于已映射的可执行 image page，名称最多 63 字节，字段复读不一致或未知实现均拒绝分类。不会执行私有材质函数。
