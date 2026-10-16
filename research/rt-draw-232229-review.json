@@ -57,7 +57,16 @@
     "host_qpc_span_seconds": 1.4265203,
     "qpc_span_use": "consumer processing span only; not GPU timing, latency, engine frame rate or performance acceptance",
     "draws_per_present_min": 329,
-    "draws_per_present_max": 364
+    "draws_per_present_max": 364,
+    "independent_order_checks": {
+      "draw_uids_unique": true,
+      "draw_uids_strictly_increasing": true,
+      "client_ordinals_exact_range": [
+        1,
+        40952
+      ],
+      "client_qpc_monotonic": true
+    }
   },
   "view_evidence": {
     "camera_groups": 42,
@@ -385,12 +394,20 @@
     ],
     "existing_converter_accepts": false,
     "rejection_reason": "existing guard requires exact stride 40 and stream0-only declaration; observed stride48/multi-stream declaration differs",
-    "static_world_classification": "unverified; format/pipeline match is only a candidate, not object provenance"
+    "static_world_classification": "unverified; format/pipeline match is only a candidate, not object provenance",
+    "distinct_view_projection_viewport_combinations": 16
   },
   "live_module_probe": "not_run: failed before opening target; no expanded context windows in this archive",
   "source_queue_execution": "unrun",
   "source_parallel_preparation": "unrun",
   "game_rt": "unrun",
   "performance": "unrun",
-  "next_action": "fix packaging and independent finalization; adapt actual layout and bounded material decoding, then combine missing ABI/thread evidence with first static-world RT test; no repeat standalone triangle or same Draw capture required"
+  "next_action": "fix packaging and independent finalization; adapt actual layout and bounded material decoding, then combine missing ABI/thread evidence with first static-world RT test; no repeat standalone triangle or same Draw capture required",
+  "fix_regression_checks": {
+    "local_total": 69,
+    "local_passed": 67,
+    "windows_required_skipped": 2,
+    "scope": "controller/package regression, not actual patched live module execution",
+    "actual_40952_draw_trace_survives_live_probe_exception": "pass"
+  }
 }

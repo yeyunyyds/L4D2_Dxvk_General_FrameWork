@@ -16,6 +16,8 @@
 
 Host 记录线程 23904，client Draw 线程 23416。这证明本次消费端快照和实际跨进程 Draw 的关联检查通过；一个消费线程本来就可以接收多个生产线程的工作，不能据此判定 Source 单线程或并行准备已经验收。Host QPC 跨度约 1.4265 秒只是诊断记录的消费区间，不能用来宣称游戏 FPS、GPU 时间或性能达标。
 
+额外逐条检查确认 Draw UID 均唯一且严格递增，client ordinal 完整覆盖 1～40,952，client QPC 不倒退。
+
 ## 从数据确定的接入差异
 
 主分辨率为 1920×1200。日志可见 HDR 目标格式 113 的透视绘制、viewport MaxZ 约 0.1 的另一组透视绘制，以及多个尺寸的正交/屏幕目标。它们提供了主场景、武器及屏幕阶段的候选区分条件；没有 Source view ID、材质名称和几何身份，尚不能把这些候选写成可靠分类。
@@ -45,6 +47,10 @@ Host 记录线程 23904，client Draw 线程 23416。这证明本次消费端快
 - 回归检查覆盖真实打包文件布局中的 collect 配置读取、缺项、篡改、模块失败后的有效 Draw 保留，以及损坏 trace 不阻断模块采集。
 
 原始 Draw 已在云端复核，不为该收尾错误安排一次单独 F9 复测。扩展模块证据留到下一次综合测试。
+
+修复后的本地回归共 69 项，67 项通过、2 项要求 Windows 而跳过；另用本次完整 40,952-Draw 文件重演 live probe 异常，确认有效分析保留且模块状态仍为 incomplete。代码 `2ab702b14b3e14d8fb68e2f19a771eb1af5538c2` 的 Windows x86 client/x64 Host 构建、两个架构原生执行检查和最终包内隔离 Python 的配置校验均通过。已取回发布 ZIP，重新核对 CRC、全部成员 SHA、脚本/必需配置字节、PE 架构及 build ID；此构建没有新的游戏 live probe 结果。
+
+[v1.1 修复包文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/05bb45ce7952f78a93204b1f5aec146af9d01786/downloads/rt-game-observe-dev.zip)，11,264,733 字节，SHA256 `9a6ac53735daa4e79ed9473868def20e909f082d77104b5dfa47a618e0e9a6f1`。这是收尾修复，**已有本次结果无需下载重采**；后续综合测试会使用更新后的完整入口。详见 [修复包验证记录](../../research/rt-game-draw-observer-hotfix-validation.json)。
 
 ## 下一步与验收边界
 

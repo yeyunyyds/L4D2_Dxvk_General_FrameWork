@@ -42,3 +42,5 @@ Client 采集对象只保护本设备的诊断数据；没有全局引擎渲染�
 本地 Python 64 项中 62 通过、2 项要求 Windows；矩阵核心 Linux 严格编译/执行与 Windows x64 Werror 交叉编译通过。最终包内固定 Python 的隔离启动检查已在 Windows 执行，源码输入 SHA、PE 架构/build ID、包内每个文件的 SHA、脚本/入口/README 字节一致性以及 ZIP CRC 均已核验。首次 Host 编译发现的宏生成长度变量名错误已修正，最终配套构建与发布验证使用上述代码版本。
 
 首版发布记录（收尾配置有缺项）：11263270 字节，SHA256 `9355d690a7e4bb164a7d02a7f399569611987aed9eef3af2da91ff9b2809d12b`，download ref `8330fe189a01a499f008f52497f04659f5559388`。当时的构建/包内文件验证见 [观察包验证](../../research/rt-game-draw-observer-validation.json)；它未覆盖 live probe 的配置读取，不能解释为配置完整性通过。实测 Draw 通过与缺项问题分别见文首复核。Source 队列/并行、游戏 RT 与性能仍待验证。
+
+v1.1 已修复收尾：[当前文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/05bb45ce7952f78a93204b1f5aec146af9d01786/downloads/rt-game-observe-dev.zip)。Windows 原生检查、最终包内 Python 隔离配置读取、包内 SHA 与 CRC 均已验证，记录见 [修复包验证](../../research/rt-game-draw-observer-hotfix-validation.json)。本次已上传的 Draw 无需重采，缺失模块证据合并到后续综合测试。

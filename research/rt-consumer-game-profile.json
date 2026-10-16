@@ -47,9 +47,10 @@
   },
   "material_pointer_offset": 11220,
   "private_methods_executed": false,
-  "acceptance": "file SHA, loaded vtable RVA, method RVA/code shape then bounded data reads; actual game execution pending",
+  "acceptance": "file SHA, loaded vtable RVA, method RVA/code shape then bounded data reads; 40952 actual game Draw snapshots passed consumer trace validation; no generalized Source ABI or producer-queue claim",
   "sdk_get_call_queue_slot_146": "not_selected: captured current functions are not a verified no-argument queue getter",
   "game_rt": "unrun",
   "source_queue_execution": "unrun",
-  "source_parallel_preparation": "unrun"
+  "source_parallel_preparation": "unrun",
+  "game_observation_review": "research/rt-draw-232229-review.json"
 }
