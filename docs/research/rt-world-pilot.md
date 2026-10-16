@@ -2,7 +2,7 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/269b5663cc777004f34383e7b3d052eb590e631b/downloads/rt-world-pilot-dev.zip)。构建提交为 `1bcbb2678bb5e9a0b3550209aea81b6a28db30dc`，包大小 11,876,515 字节，SHA256 为 `d6e70e7c7fe222d6fd1f69ead5e32e0a03e9185c6d4c655ed716b658842f775a`。该链接固定到本次已核验产物，不随下载分支更新而改变。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/dcbbb37a384559c57ed67c8116f4270709df7a7b/downloads/rt-world-pilot-dev.zip)。当前为 v2，构建提交为 `f241cdcbbb0ff78c4f29b3169bd1f2572ec8decb`，包大小 11,880,160 字节，SHA256 为 `adc9ef14de850e6af20aa2b8661618db44d9cc99fe3333ebb8970d47e53d7b6e`。该链接固定到本次已核验产物，不随下载分支更新而改变。
 
 ## 从数据到实际转换
 
@@ -28,7 +28,7 @@ Host 启动时读取本次 `LDB_RT_WORLD_1` 请求，只在该模式下加载包
 
 进图后按一次 F9。前 30 次 Present 保留未转换光栅观察，之后尝试选定世界转换并请求开启 RT，总共 240 次 Present；这些都是同一个 Remix 后端，不能冒充普通 DXVK 的 R0 对照。30/120/240 后分别用 API 读回颜色、primary depth、primary world shading normal，输出为 640×400 最近邻缩放的 RGBA32F 和预览。目标先清零：参考 API 在没有源图时也可能返回成功，因此检查实际缓冲内容，不能只检查返回值。
 
-v2 在 F9 前独立保留有界启动模块清单、Host 首次实际 Draw/绘制总数和 client 的请求/F9/前台 PID 记录。菜单若仍黑屏可直接正常退出，不要求盲操作；脚本会保存 INCOMPLETE 部分包。最终的完成提示和退出码区分完整采集与部分结果；模块清单成功或库加载成功都不表示 240 Present 已完成。用户主动退出与退出阶段 ReShade/驱动异常也分别记录，不能倒推成游戏此前自动崩溃。
+v2 在 F9 前独立保留有界启动模块清单、首次 Draw 到达 Host/调用计数和 client 的请求/F9/前台 PID 记录。菜单若仍黑屏可直接正常退出，不要求盲操作；脚本会保存 INCOMPLETE 部分包。最终的完成提示和退出码区分完整采集与部分结果；模块清单成功或库加载成功都不表示 240 Present 已完成。用户主动退出与退出阶段 ReShade/驱动异常也分别记录，不能倒推成游戏此前自动崩溃。
 
 采集完成先读取仍在运行的模块和 0～255 context 槽位，再提示正常退出游戏，最终日志与数据合并为一个 ZIP。ConVar 只保存 SDK 布局候选、原始字段及模块身份，不把读到一个整数当作 ABI 或并行通过。退出、异常、模块失败和预算截断保留分项状态。旧 40,952-Draw 数据仍能由新版分析器复核。
 
@@ -40,6 +40,8 @@ v2 在 F9 前独立保留有界启动模块清单、Host 首次实际 Draw/绘�
 
 发布构建和包内 Python/依赖加载验证以本版交付记录为准。云端没有 L4D2/B580 的实际运行，不能据此宣布游戏 RT、完整静态世界、Source 准备线程并行或性能通过。下一次用户结果用于同时审查世界转换、实际输出、材质失败原因和缺失模块信息，不再补一次独立三角形或相同的纯观察段。
 
-本次 [交付核验记录](../../research/rt-world-pilot-validation.json) 已完成：从固定 GitHub 提交重新下载成品，验证全部 ZIP 成员哈希、发行脚本/配置/README 与源码一致、配套 PE 架构和编译身份、原生源码输入指纹；分别重析 x86/x64 的观察与世界转换 trace。每种架构的世界用例均为 240 Present/720 Draw，其中 210 次符合条件的世界绘制转换，控制段、武器和 HUD 候选保持原绘制，未出现状态恢复错误。这些是模拟设备用例，不能充当实际游戏分类或 GPU RT 证据。另已通过双架构系统 D3D9 NULLREF 状态测试、固定运行时错误 SHA 拒绝与真实 DLL/API 0.6.4 配置初始化、包内 Python 入口与完整配置检查、40,952 次原始游戏 Draw 的兼容性回归。本地 Python 检查为 75 项通过、2 项需 Windows 而跳过。
+v1 的 [历史交付核验记录](../../research/rt-world-pilot-validation.json) 只覆盖当时构建与用例，不代表菜单或实际游戏通过。其中已完成：从固定 GitHub 提交重新下载成品，验证全部 ZIP 成员哈希、发行脚本/配置/README 与源码一致、配套 PE 架构和编译身份、原生源码输入指纹；分别重析 x86/x64 的观察与世界转换 trace。每种架构的世界用例均为 240 Present/720 Draw，其中 210 次符合条件的世界绘制转换，控制段、武器和 HUD 候选保持原绘制，未出现状态恢复错误。这些是模拟设备用例，不能充当实际游戏分类或 GPU RT 证据。另已通过双架构系统 D3D9 NULLREF 状态测试、固定运行时错误 SHA 拒绝与真实 DLL/API 0.6.4 配置初始化、包内 Python 入口与完整配置检查、40,952 次原始游戏 Draw 的兼容性回归。本地 Python 检查为 75 项通过、2 项需 Windows 而跳过。
 
 发行验证曾发现 Windows 依赖 DLL 被父 Python 进程保留，导致临时目录清理失败；现将加载/导出检查放在独立进程执行，退出后释放其依赖，重新完成 Windows 打包、目录清理和发布。此修正不调用 GPU 或私有游戏方法。
+
+当前 [v2 交付核验记录](../../research/rt-world-pilot-v2-validation.json) 已核对固定 GitHub 成品的 CRC、全部成员哈希、源码/配置/README、配套二进制与原生指纹，并重新分析双架构观察/转换 trace。Windows x86/x64 均实际执行启动开关保护、拒绝布局、开启失败时恢复原 Draw、完成后关闭且禁止重新开启的用例；系统 NULLREF 状态、固定 DLL/API 初始化、包内 Python 与完整配置检查也通过。本地 Python 为 76 项通过、2 项需 Windows 而跳过。以上不替代菜单画面、API 帧边界实际生效、游戏 RT 或 Source 并行的实机验收。

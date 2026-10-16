@@ -1,0 +1,292 @@
+{
+  "schema": 1,
+  "scope": "selected_static_world_runtime_pilot_build_package_and_native_fixture_validation",
+  "build_commit": "f241cdcbbb0ff78c4f29b3169bd1f2572ec8decb",
+  "download_ref": "dcbbb37a384559c57ed67c8116f4270709df7a7b",
+  "filename": "rt-world-pilot-dev.zip",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/dcbbb37a384559c57ed67c8116f4270709df7a7b/downloads/rt-world-pilot-dev.zip",
+  "size": 11880160,
+  "sha256": "adc9ef14de850e6af20aa2b8661618db44d9cc99fe3333ebb8970d47e53d7b6e",
+  "zip_crc": "pass",
+  "all_manifest_members_verified": true,
+  "shipped_scripts_cmd_configuration_readme_exact_match": true,
+  "source_inputs_match_native_receipt": true,
+  "native_status": {
+    "commit": "f241cdcbbb0ff78c4f29b3169bd1f2572ec8decb",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "foundation_status": {
+    "schema": 1,
+    "commit": "f241cdcbbb0ff78c4f29b3169bd1f2572ec8decb",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "21173d1e1e7c4dafb2ee813627f8c7cd4d09404810671abdc14d225f6702ef12",
+      "development/x86/d3d9.dll": "b0bbc701404bfeaa1be6f51183716ce98e79884209818b35b55f5267131b8f8a"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "consumer_draw_development_execution": "pass",
+    "consumer_world_development_execution": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "package_validation": {
+    "schema": 1,
+    "commit": "f241cdcbbb0ff78c4f29b3169bd1f2572ec8decb",
+    "package_validation": "pass",
+    "launcher": "rt-world-pilot-dev.zip",
+    "payloads": [],
+    "primary_sha256": "adc9ef14de850e6af20aa2b8661618db44d9cc99fe3333ebb8970d47e53d7b6e",
+    "primary_size": 11880160,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "pinned_native_loader_api_initialization": "pass",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "sha256": "b0bbc701404bfeaa1be6f51183716ce98e79884209818b35b55f5267131b8f8a",
+      "size": 1407488,
+      "machine": "0x14c"
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "sha256": "21173d1e1e7c4dafb2ee813627f8c7cd4d09404810671abdc14d225f6702ef12",
+      "size": 1384448,
+      "machine": "0x8664"
+    }
+  },
+  "build_id": "ldb-rt-observer+36c130d1047f1acc",
+  "runtime_sha256": "21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7",
+  "local_python_tests": {
+    "total": 78,
+    "passed": 76,
+    "windows_required_skipped": 2
+  },
+  "native_fixture_independent_reviews": {
+    "x86": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30
+        },
+        "footer": {
+          "draws": 720,
+          "valid": 720,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210
+        },
+        "world_conversion": {
+          "reports": 720,
+          "converted": 210
+        },
+        "world_normalization": "pass"
+      }
+    },
+    "x64": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30
+        },
+        "footer": {
+          "draws": 720,
+          "valid": 720,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210
+        },
+        "world_conversion": {
+          "reports": 720,
+          "converted": 210
+        },
+        "world_normalization": "pass"
+      }
+    }
+  },
+  "pinned_loader_validation": {
+    "wrong_sha_rejected": true,
+    "positive_initialization_events": [
+      {
+        "event": "loaded_pinned_runtime",
+        "code": 0
+      },
+      {
+        "event": "initialize_api_0_6_4",
+        "code": 0
+      },
+      {
+        "event": "rtx.enableRaytracing",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.useVertexCapture",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.upscalerType",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "rtx.enableRayReconstruction",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.sceneScale",
+        "code": 0,
+        "value": "0.3937007874"
+      },
+      {
+        "event": "rtx.fallbackLightMode",
+        "code": 0,
+        "value": "2"
+      },
+      {
+        "event": "rtx.fallbackLightType",
+        "code": 0,
+        "value": "1"
+      },
+      {
+        "event": "rtx.fallbackLightRadiance",
+        "code": 0,
+        "value": "30,30,30"
+      },
+      {
+        "event": "rtx.fallbackLightRadius",
+        "code": 0,
+        "value": "5"
+      },
+      {
+        "event": "rtx.bloom.enable",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.postfx.enable",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "startup_raster_policy",
+        "code": 0,
+        "value": "RT_off_until_valid_converted_draw_after_control"
+      },
+      {
+        "event": "physical_draw_count",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "host_cleanup",
+        "code": 0
+      }
+    ],
+    "gpu_device_created": false
+  },
+  "old_actual_draw_trace_regression": {
+    "pass": true,
+    "draws": 40952,
+    "presents": 120
+  },
+  "actual_game_world_execution": "unrun",
+  "game_rt": "unrun",
+  "source_queue_execution": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun",
+  "pilot_revision": 2,
+  "startup_raytracing": false,
+  "actual_game_menu_visual": "unrun",
+  "rt_activation": "successful_world_scope_after_30_control_presents_requests_enable_then_runtime_defers_application",
+  "actual_post_d3d9_configuration_execution": "unrun",
+  "previous_black_screen_review": "research/rt-world-093012-review.json"
+}
