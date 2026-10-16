@@ -61,7 +61,12 @@ jobs:
       - name: Compile and verify only the updated standalone diagnostic
         id: smoke
         shell: powershell
-        run: ./scripts/build_rt_diagnostic.ps1
+        run: |
+          New-Item -ItemType Directory -Force .research/preflight-smoke | Out-Null
+          & cmd.exe /d /c 'powershell.exe -NoProfile -File scripts/build_rt_diagnostic.ps1 > .research/preflight-smoke/step.log 2>&1'
+          $result = $LASTEXITCODE
+          Get-Content .research/preflight-smoke/step.log
+          if ($result -ne 0) { throw 'Standalone diagnostic build/check failed' }
       - uses: actions/download-artifact@v4
         with:
           name: rt-runtime-9c3b2f860095d4e75e283d24dd9a54c0343554ec
@@ -188,6 +193,8 @@ jobs:
               for name in ['.research/preflight-smoke/native.log','.research/preflight-smoke/native-validation.json','.research/preflight-check/game-tests.log','.research/preflight-smoke/negative/status.json','.research/preflight-smoke/negative/events.jsonl','.research/preflight-smoke/helper-evidence/status.json','.research/preflight-smoke/helper-evidence/cleanup-events.jsonl','.research/preflight-smoke/helper-evidence/crash.json']:
                   p=pathlib.Path(name)
                   if p.is_file(): z.write(p,'diagnostic/'+p.relative_to('.research').as_posix())
+              for p in pathlib.Path('.research/preflight-smoke').glob('*.log'):
+                  if p.name != 'native.log': z.write(p, 'diagnostic/'+p.relative_to('.research').as_posix())
               z.writestr('status.json',json.dumps({'schema':1,'commit':os.environ['GITHUB_SHA'],'coordinator_tests':os.environ['RT_COORDINATOR_OUTCOME'],'diagnostic_native_checks':os.environ['RT_SMOKE_OUTCOME'],'restoration':os.environ['RT_DEPENDENCY_OUTCOME'],'loader_build':os.environ['RT_LOADER_OUTCOME'],'package_repair':os.environ['RT_REPAIR_OUTCOME'],'scope':'dependency_load_diagnostic','gpu_execution':'unrun'}))
           import subprocess, sys
           subprocess.run([sys.executable,'scripts/publish_rt_build_status.py','--package',str(path)],check=True)
