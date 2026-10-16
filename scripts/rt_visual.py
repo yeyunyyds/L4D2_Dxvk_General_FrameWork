@@ -118,6 +118,23 @@ def inspect_inputs(directory):
         return {'pass': False, 'error': str(error)}
 
 
+def inspect_materials(directory):
+    try:
+        data = json.loads((directory / 'material-input.json').read_text())
+        materials = data['materials']
+        if len(materials) != 3:
+            raise ValueError('Expected three fixed-scene materials')
+        expected_emission = (4, 64, 0)
+        valid = all(m['variant'] == i and m['alpha_test_type'] == 7
+                    and m['use_draw_call_alpha_state'] is False and m['opacity'] == 1
+                    and m['blend_override'] is False and m['emissive_intensity'] == expected_emission[i]
+                    for i, m in enumerate(materials))
+        return {'pass': valid, 'input': data,
+                'contract': 'pinned AlphaTestType 7=ALWAYS, 0=NEVER; fixed opaque material owns alpha state'}
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        return {'pass': False, 'error': str(error)}
+
+
 def evaluate_matrix(directory):
     directory = Path(directory)
     evidence = {'schema': 2, 'pass': False, 'cases': {}, 'selected_profile': None,
@@ -125,12 +142,12 @@ def evaluate_matrix(directory):
                 'debug_views_count_as_acceptance': False}
     try:
         matrix = json.loads((directory / 'matrix.json').read_text())
-        if matrix.get('schema') not in (1, 2):
+        if matrix.get('schema') not in (1, 2, 3):
             raise ValueError('Unknown case matrix version')
     except (OSError, ValueError) as error:
         evidence['error'] = str(error)
         return evidence
-    modern = matrix['schema'] == 2
+    modern = matrix['schema'] >= 2
     names = ALL_CASES if modern else LEGACY_CASES
     for name in names:
         case = directory / name
@@ -163,15 +180,21 @@ def evaluate_matrix(directory):
         evidence['pass'] = emission_visible
         if modern:
             evidence['mesh_inputs'] = inspect_inputs(directory)
+            material_valid = True
+            if matrix['schema'] >= 3:
+                evidence['material_inputs'] = inspect_materials(directory)
+                material_valid = evidence['material_inputs']['pass']
             evidence['emission_path'] = {'pass': (emission_visible and evidence['cases']['emission']['pass']
-                                                   and evidence['mesh_inputs']['pass'])}
+                                                   and evidence['mesh_inputs']['pass'] and material_valid)}
             lighting_move = moved(directory / 'light_on/final-color.ppm', directory / 'light_translated/final-color.ppm')
-            evidence['lighting_path'] = {'pass': (complete and evidence['mesh_inputs']['pass']
+            evidence['lighting_path'] = {'pass': (complete and evidence['mesh_inputs']['pass'] and material_valid
                                                   and all(evidence['cases'][n]['pass'] for n in LIGHT_CASES)
                                                   and lighting_move['pass']),
                                          'movement': lighting_move,
                                          'scope': 'separate nonemissive material, light off/on/moved/off; cannot replace emission acceptance'}
-            evidence['pass'] = emission_visible and evidence['emission_path']['pass'] and evidence['mesh_inputs']['pass']
+            evidence['pass'] = emission_visible and evidence['emission_path']['pass'] and evidence['mesh_inputs']['pass'] and material_valid
+            if matrix['schema'] >= 3:
+                evidence['pass'] = evidence['pass'] and evidence['lighting_path']['pass']
     except (OSError, ValueError, KeyError) as error:
         evidence['error'] = str(error)
     leads = ('normal_output_visible', 'compare_default_and_explicit_blend',

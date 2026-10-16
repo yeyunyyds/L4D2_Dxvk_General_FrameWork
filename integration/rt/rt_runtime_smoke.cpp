@@ -174,7 +174,7 @@ struct Outcome {
   std::string error;
   void save(const fs::path& file, const PickResult& pick, const char* cleanup) const {
     std::ofstream out(file);
-    out << "{\"schema\":4,\"result\":\"" << (passed ? (expectedDark ? "static_expected_dark_readback" : "static_visible_triangle_readback") : "fail")
+    out << "{\"schema\":5,\"result\":\"" << (passed ? (expectedDark ? "static_expected_dark_readback" : "static_visible_triangle_readback") : "fail")
         << "\",\"frames\":" << frames << ",\"pick_callback_count\":" << pick.callbacks.load()
         << ",\"pick_hit\":" << (pick.hit.load() ? "true" : "false") << ",\"pick_values\":" << pick.values.load()
         << ",\"capture_attempts\":" << captureAttempts << ",\"readback_successes\":" << captures
@@ -186,6 +186,24 @@ struct Outcome {
     out.close(); if (!out) { throw std::runtime_error("save diagnostic status"); }
   }
 };
+
+remixapi_MaterialInfoOpaqueEXT opaqueTriangleMaterial() {
+  remixapi_MaterialInfoOpaqueEXT opaque{};
+  opaque.sType = REMIXAPI_STRUCT_TYPE_MATERIAL_INFO_OPAQUE_EXT;
+  opaque.albedoConstant = {0.8f, 0.2f, 0.05f}; opaque.opacityConstant = 1; opaque.roughnessConstant = 1;
+  // Pinned runtime AlphaTestType is zero-based: 0=NEVER, 7=ALWAYS.
+  // A zeroed struct does not mean "alpha testing disabled". With this false,
+  // material alpha state overrides InstanceInfoBlendEXT's disabled alpha test.
+  opaque.useDrawCallAlphaState = FALSE;
+  opaque.alphaTestType = 7;
+  return opaque;
+}
+
+bool validOpaqueTriangleMaterial(const remixapi_MaterialInfoOpaqueEXT& opaque) {
+  return opaque.sType == REMIXAPI_STRUCT_TYPE_MATERIAL_INFO_OPAQUE_EXT &&
+    !opaque.useDrawCallAlphaState && opaque.alphaTestType == 7 && opaque.opacityConstant == 1.f &&
+    !opaque.blendType_hasvalue && !opaque.invertedBlend;
+}
 
 std::array<remixapi_HardcodedVertex, 3> triangleVertices() {
   std::array<remixapi_HardcodedVertex, 3> vertices{};
@@ -236,6 +254,8 @@ void configure(Runtime& runtime, Log& log, const Case& test) {
     {"rtx.autoExposure.enabled", test.fixedExposure ? "False" : "True"},
     {"rtx.tonemap.exposureBias", "0"}, {"rtx.tonemap.tonemappingEnabled", "True"},
     {"rtx.tonemap.colorGradingEnabled", "False"},
+    // Keep the off/on/off control independent of Remix's automatic headlight.
+    {"rtx.fallbackLightMode", "0"},
     {"rtx.debugView.debugViewIdx", test.debugView},
     {"rtx.debugView.composite.compositeViewIdx", "0"},
     {"rtx.debugView.enableGammaCorrection", "True"},
@@ -347,13 +367,20 @@ int wmain(int argc, wchar_t** argv) {
     }
     geometry << "]}\n";
     geometry.close(); if (!geometry) { throw std::runtime_error("save geometry input validation"); }
+    std::ofstream materialInputs(directory / "material-input.json");
+    materialInputs << "{\"schema\":1,\"materials\":[";
     for (unsigned variant = 0; variant < 3; ++variant) {
-      remixapi_MaterialInfoOpaqueEXT opaque{};
-      opaque.sType = REMIXAPI_STRUCT_TYPE_MATERIAL_INFO_OPAQUE_EXT;
-      opaque.albedoConstant = {0.8f, 0.2f, 0.05f}; opaque.opacityConstant = 1; opaque.roughnessConstant = 1;
+      auto opaque = opaqueTriangleMaterial();
+      log.result("validate_opaque_alpha_inputs", validOpaqueTriangleMaterial(opaque) ? 0 : ERROR_INVALID_DATA);
       remixapi_MaterialInfo material{};
       material.sType = REMIXAPI_STRUCT_TYPE_MATERIAL_INFO; material.pNext = &opaque; material.hash = 0x4c445201 + variant * 16;
       material.emissiveIntensity = variant == 2 ? 0.0f : (variant == 1 ? 64.0f : 4.0f); material.emissiveColorConstant = {1, 0.2f, 0.05f};
+      if (variant) { materialInputs << ','; }
+      materialInputs << "{\"variant\":" << variant << ",\"alpha_test_type\":" << opaque.alphaTestType
+                     << ",\"use_draw_call_alpha_state\":" << (opaque.useDrawCallAlphaState ? "true" : "false")
+                     << ",\"opacity\":" << opaque.opacityConstant
+                     << ",\"blend_override\":" << (opaque.blendType_hasvalue ? "true" : "false")
+                     << ",\"emissive_intensity\":" << material.emissiveIntensity << '}';
       log.result("create_material", uint32_t(runtime.api.CreateMaterial(&material, &materialHandles[variant])));
       const uint32_t indices[] = {0, 1, 2};
       remixapi_MeshInfoSurfaceTriangles surface{};
@@ -363,6 +390,8 @@ int wmain(int argc, wchar_t** argv) {
       mesh.surfaces_values = &surface; mesh.surfaces_count = 1;
       log.result("create_mesh", uint32_t(runtime.api.CreateMesh(&mesh, &meshHandles[variant])));
     }
+    materialInputs << "]}\n";
+    materialInputs.close(); if (!materialInputs) { throw std::runtime_error("save material input validation"); }
     remixapi_LightInfoDistantEXT distant{};
     distant.sType = REMIXAPI_STRUCT_TYPE_LIGHT_INFO_DISTANT_EXT;
     distant.direction = {0, 0, 1}; distant.angularDiameterDegrees = 0.5f;
@@ -479,15 +508,17 @@ int wmain(int argc, wchar_t** argv) {
       test.outcome.save(output / "status.json", test.pick, "pending");
     }
     outcome.signal = normalPassed; outcome.stableSignal = normalPassed && cases.back().outcome.stableSignal;
-    outcome.passed = normalPassed && cases.back().outcome.passed;
+    const bool lightingPassed = cases[8].outcome.passed && cases[9].outcome.passed &&
+      cases[10].outcome.passed && cases[11].outcome.passed;
+    outcome.passed = normalPassed && cases.back().outcome.passed && cases[6].outcome.passed && lightingPassed;
     log.stage = "save_matrix";
     fs::copy_file(directory / cases[selected].name / "final-color.ppm", directory / "final-color.ppm");
     std::ofstream matrix(directory / "matrix.json");
-    matrix << "{\"schema\":2,\"selected_profile\":" << jsonString(cases[selected].name)
+    matrix << "{\"schema\":3,\"selected_profile\":" << jsonString(cases[selected].name)
            << ",\"normal_profile_visible\":" << (normalPassed ? "true" : "false")
            << ",\"translated_offset_x\":1.0,\"debug_views_count_as_acceptance\":false}\n";
     matrix.close(); if (!matrix) { throw std::runtime_error("save case matrix"); }
-    if (!outcome.passed) { log.stage = "verify_visible_triangle"; throw std::runtime_error("normal final color and translated control did not both show the expected triangle"); }
+    if (!outcome.passed) { log.stage = "verify_visible_triangle"; throw std::runtime_error("opaque emission and independent light off/on/moved/off controls did not all pass"); }
   } catch (const std::exception& error) {
     outcome.failedAt = log.stage; outcome.error = error.what();
     log.output << "{\"failed_at\":" << jsonString(log.stage) << ",\"error\":" << jsonString(error.what()) << "}\n" << std::flush;

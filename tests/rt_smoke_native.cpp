@@ -4,6 +4,7 @@
 #undef wmain
 #include <vector>
 #include <limits>
+#include "pinned-alpha-fixture.h"
 
 void require(bool condition, const char* reason) {
   if (!condition) { throw std::runtime_error(reason); }
@@ -26,6 +27,21 @@ int wmain(int argc, wchar_t** argv) {
     static_assert(sizeof(remixapi_HardcodedVertex) == 64, "pinned API vertex stride");
     static_assert(offsetof(remixapi_HardcodedVertex, texcoord) == 24, "pinned API UV offset");
     static_assert(offsetof(remixapi_HardcodedVertex, color) == 32, "pinned API color offset");
+    auto opaque = opaqueTriangleMaterial();
+    require(validOpaqueTriangleMaterial(opaque), "production material alpha must allow opaque pixels");
+    require(pinned_alpha_fixture::evaluate(opaque.alphaTestType, opaque.opacityConstant) == 1.f,
+            "real pinned shader alpha prefix accepts production material");
+    // Reproduce the prior production initialization through the same upstream
+    // shader branch, rather than inventing a second alpha-test implementation.
+    opaque.alphaTestType = 0;
+    require(!validOpaqueTriangleMaterial(opaque), "reject prior zero-initialized NEVER alpha state");
+    require(pinned_alpha_fixture::evaluate(opaque.alphaTestType, opaque.opacityConstant) == 0.f,
+            "real pinned shader alpha prefix rejects the prior production material");
+    opaque = opaqueTriangleMaterial(); opaque.opacityConstant = 0;
+    require(!validOpaqueTriangleMaterial(opaque), "reject transparent fixed-scene material");
+    opaque = opaqueTriangleMaterial(); opaque.useDrawCallAlphaState = TRUE;
+    require(!validOpaqueTriangleMaterial(opaque), "reject unexpected alpha-state ownership");
+    std::cout << "PINNED_SHADER_ALPHA_CONTRACT_PASS: old NEVER=0, fixed ALWAYS=1; GPU unrun\n";
     auto triangle = triangleVertices();
     require(validTriangle(triangle), "production triangle has finite normals and independent UVs");
     require(std::abs(uvDeterminant(triangle) - 1.0f) < 1e-6f, "nondegenerate production UV determinant");

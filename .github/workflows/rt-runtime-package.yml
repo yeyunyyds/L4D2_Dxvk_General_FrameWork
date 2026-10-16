@@ -15,6 +15,7 @@ on:
       - tests/test_rt_game_probe.py
       - integration/rt/rt_runtime_smoke.cpp
       - scripts/build_rt_diagnostic.ps1
+      - scripts/prepare_rt_alpha_fixture.py
       - tests/rt_smoke_native.cpp
       - tests/rt_smoke_window_fixture.cpp
   workflow_dispatch:
@@ -191,7 +192,7 @@ jobs:
               for name in ['.research/vulkan-loader-build.log','.research/rt-repackage.log','.research/dist/rt-prerequisites/package-validation.json','.research/dist/rt-prerequisites/publish-index.json','.research/preflight-check/compile.log','.research/preflight-check/tests.log','.research/preflight-check/public-payload-urls.json']:
                   p=pathlib.Path(name)
                   if p.is_file(): z.write(p,p.name)
-              for name in ['.research/preflight-smoke/native.log','.research/preflight-smoke/native-validation.json','.research/preflight-check/game-tests.log','.research/preflight-smoke/negative/status.json','.research/preflight-smoke/negative/events.jsonl','.research/preflight-smoke/helper-evidence/status.json','.research/preflight-smoke/helper-evidence/cleanup-events.jsonl','.research/preflight-smoke/helper-evidence/crash.json']:
+              for name in ['.research/preflight-smoke/native.log','.research/preflight-smoke/native-validation.json','.research/preflight-smoke/pinned-alpha-fixture.json','.research/preflight-check/game-tests.log','.research/preflight-smoke/negative/status.json','.research/preflight-smoke/negative/events.jsonl','.research/preflight-smoke/helper-evidence/status.json','.research/preflight-smoke/helper-evidence/cleanup-events.jsonl','.research/preflight-smoke/helper-evidence/crash.json']:
                   p=pathlib.Path(name)
                   if p.is_file(): z.write(p,'diagnostic/'+p.relative_to('.research').as_posix())
               for p in pathlib.Path('.research/preflight-smoke').glob('*.log'):
