@@ -10,6 +10,7 @@ RECORD = struct.Struct('<IIQIIQ')
 SNAPSHOT = struct.Struct('<IIQQQII48fII4I2f')
 MATERIAL = struct.Struct('<QII64s')
 PIPELINE = struct.Struct('<12I2f4I')
+PIPELINE_V7 = struct.Struct('<12I2f5I')  # original CULLMODE follows declaration count
 STATUS = {1:'valid',2:'module_missing',3:'version_mismatch',4:'read_failed',5:'invalid_stack',
           6:'changed_during_read',7:'invalid_matrices',8:'not_sampled'}
 
@@ -38,7 +39,9 @@ def analyze(path):
     pending_conversion, pending_world_safe = False, False
     client_threads, ordinals = {}, set()
     host_thread, last_tick = None, 0
-    cameras, layouts = {}, {}
+    cameras, layouts, attribution = {}, {}, {}
+    attribution_omitted_draws = 0
+    pending_attribution = None
     viewport_mismatch = 0
     while offset < len(data):
         if len(data) - offset < RECORD.size:
@@ -57,14 +60,15 @@ def analyze(path):
                 if header or counts.total() != 1 or len(payload) not in (28,36):
                     raise ValueError('invalid_header')
                 version, session, device, frequency = struct.unpack_from('<IQQQ', payload)
-                if (version,len(payload)) not in ((1,28),(2,36),(3,36)) or not all((session, device, frequency)):
+                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36)) or not all((session, device, frequency)):
                     raise ValueError('invalid_identity')
                 header = {'session':session,'device':device,'frequency':frequency}
-                if version in (2,3):
+                if version in (2,3,4):
                     target,control=struct.unpack_from('<2I',payload,28)
                     if (target,control)!=(240,30):raise ValueError('invalid_world_profile_boundaries')
                     header.update(profile='world_pilot',target_presents=target,control_presents=control)
                     if version==3:header['coverage_revision']=6
+                    if version==4:header['coverage_revision']=7
             elif event == 1:
                 if not header or pending is not None or len(payload) < SNAPSHOT.size + 32 + PIPELINE.size:
                     raise ValueError('unpaired_or_short_draw')
@@ -95,12 +99,16 @@ def analyze(path):
                     raise ValueError('invalid_draw_arguments')
                 kinds[kind] += 1
                 state_at = snapshot_size + 32
-                state = PIPELINE.unpack_from(payload, state_at)
+                v7=header.get('coverage_revision')==7
+                pipeline=PIPELINE_V7 if v7 else PIPELINE
+                state = pipeline.unpack_from(payload, state_at)
                 failures, stream_offset, stride, stream_frequency = state[:4]
                 alpha, test, depth, depth_write = state[4:8]
                 host_vp = state[8:14]
-                width, height, fmt, elements = state[14:]
-                if elements > 65 or len(payload) != state_at + PIPELINE.size + elements * 8:
+                width, height, fmt, elements = state[14:18]
+                cull=state[18] if v7 else None
+                if v7 and not failures and cull not in (1,2,3):raise ValueError('invalid_cull_mode')
+                if elements > 65 or len(payload) != state_at + pipeline.size + elements * 8:
                     raise ValueError('invalid_vertex_declaration_size')
                 client_vp = fields[57:63]
                 world_identity=all(abs(v-float(i%5==0))<=1e-6 for i,v in enumerate(matrices[:16]))
@@ -108,14 +116,18 @@ def analyze(path):
                 rigid=all(abs(sum(v[i*4+k]*v[j*4+k] for k in range(3))-float(i==j))<=.01 for i in range(3) for j in range(3))
                 camera=(rigid and abs(p[11]+1)<=1e-5 and abs(p[15])<=1e-5 and p[0]>0 and p[5]>0
                         and p[10]<-1 and 4<=p[14]/p[10]<=32)
-                expanded=header.get('coverage_revision')==6 and counts[3]>=120
-                material_safe=(vertex_format==0x480003 and shader in ('LightmappedGeneric','LightmappedGeneric_DX9')) or (expanded and vertex_format==0x80503 and shader=='UnlitGeneric')
-                pending_world_safe=(status==1 and fields[55] and fields[56] and flags==3 and material_safe
+                expanded=header.get('coverage_revision') in (6,7) and counts[3]>=120
+                unlit_hud_enabled=expanded or v7 and counts[3]>=30
+                lightmapped=shader in ('LightmappedGeneric','LightmappedGeneric_DX9')
+                tangent=v7 and expanded and vertex_format in (0x480033,0x2480033) and lightmapped
+                material_safe=(vertex_format==0x480003 and lightmapped) or (unlit_hud_enabled and vertex_format==0x80503 and shader=='UnlitGeneric') or tangent
+                pending_world_safe=(status==1 and fields[55] and fields[56] and flags==3 and material_safe and not failures
+                    and kind in (1,2) and topology in (4,5)
                     and world_identity and camera and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==113
                     and (width,height)==fields[59:61] and not alpha and not test and depth==depth_write==1)
                 if status == 1 and tuple(client_vp) != tuple(host_vp):
                     viewport_mismatch += 1
-                declaration = payload[state_at + PIPELINE.size:]
+                declaration = payload[state_at + pipeline.size:]
                 core=bytes.fromhex('000000000200000000000c000200030000001800010005000000200001000501')
                 terminator=bytes.fromhex('ff00000011000000')
                 auxiliary=bytes.fromhex('02000000030000010200100002000301')
@@ -123,11 +135,16 @@ def analyze(path):
                     and (declaration==core+terminator or stride==48 and declaration==core+auxiliary+terminator))
                 unlit_decl=bytes.fromhex('000000000200000000000c000200030000001800010005000100000004000a01020000000300000102001000020003010300000000000002ff00000011000000')
                 if vertex_format==0x80503:
-                    layout_safe=expanded and stride==32 and stream_frequency==1 and stream_offset%4==0 and declaration==unlit_decl
+                    layout_safe=unlit_hud_enabled and stride==32 and stream_frequency==1 and stream_offset%4==0 and declaration==unlit_decl
+                if tangent:
+                    tangent2=core+bytes.fromhex('00002800020006000000340002000700')+auxiliary+terminator
+                    tangent3=core+bytes.fromhex('0000280001000502000030000200060000003c0002000700')+auxiliary+terminator
+                    expected_decl,expected_stride=(tangent2,64) if vertex_format==0x480033 else (tangent3,80)
+                    layout_safe=stride==expected_stride and stream_frequency==1 and stream_offset%4==0 and declaration==expected_decl
                 pending_world_safe=pending_world_safe and layout_safe
                 post_decl=bytes.fromhex('000000000200000000000c000100050002000000030000010200100002000301ff00000011000000')
                 all_identity=all(abs(v-float(i%5==0))<=1e-6 for part in (matrices[:16],matrices[16:32],matrices[32:48]) for i,v in enumerate(part))
-                pending_hud_safe=(expanded and status==1 and fields[55] and fields[56] and flags==3 and shader=='Neko_Engine_Post' and vertex_format==0x80001
+                pending_hud_safe=(unlit_hud_enabled and status==1 and fields[55] and fields[56] and flags==3 and shader=='Neko_Engine_Post' and vertex_format==0x80001
                     and kind in (1,2) and topology==4 and stride==32 and stream_frequency==1 and stream_offset%4==0 and declaration==post_decl
                     and all_identity and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==21
                     and (width,height)==fields[59:61] and not alpha and not test and not depth and not depth_write)
@@ -138,6 +155,24 @@ def analyze(path):
                 layout = layouts[layout_key]; layout['draws'] += 1
                 layout['opaque_depth_draws'] += int(not alpha and not test and depth == 1 and depth_write == 1)
                 layout['query_failure_draws'] += int(bool(failures))
+                pending_attribution=None
+                if header.get('profile') and status==1 and flags==3 and world_identity and camera and fmt==113 and not alpha and not test and depth==depth_write==1 and (lightmapped or shader=='UnlitGeneric'):
+                    phase='raster' if counts[3]<30 else 'baseline_world' if counts[3]<120 else 'expanded_world'
+                    # Same material may use several layouts/cull states. Keep
+                    # separate groups; do not invent a Source object identity.
+                    group_key=(phase,fields[55],fields[56],vertex_format,shader,layout_key,cull)
+                    if group_key not in attribution and len(attribution)<256:
+                        attribution[group_key]={'phase':phase,'material':fields[55],'table':fields[56],
+                            'vertex_format':hex(vertex_format),'shader':shader,'stride':stride,'frequency':stream_frequency,
+                            'declaration_hex':declaration.hex(),'cull_mode':cull,'first_ordinal':ordinal,'first_rpc_uid':uid,
+                            'first_frame':counts[3]+1,'first_draw_kind':kind,'first_topology':topology,'first_args':args,
+                            'draws':0,'converted':0,'decisions':{}}
+                    pending_attribution=attribution.get(group_key)
+                    if pending_attribution is None:attribution_omitted_draws+=1
+                    else:
+                        pending_attribution['draws']+=1
+                        pending_attribution['last_ordinal']=ordinal
+                        pending_attribution['last_frame']=counts[3]+1
                 if status == 1:
                     key_bytes = payload[40+64:40+192] + struct.pack('<6I', *fields[57:61], width, height)
                     key = hashlib.sha256(key_bytes).hexdigest()[:16]
@@ -155,6 +190,9 @@ def analyze(path):
                 decision,code,capture,apply,restore,converted,called,physical=struct.unpack('<8I',payload)
                 if decision>9 or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
                 decisions[decision]+=1;conversions['reports']+=1;pending_conversion=True
+                if pending_attribution is not None:
+                    pending_attribution['converted']+=converted
+                    bucket=pending_attribution['decisions'];bucket[str(decision)]=bucket.get(str(decision),0)+1
                 if decision==9:
                     if not pending_hud_safe or converted or code!=9 or called or physical:
                         raise ValueError('unsafe_or_failed_hud_replacement')
@@ -210,6 +248,8 @@ def analyze(path):
             'camera_groups':cameras,'vertex_layouts':layouts,
             'material_decode_flags':dict(material_flags),'shader_names':dict(shaders),
             'world_decisions':dict(decisions),'world_conversion':dict(conversions),
+            'world_material_attribution':{'groups':list(attribution.values()),'limit':256,'omitted_draws':attribution_omitted_draws,
+                'scope':'main-camera candidate opaque HDR world draws; original cull state, material/layout identity and RPC linkage; no screen-space or per-object identity proof'},
             'world_normalization':'pass' if header and header.get('profile') and conversions['converted'] and not conversions['state_failures'] and not errors else 'unrun_or_incomplete',
             'source_queue_execution':'unrun','source_parallel_preparation':'unrun','static_world_classification':'unverified',
             'game_rt':'unrun','performance':'unrun'}
@@ -227,5 +267,5 @@ if __name__ == '__main__':
         result=analyze(args.trace)
     if args.output:
         args.output.write_text(json.dumps(result,indent=2)+'\n')
-    print(json.dumps({k:v for k,v in result.items() if k not in ('camera_groups','vertex_layouts')},indent=2))
+    print(json.dumps({k:v for k,v in result.items() if k not in ('camera_groups','vertex_layouts','world_material_attribution')},indent=2))
     raise SystemExit(0 if result['pass'] else 1)

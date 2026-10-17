@@ -36,7 +36,12 @@ struct Surface : IDirect3DSurface9 {
 };
 struct Graphics : rt_test::Graphics {
   Surface surface;
+  bool failCull=false;
   HRESULT GetRenderTarget(DWORD, IDirect3DSurface9** output) { surface.AddRef();*output=&surface;return S_OK; }
+  HRESULT GetRenderState(D3DRENDERSTATETYPE type,DWORD* value) {
+    const auto result=rt_test::Graphics::GetRenderState(type,value);
+    return type==D3DRS_CULLMODE && failCull?E_FAIL:result;
+  }
 };
 int main(int argc, char** argv) {
   try {
@@ -64,6 +69,10 @@ int main(int argc, char** argv) {
     require(device.sets == 0 && !device.foreign,"observation must not modify raster state");
     require(shaderRefs==device.shader.refs && declarationRefs==device.declaration.refs && bufferRefs==device.buffer.refs,"public getter COM references released");
     require(device.surface.refs==1,"render target reference released");
+    device.failCull=true;
+    const auto failedCull=pipeline(&device,true);ldb_rt::Reader cullReader{failedCull.data(),failedCull.size()};
+    require((cullReader.u32()&512)!=0 && !device.sets && device.surface.refs==1,"v7 cull getter failure missing or changed draw state");
+    device.failCull=false;
     require(fs::exists(doneFile(parsed)),"complete marker");
     const auto fakeRuntime=output/"fixture-runtime";fs::create_directory(fakeRuntime);
     { std::ofstream file(fakeRuntime/"d3d9.dll");file << "not a DLL; request parser fixture only"; }

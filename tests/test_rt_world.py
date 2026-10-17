@@ -59,6 +59,17 @@ class ReadbackEvidenceTests(unittest.TestCase):
             self.assertEqual(coverage['coverage_comparison']['hud_post_replacements'],1)
             hud['restore_hresult']=0x80004005
             self.assertIn('missing_or_failed_hud_injection',inspect()['errors'])
+            hud['restore_hresult']=0
+            events.append(dict(event='world_coverage_revision',code=0,value='7'))
+            hud['phase']='expanded_world'
+            self.assertIn('missing_baseline_or_expanded_hud_injection',inspect()['errors'])
+            baseline_hud=dict(hud,phase='baseline_world',ordinal=999);events.append(baseline_hud)
+            v7=inspect()
+            self.assertEqual(v7['runtime_outputs'],'pass',v7['errors'])
+            self.assertEqual(v7['coverage_comparison']['revision'],7)
+            self.assertEqual(v7['coverage_comparison']['hud_phase_counts'],{'baseline_world':1,'expanded_world':1})
+            baseline_hud['phase']='raster'
+            self.assertIn('missing_baseline_or_expanded_hud_injection',inspect()['errors'])
             events[:]=original
             events[-1]['code']=1
             self.assertIn('incomplete_or_failed_lighting_phase_requests',inspect()['errors'])

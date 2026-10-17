@@ -92,6 +92,7 @@ def install(root,game,manifest):
                      '27349fe2def9ade2aaa637b32189db09e71fc41f79afdf9e06fd8e3c2e6c3d87',
                      '3f1a899dd2021610c17bf32cb076b749293910b5fe6f4681b2695a1dfbb57fbb',
                      'd280301fa0dd70084aff94bdccad08f68d5fbe76fa1d3c69d30ea2f14b92094a',
+                     'd9f6cbefa7e090deceb5d773f8999b34eaa5c9910cec0a56a8abbacf6e6c779f',
                      manifest['binaries'][TARGETS[0]]['sha256']}
     if inherited is None and digest(game/TARGETS[0]) in known_observers:
         raise ValueError('Earlier observer found without its recovery receipt. Restore it from its original package folder first.')

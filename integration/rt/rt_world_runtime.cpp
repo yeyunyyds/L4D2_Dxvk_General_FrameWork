@@ -24,7 +24,7 @@ bool initialized = false;
 bool raytracingRequested = false;
 uint64_t physicalDraws = 0;
 world_diagnostics::CoverageComparison comparison;
-std::set<std::array<uint64_t, 3>> audited;
+std::set<std::array<uint64_t, 4>> audited;
 std::array<unsigned, 4> auditCounts{};
 std::array<float, 16> lastView{}, lastProjection{};
 bool haveWorldCamera = false;
@@ -91,14 +91,17 @@ void audit(IDirect3DDevice9* device, const draw_observe::Snapshot& snapshot) noe
     lastView = snapshot.view; lastProjection = snapshot.projection; haveWorldCamera = true;
     const auto phase = comparison.phase();
     const auto index = size_t(phase);
-    const std::array<uint64_t, 3> key{{uint64_t(phase), snapshot.material, snapshot.materialTable}};
+    const std::array<uint64_t, 4> key{{uint64_t(phase), snapshot.material, snapshot.materialTable,snapshot.materialInfo.format}};
     if (phase == world_diagnostics::CoveragePhase::Raster || auditCounts[index] >= 64 || !audited.insert(key).second) { return; }
     ++auditCounts[index];
     Ref<IDirect3DPixelShader9> shader;
     const auto ps = device->GetPixelShader(&shader.value);
+    DWORD cull=0;const auto cullResult=device->GetRenderState(D3DRS_CULLMODE,&cull);
     events << "{\"event\":\"world_material_sample\",\"phase\":\"" << world_diagnostics::name(phase)
       << "\",\"material\":" << snapshot.material << ",\"table\":" << snapshot.materialTable
-      << ",\"ordinal\":" << snapshot.ordinal << ",\"pixel_shader_hresult\":" << uint32_t(ps)
+      << ",\"ordinal\":" << snapshot.ordinal << ",\"vertex_format\":" << snapshot.materialInfo.format
+      << ",\"shader_name\":\"" << snapshot.materialInfo.shader.data() << "\",\"cull_mode\":" << cull
+      << ",\"cull_hresult\":" << uint32_t(cullResult) << ",\"pixel_shader_hresult\":" << uint32_t(ps)
       << ",\"pixel_shader_bound\":" << (shader.value ? "true" : "false") << ",\"render_state_values\":[";
     const D3DRENDERSTATETYPE renderNames[] = {D3DRS_TEXTUREFACTOR, D3DRS_LIGHTING, D3DRS_COLORVERTEX,
       D3DRS_DIFFUSEMATERIALSOURCE, D3DRS_AMBIENTMATERIALSOURCE, D3DRS_AMBIENT, D3DRS_FOGENABLE, D3DRS_SRGBWRITEENABLE};
@@ -141,7 +144,8 @@ bool overlayDraw(IDirect3DDevice9* device, const draw_observe::Snapshot& snapsho
   if (device!=registered || !raytracingRequested || !overlay::candidate(snapshot,type,userMemory)) { return false; }
   const auto result=overlay::inject(device,snapshot);report=result.report;
   physical=FAILED(report.restore)?report.restore:result.draw;
-  events << "{\"event\":\"hud_injection\",\"ordinal\":" << snapshot.ordinal
+  events << "{\"event\":\"hud_injection\",\"phase\":\"" << world_diagnostics::name(comparison.phase())
+    << "\",\"ordinal\":" << snapshot.ordinal
     << ",\"capture_hresult\":" << uint32_t(report.capture) << ",\"apply_hresult\":" << uint32_t(report.apply)
     << ",\"draw_hresult\":" << uint32_t(result.draw) << ",\"restore_hresult\":" << uint32_t(report.restore)
     << ",\"scope_code\":" << uint32_t(report.code) << ",\"replaced_post\":" << (result.replaced?"true":"false") << "}\n" << std::flush;
@@ -232,7 +236,8 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy", 0, "v6_baseline_world_then_unlit_and_neko_post_overlay_after120_constant_sphere3000");
+    event("coverage_comparison_policy", 0, "v7_v6_world_and_hud_baseline_then_exact_tangent_layouts_after120_constant_sphere3000");
+    event("world_coverage_revision", 0, "7");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &overlayDraw}; return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }

@@ -9,7 +9,7 @@
 #include <type_traits>
 
 namespace ldb_rt::draw_observe {
-template<class Device> Bytes pipeline(Device* device) {
+template<class Device> Bytes pipeline(Device* device, bool coverageV7 = false) {
   Writer w;
   uint32_t failures = 0;
   D3DVIEWPORT9 viewport{};
@@ -31,11 +31,14 @@ template<class Device> Bytes pipeline(Device* device) {
   IDirect3DSurface9* target = nullptr; D3DSURFACE_DESC desc{};
   if (FAILED(device->GetRenderTarget(0, &target)) || !target) { failures |= 256; }
   if (target) { if (FAILED(target->GetDesc(&desc))) { failures |= 256; } target->Release(); }
+  DWORD cull = 0;
+  if (coverageV7 && FAILED(device->GetRenderState(D3DRS_CULLMODE,&cull))) { failures |= 512; }
   w.u32(failures); w.u32(offset); w.u32(stride); w.u32(frequency);
   for (auto value : state) { w.u32(value); }
   w.u32(viewport.X); w.u32(viewport.Y); w.u32(viewport.Width); w.u32(viewport.Height);
   w.f32(viewport.MinZ); w.f32(viewport.MaxZ);
   w.u32(desc.Width); w.u32(desc.Height); w.u32(uint32_t(desc.Format)); w.u32(count);
+  if (coverageV7) { w.u32(cull); }
   for (unsigned i = 0; i < count; ++i) {
     const auto* bytes = reinterpret_cast<const uint8_t*>(&elements[i]);
     w.data.insert(w.data.end(), bytes, bytes + sizeof(elements[i]));
@@ -73,7 +76,7 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.world ? 3 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    Writer header; header.u32(request.world ? 4 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
     if (request.world) { header.u32(240); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
@@ -90,7 +93,7 @@ public:
     if (written > 128 * 1024 * 1024) { finish(2); return; }
     Writer payload; payload.data = pack(snapshot); payload.u32(kind); payload.u32(uint32_t(type));
     for (auto arg : args) { payload.u32(arg); }
-    auto state = pipeline(device); payload.data.insert(payload.data.end(), state.begin(), state.end());
+    auto state = pipeline(device, request.world); payload.data.insert(payload.data.end(), state.begin(), state.end());
     if (pending) { ++failures; }
     pending = true; pendingUid = uid;
     record(1, uid, payload.data); ++draws; if (snapshot.status == Status::Valid) { ++valid; }

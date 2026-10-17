@@ -66,6 +66,50 @@ class DrawObservation(unittest.TestCase):
         early[a:a+3]=events[b:b+3]
         self.assertFalse(self.inspect(early)['pass'])
 
+    def tangent_fixture(self):
+        events=self.coverage_fixture()
+        events[0]=(0,0,struct.pack('<IQQQII',4,42,7,10000000,240,30))
+        state_at=check.SNAPSHOT.size+check.MATERIAL.size+32
+        for i,(e,u,p) in enumerate(events):
+            if e==1:events[i]=(e,u,p[:state_at+check.PIPELINE.size]+struct.pack('<I',3)+p[state_at+check.PIPELINE.size:])
+        # v6 features are in the baseline already. Keep their original precise
+        # snapshots but use the destination frame's ordinal and RPC identity.
+        for source,frame in ((121,31),(122,32)):
+            at=1+(frame-1)*4;src=1+(source-1)*4;e,u,_=events[at];data=bytearray(events[src][2]);struct.pack_into('<Q',data,16,frame)
+            events[at]=(e,u,bytes(data));events[at+1]=(6,u,events[src+1][2])
+        layouts={123:(0x480033,64,'000000000200000000000c0002000300000018000100050000002000010005010000280002000600000034000200070002000000030000010200100002000301ff00000011000000'),
+                 124:(0x2480033,80,'000000000200000000000c0002000300000018000100050000002000010005010000280001000502000030000200060000003c000200070002000000030000010200100002000301ff00000011000000')}
+        for frame,(fmt,stride,hex_decl) in layouts.items():
+            at=1+(frame-1)*4;e,u,p=events[at];decl=bytes.fromhex(hex_decl)
+            state=list(check.PIPELINE_V7.unpack_from(p,state_at));state[2]=stride;state[17]=len(decl)//8
+            events[at]=(e,u,p[:check.SNAPSHOT.size]+check.MATERIAL.pack(fmt,3,0,b'LightmappedGeneric')+
+                        p[check.SNAPSHOT.size+check.MATERIAL.size:state_at]+check.PIPELINE_V7.pack(*state)+decl)
+        return events
+
+    def test_v7_tangent_phase_exact_layout_and_original_cull_attribution(self):
+        events=self.tangent_fixture();report=self.inspect(events)
+        self.assertTrue(report['pass'],report['errors'])
+        self.assertEqual(report['header']['coverage_revision'],7)
+        self.assertEqual(report['world_conversion']['hud_replaced'],2)
+        groups=report['world_material_attribution']['groups']
+        self.assertTrue(any(g['phase']=='baseline_world' and g['shader']=='UnlitGeneric' and g['converted']==1 for g in groups))
+        tangent=[g for g in groups if g['vertex_format'] in ('0x480033','0x2480033')]
+        self.assertEqual({g['stride'] for g in tangent},{64,80})
+        self.assertTrue(all(g['converted']==1 and g['cull_mode']==3 and g['first_rpc_uid'] for g in tangent))
+        state_at=check.SNAPSHOT.size+check.MATERIAL.size+32
+        for frame in (123,124):
+            at=1+(frame-1)*4;e,u,p=events[at]
+            mutations=[]
+            for offset,value in ((state_at+2*4,72),(state_at+4,2),(state_at+3*4,2),
+                                 (state_at+check.PIPELINE_V7.size+8+4,5),
+                                 (state_at+check.PIPELINE_V7.size-4,0),
+                                 (check.SNAPSHOT.size+check.MATERIAL.size,3),
+                                 (check.SNAPSHOT.size+check.MATERIAL.size+4,2)):
+                damaged=bytearray(p);struct.pack_into('<I',damaged,offset,value);changed=events.copy();changed[at]=(e,u,bytes(damaged));mutations.append(changed)
+            early=events.copy();dest=1+119*4;_,dest_uid,_=early[dest];data=bytearray(p);struct.pack_into('<Q',data,16,120)
+            early[dest]=(e,dest_uid,bytes(data));mutations.append(early)
+            for changed in mutations:self.assertFalse(self.inspect(changed)['pass'])
+
     def test_world_report_cannot_hide_bad_uid_control_or_unsafe_material(self):
         original=self.world_fixture()
         wrong=original.copy();wrong[2]=(6,999,wrong[2][2])

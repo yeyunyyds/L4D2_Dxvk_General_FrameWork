@@ -75,7 +75,7 @@ struct Graphics {
   Buffer buffer;
   IDirect3DVertexShader9* currentShader = &shader;
   IDirect3DVertexDeclaration9* currentDeclaration = &declaration;
-  DWORD currentFvf = 0, frequency = 1, alpha = 0, alphaTest = 0, depthWrite = 1, depth = D3DZB_TRUE;
+  DWORD currentFvf = 0, frequency = 1, alpha = 0, alphaTest = 0, depthWrite = 1, depth = D3DZB_TRUE, cull = D3DCULL_CCW;
   UINT stride = 40, offset = 0;
   D3DVIEWPORT9 viewport{0, 0, 1920, 1080, 0, 1};
   std::array<D3DMATRIX, 3> transforms{matrix(100), matrix(200), matrix(300)};
@@ -106,6 +106,7 @@ struct Graphics {
     case D3DRS_ALPHATESTENABLE: *out = alphaTest; break;
     case D3DRS_ZWRITEENABLE: *out = depthWrite; break;
     case D3DRS_ZENABLE: *out = depth; break;
+    case D3DRS_CULLMODE: *out = cull; break;
     default: return E_INVALIDARG;
     }
     return operation(false);

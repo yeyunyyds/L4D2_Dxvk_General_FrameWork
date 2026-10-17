@@ -1,4 +1,4 @@
-LDB 1.3.2：受限世界 Remix 接入试验 v6（场景覆盖扩展 + Neko HUD 合成入口）
+LDB 1.3.2：受限世界 Remix 接入试验 v7（补齐两种带切线场景布局）
 
 一个入口、一次 F9、一个结果 ZIP：
 1. 解压到独立目录，建议放在旧测试包旁边。保留旧包的 backups 和 installed-observer.json，供自动继承原始恢复备份。
@@ -8,15 +8,17 @@ LDB 1.3.2：受限世界 Remix 接入试验 v6（场景覆盖扩展 + Neko HUD �
 
 这次不再切换三种灯光。全过程使用 v5 已能看清场景的同型强球灯（半径 5，辐射度 3000），自动曝光与 tone mapping 参数保持一致：
 - 1–30 Present：普通 Remix 光栅控制段。
-- 31–120：保留此前 LightmappedGeneric 世界转换，作为亮度一致的覆盖对照。
-- 121–240：增加经过精确布局检查的 UnlitGeneric 不透明场景候选，并尝试在 Neko_Engine_Post 处触发运行时原生 UI 合成；180/240 保存扩展后的结果。
+- 31–120：保留 v6 的原 LightmappedGeneric、浮点 Unlit 场景转换及已恢复的 Neko HUD 合成，作为对照。
+- 121–240：只额外加入实际记录的 64/80 字节 LightmappedGeneric 带切线布局；HUD、灯光与此前世界路径保持相同。180/240 保存扩展后的结果。
 30/120/180/240 各保存 640×400 颜色、投影深度、解码法线预览和原始 RGBA32F，共 12 份原始读回；用于正确性验证，不是全分辨率画质或性能验收。
 
-新增场景路径只接受实机记录的 0x80503 / UnlitGeneric、单位 world、刚性主视图候选、完整深度范围、同尺寸 HDR 目标、不透明且写深度、stream0 步长 32 的完整 FLOAT3 位置/FLOAT3 法线/FLOAT2 UV 及精确附加声明。使用固定功能 XYZ|NORMAL|TEX1；原 VS、PS、完整声明和矩阵逐 Draw 恢复。压缩法线、骨骼/蒙皮声明、武器相机、未知材质和布局继续拒绝。它不保证上次缺失的白墙恰好属于这一路径，也不是所有模型接入。
+本次新增路径只接受 LightmappedGeneric / LightmappedGeneric_DX9 的 0x480033（stride64）和 0x2480033（stride80），并检查完整实际声明、单位 world、刚性主视图候选、完整深度范围、同尺寸 HDR 目标、不透明写深度、非 UP 三角形、无实例化和对齐 offset。FLOAT3 位置@0、FLOAT3 法线@12、FLOAT2 UV0@24、FLOAT2 UV1@32 经固定功能 XYZ|NORMAL|TEX2 读取；保留原 buffer、offset 和 stride，忽略额外切线/UV2 与辅助流。新增两路暂未将切线/UV2 接成完整 PBR。原 VS、PS、完整声明和矩阵逐 Draw 恢复。此前 Unlit 的精确 32 字节路径保留；压缩法线、骨骼/蒙皮、武器相机、未知格式和布局继续拒绝。
 
-HUD 路径仅匹配本次实际记录的 Neko_Engine_Post、0x80001、单位矩阵、精确声明、无深度/混合的完整 backbuffer 绘制，并核对 RT 就是实际 swapchain backbuffer。仅在扩展阶段且已请求开启 RT 时尝试。
+原始 trace 升为 world version4（snapshot wire 仍为 v2），记录每次原 Draw 的 CULLMODE。分析器按阶段、材质身份、格式、完整声明和剔除状态汇总有界候选及转换数量，并保留首次 RPC/ordinal/参数关联；材质样本增加 shader、格式和恢复后的剔除状态。它有助于追踪新增覆盖，不等于已获得屏幕逐物体 ID；白墙是否恢复仍以颜色/深度/法线实际遮挡为准，不保证这面墙一定属于新增两路。
+
+HUD 路径仅匹配实际记录的 Neko_Engine_Post、0x80001、单位矩阵、精确声明、无深度/混合的完整 backbuffer 绘制，并核对 RT 就是实际 swapchain backbuffer。在基线和扩展两段都保留此路径，仅于控制段之后且已请求开启 RT 时尝试。
 它用 alpha=0 的固定功能屏幕三角形触发固定 Remix 的 orthographic UI 注入，再保留其后原生 UI 绘制。成功后跳过该次原 Neko 后处理，避免它用未完成的光栅 HDR 画面覆盖 RT。使用 D3DSBT_ALL 备份，并独立保存/恢复全部修改字段，包含 shader、纹理、矩阵、渲染/纹理阶段状态及 DrawPrimitiveUP 会清除的 stream0；任何捕获、setter、绘制或恢复错误都记录。
-本版不等于恢复全部 Neko 后处理效果；原 Neko 色调/受伤淡入淡出、武器和蒙皮模型仍未移植。HUD 是否实际显示，必须由本轮图像确认，不能只看注入 draw 的 S_OK。
+v6 实机已确认本镜头的 HUD 恢复，仍未恢复全部 Neko 后处理效果；原 Neko 色调/受伤淡入淡出、武器和蒙皮模型未移植。本轮继续检查前后两段 HUD 图像，不能只看注入 draw 的 S_OK。
 
 原地图灯光、天空、透明与全部动态模型未验收。没有写 Source 线程 CVar，没有移植参考 mod 的全局 prim context；Source 准备线程并行和性能继续待验收。逐 Draw 观察、状态 getter、文件记录与同步读回会影响诊断帧率。
 
