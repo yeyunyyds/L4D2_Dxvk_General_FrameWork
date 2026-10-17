@@ -41,7 +41,7 @@
 
 - TEXTUREFACTOR 为 `0xffffffff`，没有采到把颜色压黑的乘色因子。
 - stage 0 绑定 2D DXT1/DXT5 纹理，sRGB=1、UV index=0，COLOROP 为 MODULATE(TEXTURE,CURRENT)。
-- stage 1～7 的 COLOROP/ALPHAOP 为 DISABLE。stage 1 虽绑定 1×1 X8R8G8B8 纹理，但在该 fixed-function 阶段遍历中未启用；没有采到额外活动阶段把 lightmap 重复乘入。
+- stage 1～7 的 COLOROP/ALPHAOP 为 DISABLE。stage 1 虽绑定 1×1 X8R8G8B8 纹理，但在该 fixed-function 阶段遍历中未启用；此结论只描述固定功能阶段；原 PS 仍绑定，固定 runtime 实际可走 programmable 纹理提取，因此不能仅据 TSS DISABLE 排除额外绑定纹理参与。
 - 原 pixel shader 仍绑定，D3DRS_LIGHTING/COLORVERTEX 为 1，固定功能颜色来源等状态保持原样；这些只是观察事实，不代表所有状态均可忽略或所有材质已经正确。
 
 这批数据支持先解决灯光与场景覆盖，无需为了排除同样的黑因子/第二阶段乘法再让用户单独重采。样本是每个材质身份/阶段的第一次恢复后状态，不含纹理内容，不覆盖每次 Draw，不能当作完整 PBR 材质验收。

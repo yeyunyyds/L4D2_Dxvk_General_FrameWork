@@ -7,6 +7,11 @@ using namespace ldb_rt::world_diagnostics;
 void require(bool ok, const char* why) { if (!ok) { throw std::runtime_error(why); } }
 int main() {
   try {
+    CoverageComparison coverage;
+    require(coverage.phase()==CoveragePhase::Raster && !coverage.afterCapture(120), "coverage must wait for raster control");
+    require(coverage.afterCapture(30) && coverage.phase()==CoveragePhase::BaselineWorld, "baseline remains old coverage");
+    require(coverage.afterCapture(120) && coverage.phase()==CoveragePhase::ExpandedWorld && !coverage.afterCapture(120), "expanded coverage only after baseline readback");
+    require(coverage.afterCapture(180) && coverage.afterCapture(240) && !coverage.afterCapture(240), "coverage comparison is bounded");
     Comparison comparison;
     std::map<std::string, std::string> values;
     auto setter = [&](const char* key, const char* value) { values[key] = value; return true; };

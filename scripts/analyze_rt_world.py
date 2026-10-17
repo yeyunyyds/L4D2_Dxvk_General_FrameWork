@@ -65,8 +65,14 @@ def analyze(directory,previews=True):
         off=[i for i,e in enumerate(events) if e.get('event')=='raytracing_requested_off' and e.get('code')==0]
         if len(on)!=1 or not off or off[-1]<=on[0]:errors.append('missing_gated_rt_on_off_sequence')
     comparison=any(e.get('event')=='lighting_comparison_policy' for e in events)
-    frames=(30,120,180,240) if comparison else (30,120,240)
+    coverage=any(e.get('event')=='coverage_comparison_policy' for e in events)
+    frames=(30,120,180,240) if comparison or coverage else (30,120,240)
     phase_names={30:'raster',120:'baseline_sphere',180:'strong_sphere',240:'distant'}
+    if coverage:
+        phase_names={30:'raster',120:'baseline_world',180:'expanded_world',240:'expanded_world'}
+        requested=[(e.get('after_present'),e.get('phase'),e.get('code')) for e in events if e.get('event')=='coverage_phase_requested']
+        if requested!=[(30,'baseline_world',0),(120,'expanded_world',0),(180,'expanded_world',0),(240,'expanded_world',0)]:
+            errors.append('incomplete_or_failed_coverage_phase_requests')
     if comparison:
         requested=[(e.get('after_present'),e.get('phase'),e.get('code')) for e in events if e.get('event')=='lighting_phase_requested']
         if requested!=[(30,'baseline_sphere',0),(120,'strong_sphere',0),(180,'distant',0),(240,'distant',0)]:
@@ -79,7 +85,7 @@ def analyze(directory,previews=True):
         seen.add(key);name=f'world-{frame}-{kind}.rgba32f';file=directory/name
         sample={'frame':frame,'kind':kind,'file':name,'copy_code':e.get('copy_code'),'hresult':e.get('hresult')}
         samples.append(sample)
-        if comparison:
+        if comparison or coverage:
             sample['phase']=e.get('phase')
             if sample['phase']!=phase_names[frame]:errors.append('readback_phase_mismatch:'+name)
         if (e.get('file')!=name or (e.get('width'),e.get('height'))!=(640,400)
@@ -138,10 +144,10 @@ def analyze(directory,previews=True):
         for s in world)
     material_samples=[e for e in events if e.get('event')=='world_material_sample']
     material_counts={phase:sum(e.get('phase')==phase for e in material_samples) for phase in phase_names.values() if phase!='raster'}
-    if comparison and any(n>64 for n in material_counts.values()):errors.append('material_sample_budget_exceeded')
+    if (comparison or coverage) and any(n>64 for n in material_counts.values()):errors.append('material_sample_budget_exceeded')
     cameras={e.get('frame'):e for e in events if e.get('event')=='world_camera_sample'}
     movement=[]
-    if comparison:
+    if comparison or coverage:
         base=cameras.get(120,{})
         for frame in (180,240):
             other=cameras.get(frame,{})
@@ -155,17 +161,22 @@ def analyze(directory,previews=True):
             movement.append({'frame':frame,'camera_sample_available':valid,
                              'max_matrix_delta':max(differences) if valid else None,
                              'matched_within_1e_4':valid and max(differences)<1e-4})
+    hud=[e for e in events if e.get('event')=='hud_injection']
+    if coverage and (not hud or any(e.get('replaced_post') is not True or e.get('scope_code')!=9 or not e.get('ordinal',0)
+                                   or any(e.get(k,0)&0x80000000 for k in ('capture_hresult','apply_hresult','draw_hresult','restore_hresult')) for e in hud)):
+        errors.append('missing_or_failed_hud_injection')
     return {'schema':2,'scope':'reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance',
             'runtime_outputs':'pass' if not errors else 'incomplete','errors':errors,'samples':samples,
             'startup_raster_gate':'requested_events_present_not_effective_state_proof' if gated else 'legacy_ungated',
             'rt_activation_requests':sum(e.get('event')=='raytracing_requested_on' and e.get('code')==0 for e in events),
             'nonzero_world_depth_and_normals':nonzero,
+            'coverage_comparison':{'present':coverage,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; weapons/skinning unimplemented'},
             'lighting_comparison':{'present':comparison,'status':'requests_complete_requires_image_review' if comparison and not errors else 'incomplete' if comparison else 'not_requested',
                 'phases':phase_names if comparison else {},'camera_comparisons':movement,
                 'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),
                 'limits':'camera samples are last converted world Draw; matching endpoints do not prove a static scene, exposure convergence, or effective light settings'},
             'material_audit':{'samples':len(material_samples),'counts':material_counts,'per_phase_limit':64,
-                'status':'samples_available' if all(material_counts.values()) else 'incomplete' if comparison else 'not_requested',
+                'status':'samples_available' if all(material_counts.values()) else 'incomplete' if comparison or coverage else 'not_requested',
                 'texture_stage_fields':['COLOROP','COLORARG1','COLORARG2','ALPHAOP','ALPHAARG1','ALPHAARG2','TEXCOORDINDEX','TEXTURETRANSFORMFLAGS','RESULTARG'],
                 'render_state_fields':['TEXTUREFACTOR','LIGHTING','COLORVERTEX','DIFFUSEMATERIALSOURCE','AMBIENTMATERIALSOURCE','AMBIENT','FOGENABLE','SRGBWRITEENABLE'],
                 'query_failures':sum(bool(e.get('pixel_shader_hresult',0)&0x80000000) or bool(e.get('render_state_query_failure_bits',0)) or any(

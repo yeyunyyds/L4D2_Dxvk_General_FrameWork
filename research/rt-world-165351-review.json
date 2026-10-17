@@ -713,7 +713,7 @@
     "texture_factor": "0xffffffff, neutral white",
     "stage0": "bound 2D DXT1/DXT5 textures; sRGB=1, UV index=0; COLOROP=MODULATE(TEXTURE,CURRENT)",
     "stages1_to7": "COLOROP/ALPHAOP DISABLE; stage1 has a bound 1x1 X8R8G8B8 texture but is not active in fixed-function stage traversal",
-    "conclusion": "No sampled black texture factor or active second-stage lightmap multiplication; sampled material state remained equal while light requests changed. Complete material correctness is not certified.",
+    "conclusion": "Sampled material states stayed equal across light phases. White texture factor and disabled TSS stages were observed, but original PS remained bound; pinned processRenderState selects programmable texture extraction by PS, so disabled TSS alone does not exclude additional bound textures. Full material correctness is not certified.",
     "limits": "Bounded first restored state per material identity/phase, not texture content or every Draw. D3DRS_LIGHTING=1 and original pixel shader remain observed, not changed or certified irrelevant."
   },
   "visual_review": {

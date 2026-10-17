@@ -135,9 +135,17 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
       ldb_rt::consumer_world::Decision decision;
       ldb_rt::static_draw::Report report;
       bool called = false; HRESULT physical = E_ABORT;
+      if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
+        const auto& runtime = ldb_rt::world_runtime::state();
+        if (runtime.active && runtime.overlay && consumer->second->expanded() &&
+            runtime.overlay(graphics, current, type, userMemory, report, physical)) {
+          consumer->second->conversion(uid, ldb_rt::consumer_world::Decision::HudOverlay, report, false, physical);
+          return physical;
+        }
+      }
       const auto result = ldb_rt::consumer_world::execute(graphics, current, type, userMemory,
         ldb_rt::world_runtime::state().active, control, [&] { called = true; physical = physicalDraw(); return physical; }, decision, report,
-        ldb_rt::world_runtime::state().raytracing);
+        ldb_rt::world_runtime::state().raytracing, consumer->second->expanded());
       consumer->second->conversion(uid, decision, report, called, physical);
       return result;
     }

@@ -3,11 +3,14 @@
 #include "rt_static_draw.h"
 
 namespace ldb_rt::consumer_world {
-enum class Decision : uint32_t { Disabled, Control, SourceState, Material, Transform, Camera, Target, Pipeline, Selected };
-inline Decision classify(const draw_observe::Snapshot& s) noexcept {
+enum class Decision : uint32_t { Disabled, Control, SourceState, Material, Transform, Camera, Target, Pipeline, Selected, HudOverlay };
+inline bool unlit(const draw_observe::Snapshot& s) noexcept {
+  return s.materialInfo.format == 0x80503 && !std::strcmp(s.materialInfo.shader.data(), "UnlitGeneric");
+}
+inline Decision classify(const draw_observe::Snapshot& s, bool expanded = false) noexcept {
   if (s.status != draw_observe::Status::Valid) { return Decision::SourceState; }
   if (!s.material || !s.materialTable || s.materialInfo.flags != (material_decode::FormatRead | material_decode::ShaderRead) ||
-      s.materialInfo.format != 0x480003 || !material_decode::worldShader(s.materialInfo.shader)) { return Decision::Material; }
+      !((s.materialInfo.format == 0x480003 && material_decode::worldShader(s.materialInfo.shader)) || (expanded && unlit(s)))) { return Decision::Material; }
   for (unsigned i = 0; i < 16; ++i) {
     if (!std::isfinite(s.world[i]) || std::abs(s.world[i] - float(i % 5 == 0)) > 1e-6f) { return Decision::Transform; }
   }
@@ -45,13 +48,14 @@ template<class Device> Decision target(Device* device, const draw_observe::Snaps
 }
 template<class Device, class Draw> HRESULT execute(Device* device, const draw_observe::Snapshot& s,
     D3DPRIMITIVETYPE type, bool userMemory, bool enabled, bool control, Draw&& physicalDraw,
-    Decision& decision, static_draw::Report& report, bool (*raytracing)(bool) noexcept = nullptr) {
-  decision = !enabled ? Decision::Disabled : control ? Decision::Control : classify(s);
+    Decision& decision, static_draw::Report& report, bool (*raytracing)(bool) noexcept = nullptr, bool expanded = false) {
+  decision = !enabled ? Decision::Disabled : control ? Decision::Control : classify(s, expanded);
   if (decision == Decision::Selected) { decision = target(device, s); }
   if (decision != Decision::Selected) { return physicalDraw(); }
   typename static_draw::Scope<Device>::ConsumerInput input;
   std::memcpy(&input.world, s.world.data(), sizeof(input.world)); input.view = s.view; input.projection = s.projection;
   input.width = s.viewport[2]; input.height = s.viewport[3];
+  input.oneUV = unlit(s);
   static_draw::Scope<Device> scope(device, input, type, userMemory);
   if (FAILED(scope.report().restore)) { report = scope.report(); return report.restore; }
   // Request RT only after the shader/layout/state scope really succeeded.

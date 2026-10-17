@@ -13,6 +13,14 @@ struct Shader final : IDirect3DVertexShader9 {
   HRESULT STDMETHODCALLTYPE GetDevice(IDirect3DDevice9**) override { return E_NOTIMPL; }
   HRESULT STDMETHODCALLTYPE GetFunction(void*, UINT*) override { return E_NOTIMPL; }
 };
+struct Pixel final : IDirect3DPixelShader9 {
+  ULONG refs = 1;
+  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, void** out) override { *out = nullptr; return E_NOINTERFACE; }
+  ULONG STDMETHODCALLTYPE AddRef() override { return ++refs; }
+  ULONG STDMETHODCALLTYPE Release() override { return --refs; }
+  HRESULT STDMETHODCALLTYPE GetDevice(IDirect3DDevice9**) override { return E_NOTIMPL; }
+  HRESULT STDMETHODCALLTYPE GetFunction(void*, UINT*) override { return E_NOTIMPL; }
+};
 struct Declaration final : IDirect3DVertexDeclaration9 {
   ULONG refs = 1;
   DWORD fvf = 0;
@@ -61,6 +69,8 @@ inline D3DMATRIX matrix(float translation) {
 // their real declared ABI. Every method also checks the graphics owner thread.
 struct Graphics {
   Shader shader;
+  Pixel pixel;
+  IDirect3DPixelShader9* currentPixel = &pixel;
   Declaration declaration, ffp;
   Buffer buffer;
   IDirect3DVertexShader9* currentShader = &shader;
@@ -73,8 +83,9 @@ struct Graphics {
   uint32_t gets = 0, sets = 0, failGet = 0;
   std::vector<uint32_t> failSet;
   bool foreign = false;
-  Graphics() { shader.AddRef(); declaration.AddRef(); buffer.AddRef(); }
+  Graphics() { pixel.AddRef(); shader.AddRef(); declaration.AddRef(); buffer.AddRef(); }
   ~Graphics() {
+    if (currentPixel) { currentPixel->Release(); }
     if (currentShader) { currentShader->Release(); }
     if (currentDeclaration) { currentDeclaration->Release(); }
     buffer.Release();
@@ -109,6 +120,12 @@ struct Graphics {
   HRESULT GetVertexShader(IDirect3DVertexShader9** out) {
     *out = currentShader; if (*out) { (*out)->AddRef(); } return operation(false);
   }
+  HRESULT GetPixelShader(IDirect3DPixelShader9** out) {
+    *out=currentPixel;if (*out) { (*out)->AddRef(); } return operation(false);
+  }
+  HRESULT SetPixelShader(IDirect3DPixelShader9* value) {
+    if (value) { value->AddRef(); } if (currentPixel) { currentPixel->Release(); } currentPixel=value;return operation(true);
+  }
   HRESULT GetFVF(DWORD* out) { *out = currentFvf; return operation(false); }
   static unsigned index(D3DTRANSFORMSTATETYPE type) {
     return type == D3DTS_WORLD ? 0 : type == D3DTS_VIEW ? 1 : 2;
@@ -138,10 +155,10 @@ struct Graphics {
     transforms[index(type)] = *value; return operation(true);
   }
   bool restored() const {
-    return currentShader == &shader && currentDeclaration == &declaration && currentFvf == declaration.fvf &&
+    return currentPixel == &pixel && currentShader == &shader && currentDeclaration == &declaration && currentFvf == declaration.fvf &&
       transforms[0].m[3][0] == 100 && transforms[1].m[3][0] == 200 && transforms[2].m[3][0] == 300;
   }
-  bool leasesReleased() const { return shader.refs == 2 && declaration.refs == 2 && ffp.refs == 1 && buffer.refs == 2; }
+  bool leasesReleased() const { return pixel.refs == 2 && shader.refs == 2 && declaration.refs == 2 && ffp.refs == 1 && buffer.refs == 2; }
 };
 
 inline ldb_rt::DrawSnapshot snapshot() {

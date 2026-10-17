@@ -46,10 +46,12 @@ inline D3DMATRIX worldMatrix(const std::array<float, 12>& source) noexcept {
 template<class Device> class Scope final {
   Device* m_device;
   Ref<IDirect3DVertexShader9> m_shader;
+  Ref<IDirect3DPixelShader9> m_pixel;
   Ref<IDirect3DVertexDeclaration9> m_declaration;
   Ref<IDirect3DVertexBuffer9> m_buffer;
   D3DMATRIX m_world{}, m_view{}, m_projection{};
   bool m_dirty = false;
+  bool m_oneUV = false;
   Report m_report;
 
   bool capture(HRESULT result) noexcept {
@@ -67,7 +69,7 @@ template<class Device> class Scope final {
   }
   void initialize(const D3DMATRIX& world, const std::array<float, 16>& viewValues,
       const std::array<float, 16>& projectionValues, uint32_t width, uint32_t height,
-      D3DPRIMITIVETYPE type, bool userMemory) noexcept {
+      D3DPRIMITIVETYPE type, bool userMemory, bool oneUV = false) noexcept {
     if (userMemory || (type != D3DPT_TRIANGLELIST && type != D3DPT_TRIANGLESTRIP)) {
       m_report.code = Code::Topology; return;
     }
@@ -108,28 +110,37 @@ template<class Device> class Scope final {
     };
     const bool originalLayout = count == 5 && !std::memcmp(elements, expected, sizeof(expected));
     const bool observedLayout = count == 7 && !std::memcmp(elements, observed, sizeof(observed));
-    if (!originalLayout && !observedLayout) { m_report.code = Code::Layout; return; }
+    const D3DVERTEXELEMENT9 unlit[] = {expected[0], expected[1], expected[2],
+      {1,0,D3DDECLTYPE_D3DCOLOR,0,D3DDECLUSAGE_COLOR,1},
+      {2,0,D3DDECLTYPE_FLOAT4,0,D3DDECLUSAGE_POSITION,1},
+      {2,16,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,1},
+      {3,0,D3DDECLTYPE_FLOAT1,0,D3DDECLUSAGE_POSITION,2},D3DDECL_END()};
+    const bool unlitLayout = count == 8 && !std::memcmp(elements, unlit, sizeof(unlit));
+    if (oneUV ? !unlitLayout : (!originalLayout && !observedLayout)) { m_report.code = Code::Layout; return; }
     UINT offset = 0, stride = 0, frequency = 0;
     if (!capture(device->GetStreamSource(0, &m_buffer.value, &offset, &stride)) ||
         !capture(device->GetStreamSourceFreq(0, &frequency))) { return; }
     // FVF describes the first 40 bytes, while stream stride can include padding.
     // No stream binding or vertex data is rewritten. Auxiliary stream 2 is not
     // referenced by this FVF and is restored via the original declaration.
-    if (!m_buffer.value || (stride != 40 && stride != 48) || (observedLayout && stride != 48) || frequency != 1 || offset % 4) {
+    if (!m_buffer.value || (oneUV ? stride != 32 : ((stride != 40 && stride != 48) || (observedLayout && stride != 48))) || frequency != 1 || offset % 4) {
       m_report.code = Code::Layout; return;
     }
     if (!capture(device->GetVertexShader(&m_shader.value)) ||
         !capture(device->GetTransform(D3DTS_WORLD, &m_world)) ||
         !capture(device->GetTransform(D3DTS_VIEW, &m_view)) ||
         !capture(device->GetTransform(D3DTS_PROJECTION, &m_projection))) { return; }
+    if (oneUV && !capture(device->GetPixelShader(&m_pixel.value))) { return; }
+    m_oneUV = oneUV;
     D3DMATRIX view{}, projection{};
     std::memcpy(&view, viewValues.data(), sizeof(view));
     std::memcpy(&projection, projectionValues.data(), sizeof(projection));
     // A failing setter may already have mutated state. Roll back all saved
     // fields, continue on restore errors, and never depend on cached globals.
     m_dirty = true;
+    if (oneUV && !set(device->SetPixelShader(nullptr))) { return; }
     if (!set(device->SetVertexShader(nullptr)) ||
-        !set(device->SetFVF(D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2)) ||
+        !set(device->SetFVF(D3DFVF_XYZ | D3DFVF_NORMAL | (oneUV ? D3DFVF_TEX1 : D3DFVF_TEX2))) ||
         !set(device->SetTransform(D3DTS_WORLD, &world)) ||
         !set(device->SetTransform(D3DTS_VIEW, &view)) ||
         !set(device->SetTransform(D3DTS_PROJECTION, &projection))) { return; }
@@ -141,9 +152,10 @@ public:
     D3DMATRIX world{};
     std::array<float, 16> view{}, projection{};
     uint32_t width = 0, height = 0;
+    bool oneUV = false;
   };
   Scope(Device* device, const ConsumerInput& input, D3DPRIMITIVETYPE type, bool userMemory) noexcept : m_device(device) {
-    initialize(input.world, input.view, input.projection, input.width, input.height, type, userMemory);
+    initialize(input.world, input.view, input.projection, input.width, input.height, type, userMemory, input.oneUV);
   }
   Scope(Device* device, const DrawSnapshot* snapshot, D3DPRIMITIVETYPE type,
         bool userMemory, bool enabled) noexcept : m_device(device) {
@@ -174,6 +186,7 @@ public:
     // Restore the original declaration, including when it came from SetFVF.
     restore(m_device->SetVertexDeclaration(m_declaration.value));
     restore(m_device->SetVertexShader(m_shader.value));
+    if (m_oneUV) { restore(m_device->SetPixelShader(m_pixel.value)); }
     if (FAILED(m_report.restore)) { m_report.code = Code::RestoreFailed; }
   }
   const Report& report() const noexcept { return m_report; }

@@ -5,6 +5,7 @@
 #include "rt_file_hash.h"
 #include "rt_draw_packet.h"
 #include "rt_world_diagnostics.h"
+#include "rt_overlay.h"
 // A separate TU prevents mixing the Bridge's old API with the pinned 0.6.4 ABI.
 #define REMIX_WINAPI_NO_LIBRARY_LOADER
 #include "rt_world_remix_c.h"
@@ -22,7 +23,7 @@ IDirect3DDevice9* registered = nullptr;
 bool initialized = false;
 bool raytracingRequested = false;
 uint64_t physicalDraws = 0;
-world_diagnostics::Comparison comparison;
+world_diagnostics::CoverageComparison comparison;
 std::set<std::array<uint64_t, 3>> audited;
 std::array<unsigned, 4> auditCounts{};
 std::array<float, 16> lastView{}, lastProjection{};
@@ -32,12 +33,13 @@ const std::pair<const char*, const char*> options[] = {
   {"rtx.upscalerType", "0"}, {"rtx.enableRayReconstruction", "False"},
   {"rtx.sceneScale", "0.3937007874"},
   {"rtx.fallbackLightMode", "2"}, {"rtx.fallbackLightType", "1"},
-  {"rtx.fallbackLightRadiance", "30,30,30"}, {"rtx.fallbackLightRadius", "5"},
+  {"rtx.fallbackLightRadiance", "3000,3000,3000"}, {"rtx.fallbackLightRadius", "5"},
   {"rtx.fallbackLightPositionOffset", "0,0,0"}, {"rtx.enableFallbackLightShaping", "False"},
   {"rtx.fallbackLightDirection", "0,0,-1"},
   {"rtx.autoExposure.enabled", "True"}, {"rtx.autoExposure.evMinValue", "-2"},
   {"rtx.autoExposure.evMaxValue", "5"}, {"rtx.tonemappingMode", "1"},
   {"rtx.localtonemap.exposure", "0.75"},
+  {"rtx.orthographicIsUI", "True"}, {"rtx.skipDrawCallsPostRTXInjection", "False"},
   {"rtx.bloom.enable", "False"}, {"rtx.postfx.enable", "False"}
 };
 void event(const char* name, uint32_t code, const char* value = nullptr) {
@@ -89,7 +91,7 @@ void audit(IDirect3DDevice9* device, const draw_observe::Snapshot& snapshot) noe
     const auto phase = comparison.phase();
     const auto index = size_t(phase);
     const std::array<uint64_t, 3> key{{uint64_t(phase), snapshot.material, snapshot.materialTable}};
-    if (phase == world_diagnostics::Phase::Raster || auditCounts[index] >= 64 || !audited.insert(key).second) { return; }
+    if (phase == world_diagnostics::CoveragePhase::Raster || auditCounts[index] >= 64 || !audited.insert(key).second) { return; }
     ++auditCounts[index];
     Ref<IDirect3DPixelShader9> shader;
     const auto ps = device->GetPixelShader(&shader.value);
@@ -133,6 +135,17 @@ void audit(IDirect3DDevice9* device, const draw_observe::Snapshot& snapshot) noe
     events << "]}\n" << std::flush;
   } catch (...) { event("material_sample_exception", uint32_t(E_FAIL)); }
 }
+bool overlayDraw(IDirect3DDevice9* device, const draw_observe::Snapshot& snapshot,
+    D3DPRIMITIVETYPE type, bool userMemory, static_draw::Report& report, HRESULT& physical) noexcept {
+  if (device!=registered || !raytracingRequested || !overlay::candidate(snapshot,type,userMemory)) { return false; }
+  const auto result=overlay::inject(device,snapshot);report=result.report;
+  physical=FAILED(report.restore)?report.restore:result.draw;
+  events << "{\"event\":\"hud_injection\",\"ordinal\":" << snapshot.ordinal
+    << ",\"capture_hresult\":" << uint32_t(report.capture) << ",\"apply_hresult\":" << uint32_t(report.apply)
+    << ",\"draw_hresult\":" << uint32_t(result.draw) << ",\"restore_hresult\":" << uint32_t(report.restore)
+    << ",\"scope_code\":" << uint32_t(report.code) << ",\"replaced_post\":" << (result.replaced?"true":"false") << "}\n" << std::flush;
+  return result.replaced || FAILED(report.restore);
+}
 void capture(IDirect3DDevice9* device, uint64_t frame) noexcept {
   try {
     if (device != registered || !events) { return; }
@@ -173,11 +186,8 @@ void capture(IDirect3DDevice9* device, uint64_t frame) noexcept {
     events << "],\"projection\":[";
     for (size_t i = 0; i < lastProjection.size(); ++i) { if (i) { events << ','; } events << lastProjection[i]; }
     events << "]}\n" << std::flush;
-    const bool advanced = comparison.afterCapture(frame, [](const char* key, const char* value) {
-      const auto code = api.SetConfigVariable(key, value); event(key, uint32_t(code), value);
-      return code == REMIXAPI_ERROR_CODE_SUCCESS;
-    });
-    events << "{\"event\":\"lighting_phase_requested\",\"code\":" << (advanced ? 0 : uint32_t(E_FAIL))
+    const bool advanced = comparison.afterCapture(frame);
+    events << "{\"event\":\"coverage_phase_requested\",\"code\":" << (advanced ? 0 : uint32_t(E_FAIL))
       << ",\"after_present\":" << frame << ",\"phase\":\"" << world_diagnostics::name(comparison.phase()) << "\"}\n" << std::flush;
     if (!advanced) { (void)raytracing(false); state().active = false; }
   } catch (...) {
@@ -221,9 +231,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("lighting_comparison_policy", 0, "v5_sphere30_sphere3000_distant3_readbacks30_120_180_240");
+    event("coverage_comparison_policy", 0, "v6_baseline_world_then_unlit_and_neko_post_overlay_after120_constant_sphere3000");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
-    state() = {true, &bind, &capture, &raytracing, &draw, &audit}; return module;
+    state() = {true, &bind, &capture, &raytracing, &draw, &audit, &overlayDraw}; return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }
 }
 bool configureRaster() noexcept {
@@ -240,7 +250,7 @@ void shutdown() noexcept {
   // it force-releases the device and D3D9 object to zero. The Bridge owns both.
   (void)raytracing(false);
   state() = {}; registered = nullptr; initialized = false;
-  if (events) { event("physical_draw_count", 0, std::to_string(physicalDraws).c_str()); }
+  if (events) { event("host_draw_request_count", 0, std::to_string(physicalDraws).c_str()); }
   if (events) { event("host_cleanup", 0); events.close(); }
 }
 } // namespace ldb_rt::world_runtime

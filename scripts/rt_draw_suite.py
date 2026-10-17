@@ -91,6 +91,7 @@ def install(root,game,manifest):
                      'b0bbc701404bfeaa1be6f51183716ce98e79884209818b35b55f5267131b8f8a',
                      '27349fe2def9ade2aaa637b32189db09e71fc41f79afdf9e06fd8e3c2e6c3d87',
                      '3f1a899dd2021610c17bf32cb076b749293910b5fe6f4681b2695a1dfbb57fbb',
+                     'd280301fa0dd70084aff94bdccad08f68d5fbe76fa1d3c69d30ea2f14b92094a',
                      manifest['binaries'][TARGETS[0]]['sha256']}
     if inherited is None and digest(game/TARGETS[0]) in known_observers:
         raise ValueError('Earlier observer found without its recovery receipt. Restore it from its original package folder first.')
@@ -321,18 +322,18 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if world:
             config='\n'.join(['rtx.enableRaytracing = False','rtx.useVertexCapture = False','rtx.upscalerType = 0',
                 'rtx.enableRayReconstruction = False','rtx.sceneScale = 0.3937007874',
-                'rtx.fallbackLightMode = 2','rtx.fallbackLightType = 1','rtx.fallbackLightRadiance = 30,30,30','rtx.fallbackLightRadius = 5',
+                'rtx.fallbackLightMode = 2','rtx.fallbackLightType = 1','rtx.fallbackLightRadiance = 3000,3000,3000','rtx.fallbackLightRadius = 5',
                 'rtx.fallbackLightPositionOffset = 0,0,0','rtx.enableFallbackLightShaping = False','rtx.fallbackLightDirection = 0,0,-1',
                 'rtx.autoExposure.enabled = True','rtx.autoExposure.evMinValue = -2','rtx.autoExposure.evMaxValue = 5',
                 'rtx.tonemappingMode = 1','rtx.localtonemap.exposure = 0.75',
-                'rtx.bloom.enable = False','rtx.postfx.enable = False'])+'\n'
+                'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.bloom.enable = False','rtx.postfx.enable = False'])+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
             report['scope']='selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('240' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Lighting comparison: face a wall and ground, press F9 once, then keep the camera still until capture completes.')
+        if world:notify('Coverage comparison: face the missing wall and ground, press F9 once, then keep the camera still. Expanded geometry and native HUD routing start after Present 120.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

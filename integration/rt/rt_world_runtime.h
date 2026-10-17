@@ -3,6 +3,7 @@
 #include <d3d9.h>
 
 namespace ldb_rt::draw_observe { struct Snapshot; }
+namespace ldb_rt::static_draw { struct Report; }
 namespace ldb_rt::world_runtime {
 struct State {
   bool active = false;
@@ -11,6 +12,7 @@ struct State {
   bool (*raytracing)(bool) noexcept = nullptr;
   void (*draw)(IDirect3DDevice9*) noexcept = nullptr;
   void (*audit)(IDirect3DDevice9*, const draw_observe::Snapshot&) noexcept = nullptr;
+  bool (*overlay)(IDirect3DDevice9*, const draw_observe::Snapshot&, D3DPRIMITIVETYPE, bool, static_draw::Report&, HRESULT&) noexcept = nullptr;
 };
 inline State& state() { static State value; return value; }
 HMODULE load(const draw_observe::Request& request) noexcept;

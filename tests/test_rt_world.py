@@ -46,6 +46,20 @@ class ReadbackEvidenceTests(unittest.TestCase):
             self.assertEqual(normal['decoded_normals']['unique_words_on_depth_hits'],2)
             color=next(s for s in report['samples'] if s['frame']==180 and s['kind']==0)
             self.assertAlmostEqual(color['luminance']['mean'],.18,places=6)
+            original=json.loads(json.dumps(events))
+            for e in events:
+                if e.get('event')=='lighting_comparison_policy':e['event']='coverage_comparison_policy'
+                if e.get('event')=='lighting_phase_requested':
+                    e['event']='coverage_phase_requested';e['phase']='baseline_world' if e['after_present']==30 else 'expanded_world'
+                if e.get('event')=='world_readback':e['phase']='raster' if e['frame']==30 else 'baseline_world' if e['frame']==120 else 'expanded_world'
+            hud=dict(event='hud_injection',ordinal=1000,scope_code=9,capture_hresult=0,apply_hresult=0,draw_hresult=0,restore_hresult=0,replaced_post=True)
+            events.append(hud)
+            coverage=inspect()
+            self.assertEqual(coverage['runtime_outputs'],'pass',coverage['errors'])
+            self.assertEqual(coverage['coverage_comparison']['hud_post_replacements'],1)
+            hud['restore_hresult']=0x80004005
+            self.assertIn('missing_or_failed_hud_injection',inspect()['errors'])
+            events[:]=original
             events[-1]['code']=1
             self.assertIn('incomplete_or_failed_lighting_phase_requests',inspect()['errors'])
             events[-1]['code']=0

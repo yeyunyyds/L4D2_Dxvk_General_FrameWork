@@ -57,13 +57,14 @@ def analyze(path):
                 if header or counts.total() != 1 or len(payload) not in (28,36):
                     raise ValueError('invalid_header')
                 version, session, device, frequency = struct.unpack_from('<IQQQ', payload)
-                if (version,len(payload)) not in ((1,28),(2,36)) or not all((session, device, frequency)):
+                if (version,len(payload)) not in ((1,28),(2,36),(3,36)) or not all((session, device, frequency)):
                     raise ValueError('invalid_identity')
                 header = {'session':session,'device':device,'frequency':frequency}
-                if version==2:
+                if version in (2,3):
                     target,control=struct.unpack_from('<2I',payload,28)
                     if (target,control)!=(240,30):raise ValueError('invalid_world_profile_boundaries')
                     header.update(profile='world_pilot',target_presents=target,control_presents=control)
+                    if version==3:header['coverage_revision']=6
             elif event == 1:
                 if not header or pending is not None or len(payload) < SNAPSHOT.size + 32 + PIPELINE.size:
                     raise ValueError('unpaired_or_short_draw')
@@ -107,7 +108,9 @@ def analyze(path):
                 rigid=all(abs(sum(v[i*4+k]*v[j*4+k] for k in range(3))-float(i==j))<=.01 for i in range(3) for j in range(3))
                 camera=(rigid and abs(p[11]+1)<=1e-5 and abs(p[15])<=1e-5 and p[0]>0 and p[5]>0
                         and p[10]<-1 and 4<=p[14]/p[10]<=32)
-                pending_world_safe=(status==1 and fields[55] and fields[56] and flags==3 and vertex_format==0x480003 and shader in ('LightmappedGeneric','LightmappedGeneric_DX9')
+                expanded=header.get('coverage_revision')==6 and counts[3]>=120
+                material_safe=(vertex_format==0x480003 and shader in ('LightmappedGeneric','LightmappedGeneric_DX9')) or (expanded and vertex_format==0x80503 and shader=='UnlitGeneric')
+                pending_world_safe=(status==1 and fields[55] and fields[56] and flags==3 and material_safe
                     and world_identity and camera and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==113
                     and (width,height)==fields[59:61] and not alpha and not test and depth==depth_write==1)
                 if status == 1 and tuple(client_vp) != tuple(host_vp):
@@ -118,7 +121,16 @@ def analyze(path):
                 auxiliary=bytes.fromhex('02000000030000010200100002000301')
                 layout_safe=(stride in (40,48) and stream_frequency==1 and stream_offset%4==0
                     and (declaration==core+terminator or stride==48 and declaration==core+auxiliary+terminator))
+                unlit_decl=bytes.fromhex('000000000200000000000c000200030000001800010005000100000004000a01020000000300000102001000020003010300000000000002ff00000011000000')
+                if vertex_format==0x80503:
+                    layout_safe=expanded and stride==32 and stream_frequency==1 and stream_offset%4==0 and declaration==unlit_decl
                 pending_world_safe=pending_world_safe and layout_safe
+                post_decl=bytes.fromhex('000000000200000000000c000100050002000000030000010200100002000301ff00000011000000')
+                all_identity=all(abs(v-float(i%5==0))<=1e-6 for part in (matrices[:16],matrices[16:32],matrices[32:48]) for i,v in enumerate(part))
+                pending_hud_safe=(expanded and status==1 and fields[55] and fields[56] and flags==3 and shader=='Neko_Engine_Post' and vertex_format==0x80001
+                    and kind in (1,2) and topology==4 and stride==32 and stream_frequency==1 and stream_offset%4==0 and declaration==post_decl
+                    and all_identity and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==21
+                    and (width,height)==fields[59:61] and not alpha and not test and not depth and not depth_write)
                 layout_key = hashlib.sha256(struct.pack('<II', stride, stream_frequency) + declaration).hexdigest()[:16]
                 if layout_key not in layouts:
                     layouts[layout_key] = {'stride':stride,'frequency':stream_frequency,
@@ -141,8 +153,12 @@ def analyze(path):
                 if pending!=uid or pending_conversion or len(payload)!=32 or not header.get('profile'):
                     raise ValueError('conversion_uid_or_scope_mismatch')
                 decision,code,capture,apply,restore,converted,called,physical=struct.unpack('<8I',payload)
-                if decision>8 or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
+                if decision>9 or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
                 decisions[decision]+=1;conversions['reports']+=1;pending_conversion=True
+                if decision==9:
+                    if not pending_hud_safe or converted or code!=9 or called or physical:
+                        raise ValueError('unsafe_or_failed_hud_replacement')
+                    conversions['hud_replaced']+=1
                 if converted:
                     if decision!=8 or code not in (9,10) or not called or counts[3]<header['control_presents'] or not pending_world_safe:
                         raise ValueError('unsafe_world_conversion_or_control_modified')

@@ -33,6 +33,39 @@ class DrawObservation(unittest.TestCase):
         self.assertEqual(r['world_conversion']['converted'],210)
         self.assertEqual(r['game_rt'],'unrun')
 
+    def coverage_fixture(self):
+        events=self.world_fixture()
+        events[0]=(0,0,struct.pack('<IQQQII',3,42,7,10000000,240,30))
+        unlit=bytes.fromhex('000000000200000000000c000200030000001800010005000100000004000a01020000000300000102001000020003010300000000000002ff00000011000000')
+        post=bytes.fromhex('000000000200000000000c000100050002000000030000010200100002000301ff00000011000000')
+        for frame,decl,shader,fmt in ((121,unlit,'UnlitGeneric',0x80503),(122,post,'Neko_Engine_Post',0x80001)):
+            index=1+(frame-1)*4;e,u,p=events[index];data=bytearray(p[:check.SNAPSHOT.size])
+            if frame==122:
+                struct.pack_into('<48f',data,40,*([float(i%5==0) for i in range(16)]*3))
+            material=check.MATERIAL.pack(fmt,3,0,shader.encode())
+            old_state=list(check.PIPELINE.unpack_from(p,check.SNAPSHOT.size+check.MATERIAL.size+32))
+            old_state[2]=32;old_state[-1]=len(decl)//8
+            if frame==122:old_state[6]=old_state[7]=0;old_state[-2]=21
+            args=p[check.SNAPSHOT.size+check.MATERIAL.size:check.SNAPSHOT.size+check.MATERIAL.size+32]
+            events[index]=(e,u,bytes(data)+material+args+check.PIPELINE.pack(*old_state)+decl)
+            if frame==122:events[index+1]=(6,u,struct.pack('<8I',9,9,0,0,0,0,0,0))
+        return events
+
+    def test_v6_coverage_and_hud_are_bounded_by_phase_and_exact_layout(self):
+        events=self.coverage_fixture();report=self.inspect(events)
+        self.assertTrue(report['pass'],report['errors'])
+        self.assertEqual(report['world_conversion']['hud_replaced'],1)
+        old=events.copy();e,u,p=old[0];old[0]=(e,u,struct.pack('<I',2)+p[4:])
+        self.assertFalse(self.inspect(old)['pass'])
+        for frame in (121,122):
+            at=1+(frame-1)*4;e,u,p=events[at];data=bytearray(p)
+            data[-len(bytes.fromhex('ff00000011000000'))-3]^=1
+            damaged=events.copy();damaged[at]=(e,u,bytes(data))
+            self.assertFalse(self.inspect(damaged)['pass'])
+        early=events.copy();a,b=1+118*4,1+121*4
+        early[a:a+3]=events[b:b+3]
+        self.assertFalse(self.inspect(early)['pass'])
+
     def test_world_report_cannot_hide_bad_uid_control_or_unsafe_material(self):
         original=self.world_fixture()
         wrong=original.copy();wrong[2]=(6,999,wrong[2][2])

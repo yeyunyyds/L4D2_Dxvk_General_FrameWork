@@ -73,10 +73,11 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.world ? 2 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    Writer header; header.u32(request.world ? 3 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
     if (request.world) { header.u32(240); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
+  bool expanded() const noexcept { return request.world && presents >= 120 && !finished; }
   template<class Device> void draw(Device* device, uint32_t uid, const Snapshot& snapshot, uint32_t kind,
       D3DPRIMITIVETYPE type, const std::array<uint32_t, 6>& args) {
     if (snapshot.session != request.session) { ++failures; return; }

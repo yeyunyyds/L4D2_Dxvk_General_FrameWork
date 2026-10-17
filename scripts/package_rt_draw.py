@@ -38,7 +38,8 @@ def package(source,output,python_package):
             or status.get('consumer_world_development_execution')!='pass' or status.get('world_startup_gate_development_execution')!='pass'
             or status.get('material_global_name_decoder_development_execution')!='pass'
             or status.get('world_transport_backpressure_development_execution')!='pass'
-            or status.get('world_lighting_comparison_development_execution')!='pass'):
+            or status.get('world_lighting_comparison_development_execution')!='pass'
+            or status.get('world_coverage_overlay_development_execution')!='pass'):
         raise ValueError('Current native paired observer and execution evidence required')
     if output.exists():raise FileExistsError('Preserve previous package directory')
     output.mkdir(parents=True)
@@ -78,9 +79,10 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_static_world_runtime_pilot','profile':'world_pilot','pilot_revision':5,
+    manifest={'schema':1,'scope':'selected_static_world_runtime_pilot','profile':'world_pilot','pilot_revision':6,
               'readback_presents':[30,120,180,240],
-              'lighting_comparison':['raster','baseline_sphere','strong_sphere','distant'],
+              'coverage_comparison':['raster','baseline_world','expanded_world','expanded_world'],
+              'constant_sphere_radiance':3000,'expanded_coverage_after_present':120,
               'material_samples_per_phase_limit':64,
               'world_ipc_producer_wait_ms':60000,'normal_ipc_producer_wait_ms':2000,
               'startup_raytracing':False,'rt_activation':'after_control_and_successful_world_scope_then_deferred_by_runtime',
@@ -133,6 +135,7 @@ def package(source,output,python_package):
                 'material_global_name_decoder_development_execution':'pass',
                 'world_transport_backpressure_development_execution':'pass',
                 'world_lighting_comparison_development_execution':'pass',
+                'world_coverage_overlay_development_execution':'pass',
                 'pinned_native_loader_api_initialization':'pass',
                 'game_rt':'unrun','actual_game_observation':'unrun'}
     (output/'publish-index.json').write_text(json.dumps(validation,indent=2)+'\n')
