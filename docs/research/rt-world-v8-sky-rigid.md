@@ -22,7 +22,7 @@ v7 trace 的天空候选为 NekoSky / `0x80001`，stride32，主场景同一透�
 后端继续使用 `b73eb23053aa50d3787b0c6c8b4b8ae49962880e`，不重编运行时：
 
 - `src/d3d9/d3d9_rtx_utils.cpp` 读取 reserved RenderState42，`0xfefefefe` 表示未使用。
-- `src/dxvk/rtx_render/rtx_types.h` 的 InstanceCategories 按 WorldUI、WorldMatte、Sky 排列，Sky 为 bit4。
+- `src/dxvk/rtx_render/rtx_types.h` 的 InstanceCategories 按 WorldUI、WorldMatte、Sky 排列，Sky 掩码为 `1u << 2`（`0x4`）。
 - `src/dxvk/shaders/rtx/concept/surface/surface_interaction.slangh` 在 normalBufferIndex 无效时使用 flippedTriangleNormal。
 
 准备脚本校对上述源码模式，并将三个固定对象的 SHA256 写入构建收据及其 fingerprint。天空仅清除 VS，保留原 PS，用 position/UV 的规范声明和原快照矩阵，添加 Sky 分类、暂时关闭 FOGENABLE；启用 `rtx.fogIgnoreSky=True`，避免天空修改世界雾。后端将天空作为专用天空输入处理，而非普通遮挡穹顶；实际正确分类和图像仍需 B580 回包验证。
@@ -46,4 +46,6 @@ Windows x86/x64 执行状态恢复与失败注入，系统 NULLREF 使用真实 
 
 [独立核验记录](../../research/rt-world-pilot-v8-validation.json) 确认全部743个成员的清单/哈希、成品与原生证据中的配套 PE 一致、源码输入及后端合约收据、独立包内 Python/配置和固定 runtime API 初始化。Windows x86/x64 的新增场景及全部既有门槛通过。Sky 作用域各17个 getter、8个应用/8个恢复 setter，道具两路各16个 getter、7个应用/7个恢复 setter，逐项失败注入通过。reserved42 仅在标准 D3D9 测试适配器中模拟，未当作实际 Remix 成功证据。
 
-原生 Host 集成 trace 每架构包含240 Present、723 Draw、213次转换，其中天空1次、两种道具各1次；独立分析确认阶段与原状态归属。它仍是模拟设备和实际 Host 命令路由验证，不是游戏图像。本地87项 Python 测试完成，85通过、2项需要 Windows 而跳过；额外严格 x64 交叉编译通过。v4/v5/v6/v7 四份既有实机回包共430,784 Draw 及原始读回均回归通过，没有改写旧预览。v8 新增天空和道具实际画面尚待回包验收。
+原生 Host 集成 trace 每架构包含240 Present、723 Draw、213次转换，其中天空1次、两种道具各1次；独立分析确认阶段与原状态归属。它仍是模拟设备和实际 Host 命令路由验证，不是游戏图像。本地87项 Python 测试完成，85通过、2项需要 Windows 而跳过；额外严格 x64 交叉编译通过。v4/v5/v6/v7 四份既有实机回包共430,784 Draw 及原始读回均回归通过，没有改写旧预览。构建验收时尚无v8实机图像，现有回包结果见下文。
+
+[v8 B580 实机回包](rt-world-141921-result.md) 已完成复核：240 Present完整，原世界4,410次、天空720次、道具60次转换无状态错误，HUD210次正常；天空恢复可见但云层映射不正确，道具未出现明确新增RT表面。白墙/左侧结构遮挡保留。新路径执行与图像正确性分开验收，下一步校正天空映射并针对实际道具候选核对几何/输入；本轮无需原样重采。

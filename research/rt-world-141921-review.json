@@ -1,0 +1,795 @@
+{
+  "schema": 1,
+  "scope": "v8_actual_game_staged_sky_visibility_recovered_mapping_incorrect_and_rigid_visual_recovery_unproven",
+  "input": {
+    "file": "rt-world-20261017-141921-e1501170.zip",
+    "size": 9645195,
+    "sha256": "ece0308a39019ff3ee0838bab436ad2b2c907411229eaffacdc9687486ba1e8b",
+    "members": 43,
+    "raw_bytes": 106792060,
+    "zip_crc": "pass",
+    "omitted_files": []
+  },
+  "build_commit": "ef5485f2c47546f46d15cb310f54ce9d0e181084",
+  "build_id": "ldb-rt-observer+75722b8bfc0efc34",
+  "installed_pair_matches_verified_v8": true,
+  "trace_sha256": "49c7294923a1fad7100fc713adcfa77ecf6f22caf9504ca052d3de6c917f4f45",
+  "runtime_events_sha256": "fcd4095a5551cc235f8b1ef968c6acc01840b75a37dc193e3b352e349405f59e",
+  "independent_reports_match_uploaded_reports": true,
+  "all12_uploaded_pngs_match_independent_raw_float_mapping": true,
+  "draw_observation": {
+    "pass": true,
+    "errors": [],
+    "header": {
+      "session": 4686531873741434498,
+      "device": 2,
+      "frequency": 10000000,
+      "profile": "world_pilot",
+      "target_presents": 240,
+      "control_presents": 30,
+      "coverage_revision": 8
+    },
+    "footer": {
+      "draws": 81985,
+      "valid": 81985,
+      "presents": 240,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "status_counts": {
+      "valid": 81985
+    },
+    "pipeline_query_failure_draws": 0,
+    "world_decisions": {
+      "1": 10015,
+      "3": 64200,
+      "8": 4410,
+      "4": 1470,
+      "9": 210,
+      "10": 720,
+      "11": 960
+    },
+    "world_conversion": {
+      "reports": 81985,
+      "converted": 5190,
+      "hud_replaced": 210,
+      "sky_converted": 720,
+      "rigid_converted": 60
+    },
+    "world_normalization": "pass"
+  },
+  "world_material_attribution": {
+    "groups": 144,
+    "limit": 256,
+    "omitted_draws": 0
+  },
+  "world_outputs": {
+    "runtime_outputs": "pass",
+    "errors": [],
+    "coverage_comparison": {
+      "present": true,
+      "revision": 8,
+      "phases": {
+        "30": "raster",
+        "120": "baseline_world",
+        "180": "expanded_sky",
+        "240": "expanded_models"
+      },
+      "hud_injection_attempts": 210,
+      "hud_post_replacements": 210,
+      "hud_phase_counts": {
+        "baseline_world": 90,
+        "expanded_sky": 60,
+        "expanded_models": 60
+      },
+      "camera_comparisons": [
+        {
+          "frame": 180,
+          "camera_sample_available": true,
+          "max_matrix_delta": 0.0,
+          "matched_within_1e_4": true
+        },
+        {
+          "frame": 240,
+          "camera_sample_available": true,
+          "max_matrix_delta": 0.0,
+          "matched_within_1e_4": true
+        }
+      ],
+      "same_camera_at_readbacks": true,
+      "limits": "native UI trigger and post replacement require actual image review; weapons/skinning unimplemented"
+    },
+    "material_audit": {
+      "samples": 73,
+      "counts": {
+        "baseline_world": 20,
+        "expanded_sky": 26,
+        "expanded_models": 27
+      },
+      "per_phase_limit": 64,
+      "status": "samples_available",
+      "texture_stage_fields": [
+        "COLOROP",
+        "COLORARG1",
+        "COLORARG2",
+        "ALPHAOP",
+        "ALPHAARG1",
+        "ALPHAARG2",
+        "TEXCOORDINDEX",
+        "TEXTURETRANSFORMFLAGS",
+        "RESULTARG"
+      ],
+      "render_state_fields": [
+        "TEXTUREFACTOR",
+        "LIGHTING",
+        "COLORVERTEX",
+        "DIFFUSEMATERIALSOURCE",
+        "AMBIENTMATERIALSOURCE",
+        "AMBIENT",
+        "FOGENABLE",
+        "SRGBWRITEENABLE"
+      ],
+      "query_failures": 0,
+      "category_query_failures": 0,
+      "cull_query_failures": 0,
+      "limits": "first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials"
+    }
+  },
+  "readbacks": [
+    {
+      "frame": 30,
+      "kind": 0,
+      "phase": "raster",
+      "sha256": "6510334f57c11faf916f0868558300428309f3261f2f2881f698049f0c07709e",
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.5259579510333973,
+        "median": 0.49695765357613564,
+        "below_0_05_fraction": 0.00376953125,
+        "above_0_95_fraction": 0.00502734375
+      }
+    },
+    {
+      "frame": 30,
+      "kind": 1,
+      "phase": "raster",
+      "sha256": "830497acdc4cbdebb0fc5a05f65cb02a183648329f3067ac2ed27fbcb0ea3419",
+      "projected_depth": {
+        "valid_fraction": 0.0,
+        "min_hit": null,
+        "max_hit": null
+      }
+    },
+    {
+      "frame": 30,
+      "kind": 2,
+      "phase": "raster",
+      "sha256": "9f94cc80e5009735a51f911b96c1f9fb89e2a7e34ee8d7d89c4daea4e695a39a",
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 0,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.0,
+        "unique_words_on_depth_hits": 0
+      }
+    },
+    {
+      "frame": 120,
+      "kind": 0,
+      "phase": "baseline_world",
+      "sha256": "50775e487221d6f5b84566a254c629a1f9dd9057a40c60ec3ef72f2e70750a66",
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.3473752902147866,
+        "median": 0.3890376536726951,
+        "below_0_05_fraction": 0.343265625,
+        "above_0_95_fraction": 0.019453125
+      }
+    },
+    {
+      "frame": 120,
+      "kind": 1,
+      "phase": "baseline_world",
+      "sha256": "9890f1b19eb88b6b7fbbcca09638d88ca1c8cbfb06bec2253b7362efd30c0b09",
+      "projected_depth": {
+        "valid_fraction": 0.6523203125,
+        "min_hit": 0.824558675289154,
+        "max_hit": 0.9897783994674683
+      }
+    },
+    {
+      "frame": 120,
+      "kind": 2,
+      "phase": "baseline_world",
+      "sha256": "f6c3e6c7bcfdf5e44fb026629665fde793e1e5e504a081bc62573e92840f8b45",
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 166994,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.6523203125,
+        "unique_words_on_depth_hits": 6
+      }
+    },
+    {
+      "frame": 180,
+      "kind": 0,
+      "phase": "expanded_sky",
+      "sha256": "4d40fd74cfa68aefbc46ac898fdb74ab0fc117f21ff12f62e6608224da5bfd7a",
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.5013703350016012,
+        "median": 0.4584266754806041,
+        "below_0_05_fraction": 0.00324609375,
+        "above_0_95_fraction": 0.01046484375
+      }
+    },
+    {
+      "frame": 180,
+      "kind": 1,
+      "phase": "expanded_sky",
+      "sha256": "56c90079444e6c064d0df7edc381951abf9519faa5051f1b7a681a1cceb8fdfe",
+      "projected_depth": {
+        "valid_fraction": 0.6510546875,
+        "min_hit": 0.8246017694473267,
+        "max_hit": 0.9897781610488892
+      }
+    },
+    {
+      "frame": 180,
+      "kind": 2,
+      "phase": "expanded_sky",
+      "sha256": "33198375518f01769efd156ca1d686a8b004624bb8242d6721ab8c5db64e0507",
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 166670,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.6510546875,
+        "unique_words_on_depth_hits": 6
+      }
+    },
+    {
+      "frame": 240,
+      "kind": 0,
+      "phase": "expanded_models",
+      "sha256": "ec7fba7736e133c6ae2955b1b669dd757716fc3431a3907214e7cb040fa529b9",
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.4976951446352494,
+        "median": 0.4534549047350883,
+        "below_0_05_fraction": 0.00337890625,
+        "above_0_95_fraction": 0.01041796875
+      }
+    },
+    {
+      "frame": 240,
+      "kind": 1,
+      "phase": "expanded_models",
+      "sha256": "e7a574fc183b7cd388727e2fdc7e056ea8880f555c0bddf74bec556e1cac9220",
+      "projected_depth": {
+        "valid_fraction": 0.6518046875,
+        "min_hit": 0.8244836926460266,
+        "max_hit": 0.989778459072113
+      }
+    },
+    {
+      "frame": 240,
+      "kind": 2,
+      "phase": "expanded_models",
+      "sha256": "56d563605893e291cbfdaf9db04c45037e9e38f70673f365005cf079aac96170",
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 166862,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.6518046875,
+        "unique_words_on_depth_hits": 6
+      }
+    }
+  ],
+  "raw_state_geometry_review": {
+    "phase_counts": {
+      "raster": {
+        "draws": 10015
+      },
+      "baseline_world": {
+        "draws": 30864,
+        "converted": 1890,
+        "world": 1890,
+        "hud": 90
+      },
+      "expanded_sky": {
+        "draws": 20640,
+        "converted": 1620,
+        "sky": 360,
+        "world": 1260,
+        "hud": 60
+      },
+      "expanded_models": {
+        "draws": 20466,
+        "converted": 1680,
+        "sky": 360,
+        "world": 1260,
+        "rigid": 60,
+        "hud": 60
+      }
+    },
+    "scene_scope_reports": [
+      {
+        "phase": "expanded_sky",
+        "decision": 10,
+        "scope_code": 9,
+        "converted": 1,
+        "shader": "NekoSky",
+        "format": "0x80001",
+        "count": 360
+      },
+      {
+        "phase": "expanded_models",
+        "decision": 10,
+        "scope_code": 9,
+        "converted": 1,
+        "shader": "NekoSky",
+        "format": "0x80001",
+        "count": 360
+      },
+      {
+        "phase": "expanded_models",
+        "decision": 11,
+        "scope_code": 9,
+        "converted": 1,
+        "shader": "VertexLitGeneric",
+        "format": "0x80503",
+        "count": 60
+      },
+      {
+        "phase": "expanded_models",
+        "decision": 11,
+        "scope_code": 4,
+        "converted": 0,
+        "shader": "VertexLitGeneric",
+        "format": "0x80503",
+        "count": 600
+      },
+      {
+        "phase": "expanded_models",
+        "decision": 11,
+        "scope_code": 4,
+        "converted": 0,
+        "shader": "VertexLitGeneric",
+        "format": "0xa0403",
+        "count": 180
+      },
+      {
+        "phase": "expanded_models",
+        "decision": 11,
+        "scope_code": 5,
+        "converted": 0,
+        "shader": "VertexLitGeneric",
+        "format": "0x80503",
+        "count": 120
+      }
+    ],
+    "failed_hresult_counts": {},
+    "physical_called_count": 81775,
+    "all_converted_hresult_zero": true,
+    "material_audit_join": {
+      "samples": 73,
+      "state_fields": [
+        "CULLMODE",
+        "LIGHTING",
+        "FOGENABLE",
+        "reserved42"
+      ],
+      "mismatched_ordinals": [],
+      "common_original_material_identities": 20,
+      "changed_original_material_identities": []
+    },
+    "converted_world_camera_groups_per_phase": {
+      "baseline_world": 1,
+      "expanded_sky": 1,
+      "expanded_models": 1
+    },
+    "all12_pngs_match_independent_raw_decode": true,
+    "png_decode_matches": {
+      "30-0": true,
+      "30-1": true,
+      "30-2": true,
+      "120-0": true,
+      "120-1": true,
+      "120-2": true,
+      "180-0": true,
+      "180-1": true,
+      "180-2": true,
+      "240-0": true,
+      "240-1": true,
+      "240-2": true
+    },
+    "geometry_comparisons": {
+      "120_to_180": {
+        "mask_iou": 0.9978564286184742,
+        "common_hits": 166653,
+        "new_hits": 17,
+        "lost_hits": 341,
+        "median_abs_projected_depth_delta": 2.0802021026611328e-05,
+        "common_hits_depth_delta_over0_001": 225,
+        "depth_delta_over0_001_bbox": [
+          1,
+          164,
+          640,
+          398
+        ],
+        "normal_angle_median_degrees": 0.0,
+        "normal_under5_fraction": 0.9975037953112155,
+        "all_normals_count": 6
+      },
+      "180_to_240": {
+        "mask_iou": 0.9987175876265184,
+        "common_hits": 166659,
+        "new_hits": 203,
+        "lost_hits": 11,
+        "median_abs_projected_depth_delta": 2.765655517578125e-05,
+        "common_hits_depth_delta_over0_001": 163,
+        "depth_delta_over0_001_bbox": [
+          1,
+          163,
+          640,
+          398
+        ],
+        "normal_angle_median_degrees": 0.0,
+        "normal_under5_fraction": 0.9980319094678355,
+        "all_normals_count": 6
+      }
+    },
+    "rois": {
+      "sky_interior": {
+        "rectangle": [
+          80,
+          45,
+          450,
+          105
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 22200,
+            "valid_hits": 0,
+            "median_projected_depth": null,
+            "mean_luminance": 0.03844885333251793,
+            "normal_words": {}
+          },
+          "180": {
+            "pixels": 22200,
+            "valid_hits": 0,
+            "median_projected_depth": null,
+            "mean_luminance": 0.7202099106314238,
+            "normal_words": {}
+          },
+          "240": {
+            "pixels": 22200,
+            "valid_hits": 0,
+            "median_projected_depth": null,
+            "mean_luminance": 0.7079404280870576,
+            "normal_words": {}
+          }
+        }
+      },
+      "near_wall": {
+        "rectangle": [
+          255,
+          160,
+          370,
+          230
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 8050,
+            "valid_hits": 8050,
+            "median_projected_depth": 0.9763567447662354,
+            "mean_luminance": 0.5667394115495135,
+            "normal_words": {
+              "0xfffe7fff": 8050
+            }
+          },
+          "180": {
+            "pixels": 8050,
+            "valid_hits": 8050,
+            "median_projected_depth": 0.9763586521148682,
+            "mean_luminance": 0.40091417109218663,
+            "normal_words": {
+              "0xfffe7fff": 8050
+            }
+          },
+          "240": {
+            "pixels": 8050,
+            "valid_hits": 8050,
+            "median_projected_depth": 0.9763509035110474,
+            "mean_luminance": 0.39938568725257,
+            "normal_words": {
+              "0xfffe7fff": 8050
+            }
+          }
+        }
+      },
+      "left_panel": {
+        "rectangle": [
+          135,
+          290,
+          172,
+          330
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 1480,
+            "valid_hits": 1480,
+            "median_projected_depth": 0.9178982377052307,
+            "mean_luminance": 0.9781360236980223,
+            "normal_words": {
+              "0x7fff0000": 1480
+            }
+          },
+          "180": {
+            "pixels": 1480,
+            "valid_hits": 1480,
+            "median_projected_depth": 0.9178415536880493,
+            "mean_luminance": 0.9490085944542692,
+            "normal_words": {
+              "0x7fff0000": 1480
+            }
+          },
+          "240": {
+            "pixels": 1480,
+            "valid_hits": 1480,
+            "median_projected_depth": 0.9178783297538757,
+            "mean_luminance": 0.9490923236490666,
+            "normal_words": {
+              "0x7fff0000": 1480
+            }
+          }
+        }
+      },
+      "missing_foreground_models": {
+        "rectangle": [
+          190,
+          235,
+          315,
+          310
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 9375,
+            "valid_hits": 9375,
+            "median_projected_depth": 0.9825862050056458,
+            "mean_luminance": 0.449853124745814,
+            "normal_words": {
+              "0xfffe7fff": 4831,
+              "0x7fff0000": 2496,
+              "0x7fff7fff": 2048
+            }
+          },
+          "180": {
+            "pixels": 9375,
+            "valid_hits": 9375,
+            "median_projected_depth": 0.9826280474662781,
+            "mean_luminance": 0.32635837671457607,
+            "normal_words": {
+              "0xfffe7fff": 4880,
+              "0x7fff0000": 2505,
+              "0x7fff7fff": 1990
+            }
+          },
+          "240": {
+            "pixels": 9375,
+            "valid_hits": 9375,
+            "median_projected_depth": 0.982591986656189,
+            "mean_luminance": 0.32747002462416874,
+            "normal_words": {
+              "0xfffe7fff": 4852,
+              "0x7fff0000": 2494,
+              "0x7fff7fff": 2029
+            }
+          }
+        }
+      }
+    },
+    "rigid_success": {
+      "draws": 60,
+      "materials": [
+        1220558692
+      ],
+      "world_variants": 1,
+      "first": {
+        "frame": 181,
+        "uid": 16304728,
+        "ordinal": 61550,
+        "world": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "view": [
+          -0.7012270092964172,
+          0.052921362221241,
+          -0.7109711766242981,
+          0.0,
+          -0.7129380702972412,
+          -0.052052050828933716,
+          0.6992924213409424,
+          0.0,
+          -4.545123787455841e-18,
+          0.9972411394119263,
+          0.07422995567321777,
+          0.0,
+          -4009.416015625,
+          -1299.058837890625,
+          -627.1895751953125,
+          1.0
+        ],
+        "projection": [
+          0.7372710108757019,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.179633617401123,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          -1.0000070333480835,
+          -1.0,
+          0.0,
+          0.0,
+          -7.000049114227295,
+          0.0
+        ],
+        "material": 1220558692,
+        "table": 1463328204,
+        "format": 525571,
+        "shader": "VertexLitGeneric",
+        "args": [
+          2,
+          4,
+          0,
+          0,
+          815,
+          0,
+          736,
+          0
+        ],
+        "state": [
+          0,
+          0,
+          32,
+          1,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          1920,
+          1200,
+          0.0,
+          1.0,
+          1920,
+          1200,
+          113,
+          9,
+          3,
+          1,
+          0,
+          0
+        ],
+        "declaration": "000000000200000000000c0005000300000010000100050000000c00050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000"
+      }
+    },
+    "present_timing_ms": {
+      "span": 7362.83,
+      "median_interval": 23.6643,
+      "longest": [
+        [
+          34,
+          1568.122
+        ],
+        [
+          32,
+          49.8919
+        ],
+        [
+          181,
+          46.1169
+        ],
+        [
+          121,
+          41.6399
+        ],
+        [
+          31,
+          37.9589
+        ]
+      ],
+      "performance_claim": "diagnostic_only"
+    },
+    "sky_snapshot_consistency": {
+      "world_view_projection_variants_all_phases": 1,
+      "six_material_identities": [
+        1220639404,
+        1220639556,
+        1220639708,
+        1220639860,
+        1220640012,
+        1220640164
+      ],
+      "main_world_view_projection_equal": true
+    },
+    "rigid_pipeline_rejections": [
+      {
+        "alpha": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "render_target_format": 113,
+        "count": 120
+      }
+    ]
+  },
+  "visual_review": {
+    "raster30": "Stone walls, left white panel, cloudy sky, TNT-like foreground object, bright angular foreground model, weapon/hands and HUD visible.",
+    "baseline120": "v7 walls and left panel already visible with matching RT depth/normals; HUD visible. Sky dark; TNT-like object, most foreground model geometry and weapon/hands missing. A blue outlined fragment remains in final color without matching object surfaces in the inspected RT buffers.",
+    "sky180": "Cloudy sky becomes visible, but cloud orientation/mapping differs conspicuously from raster30 at unchanged captured camera matrices. Wall/left-panel occlusion and HUD remain. Sky-interior ROI remains without RT depth hits, as expected for a background.",
+    "models240": "Sky and world remain visible. No clear newly restored foreground model silhouette or corresponding new depth/normal surface relative to180. HUD remains; lower-left chat text has disappeared, which does not prove UI composition failure.",
+    "sky_acceptance": "Visibility only passes in this view. Projection/UV/face mapping and color pipeline remain unaccepted; do not label the sky fully correct.",
+    "rigid_acceptance": "60 successful scoped conversions of one0x80503 material prove routing and state restoration, not successful visible model reconstruction. The0xa0403 bone-free layout was not successfully exercised in this capture.",
+    "depth_limits": "640x400 nearest-neighbor API readbacks; projected z/w, not linear distance. Small full-frame deltas include existing boundaries/jitter/resampling. No per-object ID, vertex/index payload, RT instance or actual original game VS bytecode/constants were collected; no exact attribution of the successful material to a visible object."
+  },
+  "runtime_log_review": {
+    "adapter": "Intel Arc B580",
+    "render_target": [
+      1920,
+      1200
+    ],
+    "readback": [
+      640,
+      400
+    ],
+    "ray_query_gbuffer_direct_indirect_initialized": true,
+    "restir_gi_activated": true,
+    "bridge_shutdown": "client Terminate; both sides report clean successful shutdown",
+    "ipc_fault_or_crash_evidence": false,
+    "remaining_common_device_objects": 40,
+    "sky_warnings": [
+      "D3D9DeviceEx::SetRenderState: Unhandled render state 42",
+      "Sky may not appear correct: sky intermediate format has been forced to HDR while the original sky is LDR and no HDR sky replacement has been found!"
+    ],
+    "reserved42_warning_review": "Pinned D3D9DeviceEx::SetRenderState stores states[State]=Value before the default warning and returns D3D_OK. The warning does not itself establish category rejection. All73 post-restored samples match original category42, lighting, fog and cull.",
+    "sky_format_review": "Six sky materials use stage0 1024x512 D3DFMT_A8R8G8B8 textures while converted targets are HDR113. The runtime warning warrants checking the retained PS/sky HDR path; it does not identify the cause of the cloud orientation mismatch.",
+    "lighting_review": "Strong diagnostic sphere and requested exposure settings retained. Auto-exposure enabled and sky probe can change scene lighting; wall ROI color drops while its depth/normals stay stable. Do not infer geometry loss or quantify pure light gain from final colors."
+  },
+  "collector_prompt_followup": "Coverage comparison console message still describes v6 missing-wall / HUD-after120 behavior. Update to v8 baseline31-120, sky121-180, models181-240 before the next delivery; README and actual traces already describe/use the correct phases.",
+  "acceptance": {
+    "capture_and_protocol": "pass",
+    "limited_world_and_hud_retained": "pass_in_sampled_view",
+    "sky_visibility": "pass_in_sampled_view",
+    "sky_projection_and_mapping": "failed_visual_comparison",
+    "sky_color_pipeline": "incomplete",
+    "rigid_scope_execution": "pass_one_material60_draws",
+    "rigid_visible_RT_geometry_recovery": "not_accepted_unproven",
+    "full_map_coverage": "unrun",
+    "weapon_and_skinned_models": "unimplemented",
+    "original_map_lighting_and_PBR": "incomplete",
+    "source_parallel_preparation": "unrun",
+    "resource_lifetime": "open_40_undisposed_objects",
+    "production_performance": "unrun"
+  },
+  "next_work": "Use this capture without unchanged repetition. Prioritize the NekoSky projection/UV/face mapping and retained pixel shader/HDR handling. Bound geometry and shader-input diagnostics to the actual successful rigid candidate and rejected skinned declarations to establish where geometry belongs before broadening model support. Combine any necessary next validation into one entry/F9/final ZIP; retain full v7 baseline, sky, model comparison and unchanged Source thread policy.",
+  "scope_of_this_update": "analysis and research record only; no new binaries published"
+}
