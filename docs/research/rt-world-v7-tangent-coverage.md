@@ -42,3 +42,5 @@ Windows x86/x64 执行两种实际字节声明的转换、阶段门槛、错配/
 新增 `world_tangent_layout_development_execution` 打包门槛；缺少任一架构的执行证据不得发布。既有 UI 回滚、系统状态、Source ABI/队列、IPC、启动保护、加载和配套身份检查继续执行。Python 覆盖 version4 的阶段/精确布局/CULLMODE/归属表及两段 HUD 判定，回归已有实际 trace/读回。
 
 NULLREF 不运行 Remix、不验证 B580 图像或真实墙面，跨平台交叉编译也不替代原生执行。本版未写 Source 线程 CVar、未移入参考 mod 的全局 prim context；Source 准备任务实际并行、完整场景、武器/天空、原地图照明/PBR、生命周期与生产性能仍待验收。
+
+已发布 [固定成品文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/02d7b302de7db8dbc46afadc725cafc39e536369/downloads/rt-world-pilot-dev.zip)，构建 `fe87baac495262a94c58974fdf0f398210e4d696`、身份 `ldb-rt-observer+81aa9f5383e0df38`，11,894,431 字节，SHA256 `3658972b15db1bff14a4fcd48677b53f76955ab48cd58f89d1ca36161e4bf22e`。[独立核验记录](../../research/rt-world-pilot-v7-validation.json) 已确认两架构新增 gate、全部旧门槛、成品哈希/身份/源码输入、包内 Python/配置及固定运行时 API 加载。当前 B580 上 v7 的白墙恢复尚待实机验收。

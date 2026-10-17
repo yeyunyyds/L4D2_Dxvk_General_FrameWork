@@ -2,7 +2,7 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/4b6559d895119d2839443e3be7c2588d84f5ac02/downloads/rt-world-pilot-dev.zip)。当前为 v6，构建提交为 `4caf3ae55af36bb48da53b367854e30d514f628f`，包大小 11,891,566 字节，SHA256 为 `2ba3037db037f15bdc6c065908990ac7a1203d726977ef7d902fd35957c08bdb`。链接固定到已核验成品，不随下载分支更新改变。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/02d7b302de7db8dbc46afadc725cafc39e536369/downloads/rt-world-pilot-dev.zip)。当前为 v7，构建提交为 `fe87baac495262a94c58974fdf0f398210e4d696`，包大小 11,894,431 字节，SHA256 为 `3658972b15db1bff14a4fcd48677b53f76955ab48cd58f89d1ca36161e4bf22e`。链接固定到已核验成品，不随下载分支更新改变。
 
 [v4 实机完整回包](rt-world-130102-result.md) 已独立复核通过 240 Present、193,262 Draw、11,805 次受限世界转换，9 份读回齐全、无状态恢复错误、无本轮 IPC fault。按实际 primary GBuffer 编码离线解出的法线/深度轮廓与地图表面相符，受限静态世界的 RT 输出链路已跑通。读回仍偏暗，武器/HUD 等内容缺失；完整场景、照明材质正确性、Source 准备线程并行、资源释放和性能继续待验收。基础数据已经足够，下一步转向画面正确性与覆盖补全。
 
@@ -10,9 +10,11 @@
 
 [v5 实机灯光对照结果](rt-world-165351-result.md) 已完成独立复核：240 Present、76,825 Draw、2,730 次世界转换，12 份读回齐全；相机一致、36 份材质样本无状态变化，较强球灯使原始颜色加权均值提高约 14.13 倍。确认旧诊断灯对偏暗有显著影响。近处白墙与武器/HUD/天空仍有覆盖缺口，下一阶段转向缺失场景与合成，不再重复相同灯光采集；Source 并行及性能继续待验收。
 
-本版 [v6 覆盖扩展与 UI 接入](rt-world-v6-coverage.md) 在同一强球灯下，比较原世界路径与新增浮点 Unlit 场景候选及 Neko 后处理处的原生 UI 合成入口；仍为一个 F9、一个结果 ZIP。
+此前 [v6 覆盖扩展与 UI 接入](rt-world-v6-coverage.md) 在同一强球灯下，比较原世界路径与新增浮点 Unlit 场景候选及 Neko 后处理处的原生 UI 合成入口；仍为一个 F9、一个结果 ZIP。
 
-[v6 实机回包](rt-world-192551-result.md) 已独立确认 240 Present、83,920 Draw、3,630 次世界转换和 120 次 HUD 合成；HUD 图像恢复，但近处白墙仍无预期遮挡。当前格式白名单还排除了每帧六次 stride64/80 的带切线 LightmappedGeneric 场景绘制。下一步优先补这两种精确布局并合并自动对照/归属诊断；现有记录尚未锁定白墙的具体 Draw，无需先重复相同采集。
+[v6 实机回包](rt-world-192551-result.md) 已独立确认 240 Present、83,920 Draw、3,630 次世界转换和 120 次 HUD 合成；HUD 图像恢复，但近处白墙仍无预期遮挡。该版格式白名单排除了每帧六次 stride64/80 的带切线 LightmappedGeneric 场景绘制，成为 v7 精确扩展的依据；当时尚未锁定白墙的具体 Draw。
+
+当前 [v7 精确切线布局扩展](rt-world-v7-tangent-coverage.md) 已发布：31–120 保留 v6 世界/Unlit/HUD，121–240 只额外增加严格验证的 stride64/80 LightmappedGeneric；灯光、HUD 与镜头对照不再同时变化。原始 trace 记录 CULLMODE，新增有界材质/布局/RPC 归属表，仍为一次 F9、一个结果 ZIP。两种新布局的 Windows 双架构状态/回滚检查及成品核验已通过，白墙恢复与实际 B580 的 v7 画面待本轮回包验收。
 
 ## 从数据到实际转换
 
@@ -71,3 +73,5 @@ v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190
 
 
 [v6 成品核验](../../research/rt-world-pilot-v6-validation.json) 已检查固定发布提交的全部成员哈希、源码输入、配套 PE 与原生用例。Windows x86/x64 均通过新增 Unlit 输入/状态恢复与 UI 作用域检查：非空编译 VS/PS、纹理、声明、stream0、矩阵、渲染/纹理阶段状态均与之前相等；26 个应用 setter、27 个显式恢复 setter 的修改后失败注入与设备 getter/capture/draw/restore 失败均检查通过。NULLREF 使用显式离屏目标及仅限测试的 backbuffer 别名，并验证另一 surface 身份被拒绝；不作为实际 swapchain 或 Remix HUD 注入证据。已有全部 native gates、包内 Python/配置与固定运行时 API 加载通过。本地 Python 85 项中 83 项通过、2 项需 Windows 而跳过；v4/v5 实际 trace 和读回回归通过。后续 [v6 实机回包](rt-world-192551-result.md) 已确认本次采样的 HUD 恢复；近墙与完整场景、Source 并行及性能继续待验收。
+
+[v7 成品核验](../../research/rt-world-pilot-v7-validation.json) 已核对固定 GitHub 成品全部成员、配套 PE/身份与源码指纹，并独立重析两架构 native trace。新增切线布局 gate 在 Windows x86/x64 均通过：实际捕获字节声明、阶段/错配拒绝、13 个 getter、6 个应用及 6 个恢复 setter 的失败处理，以及系统 NULLREF 上非空 VS/PS、非零 buffer offset、辅助 stream2 和真实 Draw 后的原绑定/矩阵恢复。既有 UI、启动保护、IPC、ABI/队列、固定 DLL/API 及包内 Python 检查通过。本地 86 项中 84 项通过、2 项需 Windows 而跳过；v4/v5/v6 实机 trace/读回兼容性回归通过。NULLREF 不代表 Remix/B580 图像验收；新增几何、完整画面、Source 准备并行与生产性能仍待验收。
