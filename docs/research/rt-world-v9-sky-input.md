@@ -38,3 +38,11 @@
 新增 `world_sky_reconstruction_development_execution` 发布门槛，要求两架构的解析器与系统执行证据；所有既有门槛保留。Python核验新原始文件和回退统计，并回归已有trace/读回。真实天空/道具图像、原地图灯光、完整PBR、Source准备并行、资源生命周期和生产性能继续按各自证据验收。
 
 同一诊断还记录VS的16组integer/16个boolean常量、PS前32组float常量及stream1–3各最多256字节的绑定起点前缀（各有HRESULT）。辅助流前缀不代表完整顶点或形变数据，未用于当前天空重建；可用来检查原shader是否依赖此前遗漏的输入。重建逐Draw只读取其必要的stream0与float常量，完整辅助采样按有界阶段执行。
+
+## 已发布成品
+
+[下载文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/785e106d041ae2332c5ab8d343c737f5c8ac742b/downloads/rt-world-pilot-dev.zip)，构建 `922faa7e6332dd7406f2c78b8295465282aecfc6`，身份 `ldb-rt-observer+e7b8cf451df750fe`，11,921,305 字节。SHA256：`02570743a04ec919a1a2b831c0b358d2b0b7fb07e24523d25db229e087c43c30`。
+
+[独立核验记录](../../research/rt-world-pilot-v9-validation.json) 已确认全部成品成员与源码收据，新增门槛在 Windows x86/x64 均通过；旧原生门槛与固定运行时加载检查继续通过。五轮既有实际回包的 trace 和读回保持兼容。本版实际游戏图像尚待测试，不把系统 NULLREF 的成功当作真实天空已经校正。
+
+解压至独立目录并保留相邻旧包的原始备份，运行 `run-test.cmd`；进图选择天空及前景道具同时可见的位置，按一次 F9 后保持镜头静止；按提示退出游戏，等控制台显示最终 ZIP 路径后上传该文件。全部对照和场景输入诊断自动完成，不需要另按 F8 或制作 trigger 文件。

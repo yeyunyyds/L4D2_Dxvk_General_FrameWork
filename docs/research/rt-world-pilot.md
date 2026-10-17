@@ -2,7 +2,7 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/e78f5dc095f605b4cb75f0211ce622d297380593/downloads/rt-world-pilot-dev.zip)。当前为 v8，构建提交为 `ef5485f2c47546f46d15cb310f54ce9d0e181084`，包大小 11,900,168 字节，SHA256 为 `0c37ad7dcd2042f523200b92f167788498ededa22b0b04def6a52f0781ecf48c`。固定链接与包内配套身份已核验；[验证记录](../../research/rt-world-pilot-v8-validation.json) 包含 Windows 双架构新增场景门槛及完整既有门槛。[v8 实机回包](rt-world-141921-result.md) 已确认天空可见、世界/HUD保留，但天空映射与光栅控制不一致；道具60次作用域成功仍缺可见几何恢复证据。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/785e106d041ae2332c5ab8d343c737f5c8ac742b/downloads/rt-world-pilot-dev.zip)。当前为 v9，构建提交为 `922faa7e6332dd7406f2c78b8295465282aecfc6`，包大小 11,921,305 字节，SHA256 为 `02570743a04ec919a1a2b831c0b358d2b0b7fb07e24523d25db229e087c43c30`。固定链接、全部成员哈希和配套身份已核验；[验证记录](../../research/rt-world-pilot-v9-validation.json) 包含 Windows 双架构天空重建门槛及完整既有门槛。[v8 实机回包](rt-world-141921-result.md) 已确认天空可见、世界/HUD保留，但天空映射与光栅控制不一致；道具60次作用域成功仍缺可见几何恢复证据。v9 针对这两处加入受限修正及合并诊断，实际天空映射和道具画面待新回包验收。
 
 [v4 实机完整回包](rt-world-130102-result.md) 已独立复核通过 240 Present、193,262 Draw、11,805 次受限世界转换，9 份读回齐全、无状态恢复错误、无本轮 IPC fault。按实际 primary GBuffer 编码离线解出的法线/深度轮廓与地图表面相符，受限静态世界的 RT 输出链路已跑通。读回仍偏暗，武器/HUD 等内容缺失；完整场景、照明材质正确性、Source 准备线程并行、资源释放和性能继续待验收。基础数据已经足够，下一步转向画面正确性与覆盖补全。
 
@@ -16,9 +16,9 @@
 
 此前 [v7 精确切线布局扩展](rt-world-v7-tangent-coverage.md) 已发布：31–120 保留 v6 世界/Unlit/HUD，121–240 只额外增加严格验证的 stride64/80 LightmappedGeneric；灯光、HUD 与镜头对照不再同时变化。原始 trace 记录 CULLMODE，新增有界材质/布局/RPC 归属表，仍为一次 F9、一个结果 ZIP。两种新布局的 Windows 双架构状态/回滚检查及成品核验已通过。[v7 B580 实机结果](rt-world-202526-result.md) 进一步确认本镜头内白墙和左侧结构恢复颜色、RT 深度/法线及遮挡，新增 720 次转换成功，HUD 两段均正常；这处缺墙无需重复采集。
 
-当前 [v8 天空与有限刚性道具](rt-world-v8-sky-rigid.md) 已通过构建和打包核验并发布：保留完整 v7 为基线，同一轮依次加入 NekoSky 与两种无骨骼声明的 VertexLitGeneric。仍只需一次 F9。[本轮实机分析](rt-world-141921-result.md) 已完成：720次天空转换后背景恢复，但云层映射待校正；60次道具转换尚未显示明确新增表面。无需原样重采。
+此前 [v8 天空与有限刚性道具](rt-world-v8-sky-rigid.md) 已通过构建和打包核验并发布：保留完整 v7 为基线，同一轮依次加入 NekoSky 与两种无骨骼声明的 VertexLitGeneric。仍只需一次 F9。[本轮实机分析](rt-world-141921-result.md) 已完成：720次天空转换后背景恢复，但云层映射待校正；60次道具转换尚未显示明确新增表面。无需原样重采。
 
-下一版 [v9 受限原始天空 VS 重建与场景输入诊断](rt-world-v9-sky-input.md) 正在构建验证：保持v8天空对照，六面预检完整成功后尝试重建原VS位置/UV，同时采集成功道具及受限候选的实际输入。仍为一个F9，未知shader保留v8并自动记录原因。
+当前 [v9 受限原始天空 VS 重建与场景输入诊断](rt-world-v9-sky-input.md) 已通过双架构构建、原生检查和成品核验并发布：保持v8天空对照，六面预检完整成功后尝试重建原VS位置/UV，同时采集成功道具及受限候选的实际输入。仍为一个F9，未知shader保留v8并自动记录原因。
 
 ## 从数据到实际转换
 
@@ -79,3 +79,5 @@ v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190
 [v6 成品核验](../../research/rt-world-pilot-v6-validation.json) 已检查固定发布提交的全部成员哈希、源码输入、配套 PE 与原生用例。Windows x86/x64 均通过新增 Unlit 输入/状态恢复与 UI 作用域检查：非空编译 VS/PS、纹理、声明、stream0、矩阵、渲染/纹理阶段状态均与之前相等；26 个应用 setter、27 个显式恢复 setter 的修改后失败注入与设备 getter/capture/draw/restore 失败均检查通过。NULLREF 使用显式离屏目标及仅限测试的 backbuffer 别名，并验证另一 surface 身份被拒绝；不作为实际 swapchain 或 Remix HUD 注入证据。已有全部 native gates、包内 Python/配置与固定运行时 API 加载通过。本地 Python 85 项中 83 项通过、2 项需 Windows 而跳过；v4/v5 实际 trace 和读回回归通过。后续 [v6 实机回包](rt-world-192551-result.md) 已确认本次采样的 HUD 恢复；近墙与完整场景、Source 并行及性能继续待验收。
 
 [v7 成品核验](../../research/rt-world-pilot-v7-validation.json) 已核对固定 GitHub 成品全部成员、配套 PE/身份与源码指纹，并独立重析两架构 native trace。新增切线布局 gate 在 Windows x86/x64 均通过：实际捕获字节声明、阶段/错配拒绝、13 个 getter、6 个应用及 6 个恢复 setter 的失败处理，以及系统 NULLREF 上非空 VS/PS、非零 buffer offset、辅助 stream2 和真实 Draw 后的原绑定/矩阵恢复。既有 UI、启动保护、IPC、ABI/队列、固定 DLL/API 及包内 Python 检查通过。本地 86 项中 84 项通过、2 项需 Windows 而跳过；v4/v5/v6 实机 trace/读回兼容性回归通过。NULLREF 不代表 Remix/B580 图像验收；后续 [v7 实机回包](rt-world-202526-result.md) 已通过本镜头两处静态结构的覆盖恢复和 HUD 对照，完整地图/模型/天空、光照/PBR、Source 准备并行与生产性能继续待验收。
+
+[v9 成品核验](../../research/rt-world-pilot-v9-validation.json) 已逐项检查固定发布提交的全部成员哈希、包内脚本/配置/README、配套 PE 架构与身份、源码指纹及固定后端合约。Windows x86/x64 均通过新增受限原 VS 解析和系统 D3D9 NULLREF 重建：实际编译非平凡位置/UV 着色器、读取原常量和带 offset 的 VB/IB，核对重建结果，并执行有符号 base、INDEX16/32、范围拒绝及绑定/恢复失败用例。完整既有门槛、固定 DLL/API 和包内 Python 检查继续通过。本地 Python 91 项中 89 项通过、2 项需 Windows 而跳过；五轮 v4–v8 实际 trace 共 512,769 Draw 及原始读回回归通过。系统检查不执行 Remix/B580；真实 NekoSky 是否通过六面预检、映射/颜色及道具可见恢复仍需本版一次 F9 的回包。
