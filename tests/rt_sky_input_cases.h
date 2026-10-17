@@ -14,7 +14,8 @@ inline void systemCases(IDirect3DDevice9* d,decltype(&D3DCompile) compile) {
   const char psText[]="sampler2D image:register(s0);float4 main(float2 uv:TEXCOORD0):COLOR0{return tex2D(image,uv);}";
   ok(__LINE__,compile(vsText,sizeof(vsText)-1,nullptr,nullptr,nullptr,"main","vs_2_0",D3DCOMPILE_ENABLE_STRICTNESS,0,&vsCode.value,&errors.value));
   if (errors.value) { errors.value->Release();errors.value=nullptr; }
-  ok(__LINE__,compile(psText,sizeof(psText)-1,nullptr,nullptr,nullptr,"main","ps_2_0",D3DCOMPILE_ENABLE_STRICTNESS,0,&psCode.value,&errors.value));
+  // SM2 sampler2D is legacy HLSL; strict mode rejects that syntax itself.
+  ok(__LINE__,compile(psText,sizeof(psText)-1,nullptr,nullptr,nullptr,"main","ps_2_0",D3DCOMPILE_ENABLE_BACKWARDS_COMPATIBILITY,0,&psCode.value,&errors.value));
   static_draw::Ref<IDirect3DVertexShader9> vs;static_draw::Ref<IDirect3DPixelShader9> ps;
   ok(__LINE__,d->CreateVertexShader(static_cast<const DWORD*>(vsCode.value->GetBufferPointer()),&vs.value));ok(__LINE__,d->CreatePixelShader(static_cast<const DWORD*>(psCode.value->GetBufferPointer()),&ps.value));
   auto s=rt_scene_test::snapshot(0);s.viewport={0,0,320,240};s.projection[5]=2;
