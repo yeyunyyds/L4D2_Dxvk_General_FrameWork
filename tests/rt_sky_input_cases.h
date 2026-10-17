@@ -2,6 +2,7 @@
 #include "rt_scene_input.h"
 #include "rt_scene_cases.h"
 #include <d3dcompiler.h>
+#include <string>
 
 namespace rt_sky_input_test {
 using rt_scene_test::check;
