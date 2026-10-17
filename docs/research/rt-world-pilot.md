@@ -14,7 +14,7 @@
 
 [v6 实机回包](rt-world-192551-result.md) 已独立确认 240 Present、83,920 Draw、3,630 次世界转换和 120 次 HUD 合成；HUD 图像恢复，但近处白墙仍无预期遮挡。该版格式白名单排除了每帧六次 stride64/80 的带切线 LightmappedGeneric 场景绘制，成为 v7 精确扩展的依据；当时尚未锁定白墙的具体 Draw。
 
-当前 [v7 精确切线布局扩展](rt-world-v7-tangent-coverage.md) 已发布：31–120 保留 v6 世界/Unlit/HUD，121–240 只额外增加严格验证的 stride64/80 LightmappedGeneric；灯光、HUD 与镜头对照不再同时变化。原始 trace 记录 CULLMODE，新增有界材质/布局/RPC 归属表，仍为一次 F9、一个结果 ZIP。两种新布局的 Windows 双架构状态/回滚检查及成品核验已通过，白墙恢复与实际 B580 的 v7 画面待本轮回包验收。
+当前 [v7 精确切线布局扩展](rt-world-v7-tangent-coverage.md) 已发布：31–120 保留 v6 世界/Unlit/HUD，121–240 只额外增加严格验证的 stride64/80 LightmappedGeneric；灯光、HUD 与镜头对照不再同时变化。原始 trace 记录 CULLMODE，新增有界材质/布局/RPC 归属表，仍为一次 F9、一个结果 ZIP。两种新布局的 Windows 双架构状态/回滚检查及成品核验已通过。[v7 B580 实机结果](rt-world-202526-result.md) 进一步确认本镜头内白墙和左侧结构恢复颜色、RT 深度/法线及遮挡，新增 720 次转换成功，HUD 两段均正常；这处缺墙无需重复采集。
 
 ## 从数据到实际转换
 
@@ -74,4 +74,4 @@ v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190
 
 [v6 成品核验](../../research/rt-world-pilot-v6-validation.json) 已检查固定发布提交的全部成员哈希、源码输入、配套 PE 与原生用例。Windows x86/x64 均通过新增 Unlit 输入/状态恢复与 UI 作用域检查：非空编译 VS/PS、纹理、声明、stream0、矩阵、渲染/纹理阶段状态均与之前相等；26 个应用 setter、27 个显式恢复 setter 的修改后失败注入与设备 getter/capture/draw/restore 失败均检查通过。NULLREF 使用显式离屏目标及仅限测试的 backbuffer 别名，并验证另一 surface 身份被拒绝；不作为实际 swapchain 或 Remix HUD 注入证据。已有全部 native gates、包内 Python/配置与固定运行时 API 加载通过。本地 Python 85 项中 83 项通过、2 项需 Windows 而跳过；v4/v5 实际 trace 和读回回归通过。后续 [v6 实机回包](rt-world-192551-result.md) 已确认本次采样的 HUD 恢复；近墙与完整场景、Source 并行及性能继续待验收。
 
-[v7 成品核验](../../research/rt-world-pilot-v7-validation.json) 已核对固定 GitHub 成品全部成员、配套 PE/身份与源码指纹，并独立重析两架构 native trace。新增切线布局 gate 在 Windows x86/x64 均通过：实际捕获字节声明、阶段/错配拒绝、13 个 getter、6 个应用及 6 个恢复 setter 的失败处理，以及系统 NULLREF 上非空 VS/PS、非零 buffer offset、辅助 stream2 和真实 Draw 后的原绑定/矩阵恢复。既有 UI、启动保护、IPC、ABI/队列、固定 DLL/API 及包内 Python 检查通过。本地 86 项中 84 项通过、2 项需 Windows 而跳过；v4/v5/v6 实机 trace/读回兼容性回归通过。NULLREF 不代表 Remix/B580 图像验收；新增几何、完整画面、Source 准备并行与生产性能仍待验收。
+[v7 成品核验](../../research/rt-world-pilot-v7-validation.json) 已核对固定 GitHub 成品全部成员、配套 PE/身份与源码指纹，并独立重析两架构 native trace。新增切线布局 gate 在 Windows x86/x64 均通过：实际捕获字节声明、阶段/错配拒绝、13 个 getter、6 个应用及 6 个恢复 setter 的失败处理，以及系统 NULLREF 上非空 VS/PS、非零 buffer offset、辅助 stream2 和真实 Draw 后的原绑定/矩阵恢复。既有 UI、启动保护、IPC、ABI/队列、固定 DLL/API 及包内 Python 检查通过。本地 86 项中 84 项通过、2 项需 Windows 而跳过；v4/v5/v6 实机 trace/读回兼容性回归通过。NULLREF 不代表 Remix/B580 图像验收；后续 [v7 实机回包](rt-world-202526-result.md) 已通过本镜头两处静态结构的覆盖恢复和 HUD 对照，完整地图/模型/天空、光照/PBR、Source 准备并行与生产性能继续待验收。

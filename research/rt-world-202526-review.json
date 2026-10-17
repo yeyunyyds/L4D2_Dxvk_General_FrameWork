@@ -1,0 +1,694 @@
+{
+  "schema": 1,
+  "scope": "v7_actual_game_same_camera_recovery_of_near_wall_and_left_structure_with_RT_depth_normal_evidence",
+  "input": {
+    "file": "rt-world-20261016-202526-2f21b2d1.zip",
+    "size": 7940631,
+    "sha256": "2d281d5ac35bd46e2bf7e73bee29ec7fd4c21056cff5d04cf7ae0b81cc513f4b",
+    "zip_crc": "pass",
+    "members": 43,
+    "raw_bytes": 101765718,
+    "omitted_files": []
+  },
+  "build_commit": "fe87baac495262a94c58974fdf0f398210e4d696",
+  "build_id": "ldb-rt-observer+81aa9f5383e0df38",
+  "installed_pair_matches_verified_v7": true,
+  "trace_sha256": "caa07b7a39ac4b3b3e96f7b56527c36fb92d67e2dced5a269150fc409c13a1d3",
+  "runtime_events_sha256": "bac4d001b7eab5cfe98e274e56ee54dcd80b0aeb5fe03cabad1dc5d2d4f47207",
+  "independent_reports_match_uploaded_reports": true,
+  "all12_uploaded_pngs_match_independent_raw_float_mapping": true,
+  "draw_observation": {
+    "pass": true,
+    "errors": [],
+    "header": {
+      "session": 7237215648524124593,
+      "device": 2,
+      "frequency": 10000000,
+      "profile": "world_pilot",
+      "target_presents": 240,
+      "control_presents": 30,
+      "coverage_revision": 7
+    },
+    "footer": {
+      "draws": 76777,
+      "valid": 76777,
+      "presents": 240,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "world_conversion": {
+      "reports": 76777,
+      "converted": 4290,
+      "hud_replaced": 210
+    },
+    "world_decisions": {
+      "1": 9577,
+      "3": 61020,
+      "8": 4290,
+      "7": 210,
+      "4": 1470,
+      "9": 210
+    },
+    "world_normalization": "pass",
+    "client_draw_threads": [
+      10972
+    ],
+    "host_thread": 15356,
+    "viewport_mismatches": 0,
+    "pipeline_query_failure_draws": 0
+  },
+  "logical_draw_and_present_hresult_counts": {
+    "0": 77017
+  },
+  "logical_draw_limit": "210 original Neko posts skipped; their logical RPC success does not represent physical original Draw calls. Transparent native UI Draws are recorded separately.",
+  "converted_capture_apply_restore_hresult_counts": {
+    "0": 12870
+  },
+  "first_conversion_frame": 31,
+  "control_conversions": 0,
+  "converted_camera_variants": {
+    "baseline_world": 1,
+    "expanded_world": 1
+  },
+  "per_frame_converted_signature_counts": [
+    {
+      "counts": {
+        "0x480003": 13,
+        "0x80503": 4
+      },
+      "frames": 90
+    },
+    {
+      "counts": {
+        "0x2480033": 5,
+        "0x480003": 13,
+        "0x480033": 1,
+        "0x80503": 4
+      },
+      "frames": 120
+    }
+  ],
+  "main_opaque_hdr_group_counts": [
+    {
+      "phase": "baseline_world",
+      "shader": "LightmappedGeneric",
+      "format": "0x2480033",
+      "stride": 80,
+      "cull_mode": 3,
+      "any_converted": false,
+      "draws": 450,
+      "materials": 5
+    },
+    {
+      "phase": "baseline_world",
+      "shader": "LightmappedGeneric",
+      "format": "0x480003",
+      "stride": 48,
+      "cull_mode": 3,
+      "any_converted": true,
+      "draws": 1170,
+      "materials": 12
+    },
+    {
+      "phase": "baseline_world",
+      "shader": "LightmappedGeneric",
+      "format": "0x480033",
+      "stride": 64,
+      "cull_mode": 3,
+      "any_converted": false,
+      "draws": 90,
+      "materials": 1
+    },
+    {
+      "phase": "baseline_world",
+      "shader": "UnlitGeneric",
+      "format": "0x80503",
+      "stride": 32,
+      "cull_mode": 3,
+      "any_converted": true,
+      "draws": 360,
+      "materials": 4
+    },
+    {
+      "phase": "expanded_world",
+      "shader": "LightmappedGeneric",
+      "format": "0x2480033",
+      "stride": 80,
+      "cull_mode": 3,
+      "any_converted": true,
+      "draws": 600,
+      "materials": 5
+    },
+    {
+      "phase": "expanded_world",
+      "shader": "LightmappedGeneric",
+      "format": "0x480003",
+      "stride": 48,
+      "cull_mode": 3,
+      "any_converted": true,
+      "draws": 1560,
+      "materials": 12
+    },
+    {
+      "phase": "expanded_world",
+      "shader": "LightmappedGeneric",
+      "format": "0x480033",
+      "stride": 64,
+      "cull_mode": 3,
+      "any_converted": true,
+      "draws": 120,
+      "materials": 1
+    },
+    {
+      "phase": "expanded_world",
+      "shader": "UnlitGeneric",
+      "format": "0x80503",
+      "stride": 32,
+      "cull_mode": 3,
+      "any_converted": true,
+      "draws": 480,
+      "materials": 4
+    },
+    {
+      "phase": "raster",
+      "shader": "LightmappedGeneric",
+      "format": "0x2480033",
+      "stride": 80,
+      "cull_mode": 3,
+      "any_converted": false,
+      "draws": 150,
+      "materials": 5
+    },
+    {
+      "phase": "raster",
+      "shader": "LightmappedGeneric",
+      "format": "0x480003",
+      "stride": 48,
+      "cull_mode": 3,
+      "any_converted": false,
+      "draws": 390,
+      "materials": 12
+    },
+    {
+      "phase": "raster",
+      "shader": "LightmappedGeneric",
+      "format": "0x480033",
+      "stride": 64,
+      "cull_mode": 3,
+      "any_converted": false,
+      "draws": 30,
+      "materials": 1
+    },
+    {
+      "phase": "raster",
+      "shader": "UnlitGeneric",
+      "format": "0x80503",
+      "stride": 32,
+      "cull_mode": 3,
+      "any_converted": false,
+      "draws": 120,
+      "materials": 4
+    }
+  ],
+  "new_tangent_layouts": {
+    "baseline_converted": 0,
+    "expanded_stride64_converted": 120,
+    "expanded_stride80_converted": 600,
+    "expanded_total_converted": 720,
+    "frames": 120,
+    "draws_per_frame": 6,
+    "original_cull_modes": [
+      3
+    ],
+    "cull_mode_description": "D3DCULL_CCW retained; no global culling disable"
+  },
+  "world_attribution": {
+    "groups": 66,
+    "limit": 256,
+    "omitted_draws": 0,
+    "all38_material_samples_match_exact_original_trace_identity_and_cull": true,
+    "scope": "main-camera candidate opaque HDR world draws; original cull state, material/layout identity and RPC linkage; no screen-space or per-object identity proof"
+  },
+  "runtime_outputs": "pass",
+  "runtime_errors": [],
+  "nonzero_world_depth_and_normals": true,
+  "coverage_comparison": {
+    "present": true,
+    "revision": 7,
+    "phases": {
+      "30": "raster",
+      "120": "baseline_world",
+      "180": "expanded_world",
+      "240": "expanded_world"
+    },
+    "hud_injection_attempts": 210,
+    "hud_post_replacements": 210,
+    "hud_phase_counts": {
+      "baseline_world": 90,
+      "expanded_world": 120
+    },
+    "camera_comparisons": [
+      {
+        "frame": 180,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      },
+      {
+        "frame": 240,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      }
+    ],
+    "same_camera_at_readbacks": true,
+    "limits": "native UI trigger and post replacement require actual image review; weapons/skinning unimplemented"
+  },
+  "sample_metrics": [
+    {
+      "frame": 30,
+      "kind": 0,
+      "phase": "raster",
+      "sha256": "b8e15c45d05927bda0809cc8c7c1561f4295b151f147a2da34314e869456ce4e",
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.45867599896184946,
+        "median": 0.4499011826246977,
+        "below_0_05_fraction": 0.00357421875,
+        "above_0_95_fraction": 0.00394921875
+      }
+    },
+    {
+      "frame": 30,
+      "kind": 1,
+      "phase": "raster",
+      "sha256": "830497acdc4cbdebb0fc5a05f65cb02a183648329f3067ac2ed27fbcb0ea3419",
+      "projected_depth": {
+        "valid_fraction": 0.0,
+        "min_hit": null,
+        "max_hit": null
+      }
+    },
+    {
+      "frame": 30,
+      "kind": 2,
+      "phase": "raster",
+      "sha256": "9f94cc80e5009735a51f911b96c1f9fb89e2a7e34ee8d7d89c4daea4e695a39a",
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 0,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.0,
+        "unique_words_on_depth_hits": 0
+      }
+    },
+    {
+      "frame": 120,
+      "kind": 0,
+      "phase": "baseline_world",
+      "sha256": "916881b5a8343b93df1174ce84018379b80c93c3df339f9c9b1c4e00bd645b79",
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.3267251910630619,
+        "median": 0.3294117748737335,
+        "below_0_05_fraction": 0.2550625,
+        "above_0_95_fraction": 0.0008984375
+      }
+    },
+    {
+      "frame": 120,
+      "kind": 1,
+      "phase": "baseline_world",
+      "sha256": "b59d6114861b055016e4b6e5434b2ce0b3a913ea8b923e4784c559f311e56d17",
+      "projected_depth": {
+        "valid_fraction": 0.73855078125,
+        "min_hit": 0.8775157332420349,
+        "max_hit": 0.9934285879135132
+      }
+    },
+    {
+      "frame": 120,
+      "kind": 2,
+      "phase": "baseline_world",
+      "sha256": "403deb3f663b41dfb4633b92398d3261a01ae2f5cdc9c606010b93d4f4dd1e53",
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 189069,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.73855078125,
+        "unique_words_on_depth_hits": 18591
+      }
+    },
+    {
+      "frame": 180,
+      "kind": 0,
+      "phase": "expanded_world",
+      "sha256": "f8b532468bc17f2b65832721b386c916500587ef691eb2bb328cef83693e7939",
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.500249100821483,
+        "median": 0.5027945394396781,
+        "below_0_05_fraction": 0.124390625,
+        "above_0_95_fraction": 0.009921875
+      }
+    },
+    {
+      "frame": 180,
+      "kind": 1,
+      "phase": "expanded_world",
+      "sha256": "f27ffeac0347e5a74fe8d7616587a2b6f6894b7a092253f7f6118b71748fa4e5",
+      "projected_depth": {
+        "valid_fraction": 0.8728359375,
+        "min_hit": 0.8775907158851624,
+        "max_hit": 0.9932687878608704
+      }
+    },
+    {
+      "frame": 180,
+      "kind": 2,
+      "phase": "expanded_world",
+      "sha256": "d93353f724a378e1fdfaab6e52ae401208f8352a68d2e8ad4d29e9609fcca85a",
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 223446,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.8728359375,
+        "unique_words_on_depth_hits": 18571
+      }
+    },
+    {
+      "frame": 240,
+      "kind": 0,
+      "phase": "expanded_world",
+      "sha256": "6fcf8e3d0be021bce5be3e958e78b02bca9941ba7e60d4f674334ad86fd0b347",
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.500214185570291,
+        "median": 0.5027945394396781,
+        "below_0_05_fraction": 0.12440234375,
+        "above_0_95_fraction": 0.0099921875
+      }
+    },
+    {
+      "frame": 240,
+      "kind": 1,
+      "phase": "expanded_world",
+      "sha256": "5d5ab0158aba8e0f28c0c4974a2b56c85d740dcc16f2e2eb888cff6deb01c684",
+      "projected_depth": {
+        "valid_fraction": 0.87293359375,
+        "min_hit": 0.8775758147239685,
+        "max_hit": 0.9932686686515808
+      }
+    },
+    {
+      "frame": 240,
+      "kind": 2,
+      "phase": "expanded_world",
+      "sha256": "a50479758e7119c91774b68edf24c2184ae4777d513c194778756a7bad362c82",
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 223471,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.87293359375,
+        "unique_words_on_depth_hits": 18603
+      }
+    }
+  ],
+  "material_audit": {
+    "samples": 38,
+    "counts": {
+      "baseline_world": 16,
+      "expanded_world": 22
+    },
+    "per_phase_limit": 64,
+    "status": "samples_available",
+    "texture_stage_fields": [
+      "COLOROP",
+      "COLORARG1",
+      "COLORARG2",
+      "ALPHAOP",
+      "ALPHAARG1",
+      "ALPHAARG2",
+      "TEXCOORDINDEX",
+      "TEXTURETRANSFORMFLAGS",
+      "RESULTARG"
+    ],
+    "render_state_fields": [
+      "TEXTUREFACTOR",
+      "LIGHTING",
+      "COLORVERTEX",
+      "DIFFUSEMATERIALSOURCE",
+      "AMBIENTMATERIALSOURCE",
+      "AMBIENT",
+      "FOGENABLE",
+      "SRGBWRITEENABLE"
+    ],
+    "query_failures": 0,
+    "cull_query_failures": 0,
+    "limits": "first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials"
+  },
+  "old_material_identities_unchanged_between_phases": 16,
+  "changed_old_material_identities": [],
+  "roi_metrics": {
+    "near_white_wall": {
+      "rectangle_xyxy": [
+        350,
+        60,
+        470,
+        180
+      ],
+      "measurements": {
+        "120": {
+          "pixels": 14400,
+          "valid_hits": 7735,
+          "median_projected_depth": 0.9921854138374329,
+          "dominant_normals": [
+            {
+              "word": "0xfffe7fff",
+              "count": 7083,
+              "normal": [
+                0.0,
+                1.0,
+                0.0
+              ]
+            },
+            {
+              "word": "0x7ffffffe",
+              "count": 354,
+              "normal": [
+                1.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        "180": {
+          "pixels": 14400,
+          "valid_hits": 14400,
+          "median_projected_depth": 0.959199070930481,
+          "dominant_normals": [
+            {
+              "word": "0xfffe7fff",
+              "count": 14400,
+              "normal": [
+                0.0,
+                1.0,
+                0.0
+              ]
+            }
+          ],
+          "closer_than_baseline_fraction_of_common_hits": 1.0
+        },
+        "240": {
+          "pixels": 14400,
+          "valid_hits": 14400,
+          "median_projected_depth": 0.9592048227787018,
+          "dominant_normals": [
+            {
+              "word": "0xfffe7fff",
+              "count": 14400,
+              "normal": [
+                0.0,
+                1.0,
+                0.0
+              ]
+            }
+          ],
+          "closer_than_baseline_fraction_of_common_hits": 1.0
+        }
+      }
+    },
+    "left_white_structure": {
+      "rectangle_xyxy": [
+        115,
+        95,
+        230,
+        145
+      ],
+      "measurements": {
+        "120": {
+          "pixels": 5750,
+          "valid_hits": 4947,
+          "median_projected_depth": 0.9929797053337097,
+          "dominant_normals": [
+            {
+              "word": "0xfffe7fff",
+              "count": 3387,
+              "normal": [
+                0.0,
+                1.0,
+                0.0
+              ]
+            },
+            {
+              "word": "0x7fff0000",
+              "count": 877,
+              "normal": [
+                -1.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        "180": {
+          "pixels": 5750,
+          "valid_hits": 5750,
+          "median_projected_depth": 0.9822821021080017,
+          "dominant_normals": [
+            {
+              "word": "0xfffe7fff",
+              "count": 5705,
+              "normal": [
+                0.0,
+                1.0,
+                0.0
+              ]
+            },
+            {
+              "word": "0x7fff0000",
+              "count": 45,
+              "normal": [
+                -1.0,
+                0.0,
+                0.0
+              ]
+            }
+          ],
+          "closer_than_baseline_fraction_of_common_hits": 0.8742672326662624
+        },
+        "240": {
+          "pixels": 5750,
+          "valid_hits": 5750,
+          "median_projected_depth": 0.9822809100151062,
+          "dominant_normals": [
+            {
+              "word": "0xfffe7fff",
+              "count": 5706,
+              "normal": [
+                0.0,
+                1.0,
+                0.0
+              ]
+            },
+            {
+              "word": "0x7fff0000",
+              "count": 44,
+              "normal": [
+                -1.0,
+                0.0,
+                0.0
+              ]
+            }
+          ],
+          "closer_than_baseline_fraction_of_common_hits": 0.8742672326662624
+        }
+      }
+    }
+  },
+  "roi_limits": "Manual interior rectangles selected from raster30, avoiding HUD. Control30 RT GBuffer is clear, not a raster depth reference. Depth is projected z/w, not linear distance.",
+  "expanded_stability": {
+    "valid_depth_mask_iou": 0.9996823180935506,
+    "common_hit_pixels": 223423,
+    "median_abs_projected_depth_delta": 2.467632293701172e-05,
+    "median_normal_angle_degrees": 0.0,
+    "normal_angle_under5_degrees_fraction": 0.9993286277598994
+  },
+  "visual_review": {
+    "raster30": "Near concrete wall center/right and left white panel structure visible, with HUD/weapon/hands/sky.",
+    "baseline120": "HUD visible but near wall and left white structure absent; distant world visible through their screen locations.",
+    "expanded180_240": "Both close structures reappear with textures, expected silhouettes and blocking of farther surfaces. Their surfaces also appear in primary RT depth and decoded normals, with nearer depth than the prior distant hits. HUD remains visible in both phases.",
+    "near_wall_roi": "All14400 pixels valid at180/240; projected-depth median changes0.992185 to0.959199/0.959205; all7735 shared baseline-hit pixels are closer by at least0.001. All expanded ROI normals decode+Y, consistent with a continuous plane.",
+    "left_structure_roi": "All5750 pixels valid at180/240; depth median changes0.992980 to0.982282/0.982281. Most normals form a near+Y plane; silhouettes agree with the control object.",
+    "interpretation": "The exact two-layout expansion restores these occluders under constant requested light, existing-material states and same camera. Supports a world-layout coverage cause for this missing-wall case, beyond a color-only or dark-lighting explanation.",
+    "limits": "Two formats/six identities enabled together; exact individual material/Draw assignment for each visible object unresolved. No whole-map coverage or full-resolution/PBR/normal-map correctness acceptance."
+  },
+  "hud": {
+    "attempts": 210,
+    "replaced_posts": 210,
+    "baseline_frames": 90,
+    "expanded_frames": 120,
+    "all_capture_apply_draw_restore_hresult_zero": true,
+    "actual_image_review": "HUD panels, ammo, text and health visible at120/180/240; pass for sampled view, not all UI/fades"
+  },
+  "runtime_log_review": {
+    "adapter": "Intel Arc B580",
+    "render_target": [
+      1920,
+      1200
+    ],
+    "readback": [
+      640,
+      400
+    ],
+    "ray_query_gbuffer_direct_indirect_initialized": true,
+    "restir_gi_activated": true,
+    "bridge_shutdown": "client Terminate; both sides report successful cleanup",
+    "ipc_fault_or_crash_evidence": false,
+    "remaining_common_device_objects": 40
+  },
+  "frame_timing": {
+    "span_ms": 6654.0071,
+    "median_interval_ms": 21.7378,
+    "longest_intervals": [
+      [
+        33,
+        1355.1587
+      ],
+      [
+        181,
+        55.6395
+      ],
+      [
+        121,
+        55.1303
+      ],
+      [
+        31,
+        38.5065
+      ],
+      [
+        93,
+        28.253
+      ]
+    ],
+    "limit": "diagnostic capture, not production FPS"
+  },
+  "acceptance": {
+    "capture_and_protocol": "pass",
+    "limited_world_state_scope": "pass",
+    "near_white_wall_recovery": "pass_in_this_view",
+    "left_white_structure_recovery": "pass_in_this_view",
+    "primary_RT_occlusion_and_normal_evidence": "pass_for_recovered_surfaces",
+    "sampled_hud_composition": "pass",
+    "full_map_world_coverage": "unrun",
+    "sky": "unimplemented",
+    "weapon_and_hands": "unimplemented",
+    "general_rigid_props_and_skinned_models": "incomplete",
+    "original_map_lighting_and_full_PBR": "unimplemented_or_unaccepted",
+    "source_parallel_preparation": "unrun",
+    "resource_lifetime": "open_40_undisposed_objects",
+    "production_performance": "unrun"
+  },
+  "next_work": "Retain v7 as the verified limited-world/HUD baseline. Do not repeat the same near-wall capture; prioritize remaining sky and supported rigid-prop routing, then separately handle viewmodel/skinned geometry and original-map lighting/material correctness. Keep future validation combined in one entry/F9/ZIP. Source parallel preparation and production performance need their own actual evidence.",
+  "scope_of_this_update": "analysis and research record only; no new binaries published"
+}
