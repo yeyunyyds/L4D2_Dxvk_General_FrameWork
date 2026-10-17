@@ -1,0 +1,786 @@
+{
+  "schema": 1,
+  "scope": "v5_actual_game_same_camera_lighting_response_and_bounded_material_review",
+  "input": {
+    "file": "rt-world-20261016-165351-fb8cfbeb.zip",
+    "size": 6940346,
+    "sha256": "f4440b0df424bd55a4c719c8545e6d124e5034b0fdd152b8cd8da0730eae3c6b",
+    "zip_crc": "pass",
+    "members": 43,
+    "raw_bytes": 100875392,
+    "omitted_files": []
+  },
+  "build_commit": "23570a69a4e75661802c5d26ca3e6bce318b2038",
+  "build_id": "ldb-rt-observer+db77c672290a6d03",
+  "installed_pair_matches_verified_v5": true,
+  "trace_sha256": "c50d56ce281144c5abcfe711fd96a5aefdfc72210e8d0ba714f2a12bbdc4f99d",
+  "collection": {
+    "schema": 1,
+    "scope": "selected_static_world_runtime_pilot",
+    "build_commit": "23570a69a4e75661802c5d26ca3e6bce318b2038",
+    "collection": "complete",
+    "errors": [],
+    "game_rt": "attempted_requires_review",
+    "source_queue_execution": "unrun",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun",
+    "capture_marker": {
+      "session": 8624997696400107804,
+      "reason": 0,
+      "draws": 76825,
+      "valid": 76825,
+      "presents": 240,
+      "game_rt": "attempted_requires_review",
+      "source_queue": "unrun"
+    },
+    "draw_observation": "pass",
+    "module_evidence": "snapshot_collected",
+    "result_scope": "consumer state / RPC ordering only; no Source producer queue or RT image acceptance",
+    "pre_exit_game_logs": "snapshot_collected",
+    "world_outputs": "pass",
+    "world_geometry_buffers": "nonzero_requires_review",
+    "world_converted_draws": 2730,
+    "rt_activation_requests": 1,
+    "world_normalization": "pass",
+    "collection_phase": "finalized"
+  },
+  "draw_observation": {
+    "pass": true,
+    "errors": [],
+    "header": {
+      "session": 8624997696400107804,
+      "device": 2,
+      "frequency": 10000000,
+      "profile": "world_pilot",
+      "target_presents": 240,
+      "control_presents": 30
+    },
+    "footer": {
+      "draws": 76825,
+      "valid": 76825,
+      "presents": 240,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "world_conversion": {
+      "reports": 76825,
+      "converted": 2730
+    },
+    "world_decisions": {
+      "1": 9970,
+      "3": 64125,
+      "8": 2730
+    },
+    "world_normalization": "pass",
+    "client_draw_threads": [
+      17160
+    ],
+    "host_thread": 14116,
+    "viewport_mismatches": 0,
+    "pipeline_query_failure_draws": 0,
+    "shader_names": {
+      "LightmappedGeneric": 4546,
+      "UnlitGeneric": 55005,
+      "NekoToon": 5520,
+      "VertexLitGeneric": 5760,
+      "Shadow": 240,
+      "MotionBlur_dx9": 240,
+      "Neko_Downsample_nohdr": 240,
+      "BlurFilterX": 240,
+      "BlurFilterY": 240,
+      "NekoBloom": 3120,
+      "Neko_Engine_Post": 240,
+      "NekoSky": 1434
+    }
+  },
+  "physical_draw_present_hresult_counts": {
+    "0": 77065
+  },
+  "converted_state_hresult_counts": {
+    "0": 8190
+  },
+  "converted_codes": {
+    "9": 2730
+  },
+  "first_conversion_frame": 31,
+  "control_conversions": 0,
+  "converted_world_camera_variants_candidate_group": 1,
+  "geometry_comparisons": [
+    {
+      "frame": 180,
+      "valid_depth_mask_iou": 0.9947286529825746,
+      "common_hit_pixels": 179647,
+      "median_abs_projected_depth_delta": 8.58306884765625e-05,
+      "median_normal_angle_degrees": 0.0,
+      "normal_angle_under_5_degrees_fraction": 0.9964151920154525
+    },
+    {
+      "frame": 240,
+      "valid_depth_mask_iou": 0.9988667799886678,
+      "common_hit_pixels": 179814,
+      "median_abs_projected_depth_delta": 6.008148193359375e-05,
+      "median_normal_angle_degrees": 0.0,
+      "normal_angle_under_5_degrees_fraction": 0.997141490651451
+    }
+  ],
+  "frame_timing": {
+    "span_ms": 6685.4139,
+    "median_interval_ms": 21.7627,
+    "longest_intervals": [
+      {
+        "frame": 33,
+        "ms": 1464.4935
+      },
+      {
+        "frame": 181,
+        "ms": 51.1055
+      },
+      {
+        "frame": 121,
+        "ms": 50.426
+      },
+      {
+        "frame": 31,
+        "ms": 34.372
+      },
+      {
+        "frame": 100,
+        "ms": 28.0424
+      }
+    ],
+    "limit": "instrumented trace, not production FPS"
+  },
+  "alternative_main_view_candidates": [
+    {
+      "shader": "NekoToon",
+      "vertex_format": "0xa0403",
+      "stride": 32,
+      "alpha_blend": 0,
+      "alpha_test": 0,
+      "depth": 1,
+      "depth_write": 1,
+      "draws": 5040
+    },
+    {
+      "shader": "VertexLitGeneric",
+      "vertex_format": "0x80503",
+      "stride": 32,
+      "alpha_blend": 0,
+      "alpha_test": 0,
+      "depth": 1,
+      "depth_write": 1,
+      "draws": 1680
+    },
+    {
+      "shader": "NekoSky",
+      "vertex_format": "0x80001",
+      "stride": 32,
+      "alpha_blend": 0,
+      "alpha_test": 0,
+      "depth": 0,
+      "depth_write": 0,
+      "draws": 1434
+    },
+    {
+      "shader": "UnlitGeneric",
+      "vertex_format": "0x80503",
+      "stride": 32,
+      "alpha_blend": 0,
+      "alpha_test": 0,
+      "depth": 1,
+      "depth_write": 1,
+      "draws": 960
+    },
+    {
+      "shader": "VertexLitGeneric",
+      "vertex_format": "0x80503",
+      "stride": 32,
+      "alpha_blend": 1,
+      "alpha_test": 0,
+      "depth": 1,
+      "depth_write": 0,
+      "draws": 480
+    },
+    {
+      "shader": "VertexLitGeneric",
+      "vertex_format": "0xa0403",
+      "stride": 32,
+      "alpha_blend": 0,
+      "alpha_test": 0,
+      "depth": 1,
+      "depth_write": 1,
+      "draws": 240
+    },
+    {
+      "shader": "Shadow",
+      "vertex_format": "0x6c0005",
+      "stride": 48,
+      "alpha_blend": 1,
+      "alpha_test": 0,
+      "depth": 1,
+      "depth_write": 0,
+      "draws": 240
+    }
+  ],
+  "world_outputs": {
+    "schema": 2,
+    "scope": "reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance",
+    "runtime_outputs": "pass",
+    "errors": [],
+    "startup_raster_gate": "requested_events_present_not_effective_state_proof",
+    "rt_activation_requests": 1,
+    "nonzero_world_depth_and_normals": true,
+    "lighting_comparison": {
+      "present": true,
+      "status": "requests_complete_requires_image_review",
+      "phases": {
+        "30": "raster",
+        "120": "baseline_sphere",
+        "180": "strong_sphere",
+        "240": "distant"
+      },
+      "camera_comparisons": [
+        {
+          "frame": 180,
+          "camera_sample_available": true,
+          "max_matrix_delta": 0.0,
+          "matched_within_1e_4": true
+        },
+        {
+          "frame": 240,
+          "camera_sample_available": true,
+          "max_matrix_delta": 0.0,
+          "matched_within_1e_4": true
+        }
+      ],
+      "same_camera_at_readbacks": true,
+      "limits": "camera samples are last converted world Draw; matching endpoints do not prove a static scene, exposure convergence, or effective light settings"
+    },
+    "material_audit": {
+      "samples": 36,
+      "counts": {
+        "baseline_sphere": 12,
+        "strong_sphere": 12,
+        "distant": 12
+      },
+      "per_phase_limit": 64,
+      "status": "samples_available",
+      "texture_stage_fields": [
+        "COLOROP",
+        "COLORARG1",
+        "COLORARG2",
+        "ALPHAOP",
+        "ALPHAARG1",
+        "ALPHAARG2",
+        "TEXCOORDINDEX",
+        "TEXTURETRANSFORMFLAGS",
+        "RESULTARG"
+      ],
+      "render_state_fields": [
+        "TEXTUREFACTOR",
+        "LIGHTING",
+        "COLORVERTEX",
+        "DIFFUSEMATERIALSOURCE",
+        "AMBIENTMATERIALSOURCE",
+        "AMBIENT",
+        "FOGENABLE",
+        "SRGBWRITEENABLE"
+      ],
+      "query_failures": 0,
+      "limits": "first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials"
+    },
+    "geometry_visual_review": "required",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun",
+    "game_rt": "requires_visual_and_thread_review",
+    "preview_mapping": {
+      "color": "clamped RGB [0,1]",
+      "depth": "projected z/w; (1-depth)/(1-min_hit); clear/miss/invalid black; not linear distance",
+      "normals": "offset Snorm2x16 /65534 then signed octahedral decode; RGB normal*.5+.5; same-frame 0<depth<1 mask"
+    },
+    "normal_source_format_from_pinned_runtime": "VK_FORMAT_R32_UINT; first RGBA word is packed normal, including float NaN bit patterns; verified against pinned primary GBuffer and actual v4 readback",
+    "limits": "decoded normal/depth spatial correspondence still requires review; no API return code or nonzero buffer alone proves correct ray-traced game output"
+  },
+  "world_output_samples": [
+    {
+      "frame": 30,
+      "kind": 0,
+      "file": "world-30-0.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "raster",
+      "sha256": "f186f9c10f50a4f55bd841cd14a0310d39ad2d6db8afabdf0e604033c9e25b87",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 1021087,
+      "positive_bounded_first_channel_fraction": 0.994859375,
+      "nonzero_finite_rgb_values": 765087,
+      "nonzero_rgb_words": 765087,
+      "first_rgba_u32": [
+        1056109299,
+        1057589642,
+        1058247572,
+        1065353216
+      ],
+      "sampled_rgb_variants": 12493,
+      "zero_initialized_buffer_unchanged": false,
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.5128494482051057,
+        "median": 0.5336541438296437,
+        "below_0_05_fraction": 0.00428125,
+        "above_0_95_fraction": 0.00369921875
+      },
+      "preview": "world-30-0.png"
+    },
+    {
+      "frame": 30,
+      "kind": 1,
+      "file": "world-30-1.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "raster",
+      "sha256": "830497acdc4cbdebb0fc5a05f65cb02a183648329f3067ac2ed27fbcb0ea3419",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 0,
+      "positive_bounded_first_channel_fraction": 0.0,
+      "nonzero_finite_rgb_values": 0,
+      "nonzero_rgb_words": 0,
+      "first_rgba_u32": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sampled_rgb_variants": 1,
+      "zero_initialized_buffer_unchanged": true,
+      "projected_depth": {
+        "valid_fraction": 0.0,
+        "min_hit": null,
+        "max_hit": null
+      },
+      "preview": "world-30-1.png"
+    },
+    {
+      "frame": 30,
+      "kind": 2,
+      "file": "world-30-2.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "raster",
+      "sha256": "9f94cc80e5009735a51f911b96c1f9fb89e2a7e34ee8d7d89c4daea4e695a39a",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 256000,
+      "positive_bounded_first_channel_fraction": 0.0,
+      "nonzero_finite_rgb_values": 0,
+      "nonzero_rgb_words": 0,
+      "first_rgba_u32": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "sampled_rgb_variants": 1,
+      "zero_initialized_buffer_unchanged": false,
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 0,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.0,
+        "unique_words_on_depth_hits": 0
+      },
+      "preview": "world-30-2.png"
+    },
+    {
+      "frame": 120,
+      "kind": 0,
+      "file": "world-120-0.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "baseline_sphere",
+      "sha256": "d8d0dd6595779d9c04f9fdbb9ef06de840caa5f7766978210afb47253324f54e",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 1023998,
+      "positive_bounded_first_channel_fraction": 1.0,
+      "nonzero_finite_rgb_values": 767998,
+      "nonzero_rgb_words": 767998,
+      "first_rgba_u32": [
+        998277249,
+        998277249,
+        998277249,
+        1065353216
+      ],
+      "sampled_rgb_variants": 686,
+      "zero_initialized_buffer_unchanged": false,
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.02152216775568386,
+        "median": 0.015403138132207094,
+        "below_0_05_fraction": 0.9124375,
+        "above_0_95_fraction": 0.0
+      },
+      "preview": "world-120-0.png"
+    },
+    {
+      "frame": 120,
+      "kind": 1,
+      "file": "world-120-1.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "baseline_sphere",
+      "sha256": "05cf23398412df1066cd13e2e7a5e5d409b768d3e931df1c7a6cc510cb2690ac",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 512000,
+      "positive_bounded_first_channel_fraction": 1.0,
+      "nonzero_finite_rgb_values": 256000,
+      "nonzero_rgb_words": 256000,
+      "first_rgba_u32": [
+        1065353216,
+        0,
+        0,
+        1065353216
+      ],
+      "sampled_rgb_variants": 546,
+      "zero_initialized_buffer_unchanged": false,
+      "projected_depth": {
+        "valid_fraction": 0.70265234375,
+        "min_hit": 0.8817163109779358,
+        "max_hit": 0.9931854605674744
+      },
+      "preview": "world-120-1.png"
+    },
+    {
+      "frame": 120,
+      "kind": 2,
+      "file": "world-120-2.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "baseline_sphere",
+      "sha256": "eeae6e541dce7be972dbfb22c28b5da1fe40e718f9ce9fc104acade400165002",
+      "pixels": 256000,
+      "finite_fraction": 0.9172255859375,
+      "nonzero_values": 436866,
+      "positive_bounded_first_channel_fraction": 0.0,
+      "nonzero_finite_rgb_values": 96105,
+      "nonzero_rgb_words": 180866,
+      "first_rgba_u32": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "sampled_rgb_variants": 2,
+      "zero_initialized_buffer_unchanged": false,
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 179879,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.70265234375,
+        "unique_words_on_depth_hits": 28886
+      },
+      "preview": "world-120-2.png"
+    },
+    {
+      "frame": 180,
+      "kind": 0,
+      "file": "world-180-0.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "strong_sphere",
+      "sha256": "f0858acb9608d73f96eddf1e5e60d0aa8a662f40e93b8ebc3321d6438bd09269",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 1024000,
+      "positive_bounded_first_channel_fraction": 1.0,
+      "nonzero_finite_rgb_values": 768000,
+      "nonzero_rgb_words": 768000,
+      "first_rgba_u32": [
+        1017159841,
+        1017159841,
+        1017159841,
+        1065353216
+      ],
+      "sampled_rgb_variants": 11569,
+      "zero_initialized_buffer_unchanged": false,
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.3040148543521802,
+        "median": 0.2789506014108658,
+        "below_0_05_fraction": 0.29523046875,
+        "above_0_95_fraction": 0.0
+      },
+      "preview": "world-180-0.png"
+    },
+    {
+      "frame": 180,
+      "kind": 1,
+      "file": "world-180-1.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "strong_sphere",
+      "sha256": "f9af862f879b9b7f6f2acedcb840b12b633811c93b312236812137b903fba122",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 512000,
+      "positive_bounded_first_channel_fraction": 1.0,
+      "nonzero_finite_rgb_values": 256000,
+      "nonzero_rgb_words": 256000,
+      "first_rgba_u32": [
+        1065353216,
+        0,
+        0,
+        1065353216
+      ],
+      "sampled_rgb_variants": 515,
+      "zero_initialized_buffer_unchanged": false,
+      "projected_depth": {
+        "valid_fraction": 0.70455859375,
+        "min_hit": 0.8816428184509277,
+        "max_hit": 0.9931783080101013
+      },
+      "preview": "world-180-1.png"
+    },
+    {
+      "frame": 180,
+      "kind": 2,
+      "file": "world-180-2.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "strong_sphere",
+      "sha256": "31dbc9f86cf902804a6a76dbe67be8f340cf1f001a2fe1927951ff73d47203fa",
+      "pixels": 256000,
+      "finite_fraction": 0.9174794921875,
+      "nonzero_values": 436866,
+      "positive_bounded_first_channel_fraction": 0.0,
+      "nonzero_finite_rgb_values": 96365,
+      "nonzero_rgb_words": 180866,
+      "first_rgba_u32": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "sampled_rgb_variants": 2,
+      "zero_initialized_buffer_unchanged": false,
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 180367,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.70455859375,
+        "unique_words_on_depth_hits": 28962
+      },
+      "preview": "world-180-2.png"
+    },
+    {
+      "frame": 240,
+      "kind": 0,
+      "file": "world-240-0.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "distant",
+      "sha256": "7df699cd39310a9fb70c742cabb6f9779aa9a89dfd3a2d603f4a98ba4e881cce",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 1023262,
+      "positive_bounded_first_channel_fraction": 0.9990390625,
+      "nonzero_finite_rgb_values": 767262,
+      "nonzero_rgb_words": 767262,
+      "first_rgba_u32": [
+        1019265217,
+        1019265217,
+        1019265217,
+        1065353216
+      ],
+      "sampled_rgb_variants": 4388,
+      "zero_initialized_buffer_unchanged": false,
+      "luminance": {
+        "finite_pixels": 256000,
+        "mean": 0.36469506221133946,
+        "median": 0.17027922043800353,
+        "below_0_05_fraction": 0.308984375,
+        "above_0_95_fraction": 0.0
+      },
+      "preview": "world-240-0.png"
+    },
+    {
+      "frame": 240,
+      "kind": 1,
+      "file": "world-240-1.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "distant",
+      "sha256": "1fc66521027ff22af5f4f3e2a4ed214d5927d5ea380cf10b466db8a9a549675a",
+      "pixels": 256000,
+      "finite_fraction": 1.0,
+      "nonzero_values": 512000,
+      "positive_bounded_first_channel_fraction": 1.0,
+      "nonzero_finite_rgb_values": 256000,
+      "nonzero_rgb_words": 256000,
+      "first_rgba_u32": [
+        1065353216,
+        0,
+        0,
+        1065353216
+      ],
+      "sampled_rgb_variants": 547,
+      "zero_initialized_buffer_unchanged": false,
+      "projected_depth": {
+        "valid_fraction": 0.70294140625,
+        "min_hit": 0.8817723989486694,
+        "max_hit": 0.9931843876838684
+      },
+      "preview": "world-240-1.png"
+    },
+    {
+      "frame": 240,
+      "kind": 2,
+      "file": "world-240-2.rgba32f",
+      "copy_code": 0,
+      "hresult": 0,
+      "phase": "distant",
+      "sha256": "700630a92dde6f9a9c9daddf7a3395cc487c4c40ecdd8bc37899b489cb8942cd",
+      "pixels": 256000,
+      "finite_fraction": 0.91711328125,
+      "nonzero_values": 436866,
+      "positive_bounded_first_channel_fraction": 0.0,
+      "nonzero_finite_rgb_values": 95990,
+      "nonzero_rgb_words": 180866,
+      "first_rgba_u32": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "sampled_rgb_variants": 2,
+      "zero_initialized_buffer_unchanged": false,
+      "decoded_normals": {
+        "valid_depth_mask_pixels": 179953,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.70294140625,
+        "unique_words_on_depth_hits": 29063
+      },
+      "preview": "world-240-2.png"
+    }
+  ],
+  "lighting_response": [
+    {
+      "frame": 120,
+      "phase": "baseline_sphere",
+      "raw_weighted_rgb_mean": 0.02152216775568386,
+      "relative_to_baseline_sphere": 1.0,
+      "dark_pixel_fraction_below_0_05": 0.9124375
+    },
+    {
+      "frame": 180,
+      "phase": "strong_sphere",
+      "raw_weighted_rgb_mean": 0.3040148543521802,
+      "relative_to_baseline_sphere": 14.125661401923228,
+      "dark_pixel_fraction_below_0_05": 0.29523046875
+    },
+    {
+      "frame": 240,
+      "phase": "distant",
+      "raw_weighted_rgb_mean": 0.36469506221133946,
+      "relative_to_baseline_sphere": 16.9450896559909,
+      "dark_pixel_fraction_below_0_05": 0.308984375
+    }
+  ],
+  "all_four_color_png_rgb_pixels_match_original_float_mapping": true,
+  "rt_normal_previews_match_independent_pinned_decode": true,
+  "material_review": {
+    "samples": 36,
+    "unique_material_identities": 12,
+    "phase_counts": {
+      "baseline_sphere": 12,
+      "strong_sphere": 12,
+      "distant": 12
+    },
+    "identities_with_changed_sampled_state_across_phases": [],
+    "query_failures": 0,
+    "render_state_values": [
+      4294967295,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    "texture_factor": "0xffffffff, neutral white",
+    "stage0": "bound 2D DXT1/DXT5 textures; sRGB=1, UV index=0; COLOROP=MODULATE(TEXTURE,CURRENT)",
+    "stages1_to7": "COLOROP/ALPHAOP DISABLE; stage1 has a bound 1x1 X8R8G8B8 texture but is not active in fixed-function stage traversal",
+    "conclusion": "No sampled black texture factor or active second-stage lightmap multiplication; sampled material state remained equal while light requests changed. Complete material correctness is not certified.",
+    "limits": "Bounded first restored state per material identity/phase, not texture content or every Draw. D3DRS_LIGHTING=1 and original pixel shader remain observed, not changed or certified irrelevant."
+  },
+  "visual_review": {
+    "control_30": "Normal raster image contains large close white wall, weapon, HUD, sky and other scene content.",
+    "baseline_120": "Selected world surfaces are present but dim.",
+    "strong_sphere_180": "Ground and distant world wall/post textures become visible; last-camera matrices match baseline.",
+    "distant_240": "Horizontal surfaces brighter, some walls and occluded areas darker; visible directional illumination response. Exact shadow correctness unaccepted.",
+    "missing_near_white_wall": "The raster white wall is absent from RT stages and surfaces behind it become visible. This is an observed scene coverage gap; exact material/Draw identity has not been established.",
+    "missing_other_content": [
+      "weapon/hands",
+      "HUD",
+      "sky",
+      "other unsupported scene materials"
+    ],
+    "limits": "640x400 nearest-neighbor diagnostic output, not full-resolution image quality or physical exposure calibration."
+  },
+  "runtime_log_review": {
+    "adapter": "Intel Arc B580",
+    "ray_query_gbuffer_direct_indirect_initialized": true,
+    "restir_gi_activated": true,
+    "raytracing_on_requests": 1,
+    "raytracing_off_requests": 1,
+    "phase_requests": [
+      {
+        "event": "lighting_phase_requested",
+        "code": 0,
+        "after_present": 30,
+        "phase": "baseline_sphere"
+      },
+      {
+        "event": "lighting_phase_requested",
+        "code": 0,
+        "after_present": 120,
+        "phase": "strong_sphere"
+      },
+      {
+        "event": "lighting_phase_requested",
+        "code": 0,
+        "after_present": 180,
+        "phase": "distant"
+      },
+      {
+        "event": "lighting_phase_requested",
+        "code": 0,
+        "after_present": 240,
+        "phase": "distant"
+      }
+    ],
+    "bridge_shutdown": "client Terminate followed by both sides normal cleanup",
+    "ipc_full_fault_report": false,
+    "remaining_runtime_common_device_objects": 40,
+    "ngx_reflex_unavailable": "unsupported NVIDIA features on Intel; actual Ray Query output continued",
+    "world_ipc_channels": "both client/Host Module and Device world_pilot 60000ms with peer checks"
+  },
+  "acceptance": {
+    "capture_and_protocol": "pass",
+    "limited_world_state_scope": "pass",
+    "observed_lighting_response": "pass",
+    "old_sphere_light_inadequate_for_visible_scene": "supported_by_strong_same_type_light_comparison_not_sole_cause_proof",
+    "repeat_same_lighting_capture_needed": false,
+    "world_coverage": "incomplete",
+    "original_map_lighting": "unimplemented",
+    "complete_material_pbr": "unrun",
+    "weapon_hud_composition": "unimplemented",
+    "resource_lifetime": "open_40_undisposed_objects",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun"
+  },
+  "recommended_next_work": "Use existing trace/reference layouts to implement missing scene material/geometry and HUD routing with scoped public state; preserve strict validation and Source thread settings. Combine future validation in one package rather than repeating this lighting-only collection."
+}
