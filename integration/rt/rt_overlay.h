@@ -54,6 +54,10 @@ template<class Device> Result inject(Device* device, const draw_observe::Snapsho
     {2,16,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,1},D3DDECL_END()};
   r.code=static_draw::Code::Layout;
   if (!buffer.value || count!=5 || std::memcmp(elements,expected,sizeof(expected)) || stride!=32 || freq!=1 || offset%4) { return result; }
+  D3DMATRIX saved[3]{};const D3DTRANSFORMSTATETYPE transforms[]={D3DTS_WORLD,D3DTS_VIEW,D3DTS_PROJECTION};
+  for (unsigned i=0;i<3;++i) { if (!capture(device->GetTransform(transforms[i],&saved[i]))) { return result; } }
+  static_draw::Ref<IDirect3DVertexShader9> vs;static_draw::Ref<IDirect3DPixelShader9> ps;
+  if (!capture(device->GetVertexShader(&vs.value)) || !capture(device->GetPixelShader(&ps.value))) { return result; }
   static_draw::Ref<IDirect3DStateBlock9> block;
   if (!capture(device->CreateStateBlock(D3DSBT_ALL,&block.value)) || !block.value || !capture(block.value->Capture())) { return result; }
   auto set=[&](HRESULT hr) {
@@ -83,6 +87,14 @@ template<class Device> Result inject(Device* device, const draw_observe::Snapsho
     if (FAILED(result.draw)) { r.apply=result.draw; }
   }
   r.restore=block.value->Apply();
+  // Match the established D3D9 UI backend workaround: some system drivers do
+  // not restore transforms reliably from D3DSBT_ALL. Also explicitly retain
+  // the original stream/declaration/shaders across DrawPrimitiveUP.
+  auto restore=[&](HRESULT hr) { if (FAILED(hr) && SUCCEEDED(r.restore)) { r.restore=hr; } };
+  for (unsigned i=0;i<3;++i) { restore(device->SetTransform(transforms[i],&saved[i])); }
+  restore(device->SetStreamSource(0,buffer.value,offset,stride));
+  restore(device->SetVertexDeclaration(declaration.value));
+  restore(device->SetVertexShader(vs.value));restore(device->SetPixelShader(ps.value));
   if (FAILED(r.restore)) { r.code=static_draw::Code::RestoreFailed; }
   result.replaced=ok && SUCCEEDED(result.draw) && SUCCEEDED(r.restore);
   return result;

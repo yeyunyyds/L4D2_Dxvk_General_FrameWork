@@ -18,7 +18,7 @@ struct Block final:IDirect3DStateBlock9 {
   HRESULT STDMETHODCALLTYPE Apply() override { const auto hr=inner->Apply();return failRestore?E_FAIL:hr; }
 };
 struct Proxy {
-  IDirect3DDevice9* device;unsigned gets=0,sets=0,draws=0,failGet=0,failSet=0;
+  IDirect3DDevice9* device;unsigned gets=0,sets=0,draws=0,failGet=0,failSet=0,beforeDrawSets=0;
   bool failCapture=false,failRestore=false,failDraw=false;
   HRESULT get(HRESULT hr) { return ++gets==failGet?E_FAIL:hr; }
   HRESULT set(HRESULT hr) { return ++sets==failSet?E_FAIL:hr; }
@@ -26,8 +26,10 @@ struct Proxy {
 #define SET(name) template<class... A> HRESULT name(A... a) { return set(device->name(a...)); }
   GET(GetRenderTarget) GET(GetBackBuffer) GET(GetViewport) GET(GetRenderState)
   GET(GetVertexDeclaration) GET(GetStreamSource) GET(GetStreamSourceFreq)
+  GET(GetTransform) GET(GetVertexShader) GET(GetPixelShader)
   SET(SetVertexShader) SET(SetPixelShader) SET(SetFVF) SET(SetRenderState)
   SET(SetTexture) SET(SetTextureStageState) SET(SetTransform)
+  SET(SetStreamSource) SET(SetVertexDeclaration)
 #undef GET
 #undef SET
   HRESULT CreateStateBlock(D3DSTATEBLOCKTYPE type,IDirect3DStateBlock9** p) {
@@ -35,7 +37,7 @@ struct Proxy {
     if (inner) { *p=new Block(inner,failCapture,failRestore); }return get(hr);
   }
   HRESULT DrawPrimitiveUP(D3DPRIMITIVETYPE type,UINT count,const void* vertices,UINT stride) {
-    ++draws;return failDraw?E_FAIL:device->DrawPrimitiveUP(type,count,vertices,stride);
+    beforeDrawSets=sets;++draws;return failDraw?E_FAIL:device->DrawPrimitiveUP(type,count,vertices,stride);
   }
 };
 std::vector<uint64_t> state(IDirect3DDevice9* d) {
@@ -125,10 +127,20 @@ int main() {
     for (auto* m:{&s.world,&s.view,&s.projection}) { (*m)[0]=(*m)[5]=(*m)[10]=(*m)[15]=1; }
     require(overlay::candidate(s,D3DPT_TRIANGLELIST,false) && !overlay::candidate(s,D3DPT_TRIANGLELIST,true),"bounded post classifier");
     const auto baseline=state(d);require(SUCCEEDED(d->BeginScene()),"begin scene");
-    Proxy success{d};const auto good=overlay::inject(&success,s);require(good.replaced && success.draws==1 && state(d)==baseline,"transparent injection must restore stream0 and all sampled state");
-    for (unsigned at=1;at<=success.sets;++at) {
+    Proxy success{d};const auto good=overlay::inject(&success,s);
+    const auto after=state(d);
+    std::cout << "RT overlay scope: code=" << uint32_t(good.report.code) << " capture=" << uint32_t(good.report.capture)
+      << " apply=" << uint32_t(good.report.apply) << " draw=" << uint32_t(good.draw) << " restore=" << uint32_t(good.report.restore)
+      << " calls=" << success.draws << " apply_sets=" << success.beforeDrawSets << " total_sets=" << success.sets << '\n';
+    for (size_t i=0;i<baseline.size();++i) { if (baseline[i]!=after[i]) { std::cout << "state_delta index=" << i << " before=" << baseline[i] << " after=" << after[i] << '\n'; } }
+    require(good.replaced && success.draws==1 && after==baseline,"transparent injection must restore stream0 and all sampled state");
+    for (unsigned at=1;at<=success.beforeDrawSets;++at) {
       Proxy bad{d};bad.failSet=at;const auto r=overlay::inject(&bad,s);
       require(!r.replaced && FAILED(r.report.apply) && !bad.draws && state(d)==baseline,"partial-mutating setter must roll back before fallback");
+    }
+    for (unsigned at=success.beforeDrawSets+1;at<=success.sets;++at) {
+      Proxy bad{d};bad.failSet=at;const auto r=overlay::inject(&bad,s);
+      require(!r.replaced && FAILED(r.report.restore) && bad.draws==1 && state(d)==baseline,"manual restore failure must not be accepted");
     }
     for (unsigned at=1;at<=success.gets;++at) {
       Proxy bad{d};bad.failGet=at;const auto r=overlay::inject(&bad,s);
