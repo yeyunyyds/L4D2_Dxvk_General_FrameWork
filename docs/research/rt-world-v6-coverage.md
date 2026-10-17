@@ -41,8 +41,11 @@ v6 仅匹配实际观察到的 `Neko_Engine_Post / 0x80001`、单位 world/view/
 
 ## 构建与验收
 
-新增 Windows x86/x64 原生用例在真实系统 D3D9 NULLREF 上检查 StateBlock 和 DrawPrimitiveUP：原 shader、纹理、声明、stream0、矩阵及渲染状态恢复；每一个 setter 先修改状态再返回失败；各 getter、capture、draw、restore 失败分别检查。另以模拟设备验证 Unlit 精确布局、PS/VS 清除与恢复以及压缩布局拒绝。原有 startup、transport、材质解码及作用域用例继续执行。系统 NULLREF 没有默认颜色目标，状态用例显式创建离屏 RT，并仅在测试代理中把它作为 backbuffer 身份；另用第二个真实 surface 验证身份不符时不修改/绘制。生产代码仍调用真实 GetBackBuffer。系统 NULLREF 不运行 Remix，也不验证实际 swapchain 注入或替代 B580 的效果验收。
+新增 Windows x86/x64 原生用例在真实系统 D3D9 NULLREF 上检查 StateBlock 和 DrawPrimitiveUP：原 shader、纹理、声明、stream0、矩阵及渲染状态恢复；每一个 setter 先修改状态再返回失败；设备 getter、capture、draw、restore 失败分别检查。另以模拟设备验证 Unlit 精确布局、PS/VS 清除与恢复以及压缩布局拒绝。原有 startup、transport、材质解码及作用域用例继续执行。系统 NULLREF 没有默认颜色目标，状态用例显式创建离屏 RT，并仅在测试代理中把它作为 backbuffer 身份；另用第二个真实 surface 验证身份不符时不修改/绘制。生产代码仍调用真实 GetBackBuffer。系统 NULLREF 不运行 Remix，也不验证实际 swapchain 注入或替代 B580 的效果验收。
 
 Python 新增 profile/阶段/声明越界拒绝、HUD 丢失/恢复失败的判定，并回归 v4/v5 原始数据。成品必须通过双架构新增 gate、配套 PE 身份、包内 Python、固定运行时 API 初始化与全部成员哈希验证后发布。
 
 本版没有修改 Source CVar、没有移入参考 mod 全局 prim context、没有调用私有 game 方法或替换固定 Remix DLL。武器、蒙皮、天空、透明、完整地图光源、多线程准备任务和性能仍未验收。不能由保留线程设置推导出准备任务已实际并行。
+
+
+已发布 [固定成品文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/4b6559d895119d2839443e3be7c2588d84f5ac02/downloads/rt-world-pilot-dev.zip)，构建 `4caf3ae55af36bb48da53b367854e30d514f628f`，SHA256 `2ba3037db037f15bdc6c065908990ac7a1203d726977ef7d902fd35957c08bdb`。双架构原生检查和成品验证详见 [v6 核验记录](../../research/rt-world-pilot-v6-validation.json)。Source 准备并行与实际 B580 的 v6 画面仍待用户回包确认。

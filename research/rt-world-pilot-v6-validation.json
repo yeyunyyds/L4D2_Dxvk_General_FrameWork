@@ -1,0 +1,397 @@
+{
+  "schema": 1,
+  "scope": "selected_static_world_runtime_pilot_build_package_and_native_fixture_validation",
+  "build_commit": "4caf3ae55af36bb48da53b367854e30d514f628f",
+  "download_ref": "4b6559d895119d2839443e3be7c2588d84f5ac02",
+  "filename": "rt-world-pilot-dev.zip",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/4b6559d895119d2839443e3be7c2588d84f5ac02/downloads/rt-world-pilot-dev.zip",
+  "size": 11891566,
+  "sha256": "2ba3037db037f15bdc6c065908990ac7a1203d726977ef7d902fd35957c08bdb",
+  "zip_crc": "pass",
+  "all_manifest_members_verified": true,
+  "shipped_scripts_cmd_configuration_readme_exact_match": true,
+  "source_inputs_match_native_receipt": true,
+  "native_status": {
+    "commit": "4caf3ae55af36bb48da53b367854e30d514f628f",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "foundation_status": {
+    "schema": 1,
+    "commit": "4caf3ae55af36bb48da53b367854e30d514f628f",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "3a1fbf63bbc167486056bd2ec69ff450ab27c90916fbad3dcea15b105dd15278",
+      "development/x86/d3d9.dll": "d9f6cbefa7e090deceb5d773f8999b34eaa5c9910cec0a56a8abbacf6e6c779f"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "consumer_draw_development_execution": "pass",
+    "consumer_world_development_execution": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "package_validation": {
+    "schema": 1,
+    "commit": "4caf3ae55af36bb48da53b367854e30d514f628f",
+    "package_validation": "pass",
+    "launcher": "rt-world-pilot-dev.zip",
+    "payloads": [],
+    "primary_sha256": "2ba3037db037f15bdc6c065908990ac7a1203d726977ef7d902fd35957c08bdb",
+    "primary_size": 11891566,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "pinned_native_loader_api_initialization": "pass",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "sha256": "d9f6cbefa7e090deceb5d773f8999b34eaa5c9910cec0a56a8abbacf6e6c779f",
+      "size": 1409024,
+      "machine": "0x14c"
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "sha256": "3a1fbf63bbc167486056bd2ec69ff450ab27c90916fbad3dcea15b105dd15278",
+      "size": 1401344,
+      "machine": "0x8664"
+    }
+  },
+  "build_id": "ldb-rt-observer+d2c623044c3eae16",
+  "runtime_sha256": "21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7",
+  "local_python_tests": {
+    "total": 85,
+    "passed": 83,
+    "windows_required_skipped": 2
+  },
+  "native_fixture_independent_reviews": {
+    "x86": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30,
+          "coverage_revision": 6
+        },
+        "footer": {
+          "draws": 720,
+          "valid": 720,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210
+        },
+        "world_conversion": {
+          "reports": 720,
+          "converted": 210
+        },
+        "world_normalization": "pass"
+      }
+    },
+    "x64": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30,
+          "coverage_revision": 6
+        },
+        "footer": {
+          "draws": 720,
+          "valid": 720,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210
+        },
+        "world_conversion": {
+          "reports": 720,
+          "converted": 210
+        },
+        "world_normalization": "pass"
+      }
+    }
+  },
+  "pinned_loader_validation": {
+    "wrong_sha_rejected": true,
+    "positive_initialization_events": [
+      {
+        "event": "loaded_pinned_runtime",
+        "code": 0
+      },
+      {
+        "event": "initialize_api_0_6_4",
+        "code": 0
+      },
+      {
+        "event": "rtx.enableRaytracing",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.useVertexCapture",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.upscalerType",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "rtx.enableRayReconstruction",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.sceneScale",
+        "code": 0,
+        "value": "0.3937007874"
+      },
+      {
+        "event": "rtx.fallbackLightMode",
+        "code": 0,
+        "value": "2"
+      },
+      {
+        "event": "rtx.fallbackLightType",
+        "code": 0,
+        "value": "1"
+      },
+      {
+        "event": "rtx.fallbackLightRadiance",
+        "code": 0,
+        "value": "3000,3000,3000"
+      },
+      {
+        "event": "rtx.fallbackLightRadius",
+        "code": 0,
+        "value": "5"
+      },
+      {
+        "event": "rtx.fallbackLightPositionOffset",
+        "code": 0,
+        "value": "0,0,0"
+      },
+      {
+        "event": "rtx.enableFallbackLightShaping",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.fallbackLightDirection",
+        "code": 0,
+        "value": "0,0,-1"
+      },
+      {
+        "event": "rtx.autoExposure.enabled",
+        "code": 0,
+        "value": "True"
+      },
+      {
+        "event": "rtx.autoExposure.evMinValue",
+        "code": 0,
+        "value": "-2"
+      },
+      {
+        "event": "rtx.autoExposure.evMaxValue",
+        "code": 0,
+        "value": "5"
+      },
+      {
+        "event": "rtx.tonemappingMode",
+        "code": 0,
+        "value": "1"
+      },
+      {
+        "event": "rtx.localtonemap.exposure",
+        "code": 0,
+        "value": "0.75"
+      },
+      {
+        "event": "rtx.orthographicIsUI",
+        "code": 0,
+        "value": "True"
+      },
+      {
+        "event": "rtx.skipDrawCallsPostRTXInjection",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.enableAlphaBlend",
+        "code": 0,
+        "value": "True"
+      },
+      {
+        "event": "rtx.bloom.enable",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "rtx.postfx.enable",
+        "code": 0,
+        "value": "False"
+      },
+      {
+        "event": "startup_raster_policy",
+        "code": 0,
+        "value": "RT_off_until_valid_converted_draw_after_control"
+      },
+      {
+        "event": "coverage_comparison_policy",
+        "code": 0,
+        "value": "v6_baseline_world_then_unlit_and_neko_post_overlay_after120_constant_sphere3000"
+      },
+      {
+        "event": "material_audit_policy",
+        "code": 0,
+        "value": "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG"
+      },
+      {
+        "event": "host_draw_request_count",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "host_cleanup",
+        "code": 0
+      }
+    ],
+    "gpu_device_created": false
+  },
+  "old_actual_draw_trace_regression": {
+    "pass": true,
+    "draws": 40952,
+    "presents": 120
+  },
+  "local_final_analyzer_tests": {
+    "world_cases": 5,
+    "draw_cases": 7,
+    "passed": 12
+  },
+  "local_strict_mingw_x64_compile": "pass_not_execution",
+  "portable_lighting_failure_and_order_execution": "pass_not_GPU",
+  "actual_v4_readback_regression": {
+    "runtime_outputs": "pass",
+    "geometry_present": true,
+    "decoded_previews_match_independent_prior_png": true
+  },
+  "actual_game_world_execution": "unrun",
+  "game_rt": "unrun",
+  "source_queue_execution": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun",
+  "coverage_native_scope_checks": {
+    "architectures": [
+      "x86",
+      "x64"
+    ],
+    "original_compiled_vs_ps_nonnull": true,
+    "offscreen_nullref_target_with_fixture_backbuffer_alias": true,
+    "production_uses_real_get_backbuffer": true,
+    "foreign_surface_identity_rejected": true,
+    "scope_apply_setter_positions": 26,
+    "explicit_restore_setter_positions": 27,
+    "device_getter_failure_positions": 36,
+    "scope_capture_apply_draw_restore_hresult_zero_both_arches": true,
+    "all_sampled_state_equal_before_after": true,
+    "native_real_swapchain_injection": "unrun",
+    "native_remix_hud_pixels": "unrun"
+  },
+  "old_actual_v5_regression": {
+    "draw_pass": true,
+    "draws": 76825,
+    "converted": 2730,
+    "world_outputs": "pass"
+  },
+  "validation_limits": "NULLREF uses an explicitly created offscreen RT aliased as backbuffer only in the fixture. It verifies real D3D9 public state and DrawPrimitiveUP rollback, not real swapchain identity or actual Remix injection. All game rendering claims remain unrun for v6."
+}
