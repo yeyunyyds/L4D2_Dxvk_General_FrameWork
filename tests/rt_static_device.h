@@ -71,11 +71,12 @@ struct Graphics {
   Shader shader;
   Pixel pixel;
   IDirect3DPixelShader9* currentPixel = &pixel;
-  Declaration declaration, ffp;
+  Declaration declaration, ffp, generated;
   Buffer buffer;
   IDirect3DVertexShader9* currentShader = &shader;
   IDirect3DVertexDeclaration9* currentDeclaration = &declaration;
   DWORD currentFvf = 0, frequency = 1, alpha = 0, alphaTest = 0, depthWrite = 1, depth = D3DZB_TRUE, cull = D3DCULL_CCW;
+  DWORD lighting=1,fog=0,category=0xfefefefe;
   UINT stride = 40, offset = 0;
   D3DVIEWPORT9 viewport{0, 0, 1920, 1080, 0, 1};
   std::array<D3DMATRIX, 3> transforms{matrix(100), matrix(200), matrix(300)};
@@ -101,18 +102,33 @@ struct Graphics {
   HRESULT GetViewport(D3DVIEWPORT9* out) { *out = viewport; return operation(false); }
   HRESULT GetRenderTarget(DWORD, IDirect3DSurface9** out) { *out = nullptr; return E_NOTIMPL; }
   HRESULT GetRenderState(D3DRENDERSTATETYPE type, DWORD* out) {
-    switch (type) {
+    switch (DWORD(type)) {
     case D3DRS_ALPHABLENDENABLE: *out = alpha; break;
     case D3DRS_ALPHATESTENABLE: *out = alphaTest; break;
     case D3DRS_ZWRITEENABLE: *out = depthWrite; break;
     case D3DRS_ZENABLE: *out = depth; break;
     case D3DRS_CULLMODE: *out = cull; break;
+    case D3DRS_LIGHTING: *out=lighting;break;
+    case D3DRS_FOGENABLE: *out=fog;break;
+    case static_cast<D3DRENDERSTATETYPE>(42): *out=category;break;
     default: return E_INVALIDARG;
     }
     return operation(false);
   }
   HRESULT GetVertexDeclaration(IDirect3DVertexDeclaration9** out) {
     *out = currentDeclaration; if (*out) { (*out)->AddRef(); } return operation(false);
+  }
+  HRESULT CreateVertexDeclaration(const D3DVERTEXELEMENT9* elements,IDirect3DVertexDeclaration9** out) {
+    generated.elements.clear();
+    for (unsigned i=0;i<MAXD3DDECLLENGTH+1;++i) { generated.elements.push_back(elements[i]);if (elements[i].Stream==0xff) { break; } }
+    generated.AddRef();*out=&generated;return operation(false);
+  }
+  HRESULT SetRenderState(D3DRENDERSTATETYPE name,DWORD value) {
+    if (name==D3DRS_LIGHTING) { lighting=value; }
+    else if (name==D3DRS_FOGENABLE) { fog=value; }
+    else if (name==static_cast<D3DRENDERSTATETYPE>(42)) { category=value; }
+    else { return E_INVALIDARG; }
+    return operation(true);
   }
   HRESULT GetStreamSource(UINT, IDirect3DVertexBuffer9** out, UINT* start, UINT* step) {
     *out = &buffer; buffer.AddRef(); *start = offset; *step = stride; return operation(false);
@@ -159,7 +175,7 @@ struct Graphics {
     return currentPixel == &pixel && currentShader == &shader && currentDeclaration == &declaration && currentFvf == declaration.fvf &&
       transforms[0].m[3][0] == 100 && transforms[1].m[3][0] == 200 && transforms[2].m[3][0] == 300;
   }
-  bool leasesReleased() const { return pixel.refs == 2 && shader.refs == 2 && declaration.refs == 2 && ffp.refs == 1 && buffer.refs == 2; }
+  bool leasesReleased() const { return pixel.refs == 2 && shader.refs == 2 && declaration.refs == 2 && ffp.refs == 1 && generated.refs==1 && buffer.refs == 2; }
 };
 
 inline ldb_rt::DrawSnapshot snapshot() {

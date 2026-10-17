@@ -3,7 +3,7 @@
 #include "rt_static_draw.h"
 
 namespace ldb_rt::consumer_world {
-enum class Decision : uint32_t { Disabled, Control, SourceState, Material, Transform, Camera, Target, Pipeline, Selected, HudOverlay };
+enum class Decision : uint32_t { Disabled, Control, SourceState, Material, Transform, Camera, Target, Pipeline, Selected, HudOverlay, Sky, Rigid };
 inline bool unlit(const draw_observe::Snapshot& s) noexcept {
   return s.materialInfo.format == 0x80503 && !std::strcmp(s.materialInfo.shader.data(), "UnlitGeneric");
 }

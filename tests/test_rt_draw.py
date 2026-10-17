@@ -110,6 +110,51 @@ class DrawObservation(unittest.TestCase):
             early[dest]=(e,dest_uid,bytes(data));mutations.append(early)
             for changed in mutations:self.assertFalse(self.inspect(changed)['pass'])
 
+    def scene_fixture(self):
+        events=self.tangent_fixture();events[0]=(0,0,struct.pack('<IQQQII',5,42,7,10000000,240,30))
+        state_at=check.SNAPSHOT.size+check.MATERIAL.size+32
+        for i,(e,u,p) in enumerate(events):
+            if e==1:events[i]=(e,u,p[:state_at+check.PIPELINE_V7.size]+struct.pack('<3I',1,1,0xfefefefe)+p[state_at+check.PIPELINE_V7.size:])
+        # Full v7 tangent coverage is already active in the v8 baseline.
+        src,dst=1+123*4,1+39*4;e,u,_=events[dst];data=bytearray(events[src][2]);struct.pack_into('<Q',data,16,40);events[dst]=(e,u,bytes(data))
+        layouts={123:(10,0x80001,'NekoSky','000000000200000000000c000100050002000000030000010200100002000301ff00000011000000'),
+                 181:(11,0x80503,'VertexLitGeneric','000000000200000000000c0005000300000010000100050000000c00050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000'),
+                 182:(11,0xa0403,'VertexLitGeneric','000000000200000000000c0005000300000010000100050000000c0005000600020000000300000102001000050003010300000000000002ff00000011000000')}
+        for frame,(decision,fmt,shader,text) in layouts.items():
+            at=1+(frame-1)*4;e,u,p=events[at];decl=bytes.fromhex(text);snapshot=bytearray(p[:check.SNAPSHOT.size])
+            if decision==11:
+                world=[0.,1,0,0,-1,0,0,0,0,0,1,0,123,0,0,1];struct.pack_into('<16f',snapshot,40,*world)
+            state=list(check.PIPELINE_V8.unpack_from(p,state_at));state[2]=32;state[6]=state[7]=int(decision==11);state[17]=len(decl)//8
+            events[at]=(e,u,bytes(snapshot)+check.MATERIAL.pack(fmt,3,0,shader.encode())+p[check.SNAPSHOT.size+check.MATERIAL.size:state_at]+check.PIPELINE_V8.pack(*state)+decl)
+            events[at+1]=(6,u,struct.pack('<8I',decision,9,0,0,0,1,1,0))
+        return events
+
+    def test_v8_scene_stages_exact_layouts_and_original_states(self):
+        events=self.scene_fixture();report=self.inspect(events)
+        self.assertTrue(report['pass'],report['errors']);self.assertEqual(report['header']['coverage_revision'],8)
+        self.assertEqual(report['world_conversion']['sky_converted'],1);self.assertEqual(report['world_conversion']['rigid_converted'],2)
+        groups=report['world_material_attribution']['groups']
+        scene=[g for g in groups if g['shader'] in ('NekoSky','VertexLitGeneric')]
+        self.assertEqual({g['phase'] for g in scene},{'expanded_sky','expanded_models'})
+        self.assertTrue(all(g['lighting']==g['fog']==1 and g['original_category']==0xfefefefe for g in scene))
+        self.assertTrue(any(g['phase']=='baseline_world' and g['stride']==80 and g['converted']==1 for g in groups))
+        state_at=check.SNAPSHOT.size+check.MATERIAL.size+32
+        for frame in (123,181,182):
+            at=1+(frame-1)*4;e,u,p=events[at]
+            for offset,fmt,value in ((state_at,'I',4096),(state_at+2*4,'I',36),(40,'f',2.),
+                                     (check.SNAPSHOT.size,'Q',0x80407),(check.SNAPSHOT.size+8,'I',0),
+                                     (check.SNAPSHOT.size-4,'f',.1),(state_at+check.PIPELINE_V8.size+12,'I',5)):
+                data=bytearray(p);struct.pack_into('<'+fmt,data,offset,value);bad=events.copy();bad[at]=(e,u,bytes(data))
+                self.assertFalse(self.inspect(bad)['pass'],(frame,offset))
+            # Last frame of the preceding phase is too early, regardless of UID.
+            dest_frame=120 if frame==123 else 180;dest=1+(dest_frame-1)*4;_,dest_uid,_=events[dest]
+            data=bytearray(p);struct.pack_into('<Q',data,16,dest_frame);bad=events.copy();bad[dest]=(e,dest_uid,bytes(data));bad[dest+1]=(6,dest_uid,events[at+1][2])
+            self.assertFalse(self.inspect(bad)['pass'])
+        no_world=events.copy()
+        for i,(e,u,p) in enumerate(no_world):
+            if e==6 and struct.unpack_from('<I',p)[0]==8:no_world[i]=(e,u,struct.pack('<8I',0,0,0,0,0,0,1,0))
+        self.assertIn('scene_before_successful_world',self.inspect(no_world)['errors'])
+
     def test_world_report_cannot_hide_bad_uid_control_or_unsafe_material(self):
         original=self.world_fixture()
         wrong=original.copy();wrong[2]=(6,999,wrong[2][2])

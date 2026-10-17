@@ -3,6 +3,7 @@
 #include "rt_draw_host.h"
 #include "rt_host.h"
 #include "rt_static_device.h"
+#include "rt_scene_cases.h"
 #include <iostream>
 using namespace ldb_rt::draw_observe;
 void require(bool value, const char* why) { if (!value) { throw std::runtime_error(why); } }
@@ -112,6 +113,24 @@ int main(int argc, char** argv) {
         });
         require(SUCCEEDED(result) && device.restored() && device.leasesReleased(),"consumer conversion or restore failed");
         ldb_rt_host::drawResult(8,uid++,result);
+      }
+      if (frame==122 || frame==180 || frame==181) {
+        const unsigned kind=frame==122?0:frame==180?1:2;
+        auto scene=rt_scene_test::snapshot(kind);scene.session=43;scene.ordinal=++s.ordinal;scene.thread=s.thread;
+        LARGE_INTEGER tick{};QueryPerformanceCounter(&tick);scene.ticks=uint64_t(tick.QuadPart);
+        const auto originalDeclaration=device.declaration.elements;
+        device.declaration.elements=rt_scene_test::declaration(kind);device.stride=32;device.viewport.MaxZ=1;
+        device.depth=device.depthWrite=kind?1u:0u;
+        const auto bytes=pack(scene);observe(8,uid,&device,bytes.data(),bytes.size(),2,D3DPT_TRIANGLELIST,{0,0,3,0,1,0});
+        const auto result=ldb_rt_host::drawCommand(8,uid,&device,D3DPT_TRIANGLELIST,false,[&] {
+          require(!device.currentShader && (kind?!device.currentPixel:device.currentPixel==&device.pixel) && !device.lighting,
+            "Host scene routing did not apply scope");
+          require(requested && (kind || device.category==ldb_rt::scene_draw::kSkyCategory),"Host scene category/activation");return S_OK;
+        });
+        require(SUCCEEDED(result) && device.restored() && device.leasesReleased() && device.lighting==1 &&
+          device.category==ldb_rt::scene_draw::kUnusedCategory,"Host scene original state not restored");
+        ldb_rt_host::drawResult(8,uid++,result);
+        device.declaration.elements=originalDeclaration;device.stride=48;device.depth=device.depthWrite=1;
       }
       ldb_rt_host::present(8,uid++,S_OK);
     }

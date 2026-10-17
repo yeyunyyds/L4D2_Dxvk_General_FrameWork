@@ -16,6 +16,8 @@
 
 当前 [v7 精确切线布局扩展](rt-world-v7-tangent-coverage.md) 已发布：31–120 保留 v6 世界/Unlit/HUD，121–240 只额外增加严格验证的 stride64/80 LightmappedGeneric；灯光、HUD 与镜头对照不再同时变化。原始 trace 记录 CULLMODE，新增有界材质/布局/RPC 归属表，仍为一次 F9、一个结果 ZIP。两种新布局的 Windows 双架构状态/回滚检查及成品核验已通过。[v7 B580 实机结果](rt-world-202526-result.md) 进一步确认本镜头内白墙和左侧结构恢复颜色、RT 深度/法线及遮挡，新增 720 次转换成功，HUD 两段均正常；这处缺墙无需重复采集。
 
+下一版 [v8 天空与有限刚性道具](rt-world-v8-sky-rigid.md) 已完成接入，正在构建验证：保留完整 v7 为基线，同一轮依次加入 NekoSky 与两种无骨骼声明的 VertexLitGeneric。仍只需一次 F9；天空和道具图像尚未实机验收。
+
 ## 从数据到实际转换
 
 实际 Draw 的同一 RPC 携带 v2 快照：原有矩阵/材质/viewport，以及当次读取的 64 位格式、解码状态和有界 shader 名称。v1 trace 继续可读。格式 getter 必须与已采到的 `mov eax,[ecx+0x38]; mov edx,[ecx+0x3c]; ret` 匹配；shader getter 必须与已采到的 `this+0x14` 路径匹配。随后识别返回字符串字面量、读取对象内小偏移指针，或 v3 补充的 `A1 <absolute>; ret` 全局字符串指针叶函数。全局指针槽和指向的名称都复读，发生变化则拒绝；槽地址从当前已验证代码读取，不硬编码 ASLR 地址。代码必须位于已映射的可执行 image page，名称最多 63 字节，字段复读不一致或未知实现均拒绝分类。不会执行私有材质函数。

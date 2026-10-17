@@ -66,13 +66,16 @@ def analyze(directory,previews=True):
         if len(on)!=1 or not off or off[-1]<=on[0]:errors.append('missing_gated_rt_on_off_sequence')
     comparison=any(e.get('event')=='lighting_comparison_policy' for e in events)
     coverage=any(e.get('event')=='coverage_comparison_policy' for e in events)
-    v7=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='7' for e in events)
+    v8=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='8' for e in events)
+    v7=v8 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='7' for e in events)
     frames=(30,120,180,240) if comparison or coverage else (30,120,240)
     phase_names={30:'raster',120:'baseline_sphere',180:'strong_sphere',240:'distant'}
     if coverage:
         phase_names={30:'raster',120:'baseline_world',180:'expanded_world',240:'expanded_world'}
+        if v8:phase_names={30:'raster',120:'baseline_world',180:'expanded_sky',240:'expanded_models'}
         requested=[(e.get('after_present'),e.get('phase'),e.get('code')) for e in events if e.get('event')=='coverage_phase_requested']
-        if requested!=[(30,'baseline_world',0),(120,'expanded_world',0),(180,'expanded_world',0),(240,'expanded_world',0)]:
+        wanted=[(30,'baseline_world',0),(120,'expanded_sky',0),(180,'expanded_models',0),(240,'expanded_models',0)] if v8 else [(30,'baseline_world',0),(120,'expanded_world',0),(180,'expanded_world',0),(240,'expanded_world',0)]
+        if requested!=wanted:
             errors.append('incomplete_or_failed_coverage_phase_requests')
     if comparison:
         requested=[(e.get('after_present'),e.get('phase'),e.get('code')) for e in events if e.get('event')=='lighting_phase_requested']
@@ -166,7 +169,7 @@ def analyze(directory,previews=True):
     if coverage and (not hud or any(e.get('replaced_post') is not True or e.get('scope_code')!=9 or not e.get('ordinal',0)
                                    or any(e.get(k,0)&0x80000000 for k in ('capture_hresult','apply_hresult','draw_hresult','restore_hresult')) for e in hud)):
         errors.append('missing_or_failed_hud_injection')
-    hud_phases={phase:sum(e.get('phase')==phase for e in hud) for phase in ('baseline_world','expanded_world')}
+    hud_phases={phase:sum(e.get('phase')==phase for e in hud) for phase in (('baseline_world','expanded_sky','expanded_models') if v8 else ('baseline_world','expanded_world'))}
     if v7 and (not coverage or not all(hud_phases.values()) or any(e.get('phase') not in hud_phases for e in hud)):
         errors.append('missing_baseline_or_expanded_hud_injection')
     return {'schema':2,'scope':'reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance',
@@ -174,7 +177,7 @@ def analyze(directory,previews=True):
             'startup_raster_gate':'requested_events_present_not_effective_state_proof' if gated else 'legacy_ungated',
             'rt_activation_requests':sum(e.get('event')=='raytracing_requested_on' and e.get('code')==0 for e in events),
             'nonzero_world_depth_and_normals':nonzero,
-            'coverage_comparison':{'present':coverage,'revision':7 if v7 else 6 if coverage else None,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'hud_phase_counts':hud_phases,'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; weapons/skinning unimplemented'},
+            'coverage_comparison':{'present':coverage,'revision':8 if v8 else 7 if v7 else 6 if coverage else None,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'hud_phase_counts':hud_phases,'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; weapons/skinning unimplemented'},
             'lighting_comparison':{'present':comparison,'status':'requests_complete_requires_image_review' if comparison and not errors else 'incomplete' if comparison else 'not_requested',
                 'phases':phase_names if comparison else {},'camera_comparisons':movement,
                 'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),
@@ -186,6 +189,7 @@ def analyze(directory,previews=True):
                 'query_failures':sum(bool(e.get('pixel_shader_hresult',0)&0x80000000) or bool(e.get('render_state_query_failure_bits',0)) or any(
                     t.get('query_failure_bits',0) or t.get('texture_hresult',0)&0x80000000 or t.get('srgb_hresult',0)&0x80000000
                     for t in e.get('stages',[])) for e in material_samples),
+                'category_query_failures':sum(bool(e.get('category_hresult',0)&0x80000000) for e in material_samples),
                 'cull_query_failures':sum(bool(e.get('cull_hresult',0)&0x80000000) for e in material_samples),
                 'limits':'first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials'},
             'geometry_visual_review':'required' if nonzero else 'incomplete',

@@ -2,6 +2,7 @@
 
 #include "rt_protocol.h"
 #include "rt_static_draw.h"
+#include "rt_scene_draw.h"
 #include "rt_draw_host.h"
 
 #include <windows.h>
@@ -143,9 +144,18 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
           return physical;
         }
       }
+      if (ldb_rt::world_runtime::state().active && !control && consumer->second->sceneReady()) {
+        const auto mode=ldb_rt::scene_draw::candidate(current,consumer->second->expanded(),consumer->second->models());
+        if (mode!=ldb_rt::scene_draw::Mode::None) {
+          const auto result=ldb_rt::scene_draw::execute(graphics,current,mode,type,userMemory,
+            [&] { called=true;physical=physicalDraw();return physical; },report);
+          decision=mode==ldb_rt::scene_draw::Mode::Sky?ldb_rt::consumer_world::Decision::Sky:ldb_rt::consumer_world::Decision::Rigid;
+          consumer->second->conversion(uid,decision,report,called,physical);return result;
+        }
+      }
       const auto result = ldb_rt::consumer_world::execute(graphics, current, type, userMemory,
         ldb_rt::world_runtime::state().active, control, [&] { called = true; physical = physicalDraw(); return physical; }, decision, report,
-        ldb_rt::world_runtime::state().raytracing, consumer->second->expanded());
+        ldb_rt::world_runtime::state().raytracing, true);
       consumer->second->conversion(uid, decision, report, called, physical);
       return result;
     }

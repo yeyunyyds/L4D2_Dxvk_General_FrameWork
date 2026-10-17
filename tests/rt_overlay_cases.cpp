@@ -2,6 +2,7 @@
 #include "rt_overlay.h"
 #include "rt_static_device.h"
 #include "rt_tangent_cases.h"
+#include "rt_scene_cases.h"
 #include <d3dcompiler.h>
 #include <iostream>
 #include <vector>
@@ -101,6 +102,7 @@ int main() {
   try {
     unlitCases();
     rt_tangent_test::mockCases();
+    rt_scene_test::mockCases();
     HMODULE library=LoadLibraryExW(L"d3d9.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);require(library!=nullptr,"system D3D9 required");
     using Create=IDirect3D9*(WINAPI*)(UINT);const auto address=GetProcAddress(library,"Direct3DCreate9");Create create=nullptr;std::memcpy(&create,&address,sizeof(create));require(create!=nullptr,"factory");
     static_draw::Ref<IDirect3D9> factory;factory.value=create(D3D_SDK_VERSION);require(factory.value!=nullptr,"D3D9");
@@ -178,6 +180,7 @@ int main() {
     require(SUCCEEDED(d->EndScene()),"end scene");
     s.materialInfo.shader[0]='X';require(!overlay::candidate(s,D3DPT_TRIANGLELIST,false),"unknown post shader accepted");
     rt_tangent_test::systemCases(d,vs.value,ps.value);
+    rt_scene_test::systemCases(d,vs.value,ps.value);
     DestroyWindow(window);
     std::cout << "RT rigid-unlit/overlay rollback/system NULLREF: PASS; effective Remix/HUD output unrun\n";
     return 0;

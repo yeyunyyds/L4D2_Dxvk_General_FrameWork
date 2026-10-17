@@ -70,6 +70,19 @@ class ReadbackEvidenceTests(unittest.TestCase):
             self.assertEqual(v7['coverage_comparison']['hud_phase_counts'],{'baseline_world':1,'expanded_world':1})
             baseline_hud['phase']='raster'
             self.assertIn('missing_baseline_or_expanded_hud_injection',inspect()['errors'])
+            baseline_hud['phase']='baseline_world'
+            for e in events:
+                if e.get('event')=='world_coverage_revision':e['value']='8'
+                if e.get('event')=='coverage_phase_requested':
+                    e['phase']='baseline_world' if e['after_present']==30 else 'expanded_sky' if e['after_present']==120 else 'expanded_models'
+                if e.get('event')=='world_readback':
+                    e['phase']='raster' if e['frame']==30 else 'baseline_world' if e['frame']==120 else 'expanded_sky' if e['frame']==180 else 'expanded_models'
+            hud['phase']='expanded_sky'
+            self.assertIn('missing_baseline_or_expanded_hud_injection',inspect()['errors'])
+            events.append(dict(hud,phase='expanded_models',ordinal=1001))
+            v8=inspect();self.assertEqual(v8['runtime_outputs'],'pass',v8['errors'])
+            self.assertEqual(v8['coverage_comparison']['revision'],8)
+            self.assertEqual(v8['coverage_comparison']['hud_phase_counts'],{'baseline_world':1,'expanded_sky':1,'expanded_models':1})
             events[:]=original
             events[-1]['code']=1
             self.assertIn('incomplete_or_failed_lighting_phase_requests',inspect()['errors'])

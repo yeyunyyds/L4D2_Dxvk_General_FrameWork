@@ -31,14 +31,17 @@ template<class Device> Bytes pipeline(Device* device, bool coverageV7 = false) {
   IDirect3DSurface9* target = nullptr; D3DSURFACE_DESC desc{};
   if (FAILED(device->GetRenderTarget(0, &target)) || !target) { failures |= 256; }
   if (target) { if (FAILED(target->GetDesc(&desc))) { failures |= 256; } target->Release(); }
-  DWORD cull = 0;
+  DWORD cull = 0,lighting=0,fog=0,category=0;
   if (coverageV7 && FAILED(device->GetRenderState(D3DRS_CULLMODE,&cull))) { failures |= 512; }
+  if (coverageV7 && FAILED(device->GetRenderState(D3DRS_LIGHTING,&lighting))) { failures |= 1024; }
+  if (coverageV7 && FAILED(device->GetRenderState(D3DRS_FOGENABLE,&fog))) { failures |= 2048; }
+  if (coverageV7 && FAILED(device->GetRenderState(static_cast<D3DRENDERSTATETYPE>(42),&category))) { failures |= 4096; }
   w.u32(failures); w.u32(offset); w.u32(stride); w.u32(frequency);
   for (auto value : state) { w.u32(value); }
   w.u32(viewport.X); w.u32(viewport.Y); w.u32(viewport.Width); w.u32(viewport.Height);
   w.f32(viewport.MinZ); w.f32(viewport.MaxZ);
   w.u32(desc.Width); w.u32(desc.Height); w.u32(uint32_t(desc.Format)); w.u32(count);
-  if (coverageV7) { w.u32(cull); }
+  if (coverageV7) { w.u32(cull);w.u32(lighting);w.u32(fog);w.u32(category); }
   for (unsigned i = 0; i < count; ++i) {
     const auto* bytes = reinterpret_cast<const uint8_t*>(&elements[i]);
     w.data.insert(w.data.end(), bytes, bytes + sizeof(elements[i]));
@@ -56,7 +59,7 @@ class Recorder {
   uint32_t nextUid = 0;
   bool hasNext = false;
   IDirect3DDevice9* nativeDevice = nullptr; // Bridge device lifetime, never AddRef'd here.
-  bool finished = false, pending = false;
+  bool finished = false, pending = false, haveConvertedWorld = false;
   void record(uint32_t event, uint32_t uid, const Bytes& payload = {}) {
     if (!trace || finished) { return; }
     LARGE_INTEGER now{}; QueryPerformanceCounter(&now);
@@ -76,11 +79,13 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.world ? 4 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    Writer header; header.u32(request.world ? 5 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
     if (request.world) { header.u32(240); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
   bool expanded() const noexcept { return request.world && presents >= 120 && !finished; }
+  bool models() const noexcept { return request.world && presents >= 180 && !finished; }
+  bool sceneReady() const noexcept { return request.world && haveConvertedWorld && !finished; }
   template<class Device> void draw(Device* device, uint32_t uid, const Snapshot& snapshot, uint32_t kind,
       D3DPRIMITIVETYPE type, const std::array<uint32_t, 6>& args) {
     if (snapshot.session != request.session) { ++failures; return; }
@@ -103,6 +108,7 @@ public:
     snapshot = nextSnapshot; hasNext = false; control = presents < 30; return true;
   }
   void conversion(uint32_t uid, consumer_world::Decision decision, const static_draw::Report& report, bool called, HRESULT physical) {
+    if (decision==consumer_world::Decision::Selected && report.converted && SUCCEEDED(report.restore)) { haveConvertedWorld=true; }
     // The conversion scope has restored the original public D3D9 state here.
     if (report.converted && SUCCEEDED(report.restore) && nativeDevice && world_runtime::state().active && world_runtime::state().audit) {
       world_runtime::state().audit(nativeDevice, nextSnapshot);

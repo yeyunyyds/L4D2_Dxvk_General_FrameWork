@@ -41,6 +41,7 @@ const std::pair<const char*, const char*> options[] = {
   {"rtx.localtonemap.exposure", "0.75"},
   {"rtx.orthographicIsUI", "True"}, {"rtx.skipDrawCallsPostRTXInjection", "False"},
   {"rtx.enableAlphaBlend", "True"},
+  {"rtx.fogIgnoreSky", "True"},
   {"rtx.bloom.enable", "False"}, {"rtx.postfx.enable", "False"}
 };
 void event(const char* name, uint32_t code, const char* value = nullptr) {
@@ -97,10 +98,12 @@ void audit(IDirect3DDevice9* device, const draw_observe::Snapshot& snapshot) noe
     Ref<IDirect3DPixelShader9> shader;
     const auto ps = device->GetPixelShader(&shader.value);
     DWORD cull=0;const auto cullResult=device->GetRenderState(D3DRS_CULLMODE,&cull);
+    DWORD category=0;const auto categoryResult=device->GetRenderState(static_cast<D3DRENDERSTATETYPE>(42),&category);
     events << "{\"event\":\"world_material_sample\",\"phase\":\"" << world_diagnostics::name(phase)
       << "\",\"material\":" << snapshot.material << ",\"table\":" << snapshot.materialTable
       << ",\"ordinal\":" << snapshot.ordinal << ",\"vertex_format\":" << snapshot.materialInfo.format
       << ",\"shader_name\":\"" << snapshot.materialInfo.shader.data() << "\",\"cull_mode\":" << cull
+      << ",\"restored_category\":" << category << ",\"category_hresult\":" << uint32_t(categoryResult)
       << ",\"cull_hresult\":" << uint32_t(cullResult) << ",\"pixel_shader_hresult\":" << uint32_t(ps)
       << ",\"pixel_shader_bound\":" << (shader.value ? "true" : "false") << ",\"render_state_values\":[";
     const D3DRENDERSTATETYPE renderNames[] = {D3DRS_TEXTUREFACTOR, D3DRS_LIGHTING, D3DRS_COLORVERTEX,
@@ -236,8 +239,8 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy", 0, "v7_v6_world_and_hud_baseline_then_exact_tangent_layouts_after120_constant_sphere3000");
-    event("world_coverage_revision", 0, "7");
+    event("coverage_comparison_policy", 0, "v8_v7_baseline_then_neko_sky_after120_then_no_bone_rigid_after180_constant_sphere3000");
+    event("world_coverage_revision", 0, "8");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &overlayDraw}; return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }

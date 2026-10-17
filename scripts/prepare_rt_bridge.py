@@ -66,7 +66,7 @@ def prepare(output, bridge, upstream, detours):
               'world-hooks.patch': digest(world_hooks), 'transport-hooks.patch': digest(transport_hooks)}
     for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h', 'rt_material_decode.h', 'rt_file_hash.h']),
                         ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h',
-                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h']),
+                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_scene_draw.h']),
                         ('util', ['rt_draw_request.h', 'rt_transport_policy.h'])]:
         for name in names:
             source = ROOT / 'integration/rt' / name
@@ -82,7 +82,21 @@ def prepare(output, bridge, upstream, detours):
     destination.mkdir(parents=True)
     with tarfile.open(fileobj=io.BytesIO(detours_archive)) as tar:
         tar.extractall(destination, filter='data')
+    # Pin the private Remix extension and the missing-normal fallback as well
+    # as the public ABI. These are contracts used by rt_scene_draw.h.
+    scene_backend_contract = {}
+    checks = {
+        'src/d3d9/d3d9_rtx_utils.cpp': [b'remixTextureCategoryFlagsFromD3D', b'renderStates[42]', b'0xfefefefe'],
+        'src/dxvk/rtx_render/rtx_types.h': [b'enum class InstanceCategories : uint32_t', b'WorldUI,', b'WorldMatte,', b'Sky,'],
+        'src/dxvk/shaders/rtx/concept/surface/surface_interaction.slangh': [b'surface.normalBufferIndex == BINDING_INDEX_INVALID', b'surfaceInteraction.geometryNormal = flippedTriangleNormal;'],
+    }
+    for name, required in checks.items():
+        data = git(runtime, 'show', baseline['runtime_commit'] + ':' + name)
+        if not all(pattern in data for pattern in required):
+            raise RuntimeError('Pinned scene backend contract differs: ' + name)
+        scene_backend_contract[name] = hashlib.sha256(data).hexdigest()
     receipt = {**baseline, 'inputs_sha256': inputs,
+               'scene_backend_contract': scene_backend_contract,
                'upstream_archive_sha256': hashlib.sha256(archive).hexdigest(),
                'native_build': 'unrun', 'game_queue_execution': 'unrun',
                'contains_fg_assets': False, 'runtime_dll_included': False}

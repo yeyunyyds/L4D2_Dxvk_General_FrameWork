@@ -11,7 +11,8 @@ int main() {
     require(coverage.phase()==CoveragePhase::Raster && !coverage.afterCapture(120), "coverage must wait for raster control");
     require(coverage.afterCapture(30) && coverage.phase()==CoveragePhase::BaselineWorld, "baseline remains old coverage");
     require(coverage.afterCapture(120) && coverage.phase()==CoveragePhase::ExpandedWorld && !coverage.afterCapture(120), "expanded coverage only after baseline readback");
-    require(coverage.afterCapture(180) && coverage.afterCapture(240) && !coverage.afterCapture(240), "coverage comparison is bounded");
+    require(coverage.afterCapture(180) && coverage.phase()==CoveragePhase::ExpandedModels &&
+      coverage.afterCapture(240) && !coverage.afterCapture(240), "sky then model coverage is bounded");
     Comparison comparison;
     std::map<std::string, std::string> values;
     auto setter = [&](const char* key, const char* value) { values[key] = value; return true; };

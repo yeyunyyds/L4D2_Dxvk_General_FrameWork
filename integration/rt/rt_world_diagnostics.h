@@ -14,14 +14,16 @@ inline const char* name(Phase phase) noexcept {
   }
 }
 inline bool readback(uint64_t frame) noexcept { return frame == 30 || frame == 120 || frame == 180 || frame == 240; }
-enum class CoveragePhase : uint32_t { Raster, BaselineWorld, ExpandedWorld };
+enum class CoveragePhase : uint32_t { Raster, BaselineWorld, ExpandedWorld, ExpandedModels };
 inline const char* name(CoveragePhase phase) noexcept {
-  return phase == CoveragePhase::Raster ? "raster" : phase == CoveragePhase::BaselineWorld ? "baseline_world" : "expanded_world";
+  return phase == CoveragePhase::Raster ? "raster" : phase == CoveragePhase::BaselineWorld ? "baseline_world" :
+    phase == CoveragePhase::ExpandedWorld ? "expanded_sky" : "expanded_models";
 }
 class CoverageComparison {
   uint64_t m_last = 0;
 public:
-  CoveragePhase phase() const noexcept { return m_last < 30 ? CoveragePhase::Raster : m_last < 120 ? CoveragePhase::BaselineWorld : CoveragePhase::ExpandedWorld; }
+  CoveragePhase phase() const noexcept { return m_last < 30 ? CoveragePhase::Raster : m_last < 120 ? CoveragePhase::BaselineWorld :
+    m_last < 180 ? CoveragePhase::ExpandedWorld : CoveragePhase::ExpandedModels; }
   bool afterCapture(uint64_t frame) noexcept {
     const uint64_t expected = m_last == 0 ? 30 : m_last == 30 ? 120 : m_last == 120 ? 180 : 240;
     if (m_last == 240 || frame != expected) { return false; }
