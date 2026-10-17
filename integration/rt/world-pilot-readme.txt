@@ -15,7 +15,7 @@ LDB 1.3.2：受限世界 Remix 接入试验 v6（场景覆盖扩展 + Neko HUD �
 新增场景路径只接受实机记录的 0x80503 / UnlitGeneric、单位 world、刚性主视图候选、完整深度范围、同尺寸 HDR 目标、不透明且写深度、stream0 步长 32 的完整 FLOAT3 位置/FLOAT3 法线/FLOAT2 UV 及精确附加声明。使用固定功能 XYZ|NORMAL|TEX1；原 VS、PS、完整声明和矩阵逐 Draw 恢复。压缩法线、骨骼/蒙皮声明、武器相机、未知材质和布局继续拒绝。它不保证上次缺失的白墙恰好属于这一路径，也不是所有模型接入。
 
 HUD 路径仅匹配本次实际记录的 Neko_Engine_Post、0x80001、单位矩阵、精确声明、无深度/混合的完整 backbuffer 绘制，并核对 RT 就是实际 swapchain backbuffer。仅在扩展阶段且已请求开启 RT 时尝试。
-它用 alpha=0 的固定功能屏幕三角形触发固定 Remix 的 orthographic UI 注入，再保留其后原生 UI 绘制。成功后跳过该次原 Neko 后处理，避免它用未完成的光栅 HDR 画面覆盖 RT。状态由 D3DSBT_ALL 保存/恢复，包含 DrawPrimitiveUP 会清除的 stream0；任何捕获、setter、绘制或恢复错误都记录。
+它用 alpha=0 的固定功能屏幕三角形触发固定 Remix 的 orthographic UI 注入，再保留其后原生 UI 绘制。成功后跳过该次原 Neko 后处理，避免它用未完成的光栅 HDR 画面覆盖 RT。使用 D3DSBT_ALL 备份，并独立保存/恢复全部修改字段，包含 shader、纹理、矩阵、渲染/纹理阶段状态及 DrawPrimitiveUP 会清除的 stream0；任何捕获、setter、绘制或恢复错误都记录。
 本版不等于恢复全部 Neko 后处理效果；原 Neko 色调/受伤淡入淡出、武器和蒙皮模型仍未移植。HUD 是否实际显示，必须由本轮图像确认，不能只看注入 draw 的 S_OK。
 
 原地图灯光、天空、透明与全部动态模型未验收。没有写 Source 线程 CVar，没有移植参考 mod 的全局 prim context；Source 准备线程并行和性能继续待验收。逐 Draw 观察、状态 getter、文件记录与同步读回会影响诊断帧率。

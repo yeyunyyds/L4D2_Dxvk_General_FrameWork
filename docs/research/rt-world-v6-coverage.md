@@ -25,7 +25,7 @@ v6 仅匹配实际观察到的 `Neko_Engine_Post / 0x80001`、单位 world/view/
 
 跳过后处理是必要的覆盖控制：若继续执行原 fullscreen Neko draw，未完成的光栅 HDR 输入可能把刚合成的 RT 覆盖掉。它也意味着本版没有恢复 Neko 全套色调、受伤 fade 等效果。这里只保证边界条件和状态作用域，实际 HUD 图像仍待验收。
 
-使用真实 D3DSBT_ALL 捕获/恢复所有被修改的状态和 stream0，后者会被 DrawPrimitiveUP 清除。所有 setter 失败后都尝试完整恢复；恢复失败返回错误而不在未知状态下执行原绘制。捕获/应用/透明 draw/恢复分别记录。透明 draw 的 S_OK 仅证明该调用完成，不是 Remix 已实际注入或 HUD 图像通过的证据。
+使用 D3DSBT_ALL 额外备份，同时显式捕获/恢复所有被修改的 public 状态：VS/PS、声明、stream0、三组矩阵、13 个渲染状态、stage0 纹理与四项阶段状态、stage1 的 color/alpha op。stream0 会被 DrawPrimitiveUP 清除；不能仅凭 StateBlock::Apply 的 S_OK 判定状态均已恢复。所有 setter 失败后都尝试完整恢复；恢复失败返回错误而不在未知状态下执行原绘制。捕获/应用/透明 draw/恢复分别记录。透明 draw 的 S_OK 仅证明该调用完成，不是 Remix 已实际注入或 HUD 图像通过的证据。
 
 ## 同一次 F9
 
@@ -41,7 +41,7 @@ v6 仅匹配实际观察到的 `Neko_Engine_Post / 0x80001`、单位 world/view/
 
 ## 构建与验收
 
-新增 Windows x86/x64 原生用例在真实系统 D3D9 NULLREF 上检查 StateBlock 和 DrawPrimitiveUP：原 shader、纹理、声明、stream0、矩阵及渲染状态恢复；每一个 setter 先修改状态再返回失败；各 getter、capture、draw、restore 失败分别检查。另以模拟设备验证 Unlit 精确布局、PS/VS 清除与恢复以及压缩布局拒绝。原有 startup、transport、材质解码及作用域用例继续执行。系统 NULLREF 不运行 Remix，也不能代替 B580 的实际效果验收。
+新增 Windows x86/x64 原生用例在真实系统 D3D9 NULLREF 上检查 StateBlock 和 DrawPrimitiveUP：原 shader、纹理、声明、stream0、矩阵及渲染状态恢复；每一个 setter 先修改状态再返回失败；各 getter、capture、draw、restore 失败分别检查。另以模拟设备验证 Unlit 精确布局、PS/VS 清除与恢复以及压缩布局拒绝。原有 startup、transport、材质解码及作用域用例继续执行。系统 NULLREF 没有默认颜色目标，状态用例显式创建离屏 RT，并仅在测试代理中把它作为 backbuffer 身份；另用第二个真实 surface 验证身份不符时不修改/绘制。生产代码仍调用真实 GetBackBuffer。系统 NULLREF 不运行 Remix，也不验证实际 swapchain 注入或替代 B580 的效果验收。
 
 Python 新增 profile/阶段/声明越界拒绝、HUD 丢失/恢复失败的判定，并回归 v4/v5 原始数据。成品必须通过双架构新增 gate、配套 PE 身份、包内 Python、固定运行时 API 初始化与全部成员哈希验证后发布。
 

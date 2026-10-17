@@ -58,22 +58,30 @@ template<class Device> Result inject(Device* device, const draw_observe::Snapsho
   for (unsigned i=0;i<3;++i) { if (!capture(device->GetTransform(transforms[i],&saved[i]))) { return result; } }
   static_draw::Ref<IDirect3DVertexShader9> vs;static_draw::Ref<IDirect3DPixelShader9> ps;
   if (!capture(device->GetVertexShader(&vs.value)) || !capture(device->GetPixelShader(&ps.value))) { return result; }
+  const std::pair<D3DRENDERSTATETYPE,DWORD> states[]={{D3DRS_ZENABLE,FALSE},{D3DRS_ZWRITEENABLE,FALSE},
+    {D3DRS_ALPHABLENDENABLE,TRUE},{D3DRS_ALPHATESTENABLE,FALSE},{D3DRS_SRCBLEND,D3DBLEND_SRCALPHA},
+    {D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA},{D3DRS_BLENDOP,D3DBLENDOP_ADD},{D3DRS_SEPARATEALPHABLENDENABLE,FALSE},
+    {D3DRS_FOGENABLE,FALSE},{D3DRS_CULLMODE,D3DCULL_NONE},{D3DRS_STENCILENABLE,FALSE},
+    {D3DRS_SCISSORTESTENABLE,FALSE},{D3DRS_COLORWRITEENABLE,7}};
+  const std::pair<D3DTEXTURESTAGESTATETYPE,DWORD> stage[]={{D3DTSS_COLOROP,D3DTOP_SELECTARG1},
+    {D3DTSS_COLORARG1,D3DTA_DIFFUSE},{D3DTSS_ALPHAOP,D3DTOP_SELECTARG1},{D3DTSS_ALPHAARG1,D3DTA_DIFFUSE}};
+  constexpr size_t stateCount=sizeof(states)/sizeof(states[0]),stageCount=sizeof(stage)/sizeof(stage[0]);
+  DWORD oldStates[stateCount]{},oldStage0[stageCount]{},oldStage1[2]{};
+  static_draw::Ref<IDirect3DBaseTexture9> texture;
+  for (size_t i=0;i<stateCount;++i) { if (!capture(device->GetRenderState(states[i].first,&oldStates[i]))) { return result; } }
+  for (size_t i=0;i<stageCount;++i) { if (!capture(device->GetTextureStageState(0,stage[i].first,&oldStage0[i]))) { return result; } }
+  if (!capture(device->GetTextureStageState(1,D3DTSS_COLOROP,&oldStage1[0])) ||
+      !capture(device->GetTextureStageState(1,D3DTSS_ALPHAOP,&oldStage1[1])) ||
+      !capture(device->GetTexture(0,&texture.value))) { return result; }
   static_draw::Ref<IDirect3DStateBlock9> block;
   if (!capture(device->CreateStateBlock(D3DSBT_ALL,&block.value)) || !block.value || !capture(block.value->Capture())) { return result; }
   auto set=[&](HRESULT hr) {
     if (FAILED(hr)) { r.apply=hr;r.code=static_draw::Code::ApplyFailed;return false; }
     return true;
   };
-  const std::pair<D3DRENDERSTATETYPE,DWORD> states[]={{D3DRS_ZENABLE,FALSE},{D3DRS_ZWRITEENABLE,FALSE},
-    {D3DRS_ALPHABLENDENABLE,TRUE},{D3DRS_ALPHATESTENABLE,FALSE},{D3DRS_SRCBLEND,D3DBLEND_SRCALPHA},
-    {D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA},{D3DRS_BLENDOP,D3DBLENDOP_ADD},{D3DRS_SEPARATEALPHABLENDENABLE,FALSE},
-    {D3DRS_FOGENABLE,FALSE},{D3DRS_CULLMODE,D3DCULL_NONE},{D3DRS_STENCILENABLE,FALSE},
-    {D3DRS_SCISSORTESTENABLE,FALSE},{D3DRS_COLORWRITEENABLE,7}};
   bool ok=set(device->SetVertexShader(nullptr)) && set(device->SetPixelShader(nullptr)) &&
     set(device->SetFVF(D3DFVF_XYZRHW|D3DFVF_DIFFUSE));
   for (const auto& state:states) { if (ok) { ok=set(device->SetRenderState(state.first,state.second)); } }
-  const std::pair<D3DTEXTURESTAGESTATETYPE,DWORD> stage[]={{D3DTSS_COLOROP,D3DTOP_SELECTARG1},
-    {D3DTSS_COLORARG1,D3DTA_DIFFUSE},{D3DTSS_ALPHAOP,D3DTOP_SELECTARG1},{D3DTSS_ALPHAARG1,D3DTA_DIFFUSE}};
   if (ok) { ok=set(device->SetTexture(0,nullptr)); }
   for (const auto& state:stage) { if (ok) { ok=set(device->SetTextureStageState(0,state.first,state.second)); } }
   if (ok) { ok=set(device->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_DISABLE)) && set(device->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_DISABLE)); }
@@ -88,13 +96,18 @@ template<class Device> Result inject(Device* device, const draw_observe::Snapsho
   }
   r.restore=block.value->Apply();
   // Match the established D3D9 UI backend workaround: some system drivers do
-  // not restore transforms reliably from D3DSBT_ALL. Also explicitly retain
-  // the original stream/declaration/shaders across DrawPrimitiveUP.
+  // not restore all requested fields reliably from D3DSBT_ALL. Independently
+  // restore every public field touched by this scope, checking every result.
   auto restore=[&](HRESULT hr) { if (FAILED(hr) && SUCCEEDED(r.restore)) { r.restore=hr; } };
   for (unsigned i=0;i<3;++i) { restore(device->SetTransform(transforms[i],&saved[i])); }
   restore(device->SetStreamSource(0,buffer.value,offset,stride));
   restore(device->SetVertexDeclaration(declaration.value));
   restore(device->SetVertexShader(vs.value));restore(device->SetPixelShader(ps.value));
+  for (size_t i=0;i<stateCount;++i) { restore(device->SetRenderState(states[i].first,oldStates[i])); }
+  restore(device->SetTexture(0,texture.value));
+  for (size_t i=0;i<stageCount;++i) { restore(device->SetTextureStageState(0,stage[i].first,oldStage0[i])); }
+  restore(device->SetTextureStageState(1,D3DTSS_COLOROP,oldStage1[0]));
+  restore(device->SetTextureStageState(1,D3DTSS_ALPHAOP,oldStage1[1]));
   if (FAILED(r.restore)) { r.code=static_draw::Code::RestoreFailed; }
   result.replaced=ok && SUCCEEDED(result.draw) && SUCCEEDED(r.restore);
   return result;

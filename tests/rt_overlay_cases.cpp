@@ -27,7 +27,7 @@ struct Proxy {
 #define SET(name) template<class... A> HRESULT name(A... a) { return set(device->name(a...)); }
   GET(GetRenderTarget) GET(GetViewport) GET(GetRenderState)
   GET(GetVertexDeclaration) GET(GetStreamSource) GET(GetStreamSourceFreq)
-  GET(GetTransform) GET(GetVertexShader) GET(GetPixelShader)
+  GET(GetTransform) GET(GetVertexShader) GET(GetPixelShader) GET(GetTextureStageState) GET(GetTexture)
   SET(SetVertexShader) SET(SetPixelShader) SET(SetFVF) SET(SetRenderState)
   SET(SetTexture) SET(SetTextureStageState) SET(SetTransform)
   SET(SetStreamSource) SET(SetVertexDeclaration)
