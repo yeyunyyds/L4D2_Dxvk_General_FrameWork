@@ -326,7 +326,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
                 'rtx.fallbackLightPositionOffset = 0,0,0','rtx.enableFallbackLightShaping = False','rtx.fallbackLightDirection = 0,0,-1',
                 'rtx.autoExposure.enabled = True','rtx.autoExposure.evMinValue = -2','rtx.autoExposure.evMaxValue = 5',
                 'rtx.tonemappingMode = 1','rtx.localtonemap.exposure = 0.75',
-                'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.bloom.enable = False','rtx.postfx.enable = False'])+'\n'
+                'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.enableAlphaBlend = True','rtx.bloom.enable = False','rtx.postfx.enable = False'])+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
             report['scope']='selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'

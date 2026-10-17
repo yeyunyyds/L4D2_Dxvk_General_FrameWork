@@ -40,6 +40,7 @@ const std::pair<const char*, const char*> options[] = {
   {"rtx.autoExposure.evMaxValue", "5"}, {"rtx.tonemappingMode", "1"},
   {"rtx.localtonemap.exposure", "0.75"},
   {"rtx.orthographicIsUI", "True"}, {"rtx.skipDrawCallsPostRTXInjection", "False"},
+  {"rtx.enableAlphaBlend", "True"},
   {"rtx.bloom.enable", "False"}, {"rtx.postfx.enable", "False"}
 };
 void event(const char* name, uint32_t code, const char* value = nullptr) {

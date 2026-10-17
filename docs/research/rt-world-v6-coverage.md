@@ -18,6 +18,7 @@ v5 trace 有 960 次主视图、不透明写深度的 `UnlitGeneric / 0x80503` �
 
 - `makeDrawCallType` 对关闭可编程 VS、正交且不写深度的 primary-target UI 返回 Rasterized 并请求注入。
 - `internalPrepareDraw` 在该点调用 `triggerInjectRTX`；此后默认 `skipDrawCallsPostRTXInjection=False` 保留原绘制及状态。
+- 显式请求 rtx.enableAlphaBlend=True：固定 backend 在识别 UI 之前会先过滤全局禁用的 alpha-blended draw，透明触发三角形需要通过此门槛。
 - 未触发注入时，可编程 VS 又关闭 vertex capture 的绘制会被移除。这正是旧 HUD 缺失的机制。
 
 v6 仅匹配实际观察到的 `Neko_Engine_Post / 0x80001`、单位 world/view/projection、TList、非 UP、完整 viewport、A8R8G8B8、无深度/混合、stride32 及五元素精确声明，额外核对 GetRenderTarget 与 GetBackBuffer 返回同一实际 surface。匹配后用 alpha=0 的 XYZRHW|DIFFUSE 三角形触发原生 UI 注入，不把它加入世界几何。成功后跳过该次 Neko 后处理，再让后续游戏 HUD 按其原 VS/PS 光栅绘制。
