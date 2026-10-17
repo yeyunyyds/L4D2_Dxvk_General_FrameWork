@@ -68,16 +68,17 @@ def analyze(path):
                 if header or counts.total() != 1 or len(payload) not in (28,36):
                     raise ValueError('invalid_header')
                 version, session, device, frequency = struct.unpack_from('<IQQQ', payload)
-                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36),(5,36)) or not all((session, device, frequency)):
+                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36),(5,36),(6,36)) or not all((session, device, frequency)):
                     raise ValueError('invalid_identity')
                 header = {'session':session,'device':device,'frequency':frequency}
-                if version in (2,3,4,5):
+                if version in (2,3,4,5,6):
                     target,control=struct.unpack_from('<2I',payload,28)
                     if (target,control)!=(240,30):raise ValueError('invalid_world_profile_boundaries')
                     header.update(profile='world_pilot',target_presents=target,control_presents=control)
                     if version==3:header['coverage_revision']=6
                     if version==4:header['coverage_revision']=7
                     if version==5:header['coverage_revision']=8
+                    if version==6:header['coverage_revision']=9
             elif event == 1:
                 if not header or pending is not None or len(payload) < SNAPSHOT.size + 32 + PIPELINE.size:
                     raise ValueError('unpaired_or_short_draw')
@@ -108,8 +109,8 @@ def analyze(path):
                     raise ValueError('invalid_draw_arguments')
                 kinds[kind] += 1
                 state_at = snapshot_size + 32
-                v8=header.get('coverage_revision')==8
-                v7=header.get('coverage_revision') in (7,8)
+                v8=header.get('coverage_revision') in (8,9)
+                v7=header.get('coverage_revision') in (7,8,9)
                 pipeline=PIPELINE_V8 if v8 else PIPELINE_V7 if v7 else PIPELINE
                 state = pipeline.unpack_from(payload, state_at)
                 failures, stream_offset, stride, stream_frequency = state[:4]
@@ -211,7 +212,7 @@ def analyze(path):
                 if pending!=uid or pending_conversion or len(payload)!=32 or not header.get('profile'):
                     raise ValueError('conversion_uid_or_scope_mismatch')
                 decision,code,capture,apply,restore,converted,called,physical=struct.unpack('<8I',payload)
-                if decision>(11 if header.get('coverage_revision')==8 else 9) or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
+                if decision>(11 if header.get('coverage_revision') in (8,9) else 9) or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
                 decisions[decision]+=1;conversions['reports']+=1;pending_conversion=True
                 if pending_attribution is not None:
                     pending_attribution['converted']+=converted

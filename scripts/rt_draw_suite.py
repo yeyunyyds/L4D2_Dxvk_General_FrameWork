@@ -19,6 +19,7 @@ from rt_game_probe import WindowsProcess, collect
 from rt_preflight import game_pids
 from rt_preflight import ensure_runtime, verify_load, check_file
 from analyze_rt_world import analyze as analyze_world
+from analyze_rt_scene import analyze as analyze_scene
 
 TARGETS=('bin/dxvk_d3d9.dll','bin/.l4d2bridge/L4D2Bridge64.exe')
 SUPPORT_FILES=('integration/rt/baseline.json','research/rt-source-audit.json',
@@ -94,6 +95,7 @@ def install(root,game,manifest):
                      'd280301fa0dd70084aff94bdccad08f68d5fbe76fa1d3c69d30ea2f14b92094a',
                      'd9f6cbefa7e090deceb5d773f8999b34eaa5c9910cec0a56a8abbacf6e6c779f',
                      '0a579c30ef02a20be14ca4250c24f5ad4165309edd78b8df8a04e5741549bff3',
+                     'e06caf633c2a3e1994c405470717dfbe73d3f1a877ea9b94e153e25e117ccb18',
                      manifest['binaries'][TARGETS[0]]['sha256']}
     if inherited is None and digest(game/TARGETS[0]) in known_observers:
         raise ValueError('Earlier observer found without its recovery receipt. Restore it from its original package folder first.')
@@ -270,6 +272,12 @@ def finish_world_capture(directory,game,since,report,notify):
     report['world_converted_draws']=sum(t.get('world_conversion',{}).get('converted',0) for t in reviews.values())
     for kind in ('sky','rigid'):
         report[kind+'_converted_draws']=sum(t.get('world_conversion',{}).get(kind+'_converted',0) for t in reviews.values())
+    scene=analyze_scene(directory);save(directory/'scene-analysis.json',scene)
+    report['scene_input_evidence']=scene['status'];report['sky_rebuild_result']=scene['sky_rebuild_result'] if 'sky_rebuild_result' in scene else 'not_requested'
+    if not scene['pass']:report['collection']='incomplete'
+    if scene.get('sky_rebuild_summaries'):
+        counts=scene['sky_rebuild_summaries'][-1]
+        notify('Sky reconstruction: '+str(counts.get('reconstructed',0))+'/'+str(counts.get('attempts',0))+'; v8 fallback: '+str(counts.get('fallback',0))+'. '+scene['sky_rebuild_result']+'.')
     report['rt_activation_requests']=outputs.get('rt_activation_requests',0)
     notify('World conversion: '+str(report['world_converted_draws'])+' Draws; RT enable requests: '+
            str(report['rt_activation_requests'])+'. Actual RT images still require review.')
@@ -337,7 +345,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('240' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Coverage comparison: face the missing wall and ground, press F9 once, then keep the camera still. Expanded geometry and native HUD routing start after Present 120.')
+        if world:notify('Coverage comparison: keep sky and foreground props visible; press F9 once and hold still. World/HUD baseline 31-120; v8 sky 121-180; guarded sky reconstruction plus rigid props 181-240.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

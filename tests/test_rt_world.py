@@ -83,6 +83,9 @@ class ReadbackEvidenceTests(unittest.TestCase):
             v8=inspect();self.assertEqual(v8['runtime_outputs'],'pass',v8['errors'])
             self.assertEqual(v8['coverage_comparison']['revision'],8)
             self.assertEqual(v8['coverage_comparison']['hud_phase_counts'],{'baseline_world':1,'expanded_sky':1,'expanded_models':1})
+            for e in events:
+                if e.get('event')=='world_coverage_revision':e['value']='9'
+            v9=inspect();self.assertEqual(v9['runtime_outputs'],'pass',v9['errors']);self.assertEqual(v9['coverage_comparison']['revision'],9)
             events[:]=original
             events[-1]['code']=1
             self.assertIn('incomplete_or_failed_lighting_phase_requests',inspect()['errors'])

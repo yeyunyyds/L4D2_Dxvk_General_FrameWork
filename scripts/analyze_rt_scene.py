@@ -1,0 +1,103 @@
+"""Verify bounded original scene inputs and project raw positions for diagnosis."""
+from collections import Counter
+import hashlib
+import json
+import math
+from pathlib import Path
+import struct
+
+PHASES=('raster','baseline_world','expanded_sky','expanded_models')
+
+
+def instructions(raw):
+    if len(raw)%4:return {'error':'unaligned_shader'}
+    words=struct.unpack('<'+'I'*(len(raw)//4),raw);at=1;ops=Counter()
+    while at<len(words):
+        code=words[at];at+=1;op=code&65535
+        if op==65535:return {'version':hex(words[0]),'opcodes':dict(ops),'ended':at==len(words)}
+        count=(code>>16)&32767 if op==65534 else (code>>24)&15
+        if count>len(words)-at:return {'error':'truncated_shader'}
+        if op!=65534:ops[str(op)]+=1
+        at+=count
+    return {'error':'missing_shader_end'}
+
+
+def projection(sample,vertices):
+    stride=sample['stride'];position=[];clip=[]
+    matrices=[sample[k] for k in ('world','view','projection')]
+    if any(len(m)!=16 or not all(isinstance(x,(int,float)) and math.isfinite(x) for x in m) for m in matrices):raise ValueError('invalid_scene_matrix')
+    if stride<12:return {'status':'position_layout_unavailable'}
+    for at in range(0,len(vertices),stride):
+        v=list(struct.unpack_from('<3f',vertices,at))+[1.]
+        if not all(math.isfinite(x) and abs(x)<1e8 for x in v):return {'status':'nonfinite_or_unbounded_raw_position'}
+        position.append(v[:3])
+        for m in matrices:v=[sum(v[i]*m[i*4+j] for i in range(4)) for j in range(4)]
+        if v[3]>1e-8:clip.append([v[i]/v[3] for i in range(3)])
+    bounds=lambda rows:{'min':[min(x[i] for x in rows) for i in range(3)],'max':[max(x[i] for x in rows) for i in range(3)]} if rows else None
+    return {'status':'raw_position_projection_only','raw_position_bounds':bounds(position),'front_vertex_ndc_bounds':bounds(clip),
+            'front_vertices':len(clip),'vertices_inside_clip':sum(-1<=x<=1 and -1<=y<=1 and 0<=z<=1 for x,y,z in clip),
+            'limits':'original VS, bones, morphs, clipping and occlusion not applied; vertex projection is not triangle visibility or RT instance proof'}
+
+
+def analyze(directory):
+    directory=Path(directory);path=directory/'world-runtime.jsonl'
+    if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
+    if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
+    events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
+    requested=any(e.get('event')=='world_coverage_revision' and e.get('value')=='9' for e in events)
+    samples=[e for e in events if e.get('event')=='scene_input_sample'];summaries=[e for e in events if e.get('event')=='sky_rebuild_counts']
+    errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception')];reviews=[];ordinals=set();phases=Counter();files=set();used=0
+    for sample in samples:
+        try:
+            phase=sample['phase'];ordinal=sample['ordinal'];phases[phase]+=1
+            if phase not in PHASES or phases[phase]>12 or ordinal in ordinals or not isinstance(ordinal,int) or ordinal<=0:raise ValueError('invalid_scene_sample_identity_or_budget')
+            ordinals.add(ordinal);payload={}
+            for item in sample['files']:
+                name=item['file'];file=directory/name
+                if Path(name).name!=name or not name.startswith('scene-'+str(ordinal)+'-') or name in files:raise ValueError('unsafe_or_duplicate_scene_file')
+                files.add(name)
+                if not file.is_file() or not 0<item['size']<=1024*1024 or file.stat().st_size!=item['size']:raise ValueError('missing_or_oversized_scene_file')
+                raw=file.read_bytes();used+=len(raw)
+                if used>24*1024*1024 or hashlib.sha256(raw).hexdigest()!=item['sha256']:raise ValueError('scene_file_hash_or_total_budget')
+                payload[name.split(str(ordinal)+'-',1)[1]]=raw
+            auxiliary=sample.get('auxiliary',[])
+            if len(auxiliary)>3 or len({a['stream'] for a in auxiliary})!=len(auxiliary):raise ValueError('invalid_auxiliary_streams')
+            for a in auxiliary:
+                if a['stream'] not in (1,2,3) or not 0<=a['prefix_bytes']<=256 or (a['prefix_bytes'] and len(payload.get('stream-'+str(a['stream'])+'.bin',b''))!=a['prefix_bytes']):raise ValueError('auxiliary_prefix_mismatch')
+            for field,name,size in [('integer_constants_hresult','vs-integers.bin',256),('bool_constants_hresult','vs-bools.bin',64),('pixel_constants_hresult','ps-constants.bin',512)]:
+                if field in sample and sample[field]==0 and len(payload.get(name,b''))!=size:raise ValueError('missing_optional_shader_constants')
+            review={k:sample[k] for k in ('phase','ordinal','material','shader','format','geometry_status','replay_status')}
+            review['shader_bytecode']={k:instructions(v) for k,v in payload.items() if k in ('vs.bin','ps.bin')}
+            if sample['geometry_hresult']==0:
+                count=sample['vertex_count'];first=sample['first_absolute_vertex'];stride=sample['stride'];kind=sample['kind'];args=sample['args']
+                if not 0<count<=4096 or not 0<=first or first+count>4096 or not 1<=stride<=64 or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
+                decl=payload.get('declaration.bin',b'')
+                if len(decl)%8 or len(decl)>520 or decl[-8:]!=bytes.fromhex('ff00000011000000'):raise ValueError('invalid_scene_declaration')
+                if kind==2:
+                    width=sample['index_bytes'];n=args[4]*3 if sample['topology']==4 else args[4]+2
+                    if width not in (2,4) or n>16384 or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
+                    indices=struct.unpack('<'+('H' if width==2 else 'I')*n,payload['indices.bin'])
+                    signed=args[0] if args[0]<2**31 else args[0]-2**32
+                    if first!=signed+args[1] or count!=args[2] or any(not args[1]<=i<args[1]+args[2] for i in indices):raise ValueError('scene_index_outside_vertices')
+                elif kind!=1 or first!=args[0] or count!=(args[1]*3 if sample['topology']==4 else args[1]+2):raise ValueError('scene_draw_range_mismatch')
+                pos=any(struct.unpack_from('<HH4B',decl,i)==(0,0,2,0,0,0) for i in range(0,len(decl),8))
+                review['raw_geometry']=projection(sample,payload['vertices.bin']) if pos else {'status':'position_layout_unavailable'}
+            else:review['raw_geometry']={'status':'unavailable','hresult':sample['geometry_hresult']}
+            if sample['shader_hresult']==0 and any(k not in payload or not instructions(payload[k]).get('ended') for k in ('vs.bin','ps.bin')):raise ValueError('missing_or_malformed_shader_bytecode')
+            if sample['constants_hresult']==0 and len(payload.get('constants.bin',b''))!=4096:raise ValueError('missing_shader_constants')
+            reviews.append(review)
+        except (ValueError,KeyError,TypeError,struct.error,OSError) as e:errors.append(str(e))
+    if requested:
+        if not samples:errors.append('missing_scene_input_samples')
+        if [(e.get('frame'),e.get('phase')) for e in summaries]!=list(zip((30,120,180,240),PHASES)):errors.append('missing_scene_rebuild_summaries')
+        for e in summaries:
+            if not all(isinstance(e.get(k),int) and e[k]>=0 for k in ('attempts','ready','reconstructed','fallback','input_samples')) or e['input_samples']>12:errors.append('invalid_rebuild_counts');continue
+            if e['input_samples']!=phases[e['phase']]:errors.append('scene_sample_count_mismatch')
+            if e['frame']<240 and e['attempts']:errors.append('premature_sky_reconstruction')
+            if e['attempts']!=e['reconstructed']+e['fallback'] or not e['reconstructed']<=e['ready']<=e['attempts'] or sum(e.get('reasons',{}).values())!=e['attempts']:errors.append('inconsistent_rebuild_counts')
+    final=summaries[-1] if summaries else {}
+    rebuilt=final.get('reconstructed',0);attempts=final.get('attempts',0)
+    return {'schema':1,'status':'valid_evidence_requires_review' if requested and not errors else 'incomplete' if requested else 'not_requested',
+            'pass':not errors,'errors':sorted(set(errors)),'sample_counts':dict(phases),'payload_bytes':used,'samples':reviews,'sky_rebuild_summaries':summaries,
+            'sky_rebuild_result':'applied_requires_image_review' if attempts and rebuilt==attempts else 'fallback_preserved_v8' if attempts and not rebuilt else 'partial_or_unrun',
+            'limits':'verified input files and bounded raw position projection; shader replay API success is not image acceptance, per-object visibility or Source threading evidence'}

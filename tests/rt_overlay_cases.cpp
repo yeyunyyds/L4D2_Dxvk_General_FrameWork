@@ -3,6 +3,7 @@
 #include "rt_static_device.h"
 #include "rt_tangent_cases.h"
 #include "rt_scene_cases.h"
+#include "rt_sky_input_cases.h"
 #include <d3dcompiler.h>
 #include <iostream>
 #include <vector>
@@ -181,6 +182,7 @@ int main() {
     s.materialInfo.shader[0]='X';require(!overlay::candidate(s,D3DPT_TRIANGLELIST,false),"unknown post shader accepted");
     rt_tangent_test::systemCases(d,vs.value,ps.value);
     rt_scene_test::systemCases(d,vs.value,ps.value);
+    rt_sky_input_test::systemCases(d,compile);
     DestroyWindow(window);
     std::cout << "RT rigid-unlit/overlay rollback/system NULLREF: PASS; effective Remix/HUD output unrun\n";
     return 0;

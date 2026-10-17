@@ -150,6 +150,8 @@ class DrawObservation(unittest.TestCase):
             dest_frame=120 if frame==123 else 180;dest=1+(dest_frame-1)*4;_,dest_uid,_=events[dest]
             data=bytearray(p);struct.pack_into('<Q',data,16,dest_frame);bad=events.copy();bad[dest]=(e,dest_uid,bytes(data));bad[dest+1]=(6,dest_uid,events[at+1][2])
             self.assertFalse(self.inspect(bad)['pass'])
+        newer=events.copy();newer[0]=(0,0,struct.pack('<IQQQII',6,42,7,10000000,240,30))
+        self.assertTrue(self.inspect(newer)['pass']);self.assertEqual(self.inspect(newer)['header']['coverage_revision'],9)
         no_world=events.copy()
         for i,(e,u,p) in enumerate(no_world):
             if e==6 and struct.unpack_from('<I',p)[0]==8:no_world[i]=(e,u,struct.pack('<8I',0,0,0,0,0,0,1,0))

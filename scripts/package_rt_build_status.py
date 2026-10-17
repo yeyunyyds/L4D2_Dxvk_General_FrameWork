@@ -30,6 +30,7 @@ if __name__ == '__main__':
               'world_coverage_overlay_development_execution': 'unrun',
               'world_tangent_layout_development_execution': 'unrun',
               'world_scene_scope_development_execution': 'unrun',
+              'world_sky_reconstruction_development_execution': 'unrun',
               'system_d3d9_nullref_state': {'x86': 'unrun', 'x64': 'unrun'},
               'artifact_validation': 'unrun'}
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -113,6 +114,12 @@ if __name__ == '__main__':
                 'RT scene sky/rigid scope/rollback/system NULLREF: PASS') == 2
                 and all((source/('checks-'+arch)/'world-overlay.exe').is_file() for arch in ('x86','x64'))):
             status['world_scene_scope_development_execution']='pass'
+        if (queue_log.exists() and queue_log.read_text(errors='replace').count(
+                'RT original sky shader bounded replay/UV/unprojection/rejection: PASS')==2
+                and queue_log.read_text(errors='replace').count(
+                'RT sky original VS reconstruction/geometry bounds/binding rollback/system NULLREF: PASS')==2
+                and all((source/('checks-'+arch)/'sky-shader.exe').is_file() for arch in ('x86','x64'))):
+            status['world_sky_reconstruction_development_execution']='pass'
         if (sdk_receipt.exists() and (source / 'checks-x86/source-queue.exe').exists() and queue_log.exists()
                 and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace')):
             status['sdk_queue_development_execution'] = 'pass'

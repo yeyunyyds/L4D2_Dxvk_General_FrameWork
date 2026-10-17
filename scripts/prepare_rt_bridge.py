@@ -66,7 +66,7 @@ def prepare(output, bridge, upstream, detours):
               'world-hooks.patch': digest(world_hooks), 'transport-hooks.patch': digest(transport_hooks)}
     for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h', 'rt_material_decode.h', 'rt_file_hash.h']),
                         ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h',
-                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_scene_draw.h']),
+                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_scene_draw.h', 'rt_sky_shader.h', 'rt_scene_input.h']),
                         ('util', ['rt_draw_request.h', 'rt_transport_policy.h'])]:
         for name in names:
             source = ROOT / 'integration/rt' / name

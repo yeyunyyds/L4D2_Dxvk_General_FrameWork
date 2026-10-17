@@ -147,6 +147,13 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
       if (ldb_rt::world_runtime::state().active && !control && consumer->second->sceneReady()) {
         const auto mode=ldb_rt::scene_draw::candidate(current,consumer->second->expanded(),consumer->second->models());
         if (mode!=ldb_rt::scene_draw::Mode::None) {
+          if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
+            auto& runtime=ldb_rt::world_runtime::state();HRESULT result=E_ABORT;
+            if (mode==ldb_rt::scene_draw::Mode::Sky && consumer->second->models() && runtime.scene &&
+                runtime.scene(graphics,current,consumer->second->kind(),type,consumer->second->args(),report,called,physical,result)) {
+              consumer->second->conversion(uid,ldb_rt::consumer_world::Decision::Sky,report,called,physical);return result;
+            }
+          }
           const auto result=ldb_rt::scene_draw::execute(graphics,current,mode,type,userMemory,
             [&] { called=true;physical=physicalDraw();return physical; },report);
           decision=mode==ldb_rt::scene_draw::Mode::Sky?ldb_rt::consumer_world::Decision::Sky:ldb_rt::consumer_world::Decision::Rigid;

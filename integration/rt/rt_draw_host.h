@@ -56,7 +56,8 @@ class Recorder {
   uint64_t written = 0, draws = 0, valid = 0, presents = 0, resets = 0, failures = 0, unobserved = 0;
   uint32_t pendingUid = 0;
   Snapshot nextSnapshot;
-  uint32_t nextUid = 0;
+  uint32_t nextUid = 0, nextKind = 0;
+  std::array<uint32_t,6> nextArgs{};
   bool hasNext = false;
   IDirect3DDevice9* nativeDevice = nullptr; // Bridge device lifetime, never AddRef'd here.
   bool finished = false, pending = false, haveConvertedWorld = false;
@@ -79,7 +80,7 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.world ? 5 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    Writer header; header.u32(request.world ? 6 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
     if (request.world) { header.u32(240); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
@@ -89,12 +90,15 @@ public:
   template<class Device> void draw(Device* device, uint32_t uid, const Snapshot& snapshot, uint32_t kind,
       D3DPRIMITIVETYPE type, const std::array<uint32_t, 6>& args) {
     if (snapshot.session != request.session) { ++failures; return; }
-    nextSnapshot = snapshot; nextUid = uid; hasNext = true;
+    nextSnapshot = snapshot; nextUid = uid; nextKind=kind;nextArgs=args;hasNext = true;
     if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
       nativeDevice = device;
       if (request.world && world_runtime::state().active && world_runtime::state().bind) { world_runtime::state().bind(device); }
     }
     if (finished) { return; }
+    if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
+      if (request.world && world_runtime::state().active && world_runtime::state().inspect) { world_runtime::state().inspect(device,snapshot,kind,type,args); }
+    }
     if (written > 128 * 1024 * 1024) { finish(2); return; }
     Writer payload; payload.data = pack(snapshot); payload.u32(kind); payload.u32(uint32_t(type));
     for (auto arg : args) { payload.u32(arg); }
@@ -103,6 +107,8 @@ public:
     pending = true; pendingUid = uid;
     record(1, uid, payload.data); ++draws; if (snapshot.status == Status::Valid) { ++valid; }
   }
+  uint32_t kind() const { return nextKind; }
+  const std::array<uint32_t,6>& args() const { return nextArgs; }
   bool take(uint32_t uid, Snapshot& snapshot, bool& control) {
     if (!request.world || !hasNext || uid != nextUid) { return false; }
     snapshot = nextSnapshot; hasNext = false; control = presents < 30; return true;

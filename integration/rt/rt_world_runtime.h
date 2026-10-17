@@ -12,6 +12,8 @@ struct State {
   bool (*raytracing)(bool) noexcept = nullptr;
   void (*draw)(IDirect3DDevice9*) noexcept = nullptr;
   void (*audit)(IDirect3DDevice9*, const draw_observe::Snapshot&) noexcept = nullptr;
+  void (*inspect)(IDirect3DDevice9*, const draw_observe::Snapshot&, uint32_t, D3DPRIMITIVETYPE, const std::array<uint32_t,6>&) noexcept = nullptr;
+  bool (*scene)(IDirect3DDevice9*, const draw_observe::Snapshot&, uint32_t, D3DPRIMITIVETYPE, const std::array<uint32_t,6>&, static_draw::Report&, bool&, HRESULT&, HRESULT&) noexcept = nullptr;
   bool (*overlay)(IDirect3DDevice9*, const draw_observe::Snapshot&, D3DPRIMITIVETYPE, bool, static_draw::Report&, HRESULT&) noexcept = nullptr;
 };
 inline State& state() { static State value; return value; }

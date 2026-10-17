@@ -25,6 +25,7 @@ try {
     $drawNative = Join-Path $repo 'tests/rt_draw_native_cases.cpp'
     $transportCases = Join-Path $repo 'tests/rt_transport_cases.cpp'
     $overlayCases = Join-Path $repo 'tests/rt_overlay_cases.cpp'
+    $skyCases = Join-Path $repo 'tests/rt_sky_shader_cases.cpp'
     $lightingCases = Join-Path $repo 'tests/rt_world_diagnostics_cases.cpp'
     $utilInclude = Join-Path $sourcePath 'bridge/src/util'
     $include = Join-Path $repo 'integration/rt'
@@ -63,6 +64,8 @@ try {
       "& `"$dir/world-lighting.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$repo/tests`" `"$overlayCases`" /Fe:`"$dir/world-overlay.exe`" /Fo:`"$dir/world-overlay.obj`" /link user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/world-overlay.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$skyCases`" /Fe:`"$dir/sky-shader.exe`" /Fo:`"$dir/sky-shader.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& `"$dir/sky-shader.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$repo/tests`" `"$drawNative`" /Fe:`"$dir/draw-native.exe`" /Fo:`"$dir/draw-native.obj`" /link bcrypt.lib user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/draw-native.exe`" `"$dir/draw-observation`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& python `"$repo/scripts/analyze_rt_draw.py`" `"$dir/draw-observation`" --output `"$dir/draw-observation-review.json`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
