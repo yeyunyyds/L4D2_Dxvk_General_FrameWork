@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "rt_overlay.h"
 #include "rt_static_device.h"
+#include <d3dcompiler.h>
 #include <iostream>
 #include <vector>
 using namespace ldb_rt;
@@ -99,11 +100,25 @@ int main() {
     const D3DVERTEXELEMENT9 layout[]={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},{2,0,D3DDECLTYPE_FLOAT4,0,D3DDECLUSAGE_POSITION,1},{2,16,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,1},D3DDECL_END()};
     static_draw::Ref<IDirect3DVertexDeclaration9> declaration;require(SUCCEEDED(d->CreateVertexDeclaration(layout,&declaration.value)),"create decl");require(SUCCEEDED(d->SetVertexDeclaration(declaration.value)),"bind decl");
     static_draw::Ref<IDirect3DVertexBuffer9> vb;require(SUCCEEDED(d->CreateVertexBuffer(96,0,0,D3DPOOL_DEFAULT,&vb.value,nullptr)),"VB");require(SUCCEEDED(d->SetStreamSource(0,vb.value,0,32)),"bind stream0");
-    const DWORD vsTokens[]={0xfffe0101,0x00000001,0xc00f0000,0x90e40000,0x0000ffff};
-    const DWORD psTokens[]={0xffff0101,0x00000001,0x800f0000,0x90e40000,0x0000ffff};
+    struct Compiler {
+      HMODULE module=LoadLibraryExW(L"d3dcompiler_47.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
+      ~Compiler() { if (module) { FreeLibrary(module); } }
+    } compiler;
+    require(compiler.module!=nullptr,"system HLSL compiler required for fixture");
+    const auto compileAddress=GetProcAddress(compiler.module,"D3DCompile");decltype(&D3DCompile) compile=nullptr;
+    std::memcpy(&compile,&compileAddress,sizeof(compile));require(compile!=nullptr,"HLSL compile export");
+    const char vsSource[]="float4 main(float4 p : POSITION) : POSITION { return p; }";
+    const char psSource[]="float4 main() : COLOR0 { return float4(1,0,0,1); }";
+    static_draw::Ref<ID3DBlob> vsCode,psCode,errors;
+    require(SUCCEEDED(compile(vsSource,sizeof(vsSource)-1,nullptr,nullptr,nullptr,"main","vs_2_0",D3DCOMPILE_ENABLE_STRICTNESS,0,&vsCode.value,&errors.value)),"compile fixture VS");
+    if (errors.value) { errors.value->Release();errors.value=nullptr; }
+    require(SUCCEEDED(compile(psSource,sizeof(psSource)-1,nullptr,nullptr,nullptr,"main","ps_2_0",D3DCOMPILE_ENABLE_STRICTNESS,0,&psCode.value,&errors.value)),"compile fixture PS");
     static_draw::Ref<IDirect3DVertexShader9> vs;static_draw::Ref<IDirect3DPixelShader9> ps;
-    require(SUCCEEDED(d->CreateVertexShader(vsTokens,&vs.value)) && SUCCEEDED(d->SetVertexShader(vs.value)),"bind original VS");
-    require(SUCCEEDED(d->CreatePixelShader(psTokens,&ps.value)) && SUCCEEDED(d->SetPixelShader(ps.value)),"bind original PS");
+    const auto vsResult=d->CreateVertexShader(static_cast<const DWORD*>(vsCode.value->GetBufferPointer()),&vs.value);
+    const auto psResult=d->CreatePixelShader(static_cast<const DWORD*>(psCode.value->GetBufferPointer()),&ps.value);
+    std::cout << "RT overlay fixture shader creation: vs_hr=" << uint32_t(vsResult) << " ps_hr=" << uint32_t(psResult) << '\n';
+    require(SUCCEEDED(vsResult) && SUCCEEDED(d->SetVertexShader(vs.value)),"bind compiled original VS");
+    require(SUCCEEDED(psResult) && SUCCEEDED(d->SetPixelShader(ps.value)),"bind compiled original PS");
     static_draw::Ref<IDirect3DTexture9> texture;require(SUCCEEDED(d->CreateTexture(1,1,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&texture.value,nullptr)) && SUCCEEDED(d->SetTexture(0,texture.value)),"bind original texture");
     for (auto rs:{D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_ALPHABLENDENABLE,D3DRS_ALPHATESTENABLE}) { require(SUCCEEDED(d->SetRenderState(rs,0)),"post state"); }
     draw_observe::Snapshot s;s.status=draw_observe::Status::Valid;s.material=1;s.materialTable=2;s.materialInfo.format=0x80001;s.materialInfo.flags=3;std::memcpy(s.materialInfo.shader.data(),"Neko_Engine_Post",17);s.viewport={0,0,320,240};s.maxZ=1;
