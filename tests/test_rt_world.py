@@ -86,6 +86,9 @@ class ReadbackEvidenceTests(unittest.TestCase):
             for e in events:
                 if e.get('event')=='world_coverage_revision':e['value']='9'
             v9=inspect();self.assertEqual(v9['runtime_outputs'],'pass',v9['errors']);self.assertEqual(v9['coverage_comparison']['revision'],9)
+            for e in events:
+                if e.get('event')=='world_coverage_revision':e['value']='10'
+            v10=inspect();self.assertEqual(v10['runtime_outputs'],'pass',v10['errors']);self.assertEqual(v10['coverage_comparison']['revision'],10)
             events[:]=original
             events[-1]['code']=1
             self.assertIn('incomplete_or_failed_lighting_phase_requests',inspect()['errors'])

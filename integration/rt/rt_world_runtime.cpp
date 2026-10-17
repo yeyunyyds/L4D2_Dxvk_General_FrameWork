@@ -7,6 +7,7 @@
 #include "rt_world_diagnostics.h"
 #include "rt_overlay.h"
 #include "rt_scene_input.h"
+#include "rt_bulk_static.h"
 #include <map>
 #include <sstream>
 // A separate TU prevents mixing the Bridge's old API with the pinned 0.6.4 ABI.
@@ -148,17 +149,23 @@ void audit(IDirect3DDevice9* device, const draw_observe::Snapshot& snapshot) noe
 struct SceneCounts { uint64_t attempts=0,ready=0,reconstructed=0,fallback=0;std::map<std::string,uint64_t> reasons; };
 std::array<SceneCounts,4> sceneCounts{};
 std::array<unsigned,4> sceneSampleCounts{};
+std::array<std::array<unsigned,3>,4> sceneFamilyCounts{};
 std::set<std::array<uint64_t,4>> sceneSampled;
 std::map<uint32_t,bool> skyReadiness;
 void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) noexcept {
   try {
-    if (!events || device!=registered || scene_draw::candidate(s,true,true)==scene_draw::Mode::None) { return; }
+    if (!events || device!=registered) { return; }
+    const bool sky=scene_draw::candidate(s,true,false)==scene_draw::Mode::Sky;
+    if (!sky && !bulk_static::candidate(s)) { return; }
     const auto phase=comparison.phase();const auto index=size_t(phase);
+    const unsigned group=sky?0u:bulk_static::family(s.materialInfo.shader.data())==1?1u:2u;
+    constexpr unsigned limits[]={6,8,10};
     const std::array<uint64_t,4> key{{uint64_t(phase),s.material,s.materialTable,s.materialInfo.format}};
-    if (sceneSampleCounts[index]>=12 || !sceneSampled.insert(key).second) { return; }++sceneSampleCounts[index];
+    if (sceneFamilyCounts[index][group]>=limits[group] || !sceneSampled.insert(key).second) { return; }
+    ++sceneFamilyCounts[index][group];++sceneSampleCounts[index];
     auto input=scene_input::capture(device,kind,type,args);
     const char* replay="not_sky";
-    if (scene_draw::candidate(s,true,false)==scene_draw::Mode::Sky) {
+    if (sky) {
       auto warmed=scene_input::prepare(device,s,input);replay=warmed.reason;
       if (phase==world_diagnostics::CoveragePhase::ExpandedWorld) { skyReadiness[s.material]=warmed.ready; }
     }
@@ -322,7 +329,7 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy", 0, "v9_world_then_v8_sky_after120_then_guarded_original_vs_sky_and_rigid_after180");
-    event("world_coverage_revision", 0, "9");
+    event("world_coverage_revision", 0, "10");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &scene, &overlayDraw}; return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }

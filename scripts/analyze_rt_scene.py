@@ -44,13 +44,19 @@ def analyze(directory):
     if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
     if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
     events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-    requested=any(e.get('event')=='world_coverage_revision' and e.get('value')=='9' for e in events)
+    v10=any(e.get('event')=='world_coverage_revision' and e.get('value')=='10' for e in events)
+    requested=v10 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='9' for e in events)
+    sample_limit=24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
     samples=[e for e in events if e.get('event')=='scene_input_sample'];summaries=[e for e in events if e.get('event')=='sky_rebuild_counts']
-    errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception')];reviews=[];ordinals=set();phases=Counter();files=set();used=0
+    errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception')];reviews=[];ordinals=set();phases=Counter();family_counts=Counter();files=set();used=0
     for sample in samples:
         try:
             phase=sample['phase'];ordinal=sample['ordinal'];phases[phase]+=1
-            if phase not in PHASES or phases[phase]>12 or ordinal in ordinals or not isinstance(ordinal,int) or ordinal<=0:raise ValueError('invalid_scene_sample_identity_or_budget')
+            if phase not in PHASES or phases[phase]>sample_limit or ordinal in ordinals or not isinstance(ordinal,int) or ordinal<=0:raise ValueError('invalid_scene_sample_identity_or_budget')
+            if v10:
+                group=0 if sample['shader']=='NekoSky' else 1 if sample['shader']=='VertexLitGeneric' else 2
+                family_counts[(phase,group)]+=1
+                if family_counts[(phase,group)]>(6,8,10)[group]:raise ValueError('scene_family_quota_exceeded')
             ordinals.add(ordinal);payload={}
             for item in sample['files']:
                 name=item['file'];file=directory/name
@@ -58,7 +64,7 @@ def analyze(directory):
                 files.add(name)
                 if not file.is_file() or not 0<item['size']<=1024*1024 or file.stat().st_size!=item['size']:raise ValueError('missing_or_oversized_scene_file')
                 raw=file.read_bytes();used+=len(raw)
-                if used>24*1024*1024 or hashlib.sha256(raw).hexdigest()!=item['sha256']:raise ValueError('scene_file_hash_or_total_budget')
+                if used>payload_limit or hashlib.sha256(raw).hexdigest()!=item['sha256']:raise ValueError('scene_file_hash_or_total_budget')
                 payload[name.split(str(ordinal)+'-',1)[1]]=raw
             auxiliary=sample.get('auxiliary',[])
             if len(auxiliary)>3 or len({a['stream'] for a in auxiliary})!=len(auxiliary):raise ValueError('invalid_auxiliary_streams')
@@ -70,7 +76,7 @@ def analyze(directory):
             review['shader_bytecode']={k:instructions(v) for k,v in payload.items() if k in ('vs.bin','ps.bin')}
             if sample['geometry_hresult']==0:
                 count=sample['vertex_count'];first=sample['first_absolute_vertex'];stride=sample['stride'];kind=sample['kind'];args=sample['args']
-                if not 0<count<=4096 or not 0<=first or first+count>4096 or not 1<=stride<=64 or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
+                if not 0<count<=4096 or not 0<=first or first+count>4096 or not 1<=stride<=stride_limit or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
                 decl=payload.get('declaration.bin',b'')
                 if len(decl)%8 or len(decl)>520 or decl[-8:]!=bytes.fromhex('ff00000011000000'):raise ValueError('invalid_scene_declaration')
                 if kind==2:
@@ -91,7 +97,7 @@ def analyze(directory):
         if not samples:errors.append('missing_scene_input_samples')
         if [(e.get('frame'),e.get('phase')) for e in summaries]!=list(zip((30,120,180,240),PHASES)):errors.append('missing_scene_rebuild_summaries')
         for e in summaries:
-            if not all(isinstance(e.get(k),int) and e[k]>=0 for k in ('attempts','ready','reconstructed','fallback','input_samples')) or e['input_samples']>12:errors.append('invalid_rebuild_counts');continue
+            if not all(isinstance(e.get(k),int) and e[k]>=0 for k in ('attempts','ready','reconstructed','fallback','input_samples')) or e['input_samples']>sample_limit:errors.append('invalid_rebuild_counts');continue
             if e['input_samples']!=phases[e['phase']]:errors.append('scene_sample_count_mismatch')
             if e['frame']<240 and e['attempts']:errors.append('premature_sky_reconstruction')
             if e['attempts']!=e['reconstructed']+e['fallback'] or not e['reconstructed']<=e['ready']<=e['attempts'] or sum(e.get('reasons',{}).values())!=e['attempts']:errors.append('inconsistent_rebuild_counts')

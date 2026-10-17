@@ -48,7 +48,7 @@ inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topol
     if (!out.indexBytes || start+bytes>desc.Size) { out.reason="index_range";return E_INVALIDARG; }
     out.indices.resize(size_t(bytes));
     void* memory=nullptr;hr=ib.value->Lock(UINT(start),UINT(bytes),&memory,D3DLOCK_READONLY);
-    if (FAILED(hr)) { out.reason="index_readonly_lock";return hr; }
+    if (FAILED(hr)) { out.indices.clear();out.reason="index_readonly_lock";return hr; }
     if (memory) { std::memcpy(out.indices.data(),memory,size_t(bytes)); }
     hr=ib.value->Unlock();if (FAILED(hr)||!memory) { out.reason="index_unlock_or_null";return FAILED(hr)?hr:E_FAIL; }
     for (size_t i=0;i<size_t(indexCount);++i) {
@@ -63,13 +63,13 @@ inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topol
   hr=d->GetStreamSource(0,&vb.value,&offset,&stride);
   if (FAILED(hr)||!vb.value) { out.reason="stream_unavailable";return FAILED(hr)?hr:E_FAIL; }
   hr=d->GetStreamSourceFreq(0,&frequency);D3DVERTEXBUFFER_DESC desc{};
-  if (FAILED(hr)||frequency!=1 || !stride || stride>64) { out.reason="stream_frequency_or_stride";return FAILED(hr)?hr:E_INVALIDARG; }
+  if (FAILED(hr)||frequency!=1 || !stride || stride>128) { out.reason="stream_frequency_or_stride";return FAILED(hr)?hr:E_INVALIDARG; }
   hr=vb.value->GetDesc(&desc);if (FAILED(hr)) { out.reason="vertex_description";return hr; }
   const uint64_t start=uint64_t(offset)+first*stride,bytes=count*stride;
-  if (!bytes || start+bytes>desc.Size || bytes>kMaxVertices*64u) { out.reason="vertex_range";return E_INVALIDARG; }
+  if (!bytes || start+bytes>desc.Size || bytes>kMaxVertices*128u) { out.reason="vertex_range";return E_INVALIDARG; }
   out.vertices.resize(size_t(bytes));
   void* memory=nullptr;hr=vb.value->Lock(UINT(start),UINT(bytes),&memory,D3DLOCK_READONLY);
-  if (FAILED(hr)) { out.reason="vertex_readonly_lock";return hr; }
+  if (FAILED(hr)) { out.vertices.clear();out.reason="vertex_readonly_lock";return hr; }
   if (memory) { std::memcpy(out.vertices.data(),memory,size_t(bytes)); }
   hr=vb.value->Unlock();if (FAILED(hr)||!memory) { out.reason="vertex_unlock_or_null";return FAILED(hr)?hr:E_FAIL; }
   out.first=uint32_t(first);out.count=uint32_t(count);out.offset=offset;out.stride=stride;out.reason="complete";return S_OK;

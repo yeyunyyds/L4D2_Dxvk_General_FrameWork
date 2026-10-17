@@ -96,6 +96,7 @@ def install(root,game,manifest):
                      'd9f6cbefa7e090deceb5d773f8999b34eaa5c9910cec0a56a8abbacf6e6c779f',
                      '0a579c30ef02a20be14ca4250c24f5ad4165309edd78b8df8a04e5741549bff3',
                      'e06caf633c2a3e1994c405470717dfbe73d3f1a877ea9b94e153e25e117ccb18',
+                     '6036c11994ba91e881f255d160b91bf3906775c30af18bd1bfdac42e5c8c7773',
                      manifest['binaries'][TARGETS[0]]['sha256']}
     if inherited is None and digest(game/TARGETS[0]) in known_observers:
         raise ValueError('Earlier observer found without its recovery receipt. Restore it from its original package folder first.')
@@ -270,8 +271,12 @@ def finish_world_capture(directory,game,since,report,notify):
     report['world_geometry_buffers']='nonzero_requires_review' if outputs.get('nonzero_world_depth_and_normals') else 'incomplete'
     reviews=json.loads((directory/'draw-analysis.json').read_text())
     report['world_converted_draws']=sum(t.get('world_conversion',{}).get('converted',0) for t in reviews.values())
-    for kind in ('sky','rigid'):
+    for kind in ('sky','rigid','bulk_static'):
         report[kind+'_converted_draws']=sum(t.get('world_conversion',{}).get(kind+'_converted',0) for t in reviews.values())
+    inventories={name:t.get('static_family_inventory',{}) for name,t in reviews.items()}
+    save(directory/'static-coverage.json',inventories)
+    report['static_inventory_omitted_draws']=sum(t.get('omitted_draws',0) for t in inventories.values())
+    notify('Additional static conversions: '+str(report['bulk_static_converted_draws'])+'. Whole-family rejection counts are in static-coverage.json; counts do not prove image coverage.')
     scene=analyze_scene(directory);save(directory/'scene-analysis.json',scene)
     report['scene_input_evidence']=scene['status'];report['sky_rebuild_result']=scene['sky_rebuild_result'] if 'sky_rebuild_result' in scene else 'not_requested'
     if not scene['pass']:report['collection']='incomplete'
@@ -345,7 +350,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('240' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Coverage comparison: keep sky and foreground props visible; press F9 once and hold still. World/HUD baseline 31-120; v8 sky 121-180; guarded sky reconstruction plus rigid props 181-240.')
+        if world:notify('Coverage comparison: keep sky and foreground props visible; press F9 once and hold still. World/HUD baseline 31-120; v8 sky 121-180; guarded sky reconstruction plus bulk static families/cutouts 181-240.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

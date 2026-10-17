@@ -3,6 +3,7 @@
 #include "rt_protocol.h"
 #include "rt_static_draw.h"
 #include "rt_scene_draw.h"
+#include "rt_bulk_static.h"
 #include "rt_draw_host.h"
 
 #include <windows.h>
@@ -145,6 +146,18 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
         }
       }
       if (ldb_rt::world_runtime::state().active && !control && consumer->second->sceneReady()) {
+        if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
+          // Keep the verified world path when its existing material/camera and
+          // target checks pass. Bulk handling adds rejected families, affine
+          // objects and cutouts without replacing that baseline's materials.
+          if (consumer->second->models() && ldb_rt::bulk_static::candidate(current) &&
+              !(ldb_rt::consumer_world::classify(current,true)==ldb_rt::consumer_world::Decision::Selected &&
+                ldb_rt::consumer_world::target(graphics,current)==ldb_rt::consumer_world::Decision::Selected)) {
+            const auto result=ldb_rt::bulk_static::execute(graphics,current,type,userMemory,
+              [&] { called=true;physical=physicalDraw();return physical; },report);
+            consumer->second->conversion(uid,ldb_rt::consumer_world::Decision::BulkStatic,report,called,physical);return result;
+          }
+        }
         const auto mode=ldb_rt::scene_draw::candidate(current,consumer->second->expanded(),consumer->second->models());
         if (mode!=ldb_rt::scene_draw::Mode::None) {
           if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {

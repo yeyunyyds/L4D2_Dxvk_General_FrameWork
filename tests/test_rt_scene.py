@@ -28,6 +28,20 @@ class SceneEvidence(unittest.TestCase):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);events=self.fixture(root);events[-1].update(attempts=360,fallback=360,reasons={'unsupported_opcode':360});r=self.inspect(root,events);self.assertTrue(r['pass']);self.assertEqual(r['sky_rebuild_result'],'fallback_preserved_v8')
    events[-1]['ready']=1;events[-1]['reconstructed']=1;self.assertFalse(self.inspect(root,events)['pass'])
+ def test_v10_wider_geometry_and_balanced_quota_validation(self):
+  import copy
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.fixture(root);events[0]['value']='10';sample=events[1]
+   raw=struct.pack('<3f',1,2,-10)+bytes(68);raw*=3
+   path=root/'scene-12-vertices.bin';path.write_bytes(raw);sample['files'][0].update(size=len(raw),sha256=hashlib.sha256(raw).hexdigest());sample['stride']=80
+   self.assertTrue(self.inspect(root,events)['pass'])
+   for ordinal in range(13,21):
+    other=copy.deepcopy(sample);other['ordinal']=ordinal
+    for item in other['files']:
+     source=root/item['file'];item['file']=item['file'].replace('scene-12-','scene-'+str(ordinal)+'-');(root/item['file']).write_bytes(source.read_bytes())
+    events.insert(2,other)
+   events[-1]['input_samples']=9
+   r=self.inspect(root,events);self.assertIn('scene_family_quota_exceeded',r['errors'])
  def test_old_capture_does_not_require_new_samples(self):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);self.assertEqual(self.inspect(root,[dict(event='world_coverage_revision',code=0,value='8')])['status'],'not_requested')

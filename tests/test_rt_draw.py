@@ -157,6 +157,30 @@ class DrawObservation(unittest.TestCase):
             if e==6 and struct.unpack_from('<I',p)[0]==8:no_world[i]=(e,u,struct.pack('<8I',0,0,0,0,0,0,1,0))
         self.assertIn('scene_before_successful_world',self.inspect(no_world)['errors'])
 
+    def test_v10_bulk_static_affine_cutout_and_unsafe_inputs(self):
+        events=self.scene_fixture();events[0]=(0,0,struct.pack('<IQQQII',7,42,7,10000000,240,30))
+        at=1+180*4;e,u,p=events[at];data=bytearray(p);state_at=check.SNAPSHOT.size+check.MATERIAL.size+32
+        struct.pack_into('<f',data,40,2.);struct.pack_into('<f',data,40+4,0.);struct.pack_into('<f',data,40+16,0.);struct.pack_into('<f',data,40+20,1.5)
+        struct.pack_into('<Q',data,check.SNAPSHOT.size,0xa0103);struct.pack_into('<I',data,state_at+5*4,1)
+        events[at]=(e,u,bytes(data));events[at+1]=(6,u,struct.pack('<8I',12,9,0,0,0,1,1,0))
+        r=self.inspect(events);self.assertTrue(r['pass'],r['errors']);self.assertEqual(r['header']['coverage_revision'],10)
+        self.assertEqual(r['world_conversion']['bulk_static_converted'],1)
+        groups=r['static_family_inventory']['groups'];self.assertTrue(any(g['alpha_test']==1 and g['converted']==1 for g in groups))
+        for offset,fmt,value in ((40,'f',-2.),(state_at+4*4,'I',1),(state_at+7*4,'I',0),
+            (state_at+3*4,'I',2),(state_at+check.PIPELINE_V8.size+8+6,'B',2)):
+            bad=events.copy();changed=bytearray(data);struct.pack_into('<'+fmt,changed,offset,value);bad[at]=(e,u,bytes(changed))
+            self.assertFalse(self.inspect(bad)['pass'],(offset,value))
+        early=events.copy();dest=1+179*4;_,dest_uid,_=events[dest];changed=bytearray(data);struct.pack_into('<Q',changed,16,180)
+        early[dest]=(e,dest_uid,bytes(changed));early[dest+1]=(6,dest_uid,events[at+1][2]);self.assertFalse(self.inspect(early)['pass'])
+
+    def test_static_inventory_includes_rejected_bone_and_cutout_families(self):
+        events=self.scene_fixture();at=1+180*4;e,u,p=events[at];data=bytearray(p);state_at=check.SNAPSHOT.size+check.MATERIAL.size+32
+        struct.pack_into('<I',data,state_at+5*4,1);struct.pack_into('<B',data,state_at+check.PIPELINE_V8.size+8+6,2)
+        events[at]=(e,u,bytes(data));events[at+1]=(6,u,struct.pack('<8I',11,4,0,0,0,0,1,0))
+        r=self.inspect(events);self.assertTrue(r['pass'],r['errors'])
+        self.assertTrue(any(g['has_bone_fields'] and g['alpha_test'] and not g['converted'] for g in r['static_family_inventory']['groups']))
+        self.assertEqual(r['static_family_inventory']['omitted_draws'],0)
+
     def test_world_report_cannot_hide_bad_uid_control_or_unsafe_material(self):
         original=self.world_fixture()
         wrong=original.copy();wrong[2]=(6,999,wrong[2][2])

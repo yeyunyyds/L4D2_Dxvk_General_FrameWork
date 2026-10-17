@@ -66,7 +66,7 @@ def prepare(output, bridge, upstream, detours):
               'world-hooks.patch': digest(world_hooks), 'transport-hooks.patch': digest(transport_hooks)}
     for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h', 'rt_material_decode.h', 'rt_file_hash.h']),
                         ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h',
-                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_scene_draw.h', 'rt_sky_shader.h', 'rt_scene_input.h']),
+                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_scene_draw.h', 'rt_sky_shader.h', 'rt_scene_input.h', 'rt_bulk_static.h']),
                         ('util', ['rt_draw_request.h', 'rt_transport_policy.h'])]:
         for name in names:
             source = ROOT / 'integration/rt' / name
@@ -86,7 +86,7 @@ def prepare(output, bridge, upstream, detours):
     # as the public ABI. These are contracts used by rt_scene_draw.h.
     scene_backend_contract = {}
     checks = {
-        'src/d3d9/d3d9_rtx_utils.cpp': [b'remixTextureCategoryFlagsFromD3D', b'renderStates[42]', b'0xfefefefe'],
+        'src/d3d9/d3d9_rtx_utils.cpp': [b'remixTextureCategoryFlagsFromD3D', b'renderStates[42]', b'0xfefefefe', b'materialData.alphaTestReferenceValue', b'D3DRS_ALPHAFUNC', b'D3DRS_ALPHAREF'],
         'src/dxvk/rtx_render/rtx_types.h': [b'enum class InstanceCategories : uint32_t', b'WorldUI,', b'WorldMatte,', b'Sky,'],
         'src/dxvk/shaders/rtx/concept/surface/surface_interaction.slangh': [b'surface.normalBufferIndex == BINDING_INDEX_INVALID', b'surfaceInteraction.geometryNormal = flippedTriangleNormal;'],
     }
