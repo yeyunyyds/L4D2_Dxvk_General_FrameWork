@@ -12,6 +12,8 @@
 
 本版 [v6 覆盖扩展与 UI 接入](rt-world-v6-coverage.md) 在同一强球灯下，比较原世界路径与新增浮点 Unlit 场景候选及 Neko 后处理处的原生 UI 合成入口；仍为一个 F9、一个结果 ZIP。
 
+[v6 实机回包](rt-world-192551-result.md) 已独立确认 240 Present、83,920 Draw、3,630 次世界转换和 120 次 HUD 合成；HUD 图像恢复，但近处白墙仍无预期遮挡。当前格式白名单还排除了每帧六次 stride64/80 的带切线 LightmappedGeneric 场景绘制。下一步优先补这两种精确布局并合并自动对照/归属诊断；现有记录尚未锁定白墙的具体 Draw，无需先重复相同采集。
+
 ## 从数据到实际转换
 
 实际 Draw 的同一 RPC 携带 v2 快照：原有矩阵/材质/viewport，以及当次读取的 64 位格式、解码状态和有界 shader 名称。v1 trace 继续可读。格式 getter 必须与已采到的 `mov eax,[ecx+0x38]; mov edx,[ecx+0x3c]; ret` 匹配；shader getter 必须与已采到的 `this+0x14` 路径匹配。随后识别返回字符串字面量、读取对象内小偏移指针，或 v3 补充的 `A1 <absolute>; ret` 全局字符串指针叶函数。全局指针槽和指向的名称都复读，发生变化则拒绝；槽地址从当前已验证代码读取，不硬编码 ASLR 地址。代码必须位于已映射的可执行 image page，名称最多 63 字节，字段复读不一致或未知实现均拒绝分类。不会执行私有材质函数。
@@ -68,4 +70,4 @@ v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190
 [v5 交付核验记录](../../research/rt-world-pilot-v5-validation.json) 已检查固定提交成品的 CRC/全部成员、源码输入与配置、配套 PE 身份及 native 证据。Windows x86/x64 均通过新增灯光阶段顺序/重复或缺失控制段/部分设置失败阻断用例，以及既有世界作用域、启动保护、IPC 背压、材质解码与系统 NULLREF 检查；固定 DLL/API 初始化、包内 Python/配置与依赖校验也通过。本地完整 Python 84 项中 82 项通过、2 项需 Windows 而跳过，最终分析器专项 5 项全部通过。新分析器重析旧实际 RGBA32F 数据及独立法线预览回归通过。v5 的实际三段灯光效果、HUD/武器与完整游戏光追、Source 并行和性能仍未验收。
 
 
-[v6 成品核验](../../research/rt-world-pilot-v6-validation.json) 已检查固定发布提交的全部成员哈希、源码输入、配套 PE 与原生用例。Windows x86/x64 均通过新增 Unlit 输入/状态恢复与 UI 作用域检查：非空编译 VS/PS、纹理、声明、stream0、矩阵、渲染/纹理阶段状态均与之前相等；26 个应用 setter、27 个显式恢复 setter 的修改后失败注入与设备 getter/capture/draw/restore 失败均检查通过。NULLREF 使用显式离屏目标及仅限测试的 backbuffer 别名，并验证另一 surface 身份被拒绝；不作为实际 swapchain 或 Remix HUD 注入证据。已有全部 native gates、包内 Python/配置与固定运行时 API 加载通过。本地 Python 85 项中 83 项通过、2 项需 Windows 而跳过；v4/v5 实际 trace 和读回回归通过。v6 实机覆盖、HUD、完整画面、Source 并行和性能仍未验收。
+[v6 成品核验](../../research/rt-world-pilot-v6-validation.json) 已检查固定发布提交的全部成员哈希、源码输入、配套 PE 与原生用例。Windows x86/x64 均通过新增 Unlit 输入/状态恢复与 UI 作用域检查：非空编译 VS/PS、纹理、声明、stream0、矩阵、渲染/纹理阶段状态均与之前相等；26 个应用 setter、27 个显式恢复 setter 的修改后失败注入与设备 getter/capture/draw/restore 失败均检查通过。NULLREF 使用显式离屏目标及仅限测试的 backbuffer 别名，并验证另一 surface 身份被拒绝；不作为实际 swapchain 或 Remix HUD 注入证据。已有全部 native gates、包内 Python/配置与固定运行时 API 加载通过。本地 Python 85 项中 83 项通过、2 项需 Windows 而跳过；v4/v5 实际 trace 和读回回归通过。后续 [v6 实机回包](rt-world-192551-result.md) 已确认本次采样的 HUD 恢复；近墙与完整场景、Source 并行及性能继续待验收。

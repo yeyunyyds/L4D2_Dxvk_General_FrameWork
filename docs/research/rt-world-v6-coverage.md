@@ -48,4 +48,6 @@ Python 新增 profile/阶段/声明越界拒绝、HUD 丢失/恢复失败的判�
 本版没有修改 Source CVar、没有移入参考 mod 全局 prim context、没有调用私有 game 方法或替换固定 Remix DLL。武器、蒙皮、天空、透明、完整地图光源、多线程准备任务和性能仍未验收。不能由保留线程设置推导出准备任务已实际并行。
 
 
-已发布 [固定成品文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/4b6559d895119d2839443e3be7c2588d84f5ac02/downloads/rt-world-pilot-dev.zip)，构建 `4caf3ae55af36bb48da53b367854e30d514f628f`，SHA256 `2ba3037db037f15bdc6c065908990ac7a1203d726977ef7d902fd35957c08bdb`。双架构原生检查和成品验证详见 [v6 核验记录](../../research/rt-world-pilot-v6-validation.json)。Source 准备并行与实际 B580 的 v6 画面仍待用户回包确认。
+已发布 [固定成品文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/4b6559d895119d2839443e3be7c2588d84f5ac02/downloads/rt-world-pilot-dev.zip)，构建 `4caf3ae55af36bb48da53b367854e30d514f628f`，SHA256 `2ba3037db037f15bdc6c065908990ac7a1203d726977ef7d902fd35957c08bdb`。双架构原生检查和成品验证详见 [v6 核验记录](../../research/rt-world-pilot-v6-validation.json)。
+
+[v6 实机复核](rt-world-192551-result.md) 已确认本轮采样 HUD 合成恢复，新增 Unlit 480 次转换成功，但近处白墙仍缺失。发现每帧另有六次 stride64/80 的带切线 LightmappedGeneric 世界绘制被格式白名单排除，优先补齐这两类精确布局；尚未确定白墙的具体材质/Draw。完整画面、Source 准备并行和性能继续待验收。
