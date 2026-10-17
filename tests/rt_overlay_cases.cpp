@@ -20,11 +20,12 @@ struct Block final:IDirect3DStateBlock9 {
 struct Proxy {
   IDirect3DDevice9* device;unsigned gets=0,sets=0,draws=0,failGet=0,failSet=0,beforeDrawSets=0;
   bool failCapture=false,failRestore=false,failDraw=false;
+  IDirect3DSurface9* foreignBackbuffer=nullptr;
   HRESULT get(HRESULT hr) { return ++gets==failGet?E_FAIL:hr; }
   HRESULT set(HRESULT hr) { return ++sets==failSet?E_FAIL:hr; }
 #define GET(name) template<class... A> HRESULT name(A... a) { return get(device->name(a...)); }
 #define SET(name) template<class... A> HRESULT name(A... a) { return set(device->name(a...)); }
-  GET(GetRenderTarget) GET(GetBackBuffer) GET(GetViewport) GET(GetRenderState)
+  GET(GetRenderTarget) GET(GetViewport) GET(GetRenderState)
   GET(GetVertexDeclaration) GET(GetStreamSource) GET(GetStreamSourceFreq)
   GET(GetTransform) GET(GetVertexShader) GET(GetPixelShader)
   SET(SetVertexShader) SET(SetPixelShader) SET(SetFVF) SET(SetRenderState)
@@ -32,6 +33,12 @@ struct Proxy {
   SET(SetStreamSource) SET(SetVertexDeclaration)
 #undef GET
 #undef SET
+  // NULLREF supplies no swapchain color target. Only this fixture aliases its
+  // explicit offscreen RT as a backbuffer; production calls the real method.
+  HRESULT GetBackBuffer(UINT,UINT,D3DBACKBUFFER_TYPE,IDirect3DSurface9** p) {
+    if (foreignBackbuffer) { foreignBackbuffer->AddRef();*p=foreignBackbuffer;return get(S_OK); }
+    return get(device->GetRenderTarget(0,p));
+  }
   HRESULT CreateStateBlock(D3DSTATEBLOCKTYPE type,IDirect3DStateBlock9** p) {
     IDirect3DStateBlock9* inner=nullptr;const auto hr=device->CreateStateBlock(type,&inner);
     if (inner) { *p=new Block(inner,failCapture,failRestore); }return get(hr);
@@ -99,6 +106,9 @@ int main() {
     D3DPRESENT_PARAMETERS pp{};pp.BackBufferWidth=320;pp.BackBufferHeight=240;pp.BackBufferFormat=D3DFMT_A8R8G8B8;pp.BackBufferCount=1;pp.SwapEffect=D3DSWAPEFFECT_DISCARD;pp.Windowed=TRUE;pp.hDeviceWindow=window;
     static_draw::Ref<IDirect3DDevice9> device;require(SUCCEEDED(factory.value->CreateDevice(0,D3DDEVTYPE_NULLREF,window,D3DCREATE_SOFTWARE_VERTEXPROCESSING,&pp,&device.value)),"NULLREF required");
     auto* d=device.value;
+    static_draw::Ref<IDirect3DSurface9> offscreen;
+    require(SUCCEEDED(d->CreateRenderTarget(320,240,D3DFMT_A8R8G8B8,D3DMULTISAMPLE_NONE,0,FALSE,&offscreen.value,nullptr)) &&
+      SUCCEEDED(d->SetRenderTarget(0,offscreen.value)),"create explicit NULLREF offscreen target");
     const D3DVERTEXELEMENT9 layout[]={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},{2,0,D3DDECLTYPE_FLOAT4,0,D3DDECLUSAGE_POSITION,1},{2,16,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,1},D3DDECL_END()};
     static_draw::Ref<IDirect3DVertexDeclaration9> declaration;require(SUCCEEDED(d->CreateVertexDeclaration(layout,&declaration.value)),"create decl");require(SUCCEEDED(d->SetVertexDeclaration(declaration.value)),"bind decl");
     static_draw::Ref<IDirect3DVertexBuffer9> vb;require(SUCCEEDED(d->CreateVertexBuffer(96,0,0,D3DPOOL_DEFAULT,&vb.value,nullptr)),"VB");require(SUCCEEDED(d->SetStreamSource(0,vb.value,0,32)),"bind stream0");
@@ -133,9 +143,12 @@ int main() {
     for (auto* m:{&s.world,&s.view,&s.projection}) { (*m)[0]=(*m)[5]=(*m)[10]=(*m)[15]=1; }
     require(overlay::candidate(s,D3DPT_TRIANGLELIST,false) && !overlay::candidate(s,D3DPT_TRIANGLELIST,true),"bounded post classifier");
     const auto baseline=state(d);require(SUCCEEDED(d->BeginScene()),"begin scene");
-    static_draw::Ref<IDirect3DSurface9> target,backbuffer;D3DSURFACE_DESC targetDesc{};
-    require(SUCCEEDED(d->GetRenderTarget(0,&target.value)) && SUCCEEDED(target.value->GetDesc(&targetDesc)) && SUCCEEDED(d->GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&backbuffer.value)),"fixture target");
-    std::cout << "RT overlay fixture target: format=" << uint32_t(targetDesc.Format) << " width=" << targetDesc.Width << " height=" << targetDesc.Height << " backbuffer_match=" << (target.value==backbuffer.value) << '\n';
+    D3DSURFACE_DESC targetDesc{};require(SUCCEEDED(offscreen.value->GetDesc(&targetDesc)),"fixture target description");
+    std::cout << "RT overlay fixture target: explicit_offscreen_backbuffer_alias format=" << uint32_t(targetDesc.Format) << " width=" << targetDesc.Width << " height=" << targetDesc.Height << "; real swapchain/Remix unrun\n";
+    static_draw::Ref<IDirect3DSurface9> foreign;
+    require(SUCCEEDED(d->CreateRenderTarget(320,240,D3DFMT_A8R8G8B8,D3DMULTISAMPLE_NONE,0,FALSE,&foreign.value,nullptr)),"create foreign identity");
+    Proxy rejected{d};rejected.foreignBackbuffer=foreign.value;
+    require(!overlay::inject(&rejected,s).replaced && !rejected.sets && !rejected.draws && state(d)==baseline,"different target identity must reject without mutations");
     Proxy success{d};const auto good=overlay::inject(&success,s);
     const auto after=state(d);
     std::cout << "RT overlay scope: code=" << uint32_t(good.report.code) << " capture=" << uint32_t(good.report.capture)
