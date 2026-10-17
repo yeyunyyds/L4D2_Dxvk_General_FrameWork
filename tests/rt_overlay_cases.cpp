@@ -102,6 +102,12 @@ int main() {
     const D3DVERTEXELEMENT9 layout[]={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},{2,0,D3DDECLTYPE_FLOAT4,0,D3DDECLUSAGE_POSITION,1},{2,16,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,1},D3DDECL_END()};
     static_draw::Ref<IDirect3DVertexDeclaration9> declaration;require(SUCCEEDED(d->CreateVertexDeclaration(layout,&declaration.value)),"create decl");require(SUCCEEDED(d->SetVertexDeclaration(declaration.value)),"bind decl");
     static_draw::Ref<IDirect3DVertexBuffer9> vb;require(SUCCEEDED(d->CreateVertexBuffer(96,0,0,D3DPOOL_DEFAULT,&vb.value,nullptr)),"VB");require(SUCCEEDED(d->SetStreamSource(0,vb.value,0,32)),"bind stream0");
+    require(SUCCEEDED(d->SetStreamSourceFreq(0,1)),"seed non-instanced stream0");
+    const D3DVIEWPORT9 viewport{0,0,320,240,0,1};require(SUCCEEDED(d->SetViewport(&viewport)),"seed viewport");
+    unsigned transformIndex=1;
+    for (auto name:{D3DTS_WORLD,D3DTS_VIEW,D3DTS_PROJECTION}) {
+      const auto matrix=rt_test::matrix(float(transformIndex++*100));require(SUCCEEDED(d->SetTransform(name,&matrix)),"seed original transform");
+    }
     struct Compiler {
       HMODULE module=LoadLibraryExW(L"d3dcompiler_47.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
       ~Compiler() { if (module) { FreeLibrary(module); } }
@@ -127,6 +133,9 @@ int main() {
     for (auto* m:{&s.world,&s.view,&s.projection}) { (*m)[0]=(*m)[5]=(*m)[10]=(*m)[15]=1; }
     require(overlay::candidate(s,D3DPT_TRIANGLELIST,false) && !overlay::candidate(s,D3DPT_TRIANGLELIST,true),"bounded post classifier");
     const auto baseline=state(d);require(SUCCEEDED(d->BeginScene()),"begin scene");
+    static_draw::Ref<IDirect3DSurface9> target,backbuffer;D3DSURFACE_DESC targetDesc{};
+    require(SUCCEEDED(d->GetRenderTarget(0,&target.value)) && SUCCEEDED(target.value->GetDesc(&targetDesc)) && SUCCEEDED(d->GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&backbuffer.value)),"fixture target");
+    std::cout << "RT overlay fixture target: format=" << uint32_t(targetDesc.Format) << " width=" << targetDesc.Width << " height=" << targetDesc.Height << " backbuffer_match=" << (target.value==backbuffer.value) << '\n';
     Proxy success{d};const auto good=overlay::inject(&success,s);
     const auto after=state(d);
     std::cout << "RT overlay scope: code=" << uint32_t(good.report.code) << " capture=" << uint32_t(good.report.capture)
