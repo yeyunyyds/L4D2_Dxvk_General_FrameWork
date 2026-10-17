@@ -2,7 +2,7 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/02d7b302de7db8dbc46afadc725cafc39e536369/downloads/rt-world-pilot-dev.zip)。当前为 v7，构建提交为 `fe87baac495262a94c58974fdf0f398210e4d696`，包大小 11,894,431 字节，SHA256 为 `3658972b15db1bff14a4fcd48677b53f76955ab48cd58f89d1ca36161e4bf22e`。链接固定到已核验成品，不随下载分支更新改变。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/e78f5dc095f605b4cb75f0211ce622d297380593/downloads/rt-world-pilot-dev.zip)。当前为 v8，构建提交为 `ef5485f2c47546f46d15cb310f54ce9d0e181084`，包大小 11,900,168 字节，SHA256 为 `0c37ad7dcd2042f523200b92f167788498ededa22b0b04def6a52f0781ecf48c`。固定链接与包内配套身份已核验；[验证记录](../../research/rt-world-pilot-v8-validation.json) 包含 Windows 双架构新增场景门槛及完整既有门槛。v7 白墙/HUD 实机结果保留，v8 新增天空与道具尚待实机图像验收。
 
 [v4 实机完整回包](rt-world-130102-result.md) 已独立复核通过 240 Present、193,262 Draw、11,805 次受限世界转换，9 份读回齐全、无状态恢复错误、无本轮 IPC fault。按实际 primary GBuffer 编码离线解出的法线/深度轮廓与地图表面相符，受限静态世界的 RT 输出链路已跑通。读回仍偏暗，武器/HUD 等内容缺失；完整场景、照明材质正确性、Source 准备线程并行、资源释放和性能继续待验收。基础数据已经足够，下一步转向画面正确性与覆盖补全。
 
@@ -14,9 +14,9 @@
 
 [v6 实机回包](rt-world-192551-result.md) 已独立确认 240 Present、83,920 Draw、3,630 次世界转换和 120 次 HUD 合成；HUD 图像恢复，但近处白墙仍无预期遮挡。该版格式白名单排除了每帧六次 stride64/80 的带切线 LightmappedGeneric 场景绘制，成为 v7 精确扩展的依据；当时尚未锁定白墙的具体 Draw。
 
-当前 [v7 精确切线布局扩展](rt-world-v7-tangent-coverage.md) 已发布：31–120 保留 v6 世界/Unlit/HUD，121–240 只额外增加严格验证的 stride64/80 LightmappedGeneric；灯光、HUD 与镜头对照不再同时变化。原始 trace 记录 CULLMODE，新增有界材质/布局/RPC 归属表，仍为一次 F9、一个结果 ZIP。两种新布局的 Windows 双架构状态/回滚检查及成品核验已通过。[v7 B580 实机结果](rt-world-202526-result.md) 进一步确认本镜头内白墙和左侧结构恢复颜色、RT 深度/法线及遮挡，新增 720 次转换成功，HUD 两段均正常；这处缺墙无需重复采集。
+此前 [v7 精确切线布局扩展](rt-world-v7-tangent-coverage.md) 已发布：31–120 保留 v6 世界/Unlit/HUD，121–240 只额外增加严格验证的 stride64/80 LightmappedGeneric；灯光、HUD 与镜头对照不再同时变化。原始 trace 记录 CULLMODE，新增有界材质/布局/RPC 归属表，仍为一次 F9、一个结果 ZIP。两种新布局的 Windows 双架构状态/回滚检查及成品核验已通过。[v7 B580 实机结果](rt-world-202526-result.md) 进一步确认本镜头内白墙和左侧结构恢复颜色、RT 深度/法线及遮挡，新增 720 次转换成功，HUD 两段均正常；这处缺墙无需重复采集。
 
-下一版 [v8 天空与有限刚性道具](rt-world-v8-sky-rigid.md) 已完成接入，正在构建验证：保留完整 v7 为基线，同一轮依次加入 NekoSky 与两种无骨骼声明的 VertexLitGeneric。仍只需一次 F9；天空和道具图像尚未实机验收。
+当前 [v8 天空与有限刚性道具](rt-world-v8-sky-rigid.md) 已通过构建和打包核验并发布：保留完整 v7 为基线，同一轮依次加入 NekoSky 与两种无骨骼声明的 VertexLitGeneric。仍只需一次 F9；天空和道具图像尚未实机验收。
 
 ## 从数据到实际转换
 

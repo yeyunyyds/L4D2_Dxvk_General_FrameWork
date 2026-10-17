@@ -38,3 +38,12 @@ world trace version5、snapshot wire2，增加原 LIGHTING/FOGENABLE/category42 
 Windows x86/x64 执行状态恢复与失败注入，系统 NULLREF 使用真实 HDR 目标、顶点 buffer、非空 shader 及实际 Draw；仅 reserved42 经适配器模拟，因为标准 D3D9 不支持该私有合约。新 `world_scene_scope_development_execution` 门槛必须有两架构证据才能打包；既有门槛全部保留。NULLREF 不执行 Remix 或验证 B580 图像，交叉编译只用于提前发现编译问题。
 
 未写 Source 线程 CVar，未移植全局 prim context或调用私有游戏方法。Source 准备线程实际并行、原地图光照、武器/蒙皮、透明、完整材质与性能仍未验收。
+
+
+## 已发布成品与验证
+
+[固定成品文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/e78f5dc095f605b4cb75f0211ce622d297380593/downloads/rt-world-pilot-dev.zip)，构建 `ef5485f2c47546f46d15cb310f54ce9d0e181084`，身份 `ldb-rt-observer+75722b8bfc0efc34`。大小 11,900,168 字节，SHA256 `0c37ad7dcd2042f523200b92f167788498ededa22b0b04def6a52f0781ecf48c`。
+
+[独立核验记录](../../research/rt-world-pilot-v8-validation.json) 确认全部743个成员的清单/哈希、成品与原生证据中的配套 PE 一致、源码输入及后端合约收据、独立包内 Python/配置和固定 runtime API 初始化。Windows x86/x64 的新增场景及全部既有门槛通过。Sky 作用域各17个 getter、8个应用/8个恢复 setter，道具两路各16个 getter、7个应用/7个恢复 setter，逐项失败注入通过。reserved42 仅在标准 D3D9 测试适配器中模拟，未当作实际 Remix 成功证据。
+
+原生 Host 集成 trace 每架构包含240 Present、723 Draw、213次转换，其中天空1次、两种道具各1次；独立分析确认阶段与原状态归属。它仍是模拟设备和实际 Host 命令路由验证，不是游戏图像。本地87项 Python 测试完成，85通过、2项需要 Windows 而跳过；额外严格 x64 交叉编译通过。v4/v5/v6/v7 四份既有实机回包共430,784 Draw 及原始读回均回归通过，没有改写旧预览。v8 新增天空和道具实际画面尚待回包验收。
