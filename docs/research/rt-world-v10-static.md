@@ -15,7 +15,7 @@
 
 完整声明必须有 stream0 的 FLOAT3 POSITION0、FLOAT2 TEXCOORD0，偏移按4对齐且字段完全位于4～128字节stride内。可有其他有界浮点UV、法线/切线/颜色字段；Source既有辅助stream1–3仅接受已识别的语义形状。任何骨骼权重/索引、POSITIONT、重复主位置/UV、未知辅助语义、越界字段或实例化均拒绝。没有执行Source morph辅助输入，不能用声明无骨骼证明物体静态。
 
-world允许有限、非退化、正行列式的仿射矩阵，包括平移、正尺度和剪切；view保持刚性、主透视near 4～32、完整viewport、同尺寸HDR目标。仅支持非UP三角形、无alpha混合且写深度；原透明裁切开关、比较函数和阈值精确保留。镜像、武器视角、半透明和蒙皮仍拒绝。
+world允许有限、非退化、正行列式的仿射矩阵，包括平移、正尺度和剪切；view保持刚性、主透视near 4～32、完整viewport、同尺寸HDR目标。仅支持非UP三角形、无alpha混合且写深度；原透明裁切开关、比较函数和阈值精确保留。初始化显式请求 `rtx.enableAlphaTest=True`，分析器要求成功事件，避免依赖用户缓存中的默认配置。镜像、武器视角、半透明和蒙皮仍拒绝。
 
 新增作用域清除VS/PS，独立声明只引用原stream0的位置和UV，不锁定或改写buffer，不改变原Draw/索引/流绑定。原world/view/projection交给固定功能后端，缺法线使用固定运行时的几何面法线。首层材质通常选原stage0；WorldVertexTransition按固定参考实现选择stage7首层贴图，暂不混合stage12第二层。显式纹理颜色/alpha选择、RESULTARG=CURRENT及关闭stage1避免继承无关固定功能状态；固定功能vertex blend/indexed blend暂时关闭，避免继承原VS下不生效的混合状态；全部修改单Draw恢复，修改后失败也恢复，恢复失败阻止继续Draw。
 

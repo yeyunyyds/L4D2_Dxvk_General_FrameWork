@@ -67,6 +67,8 @@ def analyze(directory,previews=True):
     comparison=any(e.get('event')=='lighting_comparison_policy' for e in events)
     coverage=any(e.get('event')=='coverage_comparison_policy' for e in events)
     v10=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='10' for e in events)
+    if v10 and not any(e.get('event')=='rtx.enableAlphaTest' and e.get('code')==0 and e.get('value')=='True' for e in events):
+        errors.append('missing_bulk_static_alpha_test_enable')
     v9=v10 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='9' for e in events)
     v8=v9 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='8' for e in events)
     v7=v8 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='7' for e in events)

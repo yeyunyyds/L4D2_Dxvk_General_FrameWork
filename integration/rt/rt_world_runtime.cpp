@@ -44,7 +44,7 @@ const std::pair<const char*, const char*> options[] = {
   {"rtx.autoExposure.evMaxValue", "5"}, {"rtx.tonemappingMode", "1"},
   {"rtx.localtonemap.exposure", "0.75"},
   {"rtx.orthographicIsUI", "True"}, {"rtx.skipDrawCallsPostRTXInjection", "False"},
-  {"rtx.enableAlphaBlend", "True"},
+  {"rtx.enableAlphaBlend", "True"}, {"rtx.enableAlphaTest", "True"},
   {"rtx.fogIgnoreSky", "True"},
   {"rtx.bloom.enable", "False"}, {"rtx.postfx.enable", "False"}
 };
