@@ -4,7 +4,7 @@
 
 已发布 [v14 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/bd736ea9f9a96970bd3f9d1a9ba69efe0ec79a8d/downloads/rt-world-pilot-dev.zip)，方案见 [模型独立提交与分组恢复对照](rt-world-v14-submission.md)。构建 `d1ed8a0e23bd117b1b90612693f6c2aa517bf51c`，身份 `ldb-rt-observer+ca9009cca3123af0`，包大小 11,954,685 字节，SHA256 `26eb3d601e464c5ebd254aed2dff59a3f0fddfad9e589bbddcfe94930fdf21fd`。[交付核验](../../research/rt-world-pilot-v14-validation.json) 已检查固定发布树、全部成员、配套 x86/x64 PE、源码收据与原生执行证据。
 
-最近的 [v13 实机结果](rt-world-133627-result.md) 在模型扩展阶段出现白屏和缺失的人物轮廓，**画面验收失败**。v14 已修改提交路径，仍待 B580 实测，不能预先宣称白屏或人物覆盖已修复。
+最近的 [v14 B580 实机结果](rt-world-145737-result.md) 已完整结束420 Present、142,550 Draw。普通模型与 Neko 合并时，完整人物、武器和可辨的世界/天空同时出现；撤去模型后背景恢复。**Neko 单独阶段仍白屏并有异常长条几何，模型路径整体尚未验收**。33份完整配对、46,023顶点的提交字节和原VS位置/UV独立核验通过，后续重点转向后端缓存/实例及材质照明交互，现有数据足够继续定位，无需原样重采。
 
 本版模型使用独立、可读、紧凑的 VB/IB，重映射原索引并核对上传内容与实际绑定；特殊 stencil/clip/颜色/深度通道保留原绘制。请求固定 Remix 后端复制几何到 staging，保留原有 Source 线程设置；曝光和诊断灯不变。三权重、Neko、完整 morph、主相机证明及既有其他静态家族保留。
 

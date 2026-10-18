@@ -1,0 +1,2165 @@
+{
+  "schema": 1,
+  "scope": "v14 B580 actual capture: complete data and verified model submission samples; combined mode has visible complete character and weapon, Neko-only still white with anomalous geometry; partial image success, not full model acceptance",
+  "archive": {
+    "filename": "rt-world-20261018-145737-a664ccce.zip",
+    "bytes": 24811500,
+    "sha256": "b5fee48d724ee13299e8bf25cdacd3e9d36faa6a1743b01ced37cd591c0a2c41",
+    "members": 3087,
+    "expanded_bytes": 201842020,
+    "crc": "pass",
+    "duplicate_or_unsafe_paths": false,
+    "omissions": []
+  },
+  "identity": {
+    "build_commit": "d1ed8a0e23bd117b1b90612693f6c2aa517bf51c",
+    "build_id": "ldb-rt-observer+ca9009cca3123af0",
+    "installed_binary_sha256": {
+      "bin/dxvk_d3d9.dll": "471151470e5777a1c1b6d7565b1e9c4f02263182d0b66ace1ee094a286646c8b",
+      "bin/.l4d2bridge/L4D2Bridge64.exe": "35019ba77edf3fd7cdffbaf96abce81b0d9d881f64d273c684d11e3d09abbc92"
+    },
+    "both_log_identities_match": true,
+    "coverage_revision": 14,
+    "draw_trace_version": 11
+  },
+  "independent_verification": {
+    "recomputed_reports": [
+      "draw-analysis.json",
+      "world-analysis.json",
+      "scene-analysis.json"
+    ],
+    "reports_match_after_json_normalization": true,
+    "all_21_preview_bytes_match": true,
+    "previews_sha256": {
+      "world-120-0.png": "6002fbf7a23bed1ea6859adc84e8a8b282e229ad879316eef6fa7c7d0d52bb63",
+      "world-120-1.png": "10a5c7473f89694bd3e1e39cc1e77a6424658cad467353ce5bf3969c48f53926",
+      "world-120-2.png": "6d942d57822f4786e82f3c6531578482f7c804b332207b6b42b42ab555854c3f",
+      "world-180-0.png": "6c3793e8224f67c63ddfcfdb77113105b05827069ea644bebfee7b7d869633d8",
+      "world-180-1.png": "ef3fe2ed24be17d585ec976e70a1af0df742129717375b2155558770da8aaf8f",
+      "world-180-2.png": "83692e3773c559614112ad32f07439a79ceb475ca83a94375a125c3174348841",
+      "world-240-0.png": "87d5892d18ec2a5d04a13cced73b86e89662634a38d04c4bc874707e2d352a3c",
+      "world-240-1.png": "ac8df8aedbbaf2d9d6fc3a2a12d980345c69f16c7ea99ff8582f15ae0e988356",
+      "world-240-2.png": "8fb8b249ec13da7e231f6a79fe4f4af3b83cc899a05778dc3c4c17b8f08b6c21",
+      "world-30-0.png": "ceccde0d58e8a6b41d04f12a41fefd413c5a7fe2dd2909b44791a586b9c75c3c",
+      "world-30-1.png": "3d924ebc0556fa8fa666923ab457e46527832572eca0ffc6b3895d5941cfff0b",
+      "world-30-2.png": "3d924ebc0556fa8fa666923ab457e46527832572eca0ffc6b3895d5941cfff0b",
+      "world-300-0.png": "3a0272114343d9b411d7cdd2405a6353f6f37dfd38a555c9dcb4ae21c0e2e47d",
+      "world-300-1.png": "67b44c45449c7af71c26e1daf855c7245f38dd16efb8b0a01aa0e727a45b8258",
+      "world-300-2.png": "b6743908f6f082ad84ff262491009c7fb14280720a1ed480738a18f307ddd96b",
+      "world-360-0.png": "e4731fdecd12c09ca1d335912d3a3667593218d10d2f49d25c641227f29c2c6f",
+      "world-360-1.png": "263137af3b15d0968b0296dba783ae3055fd11f351e90c382663b7aef13e66ae",
+      "world-360-2.png": "ec73489de00e21e07e25e29f9d3470be377e68a693055fed3174a44e7d0bcd49",
+      "world-420-0.png": "e6cd4d5a6d5fe28471b81d1d65da30eaa3b13a213d9a97562a464294749a320e",
+      "world-420-1.png": "162b01f1dd770888e7ef41738d54408d9e61db5a62126c12c25246188ed83e48",
+      "world-420-2.png": "ee74cf845fb3f05c3cb80931a44e9e06667f7df0f678bfaca13371ecb185285c"
+    }
+  },
+  "collection": {
+    "status": "complete",
+    "phase": "finalized",
+    "errors": [],
+    "footer": {
+      "draws": 142550,
+      "valid": 142550,
+      "presents": 420,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "conversion": {
+      "reports": 142550,
+      "converted": 16980,
+      "hud_replaced": 390,
+      "sky_converted": 1800,
+      "bulk_static_converted": 5040
+    },
+    "stages": {
+      "raster": {
+        "draws": 10730,
+        "original_draw_calls": 10730,
+        "converted": 0,
+        "capture_failures": 0,
+        "apply_failures": 0,
+        "restore_failures": 0,
+        "physical_failures": 0
+      },
+      "baseline_world": {
+        "draws": 30420,
+        "original_draw_calls": 30330,
+        "converted": 2340,
+        "capture_failures": 0,
+        "apply_failures": 0,
+        "restore_failures": 0,
+        "physical_failures": 0,
+        "world": 2340,
+        "hud": 90
+      },
+      "expanded_sky": {
+        "draws": 20280,
+        "original_draw_calls": 20220,
+        "converted": 1920,
+        "capture_failures": 0,
+        "apply_failures": 0,
+        "restore_failures": 0,
+        "physical_failures": 0,
+        "sky": 360,
+        "world": 1560,
+        "hud": 60
+      },
+      "ordinary": {
+        "draws": 20280,
+        "original_draw_calls": 20220,
+        "converted": 3180,
+        "capture_failures": 0,
+        "apply_failures": 0,
+        "restore_failures": 0,
+        "physical_failures": 0,
+        "sky": 360,
+        "world": 1560,
+        "bulk_static": 1260,
+        "hud": 60
+      },
+      "neko": {
+        "draws": 20280,
+        "original_draw_calls": 20220,
+        "converted": 3180,
+        "capture_failures": 0,
+        "apply_failures": 0,
+        "restore_failures": 0,
+        "physical_failures": 0,
+        "sky": 360,
+        "world": 1560,
+        "bulk_static": 1260,
+        "hud": 60
+      },
+      "combined": {
+        "draws": 20280,
+        "original_draw_calls": 20220,
+        "converted": 4440,
+        "capture_failures": 0,
+        "apply_failures": 0,
+        "restore_failures": 0,
+        "physical_failures": 0,
+        "sky": 360,
+        "world": 1560,
+        "bulk_static": 2520,
+        "hud": 60
+      },
+      "recovery": {
+        "draws": 20280,
+        "original_draw_calls": 20220,
+        "converted": 1920,
+        "capture_failures": 0,
+        "apply_failures": 0,
+        "restore_failures": 0,
+        "physical_failures": 0,
+        "sky": 360,
+        "world": 1560,
+        "hud": 60
+      }
+    },
+    "restored_material_audit": {
+      "samples": 118,
+      "counts": {
+        "baseline_world": 24,
+        "expanded_sky": 30,
+        "expanded_models": 64
+      },
+      "per_phase_limit": 64,
+      "status": "samples_available",
+      "texture_stage_fields": [
+        "COLOROP",
+        "COLORARG1",
+        "COLORARG2",
+        "ALPHAOP",
+        "ALPHAARG1",
+        "ALPHAARG2",
+        "TEXCOORDINDEX",
+        "TEXTURETRANSFORMFLAGS",
+        "RESULTARG"
+      ],
+      "render_state_fields": [
+        "TEXTUREFACTOR",
+        "LIGHTING",
+        "COLORVERTEX",
+        "DIFFUSEMATERIALSOURCE",
+        "AMBIENTMATERIALSOURCE",
+        "AMBIENT",
+        "FOGENABLE",
+        "SRGBWRITEENABLE"
+      ],
+      "query_failures": 0,
+      "category_query_failures": 0,
+      "cull_query_failures": 0,
+      "limits": "first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials"
+    },
+    "camera": [
+      {
+        "frame": 180,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      },
+      {
+        "frame": 240,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      },
+      {
+        "frame": 300,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      },
+      {
+        "frame": 360,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      },
+      {
+        "frame": 420,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      }
+    ]
+  },
+  "image": {
+    "acceptance": "partial; combined visible model success, Neko-only failure; whole pilot remains unaccepted",
+    "stage_review": {
+      "30": "raster: complete third-person character and sword",
+      "120": "readable world and HUD, black sky, no character",
+      "180": "readable world, rebuilt sky and HUD, no character",
+      "240": "ordinary: weapons/sword visible without Neko character, readable world and sky",
+      "300": "Neko-only: nearly white color, complete character silhouette in depth/normals plus abnormal long strip across left floor",
+      "360": "combined: readable world/sky and full character with weapon; overbright hair and incomplete original material/lighting; no left strip",
+      "420": "recovery: readable world and sky, model/weapon removed, no left strip"
+    },
+    "color_readback_metrics": {
+      "30": {
+        "luminance": {
+          "finite_pixels": 256000,
+          "mean": 0.5229012424077826,
+          "median": 0.5050815746605396,
+          "below_0_05_fraction": 0.00340625,
+          "above_0_95_fraction": 0.00321875
+        },
+        "exact_white_fraction": 0.001109375
+      },
+      "120": {
+        "luminance": {
+          "finite_pixels": 256000,
+          "mean": 0.41440262288319335,
+          "median": 0.4346635396420956,
+          "below_0_05_fraction": 0.234203125,
+          "above_0_95_fraction": 0.00518359375
+        },
+        "exact_white_fraction": 0.0007734375
+      },
+      "180": {
+        "luminance": {
+          "finite_pixels": 256000,
+          "mean": 0.5144657572674733,
+          "median": 0.48193098362088205,
+          "below_0_05_fraction": 0.00328125,
+          "above_0_95_fraction": 0.00162890625
+        },
+        "exact_white_fraction": 0.00076171875
+      },
+      "240": {
+        "luminance": {
+          "finite_pixels": 256000,
+          "mean": 0.5149132256083618,
+          "median": 0.47450980544090265,
+          "below_0_05_fraction": 0.00340234375,
+          "above_0_95_fraction": 0.0065859375
+        },
+        "exact_white_fraction": 0.00271484375
+      },
+      "300": {
+        "luminance": {
+          "finite_pixels": 256000,
+          "mean": 0.9750170018938882,
+          "median": 1.0,
+          "below_0_05_fraction": 0.00337109375,
+          "above_0_95_fraction": 0.9213984375
+        },
+        "exact_white_fraction": 0.9132734375
+      },
+      "360": {
+        "luminance": {
+          "finite_pixels": 256000,
+          "mean": 0.36821421470673066,
+          "median": 0.33232471587657925,
+          "below_0_05_fraction": 0.00350390625,
+          "above_0_95_fraction": 0.05084375
+        },
+        "exact_white_fraction": 0.01572265625
+      },
+      "420": {
+        "luminance": {
+          "finite_pixels": 256000,
+          "mean": 0.5093286328390599,
+          "median": 0.47450980544090265,
+          "below_0_05_fraction": 0.00340234375,
+          "above_0_95_fraction": 0.001625
+        },
+        "exact_white_fraction": 0.00076171875
+      }
+    },
+    "normal_encoding": "packed octahedral uint32, not float RGB",
+    "decoded_normals": {
+      "120": {
+        "valid_depth_mask_pixels": 195477,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.76358203125,
+        "unique_words_on_depth_hits": 30106
+      },
+      "180": {
+        "valid_depth_mask_pixels": 195530,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.7637890625,
+        "unique_words_on_depth_hits": 30207
+      },
+      "240": {
+        "valid_depth_mask_pixels": 195329,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.76300390625,
+        "unique_words_on_depth_hits": 29801
+      },
+      "300": {
+        "valid_depth_mask_pixels": 195347,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.76307421875,
+        "unique_words_on_depth_hits": 15521
+      },
+      "360": {
+        "valid_depth_mask_pixels": 195562,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.7639140625,
+        "unique_words_on_depth_hits": 24164
+      },
+      "420": {
+        "valid_depth_mask_pixels": 195223,
+        "invalid_encoding_on_depth_hits": 0,
+        "valid_fraction": 0.76258984375,
+        "unique_words_on_depth_hits": 30081
+      }
+    },
+    "left_floor_depth_change": {
+      "region_xy": [
+        0,
+        150,
+        220,
+        400
+      ],
+      "reference_frame": 180,
+      "valid_reference_pixels": 55000,
+      "threshold_ndc": 0.001,
+      "closer_pixels": {
+        "240": 0,
+        "300": 28201,
+        "360": 0,
+        "420": 0
+      },
+      "limits": "fixed left-floor region, diagnostic evidence of changed GBuffer geometry; not object identity or restored coverage percentage"
+    }
+  },
+  "model_counts_cumulative": [
+    {
+      "event": "model_rebuild_counts",
+      "frame": 30,
+      "phase": "raster",
+      "model_stage": "off",
+      "attempts": 0,
+      "ready": 0,
+      "reconstructed": 0,
+      "fallback": 0,
+      "reasons": {}
+    },
+    {
+      "event": "model_rebuild_counts",
+      "frame": 120,
+      "phase": "baseline_world",
+      "model_stage": "off",
+      "attempts": 0,
+      "ready": 0,
+      "reconstructed": 0,
+      "fallback": 0,
+      "reasons": {}
+    },
+    {
+      "event": "model_rebuild_counts",
+      "frame": 180,
+      "phase": "expanded_sky",
+      "model_stage": "off",
+      "attempts": 0,
+      "ready": 0,
+      "reconstructed": 0,
+      "fallback": 0,
+      "reasons": {}
+    },
+    {
+      "event": "model_rebuild_counts",
+      "frame": 240,
+      "phase": "expanded_models",
+      "model_stage": "ordinary",
+      "attempts": 2760,
+      "ready": 1260,
+      "reconstructed": 1260,
+      "fallback": 1500,
+      "reasons": {
+        "model_pipeline_unsupported": 240,
+        "model_stage_excluded": 1260,
+        "original_vs_model_matrix": 60,
+        "original_vs_three_weight": 1200
+      }
+    },
+    {
+      "event": "model_rebuild_counts",
+      "frame": 300,
+      "phase": "expanded_models",
+      "model_stage": "neko",
+      "attempts": 5520,
+      "ready": 2520,
+      "reconstructed": 2520,
+      "fallback": 3000,
+      "reasons": {
+        "model_pipeline_unsupported": 240,
+        "model_stage_excluded": 2760,
+        "original_vs_model_matrix": 60,
+        "original_vs_neko_three_weight": 1260,
+        "original_vs_three_weight": 1200
+      }
+    },
+    {
+      "event": "model_rebuild_counts",
+      "frame": 360,
+      "phase": "expanded_models",
+      "model_stage": "combined",
+      "attempts": 8280,
+      "ready": 5040,
+      "reconstructed": 5040,
+      "fallback": 3240,
+      "reasons": {
+        "model_pipeline_unsupported": 480,
+        "model_stage_excluded": 2760,
+        "original_vs_model_matrix": 120,
+        "original_vs_neko_three_weight": 2520,
+        "original_vs_three_weight": 2400
+      }
+    },
+    {
+      "event": "model_rebuild_counts",
+      "frame": 420,
+      "phase": "expanded_models",
+      "model_stage": "recovery",
+      "attempts": 11040,
+      "ready": 5040,
+      "reconstructed": 5040,
+      "fallback": 6000,
+      "reasons": {
+        "model_pipeline_unsupported": 480,
+        "model_stage_excluded": 5520,
+        "original_vs_model_matrix": 120,
+        "original_vs_neko_three_weight": 2520,
+        "original_vs_three_weight": 2400
+      }
+    }
+  ],
+  "sky_counts": [
+    {
+      "event": "sky_rebuild_counts",
+      "frame": 30,
+      "phase": "raster",
+      "attempts": 0,
+      "ready": 0,
+      "reconstructed": 0,
+      "fallback": 0,
+      "input_samples": 56,
+      "reasons": {}
+    },
+    {
+      "event": "sky_rebuild_counts",
+      "frame": 120,
+      "phase": "baseline_world",
+      "attempts": 0,
+      "ready": 0,
+      "reconstructed": 0,
+      "fallback": 0,
+      "input_samples": 57,
+      "reasons": {}
+    },
+    {
+      "event": "sky_rebuild_counts",
+      "frame": 180,
+      "phase": "expanded_sky",
+      "attempts": 360,
+      "ready": 360,
+      "reconstructed": 360,
+      "fallback": 0,
+      "input_samples": 56,
+      "reasons": {
+        "original_world_positions_full_ps_uv": 360
+      }
+    },
+    {
+      "event": "sky_rebuild_counts",
+      "frame": 420,
+      "phase": "expanded_models",
+      "attempts": 1440,
+      "ready": 1440,
+      "reconstructed": 1440,
+      "fallback": 0,
+      "input_samples": 74,
+      "reasons": {
+        "original_world_positions_full_ps_uv": 1440
+      }
+    }
+  ],
+  "inputs": {
+    "source_samples": 243,
+    "source_payload_bytes": 11299300,
+    "source_sample_counts": {
+      "raster": 56,
+      "baseline_world": 57,
+      "expanded_sky": 56,
+      "expanded_models": 74
+    },
+    "submission_samples": 59,
+    "submission_payload_bytes": 4182512,
+    "submission_by_stage": {
+      "ordinary": {
+        "total": 16,
+        "payload_complete": 13,
+        "payload_omitted": 3
+      },
+      "neko": {
+        "total": 19,
+        "payload_complete": 7,
+        "payload_omitted": 12
+      },
+      "combined": {
+        "total": 24,
+        "payload_complete": 13,
+        "payload_omitted": 11
+      }
+    },
+    "upload_and_binding_verified_samples": 59,
+    "submission_cull_values": {
+      "3": 9,
+      "1": 50
+    },
+    "limits": "bounded unique material samples, not all Draws or entire models; 26 paired payloads intentionally omitted by byte budgets, no archive omissions"
+  },
+  "model_state_audit": {
+    "samples": 86,
+    "by_stage": {
+      "ordinary": 19,
+      "neko": 19,
+      "combined": 24,
+      "recovery": 24
+    },
+    "query_failures": 0,
+    "observed_values": {
+      "7": [
+        1
+      ],
+      "14": [
+        0,
+        1
+      ],
+      "15": [
+        0
+      ],
+      "23": [
+        4
+      ],
+      "27": [
+        0,
+        1
+      ],
+      "28": [
+        0
+      ],
+      "42": [
+        0
+      ],
+      "52": [
+        0
+      ],
+      "168": [
+        7,
+        15
+      ],
+      "195": [
+        0
+      ],
+      "149": [
+        0
+      ],
+      "150": [
+        0
+      ],
+      "169": [
+        0
+      ],
+      "177": [
+        0
+      ],
+      "196": [
+        0
+      ],
+      "197": [
+        0
+      ],
+      "210": [
+        0
+      ],
+      "211": [
+        0
+      ],
+      "212": [
+        0
+      ],
+      "213": [
+        0
+      ],
+      "214": [
+        0
+      ],
+      "215": [
+        0
+      ],
+      "216": [
+        0
+      ],
+      "217": [
+        0
+      ],
+      "218": [
+        0
+      ],
+      "219": [
+        0
+      ],
+      "220": [
+        0
+      ]
+    },
+    "limits": "original state audit; production scope checks before converted Draw and restores afterwards. Numeric CLIPPLANEENABLE is not in saved model_state array; zero checked by conversion gate, no independent numeric plane audit. Zero custom fields exclude an observed nonzero metadata modifier, not all material/lighting causes"
+  },
+  "cpu_replay": {
+    "samples": 134,
+    "valid": 134,
+    "reasons": {
+      "original_world_positions_full_ps_uv": 24,
+      "original_vs_model_matrix": 4,
+      "original_vs_three_weight": 55,
+      "original_vs_neko_three_weight": 51
+    },
+    "scope": "captured input CPU replay, no GPU/BLAS/visibility/performance acceptance"
+  },
+  "paired_original_vs_and_submission_oracle": {
+    "scope": "same-readback-Present original Draw inputs, production CPU output, readback-verified submitted buffers and independent original VS POSITION/UV oracle; not GPU BLAS identity proof",
+    "samples": [
+      {
+        "ordinal": 81437,
+        "frame": 240,
+        "vertices": 815,
+        "reason": "original_vs_model_matrix",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0002602569132914567,
+          0.00012844579936333034
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3094.795351560297,
+            -2534.204755953856,
+            1280.4780055357335
+          ],
+          [
+            -3084.1063132763848,
+            -2530.030926103544,
+            1288.037498106567
+          ]
+        ]
+      },
+      {
+        "ordinal": 81438,
+        "frame": 240,
+        "vertices": 4,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.436776015774967e-05,
+          6.430459709994008e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1283.1754150390625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1283.175537109375
+          ]
+        ]
+      },
+      {
+        "ordinal": 81439,
+        "frame": 240,
+        "vertices": 4,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.5497580697096964e-05,
+          3.357575325546591e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1286.636962890625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1286.6370849609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 81440,
+        "frame": 240,
+        "vertices": 16,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.5497580697096964e-05,
+          6.430459709994008e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1283.1754150390625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1286.6370849609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 81441,
+        "frame": 240,
+        "vertices": 24,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.00019691947603206472,
+          9.327834383787703e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3098.140380859375,
+            -2532.824462890625,
+            1276.475830078125
+          ],
+          [
+            -3079.619873046875,
+            -2510.918212890625,
+            1295.789794921875
+          ]
+        ]
+      },
+      {
+        "ordinal": 81442,
+        "frame": 240,
+        "vertices": 536,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.001484297336700191,
+          0.0007150579446224548
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3229.21533203125,
+            -2244.972412109375,
+            1328.4619140625
+          ],
+          [
+            -3211.722412109375,
+            -2243.654296875,
+            1332.0167236328125
+          ]
+        ]
+      },
+      {
+        "ordinal": 81464,
+        "frame": 240,
+        "vertices": 5899,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          7.05541734546955e-05,
+          2.6875764025380278e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            488.8538818359375,
+            -2209.41943359375,
+            1278.068359375
+          ],
+          [
+            555.7145385742188,
+            -2152.831787109375,
+            1325.9049072265625
+          ]
+        ]
+      },
+      {
+        "ordinal": 81470,
+        "frame": 240,
+        "vertices": 846,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.00022432323381949004,
+          0.0001055929189391902
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3098.839111328125,
+            -2562.067626953125,
+            1278.404052734375
+          ],
+          [
+            -3075.06982421875,
+            -2539.59423828125,
+            1286.062255859375
+          ]
+        ]
+      },
+      {
+        "ordinal": 81471,
+        "frame": 240,
+        "vertices": 822,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0002130844782843866,
+          0.00011230021086938713
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3094.67041015625,
+            -2551.3310546875,
+            1278.721435546875
+          ],
+          [
+            -3079.30810546875,
+            -2544.828369140625,
+            1287.7027587890625
+          ]
+        ]
+      },
+      {
+        "ordinal": 81472,
+        "frame": 240,
+        "vertices": 1693,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.00021531003125296877,
+          0.0001020934418727304
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3098.853759765625,
+            -2562.096923828125,
+            1278.3641357421875
+          ],
+          [
+            -3075.051513671875,
+            -2539.5576171875,
+            1287.74169921875
+          ]
+        ]
+      },
+      {
+        "ordinal": 81479,
+        "frame": 240,
+        "vertices": 566,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.001943689818304506,
+          0.0013206981259061834
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3222.826416015625,
+            -2253.69580078125,
+            1335.3134765625
+          ],
+          [
+            -3222.19287109375,
+            -2225.465576171875,
+            1340.41748046875
+          ]
+        ]
+      },
+      {
+        "ordinal": 81480,
+        "frame": 240,
+        "vertices": 387,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0012211563029040917,
+          0.0005506868327675996
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3222.8994140625,
+            -2267.508544921875,
+            1333.0548095703125
+          ],
+          [
+            -3222.033935546875,
+            -2264.326171875,
+            1333.940673828125
+          ]
+        ]
+      },
+      {
+        "ordinal": 81483,
+        "frame": 240,
+        "vertices": 639,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014929167910482377,
+          0.0007934766418138395
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3227.392822265625,
+            -2244.866943359375,
+            1303.414306640625
+          ],
+          [
+            -3214.261474609375,
+            -2242.373291015625,
+            1329.165283203125
+          ]
+        ]
+      },
+      {
+        "ordinal": 101723,
+        "frame": 300,
+        "vertices": 3179,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014432938473174506,
+          0.0007430827662080475
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3219.887451171875,
+            -2254.52734375,
+            1335.2147216796875
+          ],
+          [
+            -3213.230712890625,
+            -2248.895263671875,
+            1340.3211669921875
+          ]
+        ]
+      },
+      {
+        "ordinal": 101725,
+        "frame": 300,
+        "vertices": 1102,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.001418460029014093,
+          0.0007492270963194159
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3218.598876953125,
+            -2253.39892578125,
+            1337.30224609375
+          ],
+          [
+            -3214.275390625,
+            -2250.156005859375,
+            1339.5103759765625
+          ]
+        ]
+      },
+      {
+        "ordinal": 101727,
+        "frame": 300,
+        "vertices": 15189,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014815256957301237,
+          0.0010457755433623817
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3230.17578125,
+            -2262.94140625,
+            1280.009765625
+          ],
+          [
+            -3211.833740234375,
+            -2243.021484375,
+            1338.9637451171875
+          ]
+        ]
+      },
+      {
+        "ordinal": 101729,
+        "frame": 300,
+        "vertices": 301,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013763750687603715,
+          0.0006651816209513051
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3220.02880859375,
+            -2255.0849609375,
+            1338.50830078125
+          ],
+          [
+            -3213.123291015625,
+            -2248.870849609375,
+            1344.8726806640625
+          ]
+        ]
+      },
+      {
+        "ordinal": 101730,
+        "frame": 300,
+        "vertices": 2053,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0015819256374527413,
+          0.0008017558041362172
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3225.629638671875,
+            -2253.330322265625,
+            1338.4761962890625
+          ],
+          [
+            -3212.84814453125,
+            -2242.234130859375,
+            1346.8175048828125
+          ]
+        ]
+      },
+      {
+        "ordinal": 101732,
+        "frame": 300,
+        "vertices": 1112,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013814064291667316,
+          0.0007480674979132296
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3219.65380859375,
+            -2250.509521484375,
+            1334.488037109375
+          ],
+          [
+            -3218.440673828125,
+            -2249.783203125,
+            1335.4266357421875
+          ]
+        ]
+      },
+      {
+        "ordinal": 101740,
+        "frame": 300,
+        "vertices": 379,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013333826355887979,
+          0.000963297506917371
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3227.659912109375,
+            -2250.856201171875,
+            1302.185546875
+          ],
+          [
+            -3222.545166015625,
+            -2245.24462890625,
+            1305.2147216796875
+          ]
+        ]
+      },
+      {
+        "ordinal": 121997,
+        "frame": 360,
+        "vertices": 815,
+        "reason": "original_vs_model_matrix",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0002602569132914567,
+          0.00012844579936333034
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3094.795351560297,
+            -2534.204755953856,
+            1280.4780055357335
+          ],
+          [
+            -3084.1063132763848,
+            -2530.030926103544,
+            1288.037498106567
+          ]
+        ]
+      },
+      {
+        "ordinal": 121998,
+        "frame": 360,
+        "vertices": 4,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.436776015774967e-05,
+          6.430459709994008e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1283.1754150390625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1283.175537109375
+          ]
+        ]
+      },
+      {
+        "ordinal": 121999,
+        "frame": 360,
+        "vertices": 4,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.5497580697096964e-05,
+          3.357575325546591e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1286.636962890625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1286.6370849609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122000,
+        "frame": 360,
+        "vertices": 16,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.5497580697096964e-05,
+          6.430459709994008e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1283.1754150390625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1286.6370849609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122001,
+        "frame": 360,
+        "vertices": 24,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.00019691947603206472,
+          9.327834383787703e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3098.140380859375,
+            -2532.824462890625,
+            1276.475830078125
+          ],
+          [
+            -3079.619873046875,
+            -2510.918212890625,
+            1295.789794921875
+          ]
+        ]
+      },
+      {
+        "ordinal": 122002,
+        "frame": 360,
+        "vertices": 536,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014187953003456932,
+          0.0007725979388584214
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3229.24072265625,
+            -2245.121337890625,
+            1328.4669189453125
+          ],
+          [
+            -3211.770751953125,
+            -2243.89794921875,
+            1332.1595458984375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122003,
+        "frame": 360,
+        "vertices": 3179,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014170089634168992,
+          0.0008646331726147594
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3219.98193359375,
+            -2254.732177734375,
+            1335.132568359375
+          ],
+          [
+            -3213.279541015625,
+            -2249.074462890625,
+            1340.166259765625
+          ]
+        ]
+      },
+      {
+        "ordinal": 122005,
+        "frame": 360,
+        "vertices": 1102,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013874744340025558,
+          0.0007074340897084141
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3218.688720703125,
+            -2253.58203125,
+            1337.2034912109375
+          ],
+          [
+            -3214.314697265625,
+            -2250.388427734375,
+            1339.38134765625
+          ]
+        ]
+      },
+      {
+        "ordinal": 122009,
+        "frame": 360,
+        "vertices": 301,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.001315230704632131,
+          0.0006837310355112258
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3220.12158203125,
+            -2255.363525390625,
+            1338.3795166015625
+          ],
+          [
+            -3213.187744140625,
+            -2249.148193359375,
+            1344.7218017578125
+          ]
+        ]
+      },
+      {
+        "ordinal": 122010,
+        "frame": 360,
+        "vertices": 2053,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0016185536420643132,
+          0.0008065735295575971
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3225.63427734375,
+            -2253.552734375,
+            1338.4971923828125
+          ],
+          [
+            -3212.8017578125,
+            -2242.551025390625,
+            1346.7095947265625
+          ]
+        ]
+      },
+      {
+        "ordinal": 122011,
+        "frame": 360,
+        "vertices": 1774,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014392633356985485,
+          0.000702472350540273
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3220.592041015625,
+            -2256.97119140625,
+            1343.9444580078125
+          ],
+          [
+            -3210.93798828125,
+            -2248.54638671875,
+            1349.7552490234375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122020,
+        "frame": 360,
+        "vertices": 379,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013518224644903931,
+          0.0009352661816564023
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3227.662841796875,
+            -2250.853515625,
+            1302.161865234375
+          ],
+          [
+            -3222.5478515625,
+            -2245.2421875,
+            1305.1917724609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122021,
+        "frame": 360,
+        "vertices": 270,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013253873990226595,
+          0.0006979181144561863
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3226.537353515625,
+            -2250.677001953125,
+            1302.25830078125
+          ],
+          [
+            -3224.376708984375,
+            -2250.2099609375,
+            1303.54296875
+          ]
+        ]
+      }
+    ],
+    "count": 33,
+    "vertices": 46023,
+    "max_pixel_delta": 0.001943689818304506,
+    "max_uv_abs_error": 0.0
+  },
+  "projection_diagnostics": {
+    "same_readback_subset": {
+      "240": {
+        "submissions": [
+          {
+            "ordinal": 81437,
+            "reason": "original_vs_model_matrix",
+            "vertices": 815,
+            "triangles": 736,
+            "projected_pixels": 36,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                364.7536563462453,
+                183.8910792245472
+              ],
+              [
+                372.2626121902832,
+                189.80031908989275
+              ]
+            ]
+          },
+          {
+            "ordinal": 81438,
+            "reason": "original_vs_three_weight",
+            "vertices": 4,
+            "triangles": 2,
+            "projected_pixels": 2,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                368.3526635225626,
+                186.0825588845584
+              ],
+              [
+                371.4285702702838,
+                186.77617552925292
+              ]
+            ]
+          },
+          {
+            "ordinal": 81439,
+            "reason": "original_vs_three_weight",
+            "vertices": 4,
+            "triangles": 2,
+            "projected_pixels": 1,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                368.4796531108885,
+                183.90037377731264
+              ],
+              [
+                371.56344074587355,
+                184.56757142783061
+              ]
+            ]
+          },
+          {
+            "ordinal": 81440,
+            "reason": "original_vs_three_weight",
+            "vertices": 16,
+            "triangles": 8,
+            "projected_pixels": 9,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                368.3526635225626,
+                183.90037377731264
+              ],
+              [
+                371.56344074587355,
+                186.77617552925292
+              ]
+            ]
+          },
+          {
+            "ordinal": 81441,
+            "reason": "original_vs_three_weight",
+            "vertices": 24,
+            "triangles": 12,
+            "projected_pixels": 152,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                356.73094850371064,
+                179.8463683533861
+              ],
+              [
+                373.3427187684931,
+                193.49101422853195
+              ]
+            ]
+          },
+          {
+            "ordinal": 81442,
+            "reason": "original_vs_three_weight",
+            "vertices": 536,
+            "triangles": 490,
+            "projected_pixels": 608,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                275.124295036901,
+                274.6128046737977
+              ],
+              [
+                340.7779921532031,
+                316.18372466047447
+              ]
+            ]
+          },
+          {
+            "ordinal": 81464,
+            "reason": "original_vs_three_weight",
+            "vertices": 5899,
+            "triangles": 4940,
+            "projected_pixels": 8,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                3.8482597321580414,
+                136.47551258787084
+              ],
+              [
+                12.50341526618925,
+                141.77246233749102
+              ]
+            ]
+          },
+          {
+            "ordinal": 81470,
+            "reason": "original_vs_three_weight",
+            "vertices": 846,
+            "triangles": 846,
+            "projected_pixels": 56,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                365.8498945811231,
+                183.26601670547137
+              ],
+              [
+                381.19328134535095,
+                189.41131328531867
+              ]
+            ]
+          },
+          {
+            "ordinal": 81471,
+            "reason": "original_vs_three_weight",
+            "vertices": 822,
+            "triangles": 604,
+            "projected_pixels": 10,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                367.39218919131383,
+                183.18255082709172
+              ],
+              [
+                376.86687124587905,
+                188.77604099335613
+              ]
+            ]
+          },
+          {
+            "ordinal": 81472,
+            "reason": "original_vs_three_weight",
+            "vertices": 1693,
+            "triangles": 1450,
+            "projected_pixels": 58,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                365.8265988133179,
+                183.16179195082867
+              ],
+              [
+                381.1995240623237,
+                189.436706705961
+              ]
+            ]
+          },
+          {
+            "ordinal": 81479,
+            "reason": "original_vs_three_weight",
+            "vertices": 566,
+            "triangles": 882,
+            "projected_pixels": 836,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                222.65034966966525,
+                254.22851182001943
+              ],
+              [
+                338.71581994764017,
+                318.98817089913143
+              ]
+            ]
+          },
+          {
+            "ordinal": 81480,
+            "reason": "original_vs_three_weight",
+            "vertices": 387,
+            "triangles": 656,
+            "projected_pixels": 10,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                360.0052862376997,
+                245.74768464081225
+              ],
+              [
+                366.88359755980025,
+                248.80645514260468
+              ]
+            ]
+          },
+          {
+            "ordinal": 81483,
+            "reason": "original_vs_three_weight",
+            "vertices": 639,
+            "triangles": 1076,
+            "projected_pixels": 598,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                284.6768710115638,
+                290.23119283440195
+              ],
+              [
+                326.14242266570704,
+                414.6355857743709
+              ]
+            ]
+          }
+        ],
+        "predicted_pixels": 2180,
+        "interior_pixels": 395,
+        "depth_error_quantiles": [
+          -0.036854490987185407,
+          -0.000805108350291146,
+          -0.0002714791313628062,
+          -3.5358552419317846e-06,
+          0.0002739333553113843,
+          0.00034443636519754684,
+          0.04502969086720032
+        ],
+        "depth_within1e_4": 180,
+        "gpu_closer1e_4": 113,
+        "gpu_behind1e_4": 102,
+        "limits": "subset of saved model parts; opaque software projection ignores alpha/cull, pixel jitter/nearest downsample, omitted geometry, and precise depth ownership. Counts are not restored coverage percentages"
+      },
+      "300": {
+        "submissions": [
+          {
+            "ordinal": 101723,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 3179,
+            "triangles": 4650,
+            "projected_pixels": 432,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                296.16688372781783,
+                232.80612733552636
+              ],
+              [
+                329.0968915223081,
+                257.34098287933375
+              ]
+            ]
+          },
+          {
+            "ordinal": 101725,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 1102,
+            "triangles": 1592,
+            "projected_pixels": 71,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                301.8194159070215,
+                237.9350309397613
+              ],
+              [
+                323.84254290908814,
+                247.42607669002186
+              ]
+            ]
+          },
+          {
+            "ordinal": 101727,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 15189,
+            "triangles": 27456,
+            "projected_pixels": 6900,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                287.7352450760287,
+                249.66438583633587
+              ],
+              [
+                361.3788583055376,
+                477.7887017013345
+              ]
+            ]
+          },
+          {
+            "ordinal": 101729,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 301,
+            "triangles": 299,
+            "projected_pixels": 394,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                295.3619575969082,
+                213.76182888599104
+              ],
+              [
+                329.6730710471933,
+                240.53483112420952
+              ]
+            ]
+          },
+          {
+            "ordinal": 101730,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 2053,
+            "triangles": 3124,
+            "projected_pixels": 296,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                280.23457465549967,
+                212.49463639505018
+              ],
+              [
+                339.93034172971255,
+                253.21637776687908
+              ]
+            ]
+          },
+          {
+            "ordinal": 101732,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 1112,
+            "triangles": 508,
+            "projected_pixels": 5,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                314.83620794839914,
+                261.0644281672563
+              ],
+              [
+                319.3389834040037,
+                264.0211997682937
+              ]
+            ]
+          },
+          {
+            "ordinal": 101740,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 379,
+            "triangles": 582,
+            "projected_pixels": 136,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                320.8452388994898,
+                376.04912985294766
+              ],
+              [
+                342.76113683443623,
+                401.85950778682803
+              ]
+            ]
+          }
+        ],
+        "predicted_pixels": 7969,
+        "interior_pixels": 5772,
+        "depth_error_quantiles": [
+          -0.06809650759753316,
+          -0.06637327283608561,
+          -0.043555729304140346,
+          -0.03143769526081114,
+          -0.01209850274743531,
+          3.353244639531049e-06,
+          0.004755759588552011
+        ],
+        "depth_within1e_4": 53,
+        "gpu_closer1e_4": 5694,
+        "gpu_behind1e_4": 25,
+        "limits": "subset of saved model parts; opaque software projection ignores alpha/cull, pixel jitter/nearest downsample, omitted geometry, and precise depth ownership. Counts are not restored coverage percentages"
+      },
+      "360": {
+        "submissions": [
+          {
+            "ordinal": 121997,
+            "reason": "original_vs_model_matrix",
+            "vertices": 815,
+            "triangles": 736,
+            "projected_pixels": 36,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                364.7536563462453,
+                183.8910792245472
+              ],
+              [
+                372.2626121902832,
+                189.80031908989275
+              ]
+            ]
+          },
+          {
+            "ordinal": 121998,
+            "reason": "original_vs_three_weight",
+            "vertices": 4,
+            "triangles": 2,
+            "projected_pixels": 2,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                368.3526635225626,
+                186.0825588845584
+              ],
+              [
+                371.4285702702838,
+                186.77617552925292
+              ]
+            ]
+          },
+          {
+            "ordinal": 121999,
+            "reason": "original_vs_three_weight",
+            "vertices": 4,
+            "triangles": 2,
+            "projected_pixels": 1,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                368.4796531108885,
+                183.90037377731264
+              ],
+              [
+                371.56344074587355,
+                184.56757142783061
+              ]
+            ]
+          },
+          {
+            "ordinal": 122000,
+            "reason": "original_vs_three_weight",
+            "vertices": 16,
+            "triangles": 8,
+            "projected_pixels": 9,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                368.3526635225626,
+                183.90037377731264
+              ],
+              [
+                371.56344074587355,
+                186.77617552925292
+              ]
+            ]
+          },
+          {
+            "ordinal": 122001,
+            "reason": "original_vs_three_weight",
+            "vertices": 24,
+            "triangles": 12,
+            "projected_pixels": 152,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                356.73094850371064,
+                179.8463683533861
+              ],
+              [
+                373.3427187684931,
+                193.49101422853195
+              ]
+            ]
+          },
+          {
+            "ordinal": 122002,
+            "reason": "original_vs_three_weight",
+            "vertices": 536,
+            "triangles": 490,
+            "projected_pixels": 621,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                276.1607379329067,
+                273.61077666704824
+              ],
+              [
+                341.05365839652393,
+                316.53647602256643
+              ]
+            ]
+          },
+          {
+            "ordinal": 122003,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 3179,
+            "triangles": 4650,
+            "projected_pixels": 427,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                297.04582923737115,
+                232.9396274616441
+              ],
+              [
+                329.9057135602768,
+                257.48446238317865
+              ]
+            ]
+          },
+          {
+            "ordinal": 122005,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 1102,
+            "triangles": 1592,
+            "projected_pixels": 69,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                302.6515882495279,
+                237.9690258006802
+              ],
+              [
+                324.5901826012291,
+                247.60565791738318
+              ]
+            ]
+          },
+          {
+            "ordinal": 122009,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 301,
+            "triangles": 299,
+            "projected_pixels": 391,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                296.2764353811078,
+                214.06587469279822
+              ],
+              [
+                330.4402446344343,
+                240.78282034502
+              ]
+            ]
+          },
+          {
+            "ordinal": 122010,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 2053,
+            "triangles": 3124,
+            "projected_pixels": 293,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                280.9647400032339,
+                212.0116208558732
+              ],
+              [
+                340.42019987930576,
+                253.34219261561816
+              ]
+            ]
+          },
+          {
+            "ordinal": 122011,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 1774,
+            "triangles": 2744,
+            "projected_pixels": 606,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                293.09410757689074,
+                193.14418028396284
+              ],
+              [
+                334.0577385610297,
+                222.67043084208643
+              ]
+            ]
+          },
+          {
+            "ordinal": 122020,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 379,
+            "triangles": 582,
+            "projected_pixels": 132,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                320.84908789792934,
+                376.13521654001903
+              ],
+              [
+                342.76280745469364,
+                401.94865646973705
+              ]
+            ]
+          },
+          {
+            "ordinal": 122021,
+            "reason": "original_vs_neko_three_weight",
+            "vertices": 270,
+            "triangles": 476,
+            "projected_pixels": 8,
+            "triangles_over1000px": 0,
+            "pixel_bounds": [
+              [
+                334.3240973448656,
+                381.4132618321847
+              ],
+              [
+                341.3695175893276,
+                387.5895553237546
+              ]
+            ]
+          }
+        ],
+        "predicted_pixels": 2615,
+        "interior_pixels": 799,
+        "depth_error_quantiles": [
+          -0.045562977742169,
+          -0.04131475887583522,
+          -0.028257881702977893,
+          -0.0162096763320696,
+          -1.5384390770689638e-05,
+          5.673124989160838e-05,
+          9.872402873079e-05
+        ],
+        "depth_within1e_4": 154,
+        "gpu_closer1e_4": 645,
+        "gpu_behind1e_4": 0,
+        "limits": "subset of saved model parts; opaque software projection ignores alpha/cull, pixel jitter/nearest downsample, omitted geometry, and precise depth ownership. Counts are not restored coverage percentages"
+      }
+    },
+    "earlier_full_neko": {
+      "inputs": 21,
+      "vertices": 74742,
+      "projected_pixels": 16914,
+      "result": "coherent character silhouette, no large left strip",
+      "limits": "earlier pose near181, not same-Present300 proof; opaque projection ignores alpha/cull and occlusion. Omitted paired300 parts prevent full same-frame input exclusion"
+    }
+  },
+  "backend_investigation": {
+    "pinned_runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "verified_boundary": "original source -> CPU position/UV -> readback-verified owned VB/IB and binding on recorded model Draws",
+    "remaining_candidates": [
+      "backend draw-call geometry/cache and instance reuse across model-stage changes",
+      "effective Neko material and diagnostic-light interaction, including history"
+    ],
+    "source_findings": [
+      "enablePreservePath defaults true and reuses unchanged Draw translations; disabling is a targeted control, not a Source threading restriction",
+      "geometry cache reuses topology buckets using position/bone/material matches; lookup and dirty tracking are candidates to instrument, no faulty entry identified in this capture"
+    ],
+    "root_cause": "unresolved: cache/instance/material candidates, not proof of exposure-only, original VS math error or driver defect",
+    "limits": "capture does not read back GPU BLAS/TLAS, backend instance identity or full effective PBR material"
+  },
+  "exit": {
+    "capture_complete": true,
+    "client_and_host_clean_terminate_in_logs": true,
+    "prior_execute_av_not_observed": true,
+    "backend_cleanup_warning": "[40] common device objects were not disposed of.",
+    "limits": "this run only; clean Bridge log is not proof all backend resources disposed or all shutdown faults resolved"
+  },
+  "next_combined_step": [
+    "Keep combined mode as readable image baseline, retain ordinary/Neko-only/recovery controls in one F9 run.",
+    "Prioritize backend geometry/instance reuse and preserve-path control, correlate a bounded set of Neko instances and effective material with the anomalous strip.",
+    "Include bounded diagnostic light/material controls and color/depth/normal acceptance in that same build, without arbitrary global exposure reduction.",
+    "Use current capture first; no unchanged v14 recollection needed."
+  ],
+  "delivery": "analysis and documentation only; no new binary in this review",
+  "unaccepted": [
+    "stable Neko-only geometry and color",
+    "full Toon/PBR and original lighting",
+    "full static map and all characters/weapons",
+    "Source parallel preparation",
+    "production performance",
+    "backend resource cleanup"
+  ]
+}
