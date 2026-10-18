@@ -134,6 +134,7 @@ int main(int argc, char** argv) {
         device.declaration.elements=originalDeclaration;device.stride=48;device.depth=device.depthWrite=1;
       }
       ldb_rt_host::present(8,uid++,S_OK);
+      require(ldb_rt::world_runtime::state().presents==frame+1,"world submission/readback frame identity lost");
     }
     require(!requested && requestsOn==1 && requestsOff==1 && !ldb_rt::world_runtime::state().active,"capture end must request raster restoration exactly once");
     ++s.ordinal;s.materialInfo.format=0x480003;s.maxZ=1;device.viewport.MaxZ=1;

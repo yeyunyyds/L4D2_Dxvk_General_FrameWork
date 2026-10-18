@@ -133,6 +133,7 @@ public:
   void present(uint32_t uid, HRESULT result) {
     if (finished) { return; } Writer w; w.u32(uint32_t(result)); record(3, uid, w.data);
     if (SUCCEEDED(result)) { ++presents; } else { ++failures; }
+    if (request.world) { world_runtime::state().presents=presents; }
     if (request.world && world_runtime::state().active && world_runtime::state().capture && nativeDevice &&
         world_diagnostics::readback(presents)) { world_runtime::state().capture(nativeDevice, presents); }
     trace.flush(); if (presents >= (request.world ? world_diagnostics::kCoveragePresents : 120u)) { finish(0); }

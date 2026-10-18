@@ -258,7 +258,7 @@ void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
   if (modelStateCounts[stage]>=24 || !modelStateSampled.insert({stage,s.material}).second) { return; }++modelStateCounts[stage];
   const unsigned names[]={7,14,15,23,24,25,27,28,42,52,137,149,150,168,169,174,175,177,195,196,197,206,210,211,212,213,214,215,216,217,218,219,220};
   events << "{\"event\":\"model_state_sample\",\"ordinal\":" << s.ordinal << ",\"material\":" << s.material
-    << ",\"model_stage\":\"" << world_diagnostics::name(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data() << "\",\"states\":[";
+    << ",\"frame\":" << state().presents+1 << ",\"model_stage\":\"" << world_diagnostics::name(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data() << "\",\"states\":[";
   for (unsigned i=0;i<sizeof(names)/sizeof(names[0]);++i) {
     DWORD value=0;const auto hr=device->GetRenderState(D3DRENDERSTATETYPE(names[i]),&value);
     if (i) { events << ','; }events << "{\"state\":" << names[i] << ",\"value\":" << value << ",\"hresult\":" << uint32_t(hr) << '}';
@@ -267,11 +267,13 @@ void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
 }
 void modelPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& prepared,const scene_input::Data& input,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) {
   const auto stage=unsigned(comparison.models());
+  const auto frame=state().presents+1;
+  if (frame!=240 && frame!=300 && frame!=360) { return; }
   if (modelSampleCounts[stage]>=24 || !modelSampled.insert({stage,s.material}).second) { return; }++modelSampleCounts[stage];
   std::ostringstream log;log << std::setprecision(9);
   log << "{\"event\":\"model_rebuild_sample\",\"phase\":\"" << world_diagnostics::name(comparison.phase()) << "\",\"model_stage\":\""
     << world_diagnostics::name(comparison.models()) << "\",\"ordinal\":" << s.ordinal
-    << ",\"material\":" << s.material << ",\"reason\":\"" << prepared.reason << "\",\"rebuilt_stride\":" << prepared.stride
+    << ",\"frame\":" << frame << ",\"material\":" << s.material << ",\"reason\":\"" << prepared.reason << "\",\"rebuilt_stride\":" << prepared.stride
     << ",\"rebuilt_vertex_bytes\":" << prepared.bytes.size() << ",\"upload_verified\":" << (prepared.uploadVerified?"true":"false")
     << ",\"binding_verified\":true,\"owned_draw\":true,\"index_bytes\":" << prepared.indexBytes << ",\"draw_args\":[";
   for (unsigned i=0;i<6;++i) { if (i) { log << ','; }log << prepared.drawArgs[i]; }
@@ -307,10 +309,12 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
     if (device!=registered || !raytracingRequested) { return false; }
     auto& counts=modelCounts[size_t(comparison.phase())];++counts.attempts;
     const bool included=world_diagnostics::includeModel(comparison.models(),bulk_static::customModel(s));
-    if (included || comparison.models()==world_diagnostics::ModelStage::Recovery) { modelState(device,s); }
+    const auto frame=state().presents+1;
+    const bool imageFrame=frame==240 || frame==300 || frame==360;
+    if ((imageFrame && included) || frame==420) { modelState(device,s); }
     scene_input::Data sourceEvidence;
     const auto stage=unsigned(comparison.models());
-    const bool paired=modelSampleCounts[stage]<24 && !modelSampled.count({stage,s.material});
+    const bool paired=imageFrame && modelSampleCounts[stage]<24 && !modelSampled.count({stage,s.material});
     auto prepared=[&] { if (included) { return model_input::prepare(device,s,kind,type,args,paired?&sourceEvidence:nullptr); }
       scene_input::Prepared disabled;disabled.reason="model_stage_excluded";return disabled; }();
     ++counts.reasons[prepared.reason];if (prepared.ready) { ++counts.ready; }

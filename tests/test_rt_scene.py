@@ -105,7 +105,7 @@ class SceneEvidence(unittest.TestCase):
  def test_v14_compact_submission_hash_indices_and_binding_proof(self):
   with tempfile.TemporaryDirectory() as temporary:
    root=Path(temporary);raw={'vertices.bin':struct.pack('<8f',1,2,3,.2,.3,0,0,0)*3,'indices.bin':struct.pack('<3H',0,1,2),'source-vertices.bin':bytes(96),'source-indices.bin':struct.pack('<3H',3,4,5),'vs.bin':struct.pack('<2I',0xfffe0300,0xffff),'ps.bin':struct.pack('<2I',0xffff0300,0xffff),'constants.bin':bytes(4096),'declaration.bin':bytes.fromhex('000000000200000000000c0001000500ff00000011000000')}
-   sample=dict(ordinal=10,model_stage='ordinary',upload_verified=True,binding_verified=True,owned_draw=True,payload_omitted=False,rebuilt_vertex_bytes=96,index_bytes=2,draw_args=[0,0,3,0,1,0],kind=2,topology=4,original_args=[2,3,3,7,1,0],source_first=5,source_count=3,source_stride=32,files=[])
+   sample=dict(ordinal=10,frame=240,model_stage='ordinary',upload_verified=True,binding_verified=True,owned_draw=True,payload_omitted=False,rebuilt_vertex_bytes=96,index_bytes=2,draw_args=[0,0,3,0,1,0],kind=2,topology=4,original_args=[2,3,3,7,1,0],source_first=5,source_count=3,source_stride=32,files=[])
    for suffix,data in raw.items():
     name='model-10-'+suffix;(root/name).write_bytes(data);sample['files'].append(dict(file=name,size=len(data),sha256=hashlib.sha256(data).hexdigest()))
    errors=[];self.assertEqual(verify_model_payloads(root,[sample],errors),sum(map(len,raw.values())));self.assertEqual(errors,[])

@@ -16,6 +16,7 @@ struct State {
   bool (*model)(IDirect3DDevice9*, const draw_observe::Snapshot&, uint32_t, D3DPRIMITIVETYPE, const std::array<uint32_t,6>&, static_draw::Report&, bool&, HRESULT&, HRESULT&) noexcept = nullptr;
   bool (*scene)(IDirect3DDevice9*, const draw_observe::Snapshot&, uint32_t, D3DPRIMITIVETYPE, const std::array<uint32_t,6>&, static_draw::Report&, bool&, HRESULT&, HRESULT&) noexcept = nullptr;
   bool (*overlay)(IDirect3DDevice9*, const draw_observe::Snapshot&, D3DPRIMITIVETYPE, bool, static_draw::Report&, HRESULT&) noexcept = nullptr;
+  uint64_t presents = 0;
 };
 inline State& state() { static State value; return value; }
 HMODULE load(const draw_observe::Request& request) noexcept;

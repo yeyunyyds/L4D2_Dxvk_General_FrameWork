@@ -98,7 +98,7 @@ def package(source,output,python_package):
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
               'model_rebuild':'audited_full_vs_matrix_proof_rigid_or_three_weight_palette_with_complete_morph_position',
               'model_submission':'compact_owned_readable_default_vb_ib_readback_and_binding_verified; remix_staging_copy',
-              'model_input_pairs':'same_draw_original_geometry_vs_ps_constants_declaration_morph_and_owned_payload',
+              'model_input_pairs':'readback_present_draw_original_geometry_vs_ps_constants_declaration_morph_and_owned_payload',
               'model_stage_readbacks':{240:'ordinary',300:'neko',360:'combined',420:'recovery'},
               'model_payload_limits_kib':{'ordinary':1024,'neko':2048,'combined':1024},
               'model_special_passes':'reject_stencil_user_clip_partial_rgb_and_non_less_depth',

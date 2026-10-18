@@ -167,6 +167,7 @@ def verify_model_payloads(directory,samples,errors):
         try:
             stage=e['model_stage']
             if stage not in ('ordinary','neko','combined') or any(e.get(k) is not True for k in ('upload_verified','binding_verified','owned_draw')):raise ValueError('unverified_model_submission')
+            if e.get('frame')!={'ordinary':240,'neko':300,'combined':360}[stage]:raise ValueError('model_submission_readback_frame_mismatch')
             payload={}
             for item in e['files']:
                 name=item['file'];path=directory/name
