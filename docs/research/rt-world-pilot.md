@@ -2,7 +2,7 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/c557e24718f780d7dca0727135fb413e5f6e152b/downloads/rt-world-pilot-dev.zip)。当前为 [v11 原模型变换与天空接口合并修正](rt-world-v11-inputs.md)，构建 `ed656a6cdeb68b8ec439046a93e85575949a2f69`，包大小 11,940,088 字节，SHA256 `f9c8728c10b7d004a9cb37b3501f75581d5a554c643ef0683494b4ccc8676379`。固定发布树的全部成员、配套PE架构/身份、源码收据和脚本已独立核验；[验证记录](../../research/rt-world-pilot-v11-validation.json) 包含Windows双架构原生检查、固定DLL/API加载和两架构fixture重析。48份完整实际输入的CPU回归及六轮共587,528 Draw兼容性回归通过；本版B580最终图像、覆盖和遮挡仍待一次F9实机验收。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/c557e24718f780d7dca0727135fb413e5f6e152b/downloads/rt-world-pilot-dev.zip)。当前为 [v11 原模型变换与天空接口合并修正](rt-world-v11-inputs.md)，构建 `ed656a6cdeb68b8ec439046a93e85575949a2f69`，包大小 11,940,088 字节，SHA256 `f9c8728c10b7d004a9cb37b3501f75581d5a554c643ef0683494b4ccc8676379`。固定发布树的全部成员、配套PE架构/身份、源码收据和脚本已独立核验；[验证记录](../../research/rt-world-pilot-v11-validation.json) 包含Windows双架构原生检查、固定DLL/API加载和两架构fixture重析。48份完整实际输入的CPU回归及六轮共587,528 Draw兼容性回归通过；本版已完成[一次 F9 的 B580 实机复核](rt-world-204924-result.md)：部分模型具备颜色/深度/法线对应，天空仍因三面的齐次 w 精度门槛整体回退 v8；完整场景、武器/人物和 Source 并行仍未验收。
 
 此前 [v10 实机复核](rt-world-191200-result.md) 确认采集完整、原世界/HUD保留，但静态模型扩展未通过；实际输入定位到原VS模型摆放变换遗漏，以及天空多组UV和大坐标精度问题。v11据此合并修正并交付，不再要求原样重采。
 

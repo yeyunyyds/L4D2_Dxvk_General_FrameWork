@@ -1,0 +1,452 @@
+{
+  "schema": 1,
+  "scope": "v11 actual B580 capture; partial model image acceptance; sky rebuild rejected; not whole-map or performance acceptance",
+  "archive": {
+    "filename": "rt-world-20261017-204924-e335726d.zip",
+    "bytes": 10309062,
+    "sha256": "1063b1b97aad0ea90b4c629fe2aeb65201bed507fe76d80e73100db43f5ac858",
+    "members": 1045,
+    "expanded_bytes": 106430871,
+    "crc": "pass",
+    "duplicate_or_unsafe_paths": false,
+    "omitted": []
+  },
+  "identity": {
+    "build": "ldb-rt-observer+4da2cbaa992b55ba",
+    "source": "ed656a6cdeb68b8ec439046a93e85575949a2f69",
+    "installed_hashes_match": true,
+    "both_log_identities_match": true
+  },
+  "independent_reports_match": true,
+  "all_12_previews_match_raw": true,
+  "report_sha256": {
+    "draw": "8580b450e3243ae3bb8b2e8c3a706f94e7c47d4e447abceb841a7d177975a705",
+    "world": "7997af51a376a275651384a01c31de3859cfdde33f65042f6f2dad8f6339b9c7",
+    "scene": "914ea72c1c0fd307efe9cbc14f7867f7b1d2b4889b721998f3a3f42a71b02124"
+  },
+  "trace": {
+    "draws": 78472,
+    "valid": 78472,
+    "presents": 240,
+    "resets": 0,
+    "failures": 0,
+    "unobserved": 0,
+    "reason": 0
+  },
+  "conversions": {
+    "reports": 78472,
+    "converted": 7710,
+    "hud_replaced": 210,
+    "sky_converted": 720,
+    "bulk_static_converted": 480
+  },
+  "stages": {
+    "raster": {
+      "draws": 9802,
+      "physical_draw_calls": 9802
+    },
+    "baseline_world": {
+      "draws": 29430,
+      "physical_draw_calls": 29340,
+      "world": 2790,
+      "hud_replaced": 90
+    },
+    "expanded_sky": {
+      "draws": 19620,
+      "physical_draw_calls": 19560,
+      "sky": 360,
+      "world": 1860,
+      "hud_replaced": 60
+    },
+    "expanded_models": {
+      "draws": 19620,
+      "physical_draw_calls": 19560,
+      "sky": 360,
+      "world": 1860,
+      "bulk_static": 480,
+      "hud_replaced": 60
+    }
+  },
+  "same_camera": {
+    "present": true,
+    "revision": 11,
+    "phases": {
+      "30": "raster",
+      "120": "baseline_world",
+      "180": "expanded_sky",
+      "240": "expanded_models"
+    },
+    "hud_injection_attempts": 210,
+    "hud_post_replacements": 210,
+    "hud_phase_counts": {
+      "baseline_world": 90,
+      "expanded_sky": 60,
+      "expanded_models": 60
+    },
+    "camera_comparisons": [
+      {
+        "frame": 180,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      },
+      {
+        "frame": 240,
+        "camera_sample_available": true,
+        "max_matrix_delta": 0.0,
+        "matched_within_1e_4": true
+      }
+    ],
+    "same_camera_at_readbacks": true,
+    "limits": "native UI trigger and post replacement require actual image review; weapons/skinning unimplemented"
+  },
+  "material_audit": {
+    "samples": 103,
+    "counts": {
+      "baseline_world": 28,
+      "expanded_sky": 34,
+      "expanded_models": 41
+    },
+    "per_phase_limit": 64,
+    "status": "samples_available",
+    "texture_stage_fields": [
+      "COLOROP",
+      "COLORARG1",
+      "COLORARG2",
+      "ALPHAOP",
+      "ALPHAARG1",
+      "ALPHAARG2",
+      "TEXCOORDINDEX",
+      "TEXTURETRANSFORMFLAGS",
+      "RESULTARG"
+    ],
+    "render_state_fields": [
+      "TEXTUREFACTOR",
+      "LIGHTING",
+      "COLORVERTEX",
+      "DIFFUSEMATERIALSOURCE",
+      "AMBIENTMATERIALSOURCE",
+      "AMBIENT",
+      "FOGENABLE",
+      "SRGBWRITEENABLE"
+    ],
+    "query_failures": 0,
+    "category_query_failures": 0,
+    "cull_query_failures": 0,
+    "limits": "first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials"
+  },
+  "scene_input": {
+    "counts": {
+      "raster": 24,
+      "baseline_world": 24,
+      "expanded_sky": 24,
+      "expanded_models": 24
+    },
+    "payload_bytes": 1429552,
+    "geometry": {
+      "complete": 52,
+      "vertex_budget": 36,
+      "index_budget": 8
+    }
+  },
+  "model": {
+    "counters": {
+      "event": "model_rebuild_counts",
+      "frame": 240,
+      "phase": "expanded_models",
+      "attempts": 1440,
+      "ready": 420,
+      "reconstructed": 420,
+      "fallback": 1020,
+      "reasons": {
+        "index_budget": 120,
+        "model_not_rigid_bone_zero": 240,
+        "model_pipeline_unsupported": 240,
+        "original_vs_model_matrix": 60,
+        "original_vs_rigid_bone_zero": 360,
+        "unknown_model_program": 240,
+        "vertex_budget": 180
+      }
+    },
+    "successful_samples": [
+      {
+        "event": "model_rebuild_sample",
+        "phase": "expanded_models",
+        "ordinal": 58894,
+        "material": 1219180308,
+        "reason": "original_vs_model_matrix",
+        "rebuilt_stride": 32,
+        "rebuilt_vertex_bytes": 26080,
+        "applied_world": [
+          -0.999939203,
+          0.0107848244,
+          -0.002305259,
+          0,
+          -0.00250330009,
+          -0.0183856282,
+          0.999827921,
+          0,
+          0.0107405838,
+          0.999772847,
+          0.0184115078,
+          0,
+          -3089.37573,
+          -2532,
+          1280.46777,
+          1
+        ]
+      },
+      {
+        "event": "model_rebuild_sample",
+        "phase": "expanded_models",
+        "ordinal": 58895,
+        "material": 1219177876,
+        "reason": "original_vs_rigid_bone_zero",
+        "rebuilt_stride": 32,
+        "rebuilt_vertex_bytes": 128,
+        "applied_world": [
+          -1,
+          2.8173115e-06,
+          -2.86102295e-06,
+          0,
+          -2.81731241e-06,
+          -1,
+          -4.45445494e-06,
+          0,
+          -2.86102181e-06,
+          -4.45445494e-06,
+          1,
+          0,
+          -3087.84375,
+          -2539.84375,
+          1284.90625,
+          1
+        ]
+      },
+      {
+        "event": "model_rebuild_sample",
+        "phase": "expanded_models",
+        "ordinal": 58896,
+        "material": 1219177724,
+        "reason": "original_vs_rigid_bone_zero",
+        "rebuilt_stride": 32,
+        "rebuilt_vertex_bytes": 128,
+        "applied_world": [
+          -1,
+          2.8173115e-06,
+          -2.86102295e-06,
+          0,
+          -2.81731241e-06,
+          -1,
+          -4.45445494e-06,
+          0,
+          -2.86102181e-06,
+          -4.45445494e-06,
+          1,
+          0,
+          -3087.84375,
+          -2539.84375,
+          1284.90625,
+          1
+        ]
+      },
+      {
+        "event": "model_rebuild_sample",
+        "phase": "expanded_models",
+        "ordinal": 58897,
+        "material": 1219177572,
+        "reason": "original_vs_rigid_bone_zero",
+        "rebuilt_stride": 32,
+        "rebuilt_vertex_bytes": 512,
+        "applied_world": [
+          -1,
+          2.8173115e-06,
+          -2.86102295e-06,
+          0,
+          -2.81731241e-06,
+          -1,
+          -4.45445494e-06,
+          0,
+          -2.86102181e-06,
+          -4.45445494e-06,
+          1,
+          0,
+          -3087.84375,
+          -2539.84375,
+          1284.90625,
+          1
+        ]
+      },
+      {
+        "event": "model_rebuild_sample",
+        "phase": "expanded_models",
+        "ordinal": 58898,
+        "material": 1219172860,
+        "reason": "original_vs_rigid_bone_zero",
+        "rebuilt_stride": 32,
+        "rebuilt_vertex_bytes": 768,
+        "applied_world": [
+          0.978525639,
+          -0.206064939,
+          0.00497463066,
+          0,
+          0.189465418,
+          0.908681691,
+          0.372022063,
+          0,
+          -0.0811810642,
+          -0.363090575,
+          0.928210557,
+          0,
+          -3097.59375,
+          -2526.75,
+          1284.34375,
+          1
+        ]
+      },
+      {
+        "event": "model_rebuild_sample",
+        "phase": "expanded_models",
+        "ordinal": 58935,
+        "material": 891939948,
+        "reason": "original_vs_rigid_bone_zero",
+        "rebuilt_stride": 32,
+        "rebuilt_vertex_bytes": 27072,
+        "applied_world": [
+          0.0107599199,
+          0.999788225,
+          0.0175458174,
+          0,
+          -0.0510912016,
+          -0.0169742294,
+          0.998549879,
+          0,
+          0.998636067,
+          -0.0116407992,
+          0.0508977361,
+          0,
+          -3090.6709,
+          -2551.85449,
+          1282.47192,
+          1
+        ]
+      }
+    ],
+    "visual": "partial foreground props/sign surfaces reappear at original location; weapon/hands and other models missing",
+    "roi": {
+      "x_half_open": [
+        330,
+        395
+      ],
+      "y_half_open": [
+        185,
+        235
+      ],
+      "common_depth_hits": 3250,
+      "new_closer_depth_gt_1e4": 267,
+      "closer_and_normal_angle_gt_5deg": 266,
+      "closer_depth_delta_median": 0.007596313953399658,
+      "closer_normal_angle_median_degrees": 78.11479190869103,
+      "limits": "projected z/w; reduced 640x400; excludes invalid/miss; does not attribute individual triangles or prove full object coverage"
+    }
+  },
+  "sky": {
+    "counters": {
+      "event": "sky_rebuild_counts",
+      "frame": 240,
+      "phase": "expanded_models",
+      "attempts": 360,
+      "ready": 0,
+      "reconstructed": 0,
+      "fallback": 360,
+      "input_samples": 24,
+      "reasons": {
+        "sky_set_not_fully_supported": 360
+      }
+    },
+    "preflight_expanded_sky": [
+      {
+        "ordinal": 39236,
+        "material": 1219261020,
+        "reason": "varying_homogeneous_scale"
+      },
+      {
+        "ordinal": 39237,
+        "material": 1219261324,
+        "reason": "original_world_positions_full_ps_uv"
+      },
+      {
+        "ordinal": 39238,
+        "material": 1219261172,
+        "reason": "varying_homogeneous_scale"
+      },
+      {
+        "ordinal": 39239,
+        "material": 1219261476,
+        "reason": "original_world_positions_full_ps_uv"
+      },
+      {
+        "ordinal": 39240,
+        "material": 1219261628,
+        "reason": "varying_homogeneous_scale"
+      },
+      {
+        "ordinal": 39241,
+        "material": 1219261780,
+        "reason": "original_world_positions_full_ps_uv"
+      }
+    ],
+    "diagnosis": "3/6 faces fail sameProjection w-relative guard, then inverse path varying_homogeneous_scale; all six deliberately fall back to v8",
+    "failed_vertex_error": {
+      "all_clip_components_common_scale": 5.17589e-08,
+      "w_relative": 2.35399e-06,
+      "w_relative_limit": 2e-06,
+      "source": "temporary diagnostic runner executes production evaluateAll and sameProjection on captured bytes; unchanged production header"
+    },
+    "visual": "180/240 sky remains stretched relative to raster30"
+  },
+  "cpu_replay": {
+    "sample_count": 44,
+    "results": [
+      {
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "count": 12
+      },
+      {
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "count": 4
+      },
+      {
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "count": 16
+      },
+      {
+        "kind": 0,
+        "valid": false,
+        "reason": "varying_homogeneous_scale",
+        "count": 12
+      }
+    ],
+    "all_inputs_reconstructed": false,
+    "uv_independent_check": "12 successful sky inputs only; no acceptance for 12 rejected sky inputs"
+  },
+  "shutdown": {
+    "capture_complete": true,
+    "host_clean_terminate": true,
+    "client_after_cleanup_av": "execute 0x104b0; necola.dll+0x1447fc/+0x1448de in stack; root module not established"
+  },
+  "next": "correct sky rounding guard using bounded clip equivalence and add this new camera as regression; expand known rigid geometry budgets with indexed compaction; retain one F9/one ZIP; do not request identical recollection",
+  "unaccepted": [
+    "whole map coverage",
+    "arbitrary skinning and weapons",
+    "PBR and original lighting",
+    "Source preparation parallelism",
+    "production performance"
+  ]
+}
