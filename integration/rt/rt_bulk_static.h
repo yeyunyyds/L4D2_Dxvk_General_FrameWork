@@ -17,13 +17,16 @@ inline bool affine(const std::array<float,16>& m) noexcept {
     double(m[1])*(double(m[4])*m[10]-double(m[6])*m[8])+double(m[2])*(double(m[4])*m[9]-double(m[5])*m[8]);
   return det>1e-8 && det<1e12;
 }
-inline bool candidate(const draw_observe::Snapshot& s) noexcept {
+inline bool mainCamera(const draw_observe::Snapshot& s) noexcept {
   if (s.status!=draw_observe::Status::Valid || !s.material || !s.materialTable || s.materialInfo.flags!=3 ||
-      !family(s.materialInfo.shader.data()) || !affine(s.world) || !scene_draw::rigid(s.view) || !invertible(s.projection) ||
+      !affine(s.world) || !scene_draw::rigid(s.view) || !invertible(s.projection) ||
       s.viewport[0] || s.viewport[1] || !s.viewport[2] || !s.viewport[3] || s.minZ!=0 || s.maxZ!=1) { return false; }
   const auto& p=s.projection;
   return std::abs(p[11]+1)<=1e-5f && std::abs(p[15])<=1e-5f && p[0]>0 && p[5]>0 && p[10]<-1 && p[14]/p[10]>=4 && p[14]/p[10]<=32;
 }
+inline bool candidate(const draw_observe::Snapshot& s) noexcept { return family(s.materialInfo.shader.data()) && mainCamera(s); }
+// These custom programs are captured for audit only, never normalized by name.
+inline bool auditOnly(const draw_observe::Snapshot& s) noexcept { return !std::strcmp(s.materialInfo.shader.data(),"NekoToon") && mainCamera(s); }
 inline unsigned elementBytes(BYTE type) noexcept {
   switch (type) {
     case D3DDECLTYPE_FLOAT1:return 4;case D3DDECLTYPE_FLOAT2:return 8;

@@ -50,6 +50,29 @@ int main() {
   for (unsigned i=1;i<5;++i) { require(std::abs(rebuilt.vertices[0][3+4*i]-(texcoords[0][0]+c[6+i][0]))<1e-6,"extra UV output lost"); }
   auto missing=interface;missing.masks[7]=3;require(!rebuild(program,missing,c,positions,texcoords,view,projection).valid,"undefined PS interpolant accepted");
   auto wrong=c;wrong[3][2]*=2;require(!rebuild(program,interface,wrong,positions,texcoords,view,projection).valid,"nonuniform homogeneous warp accepted");
+  // Actual 204924 camera: clip.w cancellation fails the old per-vertex
+  // relative test although each VS coefficient is the stored main VP product.
+  view={-.622058868f,.111499012f,-.774990797f,0,-.782970488f,-.0885843709f,.61571914f,0,-8.71951101e-18f,.98980844f,.142405123f,0,-3834.6123f,-1166.54065f,-1315.81934f,1};
+  projection={.737271011f,0,0,0,0,1.17963362f,0,0,0,0,-1.00000703f,-1,0,0,-7.00004911f,0};
+  c[0]={-.458625972f,-.577261448f,-6.42864258e-18f,-2827.14844f};
+  c[1]={.131527975f,-.104497105f,1.16761136f,-1376.09058f};
+  c[2]={.774996221f,-.615723491f,-.142406121f,1308.82861f};
+  c[3]={.774990797f,-.61571914f,-.142405123f,1315.81934f};
+  const Vec edge{574074.375f,575053.875f,578691.5f,1};
+  require(evaluate(program,c,edge,texcoords[0],clip,uv) && !sameProjection(edge,clip,view,projection),"actual cancellation regression not exercised");
+  require(originalPositionMatrix(program,c,view,projection),"stored main-camera DP4 matrix not proven");
+  rebuilt=rebuild(program,interface,c,{edge}, {texcoords[0]},view,projection);
+  require(rebuilt.valid && rebuilt.vertices[0][0]==edge[0] && rebuilt.vertices[0][2]==edge[2],"sky matrix proof did not preserve exact source vertices");
+  for (unsigned j=0;j<4;++j) {
+    auto warped=c;warped[j][3]+=.01f;require(!originalPositionMatrix(program,warped,view,projection),"foreign clip matrix accepted");
+  }
+  auto overwritten=program;overwritten.instructions.push_back(overwritten.instructions[0]);
+  // Add an actual second writer to POSITION, not merely a UV instruction.
+  for (const auto& ins:program.instructions) { if (type(ins.dest)==program.positionType && index(ins.dest)==program.positionIndex) { overwritten.instructions.push_back(ins);break; } }
+  require(!originalPositionMatrix(overwritten,c,view,projection),"multiple position writers accepted as DP4-only proof");
+  auto saturated=program;for (auto& ins:saturated.instructions) { if (type(ins.dest)==program.positionType && index(ins.dest)==program.positionIndex) { ins.dest|=1u<<20;break; } }
+  require(!originalPositionMatrix(saturated,c,view,projection),"saturated clip output accepted as matrix product");
+  std::cout << "RT sky matrix coefficient proof/cancelled-w/warp rejection: PASS\n";
   std::cout << "RT full sky interpolants/world-coordinate precision: PASS\n";
   std::cout << "RT original sky shader bounded replay/UV/unprojection/rejection: PASS\n";return 0;
  } catch (const std::exception& e) { std::cerr << e.what() << '\n';return 1; }

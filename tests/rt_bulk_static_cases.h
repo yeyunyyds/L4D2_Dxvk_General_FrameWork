@@ -39,6 +39,40 @@ inline std::vector<uint64_t> state(IDirect3DDevice9* d) {
   for (unsigned i:{0u,7u}) { ldb_rt::static_draw::Ref<IDirect3DBaseTexture9> t;check(SUCCEEDED(d->GetTexture(i,&t.value)),"bulk read texture");r.push_back(uint64_t(reinterpret_cast<uintptr_t>(t.value))); }
   return r;
 }
+inline void modelGeometryBounds(IDirect3DDevice9* d) {
+  using namespace ldb_rt;
+  const auto ok=[](HRESULT h) { check(SUCCEEDED(h),"larger model geometry fixture API"); };
+  static_draw::Ref<IDirect3DVertexBuffer9> oldVB,vb;static_draw::Ref<IDirect3DIndexBuffer9> oldIB,ib;
+  static_draw::Ref<IDirect3DVertexDeclaration9> oldDecl,decl;UINT oldOffset=0,oldStride=0;
+  ok(d->GetStreamSource(0,&oldVB.value,&oldOffset,&oldStride));ok(d->GetIndices(&oldIB.value));ok(d->GetVertexDeclaration(&oldDecl.value));
+  const D3DVERTEXELEMENT9 elements[]={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,16,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
+  ok(d->CreateVertexDeclaration(elements,&decl.value));ok(d->SetVertexDeclaration(decl.value));
+  constexpr UINT vertices=8951,indices=8979*3,offset=16,start=7;
+  std::vector<uint8_t> source(offset+vertices*32,0x5a);
+  for (UINT i=0;i<vertices;++i) { const float p[]={float(i%3),1,-10};const float uv[]={.2f,.3f};std::memcpy(source.data()+offset+i*32,p,12);std::memcpy(source.data()+offset+i*32+16,uv,8); }
+  ok(d->CreateVertexBuffer(UINT(source.size()),0,0,D3DPOOL_MANAGED,&vb.value,nullptr));void* memory=nullptr;
+  ok(vb.value->Lock(0,UINT(source.size()),&memory,0));check(memory!=nullptr,"large VB null");std::memcpy(memory,source.data(),source.size());ok(vb.value->Unlock());
+  std::vector<uint16_t> sourceIndices(start+indices,0x5555);
+  for (UINT i=0;i<indices;++i) { sourceIndices[start+i]=uint16_t(100+i%vertices); }
+  ok(d->CreateIndexBuffer(UINT(sourceIndices.size()*2),0,D3DFMT_INDEX16,D3DPOOL_MANAGED,&ib.value,nullptr));
+  ok(ib.value->Lock(0,UINT(sourceIndices.size()*2),&memory,0));check(memory!=nullptr,"large IB null");std::memcpy(memory,sourceIndices.data(),sourceIndices.size()*2);ok(ib.value->Unlock());
+  ok(d->SetStreamSource(0,vb.value,offset,32));ok(d->SetIndices(ib.value));
+  const std::array<uint32_t,6> args{{uint32_t(-100),100,vertices,start,8979,0}};scene_input::Data legacy,larger;
+  check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,args,legacy)),"legacy scene geometry budget unexpectedly changed");
+  ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,args,larger,scene_input::kModelLimits));
+  check(larger.first==0 && larger.count==vertices && larger.vertices.size()==vertices*32 && larger.indices.size()==indices*2,"signed base/min/start range changed");
+  check(!std::memcmp(larger.vertices.data(),source.data()+offset,larger.vertices.size()) && !std::memcmp(larger.indices.data(),sourceIndices.data()+start,larger.indices.size()),"original model payload differs");
+  auto invalid=args;invalid[2]=scene_input::kModelLimits.vertices+1;scene_input::Data rejected;
+  check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,invalid,rejected,scene_input::kModelLimits)) && rejected.vertices.empty(),"model vertex cap absent");
+  invalid=args;invalid[4]=scene_input::kModelLimits.indices/3+1;
+  check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,invalid,rejected,scene_input::kModelLimits)),"model index cap absent");
+  invalid=args;invalid[0]=uint32_t(-101);
+  check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,invalid,rejected,scene_input::kModelLimits)),"negative absolute vertex accepted");
+  ok(vb.value->Lock(0,UINT(source.size()),&memory,D3DLOCK_READONLY));check(memory && !std::memcmp(memory,source.data(),source.size()),"capture modified original VB");ok(vb.value->Unlock());
+  ok(ib.value->Lock(0,UINT(sourceIndices.size()*2),&memory,D3DLOCK_READONLY));check(memory && !std::memcmp(memory,sourceIndices.data(),sourceIndices.size()*2),"capture modified original IB");ok(ib.value->Unlock());
+  ok(d->SetStreamSource(0,oldVB.value,oldOffset,oldStride));ok(d->SetIndices(oldIB.value));ok(d->SetVertexDeclaration(oldDecl.value));
+  std::cout << "RT larger model signed-base/index-window/read-only/caps/system NULLREF: PASS\n";
+}
 inline void systemCases(IDirect3DDevice9* d,IDirect3DVertexShader9* vs,IDirect3DPixelShader9* ps) {
   using namespace ldb_rt;
   const auto ok=[](unsigned line,HRESULT h) { if (FAILED(h)) { throw std::runtime_error("bulk system API failure line="+std::to_string(line)+" HRESULT="+std::to_string(uint32_t(h))); } };
@@ -122,6 +156,7 @@ inline void systemCases(IDirect3DDevice9* d,IDirect3DVertexShader9* vs,IDirect3D
     auto camera=s;camera.maxZ=.1f;check(!bulk_static::candidate(camera),"bulk viewmodel accepted");camera=s;camera.materialInfo.shader[0]='X';check(!bulk_static::candidate(camera),"bulk unknown shader accepted");
     std::cout << "RT bulk family=" << names[kind] << " getters=" << gets << " apply=" << sets << " restore=" << sets << '\n';
   }
+  modelGeometryBounds(d);
   std::cout << "RT bulk static families/affine/cutout/base-layer/rollback/system NULLREF: PASS; actual Remix/B580 unrun\n";
 }
 } // namespace rt_bulk_static_test

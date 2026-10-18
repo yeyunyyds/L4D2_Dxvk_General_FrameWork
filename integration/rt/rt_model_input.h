@@ -4,6 +4,7 @@
 #include "rt_file_hash.h"
 
 namespace ldb_rt::model_input {
+static_assert(model_shader::kMaxVertices==scene_input::kModelLimits.vertices,"model capture/rebuild budget mismatch");
 inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest) {
   scene_input::Prepared out;
   if (FAILED(input.result)) {
@@ -35,7 +36,7 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
   auto transformed=model_shader::reconstruct(profile,input.constants,input.vertices,input.stride,unsigned(position),unsigned(uv),weight,indices);
   out.reason=transformed.reason;if (!transformed.valid) { return out; }
   if (!model_shader::cameraCompatible(transformed,input.constants,s.view,s.projection)) { out.reason="model_clip_camera_mismatch";return out; }
-  if (!input.count || input.vertices.size()!=size_t(input.count)*32 || uint64_t(input.first)+input.count>scene_input::kMaxVertices) { out.reason="model_vertex_range";return out; }
+  if (!input.count || input.vertices.size()!=size_t(input.count)*32 || uint64_t(input.first)+input.count>model_shader::kMaxVertices) { out.reason="model_vertex_range";return out; }
   out.stride=32;out.world=transformed.world;out.sourceDeclaration=input.declaration;
   out.elements={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
   out.bytes.resize(size_t(input.first+input.count)*32);std::memcpy(out.bytes.data()+size_t(input.first)*32,transformed.vertices.data(),transformed.vertices.size());return out;
@@ -47,7 +48,7 @@ inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Sna
     const auto hr=d->GetRenderState(names[i],values[i]);if (FAILED(hr)) { rejected.result=hr;rejected.reason="model_pipeline_query_failed";return rejected; }
   }
   if (blend || depth!=1 || write!=1) { rejected.reason="model_pipeline_unsupported";return rejected; }
-  const auto input=scene_input::capture(d,kind,type,args,false);
+  const auto input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
   const auto digest=ldb_rt_file::bytesSha256(input.vs.data(),input.vs.size()*4);
   auto out=reconstruct(s,input,digest);if (!out.bytes.empty() && scene_input::upload(d,out)) { out.ready=true; }return out;
 }

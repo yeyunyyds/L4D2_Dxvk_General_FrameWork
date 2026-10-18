@@ -66,7 +66,8 @@ def analyze(directory,previews=True):
         if len(on)!=1 or not off or off[-1]<=on[0]:errors.append('missing_gated_rt_on_off_sequence')
     comparison=any(e.get('event')=='lighting_comparison_policy' for e in events)
     coverage=any(e.get('event')=='coverage_comparison_policy' for e in events)
-    v11=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='11' for e in events)
+    v12=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='12' for e in events)
+    v11=v12 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='11' for e in events)
     v10=v11 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='10' for e in events)
     if v10 and not any(e.get('event')=='rtx.enableAlphaTest' and e.get('code')==0 and e.get('value')=='True' for e in events):
         errors.append('missing_bulk_static_alpha_test_enable')
@@ -182,7 +183,7 @@ def analyze(directory,previews=True):
             'startup_raster_gate':'requested_events_present_not_effective_state_proof' if gated else 'legacy_ungated',
             'rt_activation_requests':sum(e.get('event')=='raytracing_requested_on' and e.get('code')==0 for e in events),
             'nonzero_world_depth_and_normals':nonzero,
-            'coverage_comparison':{'present':coverage,'revision':11 if v11 else 10 if v10 else 9 if v9 else 8 if v8 else 7 if v7 else 6 if coverage else None,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'hud_phase_counts':hud_phases,'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; weapons/skinning unimplemented'},
+            'coverage_comparison':{'present':coverage,'revision':12 if v12 else 11 if v11 else 10 if v10 else 9 if v9 else 8 if v8 else 7 if v7 else 6 if coverage else None,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'hud_phase_counts':hud_phases,'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; weapons/skinning unimplemented'},
             'lighting_comparison':{'present':comparison,'status':'requests_complete_requires_image_review' if comparison and not errors else 'incomplete' if comparison else 'not_requested',
                 'phases':phase_names if comparison else {},'camera_comparisons':movement,
                 'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),

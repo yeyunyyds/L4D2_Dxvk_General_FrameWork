@@ -14,11 +14,11 @@ struct Reader {
 int main(int argc,char** argv) {
   try {
     if (argc!=2) { return 1; }Reader r(argv[1]);if (r.u32()!=0x3152534cu) { throw std::runtime_error("input magic"); }
-    const auto count=r.u32();if (count>96) { return 1; }std::cout<<std::setprecision(12)<<"[";
+    const auto count=r.u32();if (count>136) { return 1; }std::cout<<std::setprecision(12)<<"[";
     for (uint32_t sample=0;sample<count;++sample) {
       const auto ordinal=r.u32(),kind=r.u32(),stride=r.u32(),pos=r.u32(),uv=r.u32();const int weight=int32_t(r.u32()),indices=int32_t(r.u32());
       std::array<char,64> hash{};r.read(hash.data(),hash.size());sky_shader::Constants c{};r.read(c.data(),sizeof(c));std::array<float,16> view{},projection{};r.read(view.data(),64);r.read(projection.data(),64);
-      auto vs=r.vector<uint32_t>(16384),ps=r.vector<uint32_t>(16384);auto bytes=r.vector<uint8_t>(4096*128);
+      auto vs=r.vector<uint32_t>(16384),ps=r.vector<uint32_t>(16384);auto bytes=r.vector<uint8_t>(1024*1024);
       if (stride!=32 || pos>stride-12 || uv>stride-8 || bytes.empty() || bytes.size()%stride) { throw std::runtime_error("invalid vertex layout"); }
       bool valid=false;const char* reason="invalid_kind";size_t vertices=0;unsigned front=0,inside=0;double maxUV=0;
       if (kind==0) {

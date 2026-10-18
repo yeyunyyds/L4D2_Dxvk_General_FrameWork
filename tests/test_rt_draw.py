@@ -173,6 +173,14 @@ class DrawObservation(unittest.TestCase):
         early=events.copy();dest=1+179*4;_,dest_uid,_=events[dest];changed=bytearray(data);struct.pack_into('<Q',changed,16,180)
         early[dest]=(e,dest_uid,bytes(changed));early[dest+1]=(6,dest_uid,events[at+1][2]);self.assertFalse(self.inspect(early)['pass'])
 
+    def test_v12_trace_keeps_baseline_and_guards_new_revision(self):
+        events=self.scene_fixture();events[0]=(0,0,struct.pack('<IQQQII',9,42,7,10000000,240,30))
+        r=self.inspect(events);self.assertTrue(r['pass'],r['errors']);self.assertEqual(r['header']['coverage_revision'],12)
+        at=1+180*4;e,u,payload=events[at];data=bytearray(payload)
+        struct.pack_into('<64s',data,check.SNAPSHOT.size+16,b'NekoToon');events[at]=(e,u,bytes(data))
+        events[at+1]=(6,u,struct.pack('<8I',12,4,0,0,0,0,1,0))
+        r=self.inspect(events);self.assertTrue(r['pass'],r['errors']);self.assertTrue(any(g['shader']=='NekoToon' and g['converted']==0 for g in r['static_family_inventory']['groups']))
+        events[at+1]=(6,u,struct.pack('<8I',12,9,0,0,0,1,1,0));self.assertFalse(self.inspect(events)['pass'])
     def test_v11_header_and_guarded_bone_declaration(self):
         events=self.scene_fixture();events[0]=(0,0,struct.pack('<IQQQII',8,42,7,10000000,240,30))
         at=1+180*4;e,u,p=events[at];data=bytearray(p)

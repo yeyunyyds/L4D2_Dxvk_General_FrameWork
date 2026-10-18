@@ -175,6 +175,31 @@ inline bool sameProjection(const Vec& position,const Vec& clip,const std::array<
   for (unsigned i=0;i<4;++i) { if (!std::isfinite(direct[i]) || !std::isfinite(clip[i]) || std::abs(direct[i]-clip[i])>2e-6*scale) { return false; } }
   return std::abs(direct[3]-clip[3])<=2e-6*(std::max)(1.0,(std::max)(std::abs(direct[3]),std::abs(double(clip[3]))));
 }
+// Prove the entire POSITION output is four unmodified DP4s of POSITION0
+// with a stored main-camera matrix. Compare matrix coefficients before vertex
+// cancellation: a tiny clip.w can lose relative precision for a distant sky face.
+// Eight float epsilons bound four products/adds plus matrix storage rounding;
+// this does not admit a shader warp or loosen inverse homogeneous-scale checks.
+inline bool originalPositionMatrix(const Program& p,const Constants& constants,const std::array<float,16>& view,const std::array<float,16>& projection) {
+  unsigned written=0;
+  for (const auto& ins:p.instructions) {
+    if (type(ins.dest)!=p.positionType || index(ins.dest)!=p.positionIndex) { continue; }
+    const unsigned mask=(ins.dest>>16)&15;
+    if (ins.op!=9 || !mask || (mask&(mask-1)) || (written&mask) || (ins.dest&0x0ff00000u) ||
+        type(ins.src[0])!=1 || index(ins.src[0])>=p.inputs.size() || p.inputs[index(ins.src[0])]!=1 ||
+        ((ins.src[0]>>16)&255)!=228 || ((ins.src[0]>>24)&15) || type(ins.src[1])!=2 ||
+        ((ins.src[1]>>16)&255)!=228 || ((ins.src[1]>>24)&15)) { return false; }
+    unsigned column=0;while (!(mask&(1u<<column))) { ++column; }
+    const unsigned reg=index(ins.src[1]);const auto& row=p.literal[reg]?p.literals[reg]:constants[reg];
+    for (unsigned i=0;i<4;++i) {
+      double expected=0,magnitude=0;
+      for (unsigned k=0;k<4;++k) { const double term=double(view[i*4+k])*projection[k*4+column];expected+=term;magnitude+=std::abs(term); }
+      const double budget=8.0*1.1920928955078125e-7*magnitude;
+      if (!std::isfinite(expected) || !std::isfinite(row[i]) || std::abs(double(row[i])-expected)>budget) { return false; }
+    }
+    written|=mask;
+  }return written==15;
+}
 struct Rebuilt {
   bool valid=false;const char* reason="invalid_sky_inputs";
   std::vector<std::array<float,35>> vertices; // world xyz, TEXCOORD0..7 float4
@@ -182,10 +207,10 @@ struct Rebuilt {
 inline Rebuilt rebuild(const Program& program,const PixelInterface& pixel,const Constants& constants,
     const std::vector<Vec>& positions,const std::vector<Vec>& uvs,const std::array<float,16>& view,const std::array<float,16>& projection) {
   Rebuilt out;if (!program.valid || !pixel.valid || positions.empty() || positions.size()>4096 || positions.size()!=uvs.size()) { return out; }
-  std::vector<Vec> clips(positions.size());std::vector<std::array<Vec,8>> coords(positions.size());bool direct=true;
+  std::vector<Vec> clips(positions.size());std::vector<std::array<Vec,8>> coords(positions.size());const bool provenMatrix=originalPositionMatrix(program,constants,view,projection);bool direct=true;
   for (size_t i=0;i<positions.size();++i) {
     if (!evaluateAll(program,constants,positions[i],uvs[i],clips[i],coords[i],pixel.masks)) { out.reason="undefined_or_nonfinite_shader_output";return out; }
-    direct=direct && sameProjection(positions[i],clips[i],view,projection);
+    if (!provenMatrix) { direct=direct && sameProjection(positions[i],clips[i],view,projection); }
   }
   std::array<double,16> inverse{};
   if (!direct && !inverseViewProjection(view,projection,inverse)) { out.reason="singular_view_projection";return out; }

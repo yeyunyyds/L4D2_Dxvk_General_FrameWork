@@ -3,11 +3,13 @@
 #include <string>
 
 namespace ldb_rt::model_shader {
-// Complete SM3 programs audited in the 191200 capture. A material name or
+constexpr unsigned kMaxVertices=16384;
+// Complete SM3 programs audited in the 191200 and 204924 captures. A material name or
 // stride does not establish their position/UV contract. Unknown code falls back.
 enum class Profile { Unknown, Rigid, Bone0 };
 inline Profile profile(const std::string& sha) {
-  if (sha=="3a9ebc14b4895b0614690472b2500c46c505ff282e6868472849900975493e41") { return Profile::Rigid; }
+  if (sha=="3a9ebc14b4895b0614690472b2500c46c505ff282e6868472849900975493e41" ||
+      sha=="3566b4c8bed75da732f7c8cdb1bce1bb1b5025c932916b2d739ec748f9b8526b") { return Profile::Rigid; }
   for (const char* known:{"84e1a3321dd4b0e7630372d7c229e37cadea38db2833da73cbfdd5bc8b7dce0d",
       "8eb1c8546fb7d3536f008f1e09998cf034849f5f67f23fc1d2fa61cea69774f9",
       "149c60569507ca934d0374759c8f998fa1ce0794937375a7a21b55549f8c7089"}) {
@@ -28,7 +30,7 @@ inline bool positiveAffine(const std::array<float,16>& m) {
 inline Result reconstruct(Profile p,const sky_shader::Constants& c,const std::vector<uint8_t>& bytes,unsigned stride,
     unsigned position,unsigned uv,int weight,int indices) {
   Result out;if (p==Profile::Unknown) { return out; }
-  if (stride!=32 || bytes.empty() || bytes.size()%stride || bytes.size()/stride>4096 || position>stride-12 || uv>stride-8 ||
+  if (stride!=32 || bytes.empty() || bytes.size()%stride || bytes.size()/stride>kMaxVertices || position>stride-12 || uv>stride-8 ||
       (p==Profile::Bone0?(weight<0 || indices<0 || unsigned(weight)>stride-4 || unsigned(indices)>stride-4):(weight>=0 || indices>=0))) { out.reason="model_layout_or_range";return out; }
   if (c[0][1]!=1 || c[13][0]!=0) { out.reason="model_morph_or_homogeneous_control";return out; }
   out.world[15]=1;

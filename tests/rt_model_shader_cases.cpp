@@ -33,6 +33,13 @@ int main() {
     std::array<float,16> view{},projection{};for (unsigned i=0;i<4;++i) { view[i*5]=projection[i*5]=1;c[8+i][i]=1; }
     check(model_shader::cameraCompatible(rigid,c,view,projection),"matching model camera rejected");c[8][3]=100;
     check(!model_shader::cameraCompatible(rigid,c,view,projection),"foreign model camera accepted");
+    check(model_shader::profile("3566b4c8bed75da732f7c8cdb1bce1bb1b5025c932916b2d739ec748f9b8526b")==model_shader::Profile::Rigid,"new audited rigid shader missing");
+    std::vector<uint8_t> large;large.reserve(model_shader::kMaxVertices*32);
+    for (unsigned i=0;i<8951;++i) { large.insert(large.end(),bytes.begin(),bytes.begin()+32); }
+    check(model_shader::reconstruct(model_shader::Profile::Rigid,c,large,32,0,24,-1,-1).valid,"captured-size rigid model rejected by old budget");
+    large.resize((model_shader::kMaxVertices+1)*32);
+    check(!model_shader::reconstruct(model_shader::Profile::Rigid,c,large,32,0,24,-1,-1).valid,"model geometry allocation cap missing");
+    std::cout<<"RT larger audited rigid model/bounded allocation: PASS\n";
     std::cout<<"RT audited model matrix/UV/bone0/range/rejection: PASS\n";return 0;
   } catch (const std::exception& e) { std::cerr<<e.what()<<'\n';return 1; }
 }

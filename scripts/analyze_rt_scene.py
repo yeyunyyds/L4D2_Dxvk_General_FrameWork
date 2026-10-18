@@ -44,10 +44,11 @@ def analyze(directory):
     if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
     if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
     events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-    v11=any(e.get('event')=='world_coverage_revision' and e.get('value')=='11' for e in events)
+    v12=any(e.get('event')=='world_coverage_revision' and e.get('value')=='12' for e in events)
+    v11=v12 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='11' for e in events)
     v10=v11 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='10' for e in events)
     requested=v10 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='9' for e in events)
-    sample_limit=24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
+    sample_limit=34 if v12 else 24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
     samples=[e for e in events if e.get('event')=='scene_input_sample'];summaries=[e for e in events if e.get('event')=='sky_rebuild_counts']
     errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception','model_rebuild_exception')];reviews=[];ordinals=set();phases=Counter();family_counts=Counter();files=set();used=0
     for sample in samples:
@@ -55,9 +56,9 @@ def analyze(directory):
             phase=sample['phase'];ordinal=sample['ordinal'];phases[phase]+=1
             if phase not in PHASES or phases[phase]>sample_limit or ordinal in ordinals or not isinstance(ordinal,int) or ordinal<=0:raise ValueError('invalid_scene_sample_identity_or_budget')
             if v10:
-                group=0 if sample['shader']=='NekoSky' else 1 if sample['shader']=='VertexLitGeneric' else 2
+                group=0 if sample['shader']=='NekoSky' else 1 if sample['shader']=='VertexLitGeneric' else 3 if v12 and sample['shader']=='NekoToon' else 2
                 family_counts[(phase,group)]+=1
-                if family_counts[(phase,group)]>(6,8,10)[group]:raise ValueError('scene_family_quota_exceeded')
+                if family_counts[(phase,group)]>((6,12,10,6) if v12 else (6,8,10))[group]:raise ValueError('scene_family_quota_exceeded')
             ordinals.add(ordinal);payload={}
             for item in sample['files']:
                 name=item['file'];file=directory/name
@@ -77,12 +78,13 @@ def analyze(directory):
             review['shader_bytecode']={k:instructions(v) for k,v in payload.items() if k in ('vs.bin','ps.bin')}
             if sample['geometry_hresult']==0:
                 count=sample['vertex_count'];first=sample['first_absolute_vertex'];stride=sample['stride'];kind=sample['kind'];args=sample['args']
-                if not 0<count<=4096 or not 0<=first or first+count>4096 or not 1<=stride<=stride_limit or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
+                max_vertices=16384 if v12 and sample['shader']=='VertexLitGeneric' else 4096
+                if not 0<count<=max_vertices or not 0<=first or first+count>max_vertices or not 1<=stride<=stride_limit or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
                 decl=payload.get('declaration.bin',b'')
                 if len(decl)%8 or len(decl)>520 or decl[-8:]!=bytes.fromhex('ff00000011000000'):raise ValueError('invalid_scene_declaration')
                 if kind==2:
                     width=sample['index_bytes'];n=args[4]*3 if sample['topology']==4 else args[4]+2
-                    if width not in (2,4) or n>16384 or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
+                    if width not in (2,4) or n>(65536 if v12 and sample['shader']=='VertexLitGeneric' else 16384) or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
                     indices=struct.unpack('<'+('H' if width==2 else 'I')*n,payload['indices.bin'])
                     signed=args[0] if args[0]<2**31 else args[0]-2**32
                     if first!=signed+args[1] or count!=args[2] or any(not args[1]<=i<args[1]+args[2] for i in indices):raise ValueError('scene_index_outside_vertices')
@@ -113,7 +115,7 @@ def analyze(directory):
             if e['attempts']!=e['reconstructed']+e['fallback'] or not e['reconstructed']<=e['ready']<=e['attempts'] or sum(e.get('reasons',{}).values())!=e['attempts']:errors.append('inconsistent_model_rebuild_counts')
         if len(model_samples)>32 or len({e.get('ordinal') for e in model_samples})!=len(model_samples):errors.append('model_sample_identity_or_budget')
         for e in model_samples:
-            if e.get('phase')!='expanded_models' or e.get('reason') not in ('original_vs_model_matrix','original_vs_rigid_bone_zero') or e.get('rebuilt_stride')!=32 or not 0<e.get('rebuilt_vertex_bytes',0)<=4096*32:errors.append('invalid_model_rebuild_sample')
+            if e.get('phase')!='expanded_models' or e.get('reason') not in ('original_vs_model_matrix','original_vs_rigid_bone_zero') or e.get('rebuilt_stride')!=32 or not 0<e.get('rebuilt_vertex_bytes',0)<=(16384 if v12 else 4096)*32:errors.append('invalid_model_rebuild_sample')
             matrix=e.get('applied_world',[])
             if len(matrix)!=16 or not all(isinstance(v,(float,int)) and math.isfinite(v) for v in matrix):errors.append('invalid_model_rebuild_world')
         if models and models[-1].get('reconstructed',0)>0 and not model_samples:errors.append('missing_model_rebuild_samples')

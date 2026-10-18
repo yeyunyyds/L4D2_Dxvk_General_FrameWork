@@ -54,6 +54,18 @@ class SceneEvidence(unittest.TestCase):
    self.assertTrue(self.inspect(root,events)['pass'])
    models[0].update(attempts=1,fallback=1,reasons={'unknown_model_program':1})
    self.assertIn('premature_model_reconstruction',self.inspect(root,events)['errors'])
+ def test_v12_model_budget_custom_shader_audit_and_revision_guard(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.fixture(root);events[0]['value']='12'
+   phases=('raster','baseline_world','expanded_sky','expanded_models')
+   events += [dict(event='model_rebuild_counts',frame=f,phase=p,attempts=0,ready=0,reconstructed=0,fallback=0,reasons={}) for f,p in zip((30,120,180,240),phases)]
+   sample=events[1];sample['vertex_count']=8952;sample['args']=[0,2984,0,0,0,0]
+   raw=struct.pack('<3f',1,2,-10)*8952;path=root/'scene-12-vertices.bin';path.write_bytes(raw);sample['files'][0].update(size=len(raw),sha256=hashlib.sha256(raw).hexdigest())
+   self.assertTrue(self.inspect(root,events)['pass'])
+   events[0]['value']='11';self.assertFalse(self.inspect(root,events)['pass'])
+   events[0]['value']='12';sample['shader']='NekoToon';self.assertFalse(self.inspect(root,events)['pass'])
+   sample['vertex_count']=3;sample['args']=[0,1,0,0,0,0];raw=raw[:36];path.write_bytes(raw);sample['files'][0].update(size=len(raw),sha256=hashlib.sha256(raw).hexdigest())
+   self.assertTrue(self.inspect(root,events)['pass'])
  def test_old_capture_does_not_require_new_samples(self):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);self.assertEqual(self.inspect(root,[dict(event='world_coverage_revision',code=0,value='8')])['status'],'not_requested')
