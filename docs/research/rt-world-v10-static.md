@@ -34,3 +34,11 @@ world trace header7标识coverage revision10；snapshot wire2、原pipeline字�
 新增发布门槛 `world_bulk_static_development_execution`。Windows x86/x64必须在系统D3D9 NULLREF上执行七个shader名称的非零位置/UV偏移、32/48/80字节stride、非均匀正尺度/平移、透明裁切函数/阈值保留、stage7首层选择、真实Draw及完整状态恢复。逐项注入每个getter和修改后失败setter、恢复失败与双失败阻止Draw，另拒绝骨骼、越界UV、镜像/武器相机、alpha混合、无深度写入和缺纹理。全部既有门槛保留。
 
 这些系统用例不执行Remix/B580，原生成功不代替实机图像验收。没有写Source线程CVar或移植全局prim context；实际Source准备并行、资源生命周期与生产性能仍未验收。
+
+## 已发布成品
+
+[下载文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/f21a7668aaf85ea1beca7bfd230dc09595252fc4/downloads/rt-world-pilot-dev.zip)，构建 `94ce852d30b8689a8c75019d2bc8d06c531a72f7`，身份 `ldb-rt-observer+90c1090847190e71`，11,930,485 字节。SHA256：`2a5a3a2ecac77195fd33ba48cdf478c430a2a22fcd4fe7ba9b4d70565cf6190f`。
+
+[独立核验记录](../../research/rt-world-pilot-v10-validation.json) 包含全部成员/源码/配套 PE 校验、双架构新增及既有原生门槛、固定 DLL/API 初始化和五轮旧实际回包回归。原生验证使用系统 D3D9 NULLREF，不执行 Remix/B580；本版实际覆盖图像未运行。
+
+解压到旧测试包旁的独立目录并保留旧备份，运行 `run-test.cmd`；进入地图，选择天空、建筑/地面和多种道具同时可见的位置，按一次 F9 后保持镜头静止；按提示退出游戏，等控制台显示最终 ZIP 路径后上传该文件。对照、覆盖统计和输入诊断均自动合入一个结果 ZIP。
