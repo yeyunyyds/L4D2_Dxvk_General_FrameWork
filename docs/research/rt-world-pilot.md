@@ -4,7 +4,9 @@
 
 已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/b53314db056371b2cf229e7a98d5df8074a173f5/downloads/rt-world-pilot-dev.zip)。当前为 [v12 天空边界、更大模型与其余材质合并验证](rt-world-v12-materials.md)，构建 `ec66bbd9b29804dc5aadb33c63310a34385ef1ca`，身份 `ldb-rt-observer+dcfd05d04d5bec21`，包大小 11,944,303 字节，SHA256 `2b7b68b28ed31370854b4b9a1affc289f55c135c650d630798a9b65b60dd629c`。[交付核验](../../research/rt-world-pilot-v12-validation.json) 已独立确认固定发布树、全部成员、配套 x86/x64 PE 与源码收据一致，Windows 双架构的天空矩阵证明、大模型/自定义材质范围、共享 VB 引用窗口及状态恢复检查均实际通过。
 
-一次 F9 仍保存四阶段对照。每阶段采样上限为天空6、模型48、其他静态96、自定义NekoToon48，按实际网格/程序/Draw范围去重，分家族预留字节预算并报告遗漏。仅审计时按实际索引窗口提取几何，避免小面片因共享大缓冲而缺数据；未知NekoToon仍不转换为RT。运行时模型扩大至16384顶点/65536索引，保留原Draw参数。[离线回归](../../research/rt-world-v12-input-regression.json) 包含两轮92份完整输入和七轮666,000 Draw；本地99项检查97通过、2项需Windows跳过，最终扩展分析器8项通过。本版B580天空映射、较大模型可见性和材质覆盖仍待实机读回。
+一次 F9 仍保存四阶段对照。每阶段采样上限为天空6、模型48、其他静态96、自定义NekoToon48，按实际网格/程序/Draw范围去重，分家族预留字节预算并报告遗漏。仅审计时按实际索引窗口提取几何，避免小面片因共享大缓冲而缺数据；未知NekoToon仍不转换为RT。运行时模型扩大至16384顶点/65536索引，保留原Draw参数。[离线回归](../../research/rt-world-v12-input-regression.json) 包含两轮92份完整输入和七轮666,000 Draw；本地99项检查97通过、2项需Windows跳过，最终扩展分析器8项通过。
+
+[v12 一次 F9 的 B580 实机复核](rt-world-004208-result.md) 已确认 240 Present、81,346 Draw 完整，最终天空 360 次重建全部成功，云层映射与光栅对照相符。扩大采样保存 244 份输入，其中 52 份 NekoToon 主几何完整；模型仍仅每帧七次 Draw 成功，人物缺失。现有输入已定位四组模型相机精度误拒绝，以及共同 Neko VS 的三权重骨骼/morph 需求，可合并下一版功能，无需先重复收集。完整模型、材质/照明、Source 并行和性能继续未验收。
 
 此前 [v11 一次 F9 的 B580 实机复核](rt-world-204924-result.md) 已确认部分模型具备颜色/深度/法线对应，但天空因三个面的齐次 w 精度门槛整体回退 v8。v12修正此边界并扩大同次采样，无需先重复旧版本采集。
 

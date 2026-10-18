@@ -1,0 +1,1944 @@
+{
+  "schema": 1,
+  "scope": "actual v12 B580 single-F9 capture independently reanalyzed; bounded sky image acceptance and input diagnosis, not complete game RT",
+  "archive": {
+    "filename": "rt-world-20261018-004208-9eccd7a6.zip",
+    "bytes": 16009590,
+    "sha256": "d29f89886aa8cec8c52da9d4c1410a047ce8f06624e30c9862b6da70f04993a5",
+    "members": 2795,
+    "expanded_bytes": 118170532,
+    "crc": "pass",
+    "duplicate_or_unsafe_paths": false,
+    "omitted_files": []
+  },
+  "identity": {
+    "build_commit": "ec66bbd9b29804dc5aadb33c63310a34385ef1ca",
+    "build_id": "ldb-rt-observer+dcfd05d04d5bec21",
+    "binary_sha256": {
+      "bin/dxvk_d3d9.dll": "d99add89194cd4267768ac11a7c87c022969d4090f162c021b5b4c865d6343b2",
+      "bin/.l4d2bridge/L4D2Bridge64.exe": "5c312bacdb7b78febe2911cab9d67c55c84a48eee8a18b5b23eebf4352a8dcd0"
+    },
+    "both_log_identities_match": true,
+    "coverage_revision": 12
+  },
+  "integrity": {
+    "collection": "complete",
+    "collection_phase": "finalized",
+    "report_matches": {
+      "draw-analysis.json": true,
+      "world-analysis.json": true,
+      "scene-analysis.json": true
+    },
+    "independent_previews_sha256": {
+      "world-120-0.png": "09f71dac944a05d53fcc09007236e7c9c6b401c2fb6e2cbfa8443167d3890127",
+      "world-120-1.png": "483482f6585c41b2e0331b7bb03a9636cd475f1bac69660e732278334314b334",
+      "world-120-2.png": "da34bfdc8b70262db85a8b6179a1940c3529339233fad91a2786fa9c4070a74b",
+      "world-180-0.png": "e4057fa4c1cff6ec5f24d3084d15936e0f3c6388c57d6a8daa6b5228b47088a3",
+      "world-180-1.png": "a14273eb06c7400ec9cb275335dbf399eca3fdc82a407e80f973b5068d96bb45",
+      "world-180-2.png": "d0a34a0d349015392de2fa3481b6c72b944b449df130c5def57a38b46673153d",
+      "world-240-0.png": "5c698b220a994a1736c5eaf284f1457ad683966a2daf4b3dfe10ea3e01a97c76",
+      "world-240-1.png": "236ef97d9d54f12504abaaa0a7f0a078b21c774a9904a60864882fad5275b2a8",
+      "world-240-2.png": "c972b7cd80969a04add2232fc3f5d24053cb3a37a26c28a464febe55ee450368",
+      "world-30-0.png": "9d49c69629ca7723173e69476c7bf2e8203801066ae430a935db943fc4989932",
+      "world-30-1.png": "3d924ebc0556fa8fa666923ab457e46527832572eca0ffc6b3895d5941cfff0b",
+      "world-30-2.png": "3d924ebc0556fa8fa666923ab457e46527832572eca0ffc6b3895d5941cfff0b"
+    },
+    "all_12_previews_exact": true,
+    "draw_pass": true,
+    "world_outputs": "pass",
+    "scene_pass": true
+  },
+  "draw_footer": {
+    "draws": 81346,
+    "valid": 81346,
+    "presents": 240,
+    "resets": 0,
+    "failures": 0,
+    "unobserved": 0,
+    "reason": 0
+  },
+  "conversion": {
+    "reports": 81346,
+    "converted": 6600,
+    "hud_replaced": 210,
+    "sky_converted": 720,
+    "bulk_static_converted": 420
+  },
+  "stages_and_original_model_pipeline": {
+    "stages": {
+      "raster": {
+        "draws": 10156,
+        "physical_draws": 10156
+      },
+      "baseline_world": {
+        "draws": 30510,
+        "physical_draws": 30420,
+        "world": 2340,
+        "hud": 90
+      },
+      "expanded_sky": {
+        "draws": 20340,
+        "physical_draws": 20280,
+        "sky": 360,
+        "world": 1560,
+        "hud": 60
+      },
+      "expanded_models": {
+        "draws": 20340,
+        "physical_draws": 20280,
+        "sky": 360,
+        "world": 1560,
+        "bulk_static": 420,
+        "hud": 60
+      }
+    },
+    "model_camera_joins": {
+      "61092": {
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "stride": 32,
+        "report": {
+          "decision": 12,
+          "code": 4,
+          "capture": 0,
+          "apply": 0,
+          "restore": 0,
+          "converted": 0
+        }
+      },
+      "61109": {
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "stride": 32,
+        "report": {
+          "decision": 12,
+          "code": 4,
+          "capture": 0,
+          "apply": 0,
+          "restore": 0,
+          "converted": 0
+        }
+      },
+      "61111": {
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "stride": 32,
+        "report": {
+          "decision": 12,
+          "code": 4,
+          "capture": 0,
+          "apply": 0,
+          "restore": 0,
+          "converted": 0
+        }
+      },
+      "61112": {
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "stride": 32,
+        "report": {
+          "decision": 12,
+          "code": 4,
+          "capture": 0,
+          "apply": 0,
+          "restore": 0,
+          "converted": 0
+        }
+      },
+      "61114": {
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "stride": 32,
+        "report": {
+          "decision": 12,
+          "code": 5,
+          "capture": 0,
+          "apply": 0,
+          "restore": 0,
+          "converted": 0
+        }
+      },
+      "61115": {
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "stride": 32,
+        "report": {
+          "decision": 12,
+          "code": 5,
+          "capture": 0,
+          "apply": 0,
+          "restore": 0,
+          "converted": 0
+        }
+      }
+    }
+  },
+  "camera_comparison": [
+    {
+      "frame": 180,
+      "camera_sample_available": true,
+      "max_matrix_delta": 0.0,
+      "matched_within_1e_4": true
+    },
+    {
+      "frame": 240,
+      "camera_sample_available": true,
+      "max_matrix_delta": 0.0,
+      "matched_within_1e_4": true
+    }
+  ],
+  "restored_material_audit": {
+    "samples": 93,
+    "counts": {
+      "baseline_world": 25,
+      "expanded_sky": 31,
+      "expanded_models": 37
+    },
+    "per_phase_limit": 64,
+    "status": "samples_available",
+    "texture_stage_fields": [
+      "COLOROP",
+      "COLORARG1",
+      "COLORARG2",
+      "ALPHAOP",
+      "ALPHAARG1",
+      "ALPHAARG2",
+      "TEXCOORDINDEX",
+      "TEXTURETRANSFORMFLAGS",
+      "RESULTARG"
+    ],
+    "render_state_fields": [
+      "TEXTUREFACTOR",
+      "LIGHTING",
+      "COLORVERTEX",
+      "DIFFUSEMATERIALSOURCE",
+      "AMBIENTMATERIALSOURCE",
+      "AMBIENT",
+      "FOGENABLE",
+      "SRGBWRITEENABLE"
+    ],
+    "query_failures": 0,
+    "category_query_failures": 0,
+    "cull_query_failures": 0,
+    "limits": "first restored original D3D9 state per material identity/phase; bounded samples, not every Draw or final PBR materials"
+  },
+  "sky": {
+    "final_counts": {
+      "event": "sky_rebuild_counts",
+      "frame": 240,
+      "phase": "expanded_models",
+      "attempts": 360,
+      "ready": 360,
+      "reconstructed": 360,
+      "fallback": 0,
+      "input_samples": 74,
+      "reasons": {
+        "original_world_positions_full_ps_uv": 360
+      }
+    },
+    "image_review": "final cloud orientation and mapping correspond to raster control; old180 stretched mapping corrected at240",
+    "roi": {
+      "x": [
+        80,
+        480
+      ],
+      "y": [
+        0,
+        50
+      ],
+      "source": "raw 640x400 RGBA32F luminance, no HUD",
+      "raster_vs_old180": 0.15988431837042447,
+      "raster_vs_new240": 0.9836018877990275,
+      "horizontal_gradient_raster_vs_old180": -0.0030689797302968372,
+      "horizontal_gradient_raster_vs_new240": 0.7126456465389026
+    },
+    "limits": "single sampled camera/sky ROI; not exact photometric identity, full sky conditions or PBR acceptance"
+  },
+  "scene_inputs": {
+    "total": 244,
+    "saved_payload_bytes": 10628714,
+    "phase_counts": {
+      "raster": 56,
+      "baseline_world": 58,
+      "expanded_sky": 56,
+      "expanded_models": 74
+    },
+    "family_geometry_counts": [
+      {
+        "shader": "LightmappedGeneric",
+        "status": "complete",
+        "count": 98
+      },
+      {
+        "shader": "NekoSky",
+        "status": "complete",
+        "count": 24
+      },
+      {
+        "shader": "NekoToon",
+        "status": "complete",
+        "count": 52
+      },
+      {
+        "shader": "UnlitGeneric",
+        "status": "complete",
+        "count": 16
+      },
+      {
+        "shader": "VertexLitGeneric",
+        "status": "complete",
+        "count": 50
+      },
+      {
+        "shader": "VertexLitGeneric",
+        "status": "vertex_budget",
+        "count": 4
+      }
+    ],
+    "final_input_counts": {
+      "event": "scene_input_counts",
+      "frame": 240,
+      "phase": "expanded_models",
+      "payload_bytes": 5197578,
+      "captured": 74,
+      "identity_failures": 0,
+      "family_payload_bytes": [
+        40896,
+        1702576,
+        340584,
+        3113522
+      ],
+      "family_captured": [
+        6,
+        21,
+        28,
+        19
+      ],
+      "family_quota_omitted": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "family_payload_omitted": [
+        0,
+        0,
+        0,
+        2
+      ]
+    },
+    "limits": "unique sampled input keys per phase, not whole objects or map coverage; two final custom keys omitted by bounded family payload budget; auxiliary streams are prefixes"
+  },
+  "model": {
+    "final_counts": {
+      "event": "model_rebuild_counts",
+      "frame": 240,
+      "phase": "expanded_models",
+      "attempts": 1500,
+      "ready": 420,
+      "reconstructed": 420,
+      "fallback": 1080,
+      "reasons": {
+        "model_clip_camera_mismatch": 240,
+        "model_not_rigid_bone_zero": 420,
+        "model_pipeline_unsupported": 300,
+        "original_vs_model_matrix": 60,
+        "original_vs_rigid_bone_zero": 360,
+        "unknown_model_program": 60,
+        "vertex_budget": 60
+      }
+    },
+    "image_review": "foreground third-person character visible at30 absent in RT180/240; partial prop contribution remains, no broad large-model image acceptance",
+    "production_cpu_replay": {
+      "samples": 74,
+      "reasons": {
+        "original_world_positions_full_ps_uv": 24,
+        "original_vs_model_matrix": 4,
+        "original_vs_rigid_bone_zero": 17,
+        "model_clip_camera_mismatch": 9,
+        "model_not_rigid_bone_zero": 15,
+        "unknown_model_program": 5
+      },
+      "scope": "captured input CPU replay, no GPU/BLAS/visibility/performance acceptance",
+      "all_inputs_reconstructed": false
+    },
+    "camera_false_rejection": {
+      "eligible_ordinals": [
+        61092,
+        61109,
+        61111,
+        61112
+      ],
+      "affected_draws": 240,
+      "original_pipeline": "no alpha blend/test; depth test and writes enabled",
+      "coefficient_proof_method": "known VS c8..11 transpose compared with float32 snapshot V@P in double; bound=8*float_epsilon*(abs(V)@abs(P)) per coefficient; structural zeros exact",
+      "coefficient_checks": [
+        {
+          "ordinal": 61065,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61066,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61067,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61068,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61069,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61091,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61092,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61093,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61094,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61095,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61096,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61101,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61102,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61103,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61104,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61109,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61110,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61111,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61112,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61114,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        },
+        {
+          "ordinal": 61115,
+          "max_error_over_bound": 0.057526268044962386,
+          "structural_zero_entries_exact": true
+        }
+      ],
+      "projection_diagnostics": [
+        {
+          "ordinal": 60,
+          "bad_vertices": 492,
+          "worst_relative_w": 5.60057e-08,
+          "worst_relative_clip": 2.2692e-06,
+          "min_abs_w": 61.8085
+        },
+        {
+          "ordinal": 10242,
+          "bad_vertices": 485,
+          "worst_relative_w": 5.70896e-08,
+          "worst_relative_clip": 2.26573e-06,
+          "min_abs_w": 61.9002
+        },
+        {
+          "ordinal": 40752,
+          "bad_vertices": 474,
+          "worst_relative_w": 5.70402e-08,
+          "worst_relative_clip": 2.27002e-06,
+          "min_abs_w": 61.8098
+        },
+        {
+          "ordinal": 61092,
+          "bad_vertices": 468,
+          "worst_relative_w": 5.57198e-08,
+          "worst_relative_clip": 2.27067e-06,
+          "min_abs_w": 61.7858
+        },
+        {
+          "ordinal": 61109,
+          "bad_vertices": 11479,
+          "worst_relative_w": 5.7853e-08,
+          "worst_relative_clip": 4.35887e-06,
+          "min_abs_w": 32.3808
+        },
+        {
+          "ordinal": 61111,
+          "bad_vertices": 170,
+          "worst_relative_w": 5.66479e-08,
+          "worst_relative_clip": 4.29572e-06,
+          "min_abs_w": 32.8193
+        },
+        {
+          "ordinal": 61112,
+          "bad_vertices": 413,
+          "worst_relative_w": 5.29076e-08,
+          "worst_relative_clip": 4.06351e-06,
+          "min_abs_w": 34.5856
+        },
+        {
+          "ordinal": 61114,
+          "bad_vertices": 40,
+          "worst_relative_w": 5.67524e-08,
+          "worst_relative_clip": 4.32787e-06,
+          "min_abs_w": 32.5868
+        },
+        {
+          "ordinal": 61115,
+          "bad_vertices": 8,
+          "worst_relative_w": 4.97499e-08,
+          "worst_relative_clip": 4.05252e-06,
+          "min_abs_w": 34.7827
+        }
+      ],
+      "explanation": "matrix coefficients match main camera; per-vertex clip cancellation/rounding exceeds old2e-6 test; w error stays below that threshold",
+      "next_fix": "certify known VS matrix identity with bounded error; retain rejection tests for foreign cameras, no blanket tolerance removal"
+    },
+    "transparency_exclusions": {
+      "ordinals": [
+        61114,
+        61115
+      ],
+      "reason": "alpha blending enabled and depth write disabled; pipeline rejection remains correct"
+    },
+    "vertex_budget_boundary": {
+      "ordinal": 61091,
+      "declared_vertices": 16977,
+      "current_runtime_cap": 16384
+    }
+  },
+  "neko": {
+    "full_vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+    "final_complete_inputs": 19,
+    "primary_position_data": "FLOAT3 position, SHORT2 blend weights at12, D3DCOLOR indices at16, UV at24, stride32",
+    "bone_formula": "w0/w1=(SHORT2+1)/32768; w2=1-w0-w1; VS .zyx selects byte0/1/2; MOVA rounds 765.005859375*byte/255 to3*bone; blend c58+3*bone rows",
+    "position_output": "o7 POSITION0; o0 is world position TEXCOORD0; c8..11 clip and c12.w depth bias",
+    "max_observed_bone": 52,
+    "inputs": [
+      {
+        "ordinal": 61070,
+        "vertices": 3179,
+        "triangles": 4650,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "f2da6f64daa0d3bad8b1ac86309ac191371a51e44733c7ec927dd0a9729ae8e9",
+        "max_bone": 0,
+        "morph_x": 1.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 28,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61071,
+        "vertices": 1700,
+        "triangles": 2950,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "f2da6f64daa0d3bad8b1ac86309ac191371a51e44733c7ec927dd0a9729ae8e9",
+        "max_bone": 0,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61072,
+        "vertices": 1102,
+        "triangles": 1592,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 0,
+        "morph_x": 1.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 89012,
+            "stride": 28,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61073,
+        "vertices": 216,
+        "triangles": 268,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 0,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61074,
+        "vertices": 15189,
+        "triangles": 27456,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "f2da6f64daa0d3bad8b1ac86309ac191371a51e44733c7ec927dd0a9729ae8e9",
+        "max_bone": 52,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61075,
+        "vertices": 12621,
+        "triangles": 12460,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 22,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61076,
+        "vertices": 301,
+        "triangles": 299,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 1,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61077,
+        "vertices": 2053,
+        "triangles": 3124,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 4,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61078,
+        "vertices": 1774,
+        "triangles": 2744,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 2,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61079,
+        "vertices": 1112,
+        "triangles": 508,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 0,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61080,
+        "vertices": 14694,
+        "triangles": 25380,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 40,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61081,
+        "vertices": 1844,
+        "triangles": 1144,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 19,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61082,
+        "vertices": 2269,
+        "triangles": 3576,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 4,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61083,
+        "vertices": 3297,
+        "triangles": 5210,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 2,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61084,
+        "vertices": 3368,
+        "triangles": 1626,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 2,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61085,
+        "vertices": 3976,
+        "triangles": 7472,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 8,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61086,
+        "vertices": 1396,
+        "triangles": 1690,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 3,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61087,
+        "vertices": 379,
+        "triangles": 582,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 0,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      },
+      {
+        "ordinal": 61088,
+        "vertices": 270,
+        "triangles": 476,
+        "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+        "ps_sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+        "max_bone": 0,
+        "morph_x": 0.0,
+        "clip_depth_bias": 0.0,
+        "all_weights_nonnegative": true,
+        "auxiliary": [
+          {
+            "stream": 1,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 2,
+            "offset": 0,
+            "stride": 32,
+            "frequency": 1,
+            "hresult": 0,
+            "prefix_bytes": 256
+          },
+          {
+            "stream": 3,
+            "offset": 0,
+            "stride": 4,
+            "frequency": 0,
+            "hresult": 1,
+            "prefix_bytes": 0
+          }
+        ]
+      }
+    ],
+    "offline_position_prototype": {
+      "scope": "independent NumPy evaluation of audited NekoToon VS position formula, morph disabled only; not production integration, GPU execution, image or triangle visibility acceptance",
+      "vs_sha256": "f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3",
+      "position_output": "POSITION0 is o7, not TEXCOORD0 o0; clip z adds c12.w, zero in these samples",
+      "bone_formula": "decode SHORT2 (value+1)/32768, w2=1-w0-w1; D3DCOLOR .zyx -> byte0/1/2; MOVA ->3*bone; blend c58+3*bone rows, DP4 local with worldW1; c8-11 clip; UV via c48-49",
+      "evaluated": 17,
+      "deferred_morph": 2,
+      "samples": [
+        {
+          "ordinal": 61070,
+          "vertices": 3179,
+          "morph_x": 1.0,
+          "clip_depth_bias": 0.0,
+          "status": "morph_primary_only_insufficient",
+          "reason": "stream2 stride28 per vertex; saved256byte prefix does not prove all position deltas zero"
+        },
+        {
+          "ordinal": 61071,
+          "vertices": 1700,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 0,
+          "front_vertices": 1700,
+          "vertices_inside_clip": 1700,
+          "world_bounds": {
+            "min": [
+              -3284.0556640625,
+              -2274.0185546875,
+              1334.965576171875
+            ],
+            "max": [
+              -3275.0322265625,
+              -2265.157470703125,
+              1345.341796875
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.07825244218111038,
+              -0.280303418636322,
+              0.8602405786514282
+            ],
+            "max": [
+              0.04256482794880867,
+              -0.04892267659306526,
+              0.8801603317260742
+            ]
+          }
+        },
+        {
+          "ordinal": 61072,
+          "vertices": 1102,
+          "morph_x": 1.0,
+          "clip_depth_bias": 0.0,
+          "status": "morph_primary_only_insufficient",
+          "reason": "stream2 stride28 per vertex; saved256byte prefix does not prove all position deltas zero"
+        },
+        {
+          "ordinal": 61073,
+          "vertices": 216,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 0,
+          "front_vertices": 216,
+          "vertices_inside_clip": 216,
+          "world_bounds": {
+            "min": [
+              -3279.284423828125,
+              -2270.309326171875,
+              1336.435302734375
+            ],
+            "max": [
+              -3278.828369140625,
+              -2269.9697265625,
+              1336.748046875
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.018333101645112038,
+              -0.2335246354341507,
+              0.8754568099975586
+            ],
+            "max": [
+              -0.01216102670878172,
+              -0.22950880229473114,
+              0.8761463761329651
+            ]
+          }
+        },
+        {
+          "ordinal": 61074,
+          "vertices": 15189,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 52,
+          "front_vertices": 15189,
+          "vertices_inside_clip": 13132,
+          "world_bounds": {
+            "min": [
+              -3292.2783203125,
+              -2279.30322265625,
+              1279.52001953125
+            ],
+            "max": [
+              -3268.3056640625,
+              -2260.2666015625,
+              1338.5006103515625
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.09904967993497849,
+              -1.3173234462738037,
+              0.8563679456710815
+            ],
+            "max": [
+              0.10041527450084686,
+              -0.24031367897987366,
+              0.9097304344177246
+            ]
+          }
+        },
+        {
+          "ordinal": 61075,
+          "vertices": 12621,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 22,
+          "front_vertices": 12621,
+          "vertices_inside_clip": 12621,
+          "world_bounds": {
+            "min": [
+              -3297.140380859375,
+              -2274.472412109375,
+              1320.567138671875
+            ],
+            "max": [
+              -3273.780517578125,
+              -2248.304443359375,
+              1347.6007080078125
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.23050008714199066,
+              -0.9143196940422058,
+              0.8174127340316772
+            ],
+            "max": [
+              0.15571416914463043,
+              -0.008485588245093822,
+              0.8815580010414124
+            ]
+          }
+        },
+        {
+          "ordinal": 61076,
+          "vertices": 301,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 1,
+          "front_vertices": 301,
+          "vertices_inside_clip": 301,
+          "world_bounds": {
+            "min": [
+              -3282.6806640625,
+              -2274.01708984375,
+              1337.521484375
+            ],
+            "max": [
+              -3275.464599609375,
+              -2267.95263671875,
+              1343.726318359375
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.06795960664749146,
+              -0.20096424221992493,
+              0.8723925352096558
+            ],
+            "max": [
+              0.03763224929571152,
+              -0.068745456635952,
+              0.8804551362991333
+            ]
+          }
+        },
+        {
+          "ordinal": 61077,
+          "vertices": 2053,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 4,
+          "front_vertices": 2053,
+          "vertices_inside_clip": 2053,
+          "world_bounds": {
+            "min": [
+              -3287.68359375,
+              -2271.96240234375,
+              1338.006103515625
+            ],
+            "max": [
+              -3274.56396484375,
+              -2261.26904296875,
+              1346.1239013671875
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.1155136451125145,
+              -0.2606655955314636,
+              0.8552852272987366
+            ],
+            "max": [
+              0.0679675042629242,
+              -0.052736200392246246,
+              0.8702670335769653
+            ]
+          }
+        },
+        {
+          "ordinal": 61078,
+          "vertices": 1774,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 2,
+          "front_vertices": 1774,
+          "vertices_inside_clip": 1774,
+          "world_bounds": {
+            "min": [
+              -3283.012939453125,
+              -2275.971435546875,
+              1343.1866455078125
+            ],
+            "max": [
+              -3273.1416015625,
+              -2267.6689453125,
+              1348.676025390625
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.07546377182006836,
+              -0.11054817587137222,
+              0.8680299520492554
+            ],
+            "max": [
+              0.05134022608399391,
+              0.037224601954221725,
+              0.8767881393432617
+            ]
+          }
+        },
+        {
+          "ordinal": 61079,
+          "vertices": 1112,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 0,
+          "front_vertices": 1112,
+          "vertices_inside_clip": 1112,
+          "world_bounds": {
+            "min": [
+              -3281.92578125,
+              -2268.494873046875,
+              1333.9105224609375
+            ],
+            "max": [
+              -3280.7236328125,
+              -2267.82275390625,
+              1334.8818359375
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.011294062249362469,
+              -0.3139769732952118,
+              0.8697326183319092
+            ],
+            "max": [
+              0.0023278859443962574,
+              -0.2986564636230469,
+              0.8723931908607483
+            ]
+          }
+        },
+        {
+          "ordinal": 61080,
+          "vertices": 14694,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 40,
+          "front_vertices": 14694,
+          "vertices_inside_clip": 14647,
+          "world_bounds": {
+            "min": [
+              -3293.47705078125,
+              -2275.81201171875,
+              1305.4749755859375
+            ],
+            "max": [
+              -3269.34716796875,
+              -2255.023681640625,
+              1336.6275634765625
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.15842238068580627,
+              -1.0203408002853394,
+              0.8552968502044678
+            ],
+            "max": [
+              0.12486317753791809,
+              -0.27407169342041016,
+              0.9021116495132446
+            ]
+          }
+        },
+        {
+          "ordinal": 61081,
+          "vertices": 1844,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 19,
+          "front_vertices": 1844,
+          "vertices_inside_clip": 1844,
+          "world_bounds": {
+            "min": [
+              -3291.380615234375,
+              -2273.82177734375,
+              1309.62548828125
+            ],
+            "max": [
+              -3272.197021484375,
+              -2257.3681640625,
+              1324.1561279296875
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.12744346261024475,
+              -0.9036088585853577,
+              0.8634517788887024
+            ],
+            "max": [
+              0.10074403882026672,
+              -0.4644061326980591,
+              0.8973028659820557
+            ]
+          }
+        },
+        {
+          "ordinal": 61082,
+          "vertices": 2269,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 4,
+          "front_vertices": 2269,
+          "vertices_inside_clip": 2269,
+          "world_bounds": {
+            "min": [
+              -3286.032470703125,
+              -2271.7705078125,
+              1324.686279296875
+            ],
+            "max": [
+              -3276.703369140625,
+              -2262.65625,
+              1335.412353515625
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.07117383182048798,
+              -0.5366712212562561,
+              0.8604994416236877
+            ],
+            "max": [
+              0.057803284376859665,
+              -0.29985639452934265,
+              0.8842651844024658
+            ]
+          }
+        },
+        {
+          "ordinal": 61083,
+          "vertices": 3297,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 2,
+          "front_vertices": 3297,
+          "vertices_inside_clip": 3297,
+          "world_bounds": {
+            "min": [
+              -3280.47998046875,
+              -2273.632568359375,
+              1316.378662109375
+            ],
+            "max": [
+              -3275.203369140625,
+              -2269.805908203125,
+              1326.37109375
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.04933788627386093,
+              -0.525636613368988,
+              0.8837040662765503
+            ],
+            "max": [
+              0.010677770711481571,
+              -0.3869049549102783,
+              0.8949816823005676
+            ]
+          }
+        },
+        {
+          "ordinal": 61084,
+          "vertices": 3368,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 2,
+          "front_vertices": 3368,
+          "vertices_inside_clip": 3368,
+          "world_bounds": {
+            "min": [
+              -3278.482421875,
+              -2270.45703125,
+              1323.948486328125
+            ],
+            "max": [
+              -3277.74169921875,
+              -2269.33740234375,
+              1325.2562255859375
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.03247879445552826,
+              -0.44090235233306885,
+              0.8830246925354004
+            ],
+            "max": [
+              -0.02167225070297718,
+              -0.4273867905139923,
+              0.8855203986167908
+            ]
+          }
+        },
+        {
+          "ordinal": 61085,
+          "vertices": 3976,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 8,
+          "front_vertices": 3976,
+          "vertices_inside_clip": 2812,
+          "world_bounds": {
+            "min": [
+              -3292.31640625,
+              -2273.583740234375,
+              1279.4691162109375
+            ],
+            "max": [
+              -3273.842529296875,
+              -2260.131591796875,
+              1323.1805419921875
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.10112053900957108,
+              -1.318638563156128,
+              0.8651688098907471
+            ],
+            "max": [
+              0.09447725862264633,
+              -0.49052780866622925,
+              0.9098591208457947
+            ]
+          }
+        },
+        {
+          "ordinal": 61086,
+          "vertices": 1396,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 3,
+          "front_vertices": 1396,
+          "vertices_inside_clip": 697,
+          "world_bounds": {
+            "min": [
+              -3284.89306640625,
+              -2263.466796875,
+              1296.2476806640625
+            ],
+            "max": [
+              -3274.02099609375,
+              -2249.82080078125,
+              1320.820068359375
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              -0.20550207793712616,
+              -1.1950602531433105,
+              0.8567675352096558
+            ],
+            "max": [
+              -0.03518756479024887,
+              -0.613099217414856,
+              0.8798596858978271
+            ]
+          }
+        },
+        {
+          "ordinal": 61087,
+          "vertices": 379,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 0,
+          "front_vertices": 379,
+          "vertices_inside_clip": 379,
+          "world_bounds": {
+            "min": [
+              -3289.659912109375,
+              -2267.72412109375,
+              1301.71337890625
+            ],
+            "max": [
+              -3284.537353515625,
+              -2262.142578125,
+              1304.7359619140625
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              0.0025455777067691088,
+              -0.9742005467414856,
+              0.8747173547744751
+            ],
+            "max": [
+              0.0691462978720665,
+              -0.8491510152816772,
+              0.885921061038971
+            ]
+          }
+        },
+        {
+          "ordinal": 61088,
+          "vertices": 270,
+          "morph_x": 0.0,
+          "clip_depth_bias": 0.0,
+          "status": "bounded_position_formula_evaluated",
+          "max_bone": 0,
+          "front_vertices": 270,
+          "vertices_inside_clip": 270,
+          "world_bounds": {
+            "min": [
+              -3288.7255859375,
+              -2267.54931640625,
+              1301.8099365234375
+            ],
+            "max": [
+              -3286.5859375,
+              -2266.94482421875,
+              1303.09521484375
+            ]
+          },
+          "front_ndc_bounds": {
+            "min": [
+              0.04352695494890213,
+              -0.9041030406951904,
+              0.8828609585762024
+            ],
+            "max": [
+              0.06487955898046494,
+              -0.8741828203201294,
+              0.8857705593109131
+            ]
+          }
+        }
+      ]
+    },
+    "morph_limit": "two morph-enabled inputs have stream2 stride28 per-vertex POSITION1; 256-byte prefixes cannot establish all deltas zero; full referenced position stream required live",
+    "pixel_material_limit": {
+      "saved_float4_constants": 32,
+      "highest_observed_external_constant": 184,
+      "variants": [
+        {
+          "sha256": "f2da6f64daa0d3bad8b1ac86309ac191371a51e44733c7ec927dd0a9729ae8e9",
+          "samplers": [
+            0,
+            2,
+            7
+          ]
+        },
+        {
+          "sha256": "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+          "samplers": [
+            0,
+            2
+          ]
+        }
+      ],
+      "texkill_in_sampled_pixel_variants": false,
+      "scope": "full original Toon material replay remains incomplete; position+first-diffuse prototype possible; query full PS constants and material/alpha/sampler contract live in next functional build"
+    }
+  },
+  "exit": {
+    "capture_complete": true,
+    "host_clean_terminate": true,
+    "client_fault_after_cleanup": true,
+    "exception": "execute access violation at0x104b0",
+    "stack": [
+      "necola.dll+0x1447fc",
+      "necola.dll+0x1448de"
+    ],
+    "no_active_bridge_command": true,
+    "attribution": "unresolved; same prior shutdown symptom, did not interrupt this capture"
+  },
+  "next_combined_implementation": [
+    "Replace false model camera guard with known-program coefficient proof and genuine foreign-camera rejection regressions.",
+    "Implement bounded three-weight palette skinning for audited model programs and the shared Neko VS; handle complete live morph POSITION1 streams when enabled.",
+    "Review 16977-vertex known input against bounded runtime limits; preserve original Draw index semantics.",
+    "Apply explicit geometry/first-diffuse material scope, verify sampler and alpha behavior; acquire full PS constants and morph payloads in the same functional capture if required.",
+    "Replay old/current CPU inputs and native state restoration cases, then deliver one combined version with one F9/final ZIP; no separate repeat collection."
+  ],
+  "unaccepted": [
+    "complete static map",
+    "characters and weapons in actual RT image",
+    "full Toon/PBR and original lighting",
+    "Source preparation parallelism",
+    "production performance",
+    "clean client shutdown"
+  ],
+  "delivery": "analysis and documentation only; no new binary in this review"
+}
