@@ -34,8 +34,16 @@ PS 常量由前 32 个 float4 改为完整 224 个，覆盖实际 Neko PS 读取
 
 本轮旧回包的126份相关完整主输入，在新生产数学路径中118份可重建；8份启用 morph 的输入缺失完整辅助流，明确拒绝。它们不是8个对象。CPU 回放不证明 GPU 图像、三角形可见性或完整人物恢复。
 
-原生检查新增三权重不同骨骼/字节通道、逐顶点 morph 顺序、索引与非有限拒绝、相机系数和真实不同相机；系统 NULLREF 检查覆盖有偏移/超过256字节的完整 morph 读取、读边界失败、源内容不变、PS224，以及 Neko 必须具备 prepared 输入、逐 getter/setter/restore 回滚。大网格检查使用16,977顶点、有符号 base 和非零 offset/start。Windows x86/x64 构建与发布证据完成后另行记录，不能把这些检查等同于 Remix/B580 验收。
+原生检查新增三权重不同骨骼/字节通道、逐顶点 morph 顺序、索引与非有限拒绝、相机系数和真实不同相机；系统 NULLREF 检查覆盖有偏移/超过256字节的完整 morph 读取、读边界失败、源内容不变、PS224，以及 Neko 必须具备 prepared 输入、逐 getter/setter/restore 回滚。大网格检查使用16,977顶点、有符号 base 和非零 offset/start。Windows x86/x64 已实际通过这些新增及既有检查；固定 DLL/API、完整依赖和包内 Python 入口验证通过。不能把这些检查等同于 Remix/B580 验收。
 
 下载新包后解压到旧包旁独立目录，运行 `run-test.cmd`。进入同一测试地图，使天空、墙体、大小道具和人物尽量同屏；按一次 F9 后保持镜头静止，人物可正常播放动画。等240 Present完成，按提示正常退出游戏，等最终 ZIP 路径并上传一个结果 ZIP。无需先补一次纯采集，也无需 F8 或 capture.trigger。
 
 本版不修改 Source 线程 CVar，不移植全局 prim context；Source 准备线程并行、生产性能、完整人物/武器和材质外观仍待实机验收。此前 client 清理后的退出异常尚未修复。
+
+## 已发布成品
+
+[固定 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/9855ee856210ebc53de8b0d21f4d32acc14af9b9/downloads/rt-world-pilot-dev.zip)，11,945,511字节，SHA256 `0dfb76f50f95f40b19c65380b3adff911066eabb8cac6f12cec0003431779379`；构建 `18cdf6eacf68a6cd96fd512df119030b7aa92fed`，身份 `ldb-rt-observer+3f514b2619cb03ad`。成品CRC、全部成员哈希、包内脚本/README/配置、配套x86 client/x64 Host、源码收据与Windows执行记录已独立匹配。[交付核验](../../research/rt-world-pilot-v13-validation.json) 与 [实际输入回归](../../research/rt-world-v13-input-regression.json) 分别保存成品及离线证据。
+
+Windows两架构均执行相机系数/不同相机拒绝、三权重不同骨骼及通道、逐顶点morph、范围和非有限输入拒绝；系统NULLREF上完整morph引用范围/超过256字节/最后顶点、读取失败和源缓冲不变、PS224以及Neko必须具备prepared输入、逐getter/setter/restore回滚均通过。两架构原生trace由分析器独立重析通过。固定下载树仅包含ZIP。
+
+本地最终Python共101项，99通过、2项需要Windows而跳过；便携C++模型数学检查实际执行，runtime/overlay/native draw/Host通过严格MinGW交叉编译。八轮实际747,346 Draw兼容回归通过。当前回包94份模型、171,423个顶点经原VS字节码独立位置/UV执行核对，UV完全一致，最大640×400投影差约0.0033像素；其余8份morph缺失输入没有伪造数据补齐。详细边界见前文，实际Remix/B580画面仍待本版一次F9验证。
