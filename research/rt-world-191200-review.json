@@ -1,0 +1,2731 @@
+{
+  "schema": 1,
+  "scope": "independent v10 actual B580 capture review; data not production GPU replay",
+  "acceptance": {
+    "collection": "complete",
+    "existing_world_hud": "preserved_in_this_view",
+    "new_bulk_static_geometry": "not_accepted",
+    "original_sky_mapping": "not_accepted",
+    "model_position_defect": "captured original VS placement omitted by current FFP replacement",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun"
+  },
+  "input": {
+    "name": "rt-world-20261017-191200-2e07a9d3.zip",
+    "bytes": 10160564,
+    "sha256": "6a9ca130e882ebcc0030d59afc1a249a224d0fb408f3755f1e9f2e99380222ee",
+    "members": 1045,
+    "uncompressed_bytes": 103675753,
+    "crc": "pass"
+  },
+  "build": {
+    "commit": "94ce852d30b8689a8c75019d2bc8d06c531a72f7",
+    "identity": "ldb-rt-observer+90c1090847190e71",
+    "installed_sha256": {
+      "bin/dxvk_d3d9.dll": "442d8840a1eae37b25612d31ce37fcc0354d751cb66badb32c1c400a59739199",
+      "bin/.l4d2bridge/L4D2Bridge64.exe": "ae50c2360a5d304ff7e8756b41691db22685a6e1b1544b53660452e618015b35"
+    },
+    "both_sides_log_identity_match": true
+  },
+  "independent_reanalysis": {
+    "reports_match_uploaded": {
+      "draw-analysis.json": true,
+      "world-analysis.json": true,
+      "scene-analysis.json": true
+    },
+    "all12_preview_pixels_match_independent_raw_decode": true,
+    "omitted_files": []
+  },
+  "trace": {
+    "header": {
+      "session": 513985119307559419,
+      "device": 2,
+      "frequency": 10000000,
+      "profile": "world_pilot",
+      "target_presents": 240,
+      "control_presents": 30,
+      "coverage_revision": 10
+    },
+    "footer": {
+      "draws": 74759,
+      "valid": 74759,
+      "presents": 240,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "conversion": {
+      "reports": 74759,
+      "converted": 5610,
+      "hud_replaced": 210,
+      "sky_converted": 720,
+      "bulk_static_converted": 60
+    },
+    "physical_called_count": 74549,
+    "failed_hresult_counts": {},
+    "all_converted_hresult_zero": true
+  },
+  "phase_counts": {
+    "raster": {
+      "draws": 9239
+    },
+    "baseline_world": {
+      "draws": 28080,
+      "converted": 2070,
+      "world": 2070,
+      "hud": 90
+    },
+    "expanded_sky": {
+      "draws": 18720,
+      "converted": 1740,
+      "sky": 360,
+      "world": 1380,
+      "hud": 60
+    },
+    "expanded_models": {
+      "draws": 18720,
+      "converted": 1800,
+      "sky": 360,
+      "world": 1380,
+      "bulk_static": 60,
+      "hud": 60
+    }
+  },
+  "scope_reports": [
+    {
+      "phase": "expanded_sky",
+      "decision": 10,
+      "scope_code": 9,
+      "converted": 1,
+      "shader": "NekoSky",
+      "format": "0x80001",
+      "count": 360
+    },
+    {
+      "phase": "expanded_models",
+      "decision": 10,
+      "scope_code": 9,
+      "converted": 1,
+      "shader": "NekoSky",
+      "format": "0x80001",
+      "count": 360
+    },
+    {
+      "phase": "expanded_models",
+      "decision": 12,
+      "scope_code": 9,
+      "converted": 1,
+      "shader": "VertexLitGeneric",
+      "format": "0x80503",
+      "count": 60
+    },
+    {
+      "phase": "expanded_models",
+      "decision": 12,
+      "scope_code": 4,
+      "converted": 0,
+      "shader": "VertexLitGeneric",
+      "format": "0x80503",
+      "count": 600
+    },
+    {
+      "phase": "expanded_models",
+      "decision": 12,
+      "scope_code": 4,
+      "converted": 0,
+      "shader": "VertexLitGeneric",
+      "format": "0xa0403",
+      "count": 120
+    },
+    {
+      "phase": "expanded_models",
+      "decision": 12,
+      "scope_code": 5,
+      "converted": 0,
+      "shader": "LightmappedGeneric",
+      "format": "0x480003",
+      "count": 60
+    },
+    {
+      "phase": "expanded_models",
+      "decision": 12,
+      "scope_code": 5,
+      "converted": 0,
+      "shader": "VertexLitGeneric",
+      "format": "0x80503",
+      "count": 120
+    }
+  ],
+  "material_audit_join": {
+    "samples": 79,
+    "state_fields": [
+      "CULLMODE",
+      "LIGHTING",
+      "FOGENABLE",
+      "reserved42"
+    ],
+    "mismatched_ordinals": [],
+    "common_original_material_identities": 22,
+    "changed_original_material_identities": []
+  },
+  "camera": {
+    "converted_world_groups_per_phase": {
+      "baseline_world": 1,
+      "expanded_sky": 1,
+      "expanded_models": 1
+    },
+    "sky_snapshot_consistency": {
+      "world_view_projection_variants_all_phases": 1,
+      "six_material_identities": [
+        1228037132,
+        1228037284,
+        1228037436,
+        1228037588,
+        1228037740,
+        1228037892
+      ],
+      "main_world_view_projection_equal": true
+    }
+  },
+  "inventory": {
+    "groups": [
+      {
+        "phase": "raster",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480003",
+        "stride": 48,
+        "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 377,
+        "converted": 0,
+        "reports": {
+          "1:0": 377
+        }
+      },
+      {
+        "phase": "raster",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480033",
+        "stride": 64,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280002000600000034000200070002000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 58,
+        "converted": 0,
+        "reports": {
+          "1:0": 58
+        }
+      },
+      {
+        "phase": "raster",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x2480033",
+        "stride": 80,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280001000502000030000200060000003c000200070002000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 116,
+        "converted": 0,
+        "reports": {
+          "1:0": 116
+        }
+      },
+      {
+        "phase": "raster",
+        "shader": "UnlitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000200030000001800010005000100000004000a01020000000300000102001000020003010300000000000002ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 116,
+        "converted": 0,
+        "reports": {
+          "1:0": 116
+        }
+      },
+      {
+        "phase": "raster",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c0005000300000010000100050000000c00050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 29,
+        "converted": 0,
+        "reports": {
+          "1:0": 29
+        }
+      },
+      {
+        "phase": "raster",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 290,
+        "converted": 0,
+        "reports": {
+          "1:0": 290
+        }
+      },
+      {
+        "phase": "raster",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0xa0403",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c00060001000000100004000200000014000500030000001800010005000000140005000600020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 58,
+        "converted": 0,
+        "reports": {
+          "1:0": 58
+        }
+      },
+      {
+        "phase": "raster",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480003",
+        "stride": 48,
+        "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "draws": 29,
+        "converted": 0,
+        "reports": {
+          "1:0": 29
+        }
+      },
+      {
+        "phase": "raster",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "draws": 58,
+        "converted": 0,
+        "reports": {
+          "1:0": 58
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480003",
+        "stride": 48,
+        "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 1170,
+        "converted": 1170,
+        "reports": {
+          "8:9": 1170
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480033",
+        "stride": 64,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280002000600000034000200070002000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 180,
+        "converted": 180,
+        "reports": {
+          "8:9": 180
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x2480033",
+        "stride": 80,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280001000502000030000200060000003c000200070002000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 360,
+        "converted": 360,
+        "reports": {
+          "8:9": 360
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "UnlitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000200030000001800010005000100000004000a01020000000300000102001000020003010300000000000002ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 360,
+        "converted": 360,
+        "reports": {
+          "8:9": 360
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c0005000300000010000100050000000c00050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 90,
+        "converted": 0,
+        "reports": {
+          "3:0": 90
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 900,
+        "converted": 0,
+        "reports": {
+          "3:0": 900
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0xa0403",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c00060001000000100004000200000014000500030000001800010005000000140005000600020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 180,
+        "converted": 0,
+        "reports": {
+          "3:0": 180
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480003",
+        "stride": 48,
+        "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "draws": 90,
+        "converted": 0,
+        "reports": {
+          "7:0": 90
+        }
+      },
+      {
+        "phase": "baseline_world",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "draws": 180,
+        "converted": 0,
+        "reports": {
+          "3:0": 180
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480003",
+        "stride": 48,
+        "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 780,
+        "converted": 780,
+        "reports": {
+          "8:9": 780
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480033",
+        "stride": 64,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280002000600000034000200070002000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 120,
+        "converted": 120,
+        "reports": {
+          "8:9": 120
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x2480033",
+        "stride": 80,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280001000502000030000200060000003c000200070002000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 240,
+        "converted": 240,
+        "reports": {
+          "8:9": 240
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "UnlitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000200030000001800010005000100000004000a01020000000300000102001000020003010300000000000002ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 240,
+        "converted": 240,
+        "reports": {
+          "8:9": 240
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c0005000300000010000100050000000c00050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 60,
+        "converted": 0,
+        "reports": {
+          "3:0": 60
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 600,
+        "converted": 0,
+        "reports": {
+          "3:0": 600
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0xa0403",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c00060001000000100004000200000014000500030000001800010005000000140005000600020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 120,
+        "converted": 0,
+        "reports": {
+          "3:0": 120
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480003",
+        "stride": 48,
+        "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "draws": 60,
+        "converted": 0,
+        "reports": {
+          "7:0": 60
+        }
+      },
+      {
+        "phase": "expanded_sky",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "draws": 120,
+        "converted": 0,
+        "reports": {
+          "3:0": 120
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480003",
+        "stride": 48,
+        "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 780,
+        "converted": 780,
+        "reports": {
+          "8:9": 780
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480033",
+        "stride": 64,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280002000600000034000200070002000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 120,
+        "converted": 120,
+        "reports": {
+          "8:9": 120
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x2480033",
+        "stride": 80,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000010005010000280001000502000030000200060000003c000200070002000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 240,
+        "converted": 240,
+        "reports": {
+          "8:9": 240
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "UnlitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000200030000001800010005000100000004000a01020000000300000102001000020003010300000000000002ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 240,
+        "converted": 240,
+        "reports": {
+          "8:9": 240
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c0005000300000010000100050000000c00050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 60,
+        "converted": 60,
+        "reports": {
+          "12:9": 60
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 600,
+        "converted": 0,
+        "reports": {
+          "12:4": 600
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0xa0403",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c00060001000000100004000200000014000500030000001800010005000000140005000600020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "draws": 120,
+        "converted": 0,
+        "reports": {
+          "12:4": 120
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "LightmappedGeneric",
+        "vertex_format": "0x480003",
+        "stride": 48,
+        "declaration_hex": "000000000200000000000c00020003000000180001000500000020000100050102000000030000010200100002000301ff00000011000000",
+        "has_bone_fields": false,
+        "affine_world": true,
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "draws": 60,
+        "converted": 0,
+        "reports": {
+          "12:5": 60
+        }
+      },
+      {
+        "phase": "expanded_models",
+        "shader": "VertexLitGeneric",
+        "vertex_format": "0x80503",
+        "stride": 32,
+        "declaration_hex": "000000000200000000000c000600010000001000040002000000140005000300000018000100050000001400050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000",
+        "has_bone_fields": true,
+        "affine_world": true,
+        "alpha_blend": 1,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 0,
+        "draws": 120,
+        "converted": 0,
+        "reports": {
+          "12:5": 120
+        }
+      }
+    ],
+    "limit": 1024,
+    "omitted_draws": 0,
+    "scope": "known shader families at main-camera HDR targets, including bones, cutout and rejected draws; counts are not pixel, object or whole-map coverage"
+  },
+  "bulk_pipeline_rejections": [
+    {
+      "alpha": 1,
+      "alpha_test": 0,
+      "depth": 1,
+      "depth_write": 0,
+      "render_target_format": 113,
+      "count": 180
+    }
+  ],
+  "images": {
+    "reviewed": "four independently decoded color frames plus raw depth and independently decoded octahedral normals",
+    "observations": [
+      "Existing world walls/panels/floor and HUD retained in all RT stages.",
+      "Sky appears at 180 and 240, with incorrect cloud mapping relative to raster 30.",
+      "No convincing new model surface or occlusion appears at 240 relative to 180."
+    ],
+    "geometry_comparisons": {
+      "120_to_180": {
+        "mask_iou": 0.9988556104556929,
+        "common_hits": 203369,
+        "new_hits": 208,
+        "lost_hits": 25,
+        "median_abs_projected_depth_delta": 1.7762184143066406e-05,
+        "common_hits_depth_delta_over0_001": 66,
+        "depth_delta_over0_001_bbox": [
+          213,
+          151,
+          407,
+          239
+        ],
+        "normal_angle_median_degrees": 0.0,
+        "normal_under5_fraction": 0.9988100447954211,
+        "all_normals_count": 5
+      },
+      "180_to_240": {
+        "mask_iou": 0.9988076253097475,
+        "common_hits": 203552,
+        "new_hits": 218,
+        "lost_hits": 25,
+        "median_abs_projected_depth_delta": 1.8417835235595703e-05,
+        "common_hits_depth_delta_over0_001": 50,
+        "depth_delta_over0_001_bbox": [
+          213,
+          151,
+          407,
+          239
+        ],
+        "normal_angle_median_degrees": 0.0,
+        "normal_under5_fraction": 0.9989437588429492,
+        "all_normals_count": 5
+      }
+    },
+    "rois": {
+      "sky_interior": {
+        "rectangle": [
+          230,
+          10,
+          390,
+          100
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 14400,
+            "valid_hits": 0,
+            "median_projected_depth": null,
+            "mean_luminance": 0.020192222227722406,
+            "normal_words": {}
+          },
+          "180": {
+            "pixels": 14400,
+            "valid_hits": 0,
+            "median_projected_depth": null,
+            "mean_luminance": 0.6291016852052228,
+            "normal_words": {}
+          },
+          "240": {
+            "pixels": 14400,
+            "valid_hits": 0,
+            "median_projected_depth": null,
+            "mean_luminance": 0.6204130611389416,
+            "normal_words": {}
+          }
+        }
+      },
+      "left_wall": {
+        "rectangle": [
+          65,
+          130,
+          190,
+          240
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 13750,
+            "valid_hits": 13750,
+            "median_projected_depth": 0.9498261213302612,
+            "mean_luminance": 0.7603872018679723,
+            "normal_words": {
+              "0x7fff0000": 13750
+            }
+          },
+          "180": {
+            "pixels": 13750,
+            "valid_hits": 13750,
+            "median_projected_depth": 0.949834406375885,
+            "mean_luminance": 0.6578302762701724,
+            "normal_words": {
+              "0x7fff0000": 13750
+            }
+          },
+          "240": {
+            "pixels": 13750,
+            "valid_hits": 13750,
+            "median_projected_depth": 0.9498342275619507,
+            "mean_luminance": 0.6549691242071125,
+            "normal_words": {
+              "0x7fff0000": 13750
+            }
+          }
+        }
+      },
+      "brick_wall": {
+        "rectangle": [
+          250,
+          155,
+          350,
+          190
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 3500,
+            "valid_hits": 3500,
+            "median_projected_depth": 0.9846612215042114,
+            "mean_luminance": 0.2724255217548413,
+            "normal_words": {
+              "0xfffe7fff": 3255,
+              "0x7fff0000": 245
+            }
+          },
+          "180": {
+            "pixels": 3500,
+            "valid_hits": 3500,
+            "median_projected_depth": 0.9846584796905518,
+            "mean_luminance": 0.2502184179957449,
+            "normal_words": {
+              "0xfffe7fff": 3255,
+              "0x7fff0000": 245
+            }
+          },
+          "240": {
+            "pixels": 3500,
+            "valid_hits": 3500,
+            "median_projected_depth": 0.9846609234809875,
+            "mean_luminance": 0.2619035788324611,
+            "normal_words": {
+              "0xfffe7fff": 3255,
+              "0x7fff0000": 245
+            }
+          }
+        }
+      },
+      "floor": {
+        "rectangle": [
+          180,
+          290,
+          400,
+          370
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 17600,
+            "valid_hits": 17600,
+            "median_projected_depth": 0.9218864440917969,
+            "mean_luminance": 0.4898281214883676,
+            "normal_words": {
+              "0x7fff7fff": 17600
+            }
+          },
+          "180": {
+            "pixels": 17600,
+            "valid_hits": 17600,
+            "median_projected_depth": 0.9217802286148071,
+            "mean_luminance": 0.3980059361924275,
+            "normal_words": {
+              "0x7fff7fff": 17600
+            }
+          },
+          "240": {
+            "pixels": 17600,
+            "valid_hits": 17600,
+            "median_projected_depth": 0.921676516532898,
+            "mean_luminance": 0.39758632681227885,
+            "normal_words": {
+              "0x7fff7fff": 17600
+            }
+          }
+        }
+      },
+      "prop_815_expected": {
+        "rectangle": [
+          296,
+          210,
+          309,
+          220
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 130,
+            "valid_hits": 130,
+            "median_projected_depth": 0.9763203263282776,
+            "mean_luminance": 0.3293083930298571,
+            "normal_words": {
+              "0x7fff7fff": 91,
+              "0xfffe7fff": 39
+            }
+          },
+          "180": {
+            "pixels": 130,
+            "valid_hits": 130,
+            "median_projected_depth": 0.9761810302734375,
+            "mean_luminance": 0.3370316282158861,
+            "normal_words": {
+              "0x7fff7fff": 97,
+              "0xfffe7fff": 33
+            }
+          },
+          "240": {
+            "pixels": 130,
+            "valid_hits": 130,
+            "median_projected_depth": 0.9760433435440063,
+            "mean_luminance": 0.34809047575061136,
+            "normal_words": {
+              "0x7fff7fff": 99,
+              "0xfffe7fff": 31
+            }
+          }
+        }
+      },
+      "right_panel": {
+        "rectangle": [
+          470,
+          150,
+          580,
+          210
+        ],
+        "measurements": {
+          "120": {
+            "pixels": 6600,
+            "valid_hits": 6600,
+            "median_projected_depth": 0.9615966081619263,
+            "mean_luminance": 0.8368097013842819,
+            "normal_words": {
+              "0xfffe7fff": 6587,
+              "0x7ffffffe": 13
+            }
+          },
+          "180": {
+            "pixels": 6600,
+            "valid_hits": 6600,
+            "median_projected_depth": 0.9615998268127441,
+            "mean_luminance": 0.750178148958578,
+            "normal_words": {
+              "0xfffe7fff": 6588,
+              "0x7ffffffe": 12
+            }
+          },
+          "240": {
+            "pixels": 6600,
+            "valid_hits": 6600,
+            "median_projected_depth": 0.9616098403930664,
+            "mean_luminance": 0.7486177431639403,
+            "normal_words": {
+              "0xfffe7fff": 6587,
+              "0x7ffffffe": 13
+            }
+          }
+        }
+      }
+    },
+    "limits": "projected z/w, 640x400 nearest readback; edge/noise differences are not new object coverage or BLAS proof"
+  },
+  "captured_inputs": {
+    "sample_counts": {
+      "raster": 24,
+      "baseline_world": 24,
+      "expanded_sky": 24,
+      "expanded_models": 24
+    },
+    "payload_bytes": 1269680,
+    "geometry_status_counts": {
+      "complete": 52,
+      "vertex_budget": 40,
+      "index_budget": 4
+    },
+    "replay_status_counts": {
+      "extra_vs_output": 24,
+      "not_sky": 72
+    },
+    "sky_rebuild_summaries": [
+      {
+        "event": "sky_rebuild_counts",
+        "frame": 30,
+        "phase": "raster",
+        "attempts": 0,
+        "ready": 0,
+        "reconstructed": 0,
+        "fallback": 0,
+        "input_samples": 24,
+        "reasons": {}
+      },
+      {
+        "event": "sky_rebuild_counts",
+        "frame": 120,
+        "phase": "baseline_world",
+        "attempts": 0,
+        "ready": 0,
+        "reconstructed": 0,
+        "fallback": 0,
+        "input_samples": 24,
+        "reasons": {}
+      },
+      {
+        "event": "sky_rebuild_counts",
+        "frame": 180,
+        "phase": "expanded_sky",
+        "attempts": 0,
+        "ready": 0,
+        "reconstructed": 0,
+        "fallback": 0,
+        "input_samples": 24,
+        "reasons": {}
+      },
+      {
+        "event": "sky_rebuild_counts",
+        "frame": 240,
+        "phase": "expanded_models",
+        "attempts": 360,
+        "ready": 0,
+        "reconstructed": 0,
+        "fallback": 360,
+        "input_samples": 24,
+        "reasons": {
+          "sky_set_not_fully_supported": 360
+        }
+      }
+    ],
+    "sky_rebuild_result": "fallback_preserved_v8"
+  },
+  "source_input_findings": {
+    "schema": 1,
+    "scope": "actual captured source input analysis; no production code changes or GPU replay",
+    "unskinned_model": {
+      "ordinal": 56071,
+      "vertex_count": 815,
+      "vs_sha256": "3a9ebc14b4895b0614690472b2500c46c505ff282e6868472849900975493e41",
+      "vertices_sha256": "6f9bdbe4fe057a2475cbd522e2ebc70377d176c3c9b8a405e23e8374270e1107",
+      "constants_sha256": "0db9d246f8d31c501a4db378fb2a1a22d55ea187f12a166e89dd2100b1ead3ec",
+      "snapshot_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "captured_model_rows_c58_to_c60": [
+        [
+          -0.9999392032623291,
+          -0.0025033000856637955,
+          0.010740583762526512,
+          -3089.375732421875
+        ],
+        [
+          0.010784824378788471,
+          -0.01838562823832035,
+          0.999772846698761,
+          -2532.0
+        ],
+        [
+          -0.002305258996784687,
+          0.9998279213905334,
+          0.018411507830023766,
+          1280.4677734375
+        ]
+      ],
+      "c13_morph_control": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "raw_position_bounds": {
+        "min": [
+          -5.262486457824707,
+          0.02380990982055664,
+          -2.014188051223755
+        ],
+        "max": [
+          5.4022135734558105,
+          7.521086692810059,
+          2.0143840312957764
+        ]
+      },
+      "placed_world_bounds": {
+        "min": [
+          -3094.7984971062997,
+          -2534.1975767085655,
+          1280.4462014400585
+        ],
+        "max": [
+          -3084.110019666389,
+          -2530.0212319093903,
+          1288.007950005714
+        ]
+      },
+      "current_snapshot_wvp_projection": {
+        "vertices": 815,
+        "front": 0,
+        "inside_clip": 0,
+        "front_ndc_bounds": null
+      },
+      "after_captured_model_placement": {
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "front_ndc_bounds": {
+          "min": [
+            -0.0692991036499922,
+            -0.0921613833305908,
+            0.9742295590008593
+          ],
+          "max": [
+            -0.04065817144740764,
+            -0.05504837392777078,
+            0.9750681042765059
+          ]
+        }
+      },
+      "original_vs_position_prefix_projection": {
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "front_ndc_bounds": {
+          "min": [
+            -0.06929854468349317,
+            -0.09216132358158606,
+            0.9742295679503419
+          ],
+          "max": [
+            -0.040657608197514565,
+            -0.05504831484019104,
+            0.9750681132375608
+          ]
+        }
+      },
+      "max_abs_clip_difference_snapshot_vp_vs_original_c8_to_c11": 0.0001548101367916388,
+      "uv_transform_c48_to_c49": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "pipeline": {
+        "alpha_blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "conversion": [
+          12,
+          9,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0
+        ]
+      },
+      "limits": "double precision projection of captured position path; not triangle visibility, GPU-bit-exact replay, occlusion or BLAS proof"
+    },
+    "model_position_dataflow": [
+      "FLOAT3 POSITION0 has default w=1",
+      "POSITION1 morph term scaled by captured c13.x=0",
+      "world.xyz=dp4(local,c58/c59/c60), world.w=c0.y=1",
+      "clip.xyzw=dp4(world,c8/c9/c10/c11)"
+    ],
+    "rigid_bone_samples": [
+      {
+        "ordinal": 56072,
+        "vertex_count": 4,
+        "vs_sha256": "84e1a3321dd4b0e7630372d7c229e37cadea38db2833da73cbfdd5bc8b7dce0d",
+        "vertices_sha256": "a9d4349a1359f636ce9bd1c9953730b9c5c91bf3b5d190a78319de06949f7f34",
+        "constants_sha256": "e5d3d8893cfb19fe09a16c3dd33a311a661f13d048940052212f8b0f4a27f49d",
+        "snapshot_world": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "captured_model_rows_c58_to_c60": [
+          [
+            -1.0,
+            -2.8173124064778676e-06,
+            -2.8610218123503728e-06,
+            -3087.84375
+          ],
+          [
+            2.817311496983166e-06,
+            -1.0,
+            -4.454454938240815e-06,
+            -2539.84375
+          ],
+          [
+            -2.86102294921875e-06,
+            -4.454454938240815e-06,
+            1.0,
+            1284.90625
+          ]
+        ],
+        "c13_morph_control": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw_position_bounds": {
+          "min": [
+            -1.7307690382003784,
+            -1.7307690382003784,
+            -1.7307690382003784
+          ],
+          "max": [
+            1.7307690382003784,
+            1.7307690382003784,
+            -1.7307690382003784
+          ]
+        },
+        "placed_world_bounds": {
+          "min": [
+            -3089.5745189625495,
+            -2541.5745162046833,
+            1283.175468300397
+          ],
+          "max": [
+            -3086.1129711339145,
+            -2538.1129683760514,
+            1283.1754936232023
+          ]
+        },
+        "current_snapshot_wvp_projection": {
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "front_ndc_bounds": null
+        },
+        "after_captured_model_placement": {
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "front_ndc_bounds": {
+            "min": [
+              -0.05325592591901204,
+              -0.07268887188106257,
+              0.9751303322286943
+            ],
+            "max": [
+              -0.040797557978171514,
+              -0.06862612454243046,
+              0.9755354326632991
+            ]
+          }
+        },
+        "original_vs_position_prefix_projection": {
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "front_ndc_bounds": {
+            "min": [
+              -0.0532553793908122,
+              -0.07268881366198421,
+              0.9751303411702161
+            ],
+            "max": [
+              -0.04079701379446898,
+              -0.06862606727142992,
+              0.9755354416112251
+            ]
+          }
+        },
+        "max_abs_clip_difference_snapshot_vp_vs_original_c8_to_c11": 0.00015475408326892648,
+        "uv_transform_c48_to_c49": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "pipeline": {
+          "alpha_blend": 0,
+          "alpha_test": 0,
+          "depth": 1,
+          "depth_write": 1,
+          "conversion": [
+            12,
+            4,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "limits": "double precision projection of captured position path; not triangle visibility, GPU-bit-exact replay, occlusion or BLAS proof",
+        "weight_short2_counts": [
+          {
+            "values": [
+              32767,
+              -1
+            ],
+            "count": 4
+          }
+        ],
+        "bone_indices_d3dcolor_counts": {
+          "00000000": 4
+        },
+        "decoded_weights": [
+          1,
+          0,
+          0
+        ],
+        "palette_bone_indices": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "ordinal": 56073,
+        "vertex_count": 4,
+        "vs_sha256": "84e1a3321dd4b0e7630372d7c229e37cadea38db2833da73cbfdd5bc8b7dce0d",
+        "vertices_sha256": "307a800b9b5f729af0f8a6d50775d514b9ecf42b82ef99f0792797336b192e4b",
+        "constants_sha256": "e5d3d8893cfb19fe09a16c3dd33a311a661f13d048940052212f8b0f4a27f49d",
+        "snapshot_world": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "captured_model_rows_c58_to_c60": [
+          [
+            -1.0,
+            -2.8173124064778676e-06,
+            -2.8610218123503728e-06,
+            -3087.84375
+          ],
+          [
+            2.817311496983166e-06,
+            -1.0,
+            -4.454454938240815e-06,
+            -2539.84375
+          ],
+          [
+            -2.86102294921875e-06,
+            -4.454454938240815e-06,
+            1.0,
+            1284.90625
+          ]
+        ],
+        "c13_morph_control": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw_position_bounds": {
+          "min": [
+            -1.7307690382003784,
+            -1.7307690382003784,
+            1.7307690382003784
+          ],
+          "max": [
+            1.7307690382003784,
+            1.7307690382003784,
+            1.7307699918746948
+          ]
+        },
+        "placed_world_bounds": {
+          "min": [
+            -3089.5745288660855,
+            -2541.5745316239486,
+            1286.6370063767977
+          ],
+          "max": [
+            -3086.112981037453,
+            -2538.1129837953213,
+            1286.6370326532774
+          ]
+        },
+        "current_snapshot_wvp_projection": {
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "front_ndc_bounds": null
+        },
+        "after_captured_model_placement": {
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "front_ndc_bounds": {
+            "min": [
+              -0.05335258974147695,
+              -0.05844436222729275,
+              0.9750848907962153
+            ],
+            "max": [
+              -0.04087125489090891,
+              -0.054606697657205265,
+              0.9754914604674746
+            ]
+          }
+        },
+        "original_vs_position_prefix_projection": {
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "front_ndc_bounds": {
+            "min": [
+              -0.05335204222084962,
+              -0.058444303518169975,
+              0.9750848997468768
+            ],
+            "max": [
+              -0.04087070972362857,
+              -0.0546066399058583,
+              0.9754914694244029
+            ]
+          }
+        },
+        "max_abs_clip_difference_snapshot_vp_vs_original_c8_to_c11": 0.00015475408372367383,
+        "uv_transform_c48_to_c49": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "pipeline": {
+          "alpha_blend": 0,
+          "alpha_test": 0,
+          "depth": 1,
+          "depth_write": 1,
+          "conversion": [
+            12,
+            4,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "limits": "double precision projection of captured position path; not triangle visibility, GPU-bit-exact replay, occlusion or BLAS proof",
+        "weight_short2_counts": [
+          {
+            "values": [
+              32767,
+              -1
+            ],
+            "count": 4
+          }
+        ],
+        "bone_indices_d3dcolor_counts": {
+          "00000000": 4
+        },
+        "decoded_weights": [
+          1,
+          0,
+          0
+        ],
+        "palette_bone_indices": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "ordinal": 56074,
+        "vertex_count": 16,
+        "vs_sha256": "84e1a3321dd4b0e7630372d7c229e37cadea38db2833da73cbfdd5bc8b7dce0d",
+        "vertices_sha256": "80b52f80b80270b23fdc83a9564b18faa646109e640181e72d0e5bccf9313d12",
+        "constants_sha256": "e5d3d8893cfb19fe09a16c3dd33a311a661f13d048940052212f8b0f4a27f49d",
+        "snapshot_world": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "captured_model_rows_c58_to_c60": [
+          [
+            -1.0,
+            -2.8173124064778676e-06,
+            -2.8610218123503728e-06,
+            -3087.84375
+          ],
+          [
+            2.817311496983166e-06,
+            -1.0,
+            -4.454454938240815e-06,
+            -2539.84375
+          ],
+          [
+            -2.86102294921875e-06,
+            -4.454454938240815e-06,
+            1.0,
+            1284.90625
+          ]
+        ],
+        "c13_morph_control": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw_position_bounds": {
+          "min": [
+            -1.7307690382003784,
+            -1.7307690382003784,
+            -1.7307690382003784
+          ],
+          "max": [
+            1.7307690382003784,
+            1.7307690382003784,
+            1.7307699918746948
+          ]
+        },
+        "placed_world_bounds": {
+          "min": [
+            -3089.5745288660855,
+            -2541.5745316239486,
+            1283.175468300397
+          ],
+          "max": [
+            -3086.1129711339145,
+            -2538.1129683760514,
+            1286.6370326532774
+          ]
+        },
+        "current_snapshot_wvp_projection": {
+          "vertices": 16,
+          "front": 0,
+          "inside_clip": 0,
+          "front_ndc_bounds": null
+        },
+        "after_captured_model_placement": {
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "front_ndc_bounds": {
+            "min": [
+              -0.05335258974147695,
+              -0.07268887188106257,
+              0.9750848907962153
+            ],
+            "max": [
+              -0.040797557978171514,
+              -0.054606697657205265,
+              0.9755354326632991
+            ]
+          }
+        },
+        "original_vs_position_prefix_projection": {
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "front_ndc_bounds": {
+            "min": [
+              -0.05335204222084962,
+              -0.07268881366198421,
+              0.9750848997468768
+            ],
+            "max": [
+              -0.04079701379446898,
+              -0.0546066399058583,
+              0.9755354416112251
+            ]
+          }
+        },
+        "max_abs_clip_difference_snapshot_vp_vs_original_c8_to_c11": 0.00015475408372367383,
+        "uv_transform_c48_to_c49": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "pipeline": {
+          "alpha_blend": 0,
+          "alpha_test": 0,
+          "depth": 1,
+          "depth_write": 1,
+          "conversion": [
+            12,
+            4,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "limits": "double precision projection of captured position path; not triangle visibility, GPU-bit-exact replay, occlusion or BLAS proof",
+        "weight_short2_counts": [
+          {
+            "values": [
+              32767,
+              -1
+            ],
+            "count": 16
+          }
+        ],
+        "bone_indices_d3dcolor_counts": {
+          "00000000": 16
+        },
+        "decoded_weights": [
+          1,
+          0,
+          0
+        ],
+        "palette_bone_indices": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "ordinal": 56075,
+        "vertex_count": 24,
+        "vs_sha256": "84e1a3321dd4b0e7630372d7c229e37cadea38db2833da73cbfdd5bc8b7dce0d",
+        "vertices_sha256": "5e10426987f3f0c241ea585e5008e334f9e6118cbce40560888a76c9fb74b087",
+        "constants_sha256": "445a886b794c8226ab5e2e2b7af3735370ee6a3698773e732889b75426addbe5",
+        "snapshot_world": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "captured_model_rows_c58_to_c60": [
+          [
+            0.9785256385803223,
+            0.18946541845798492,
+            -0.08118106424808502,
+            -3097.59375
+          ],
+          [
+            -0.20606493949890137,
+            0.9086816906929016,
+            -0.3630905747413635,
+            -2526.75
+          ],
+          [
+            0.004974630661308765,
+            0.3720220625400543,
+            0.9282105565071106,
+            1284.34375
+          ]
+        ],
+        "c13_morph_control": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw_position_bounds": {
+          "min": [
+            0.10907046496868134,
+            -0.7143807411193848,
+            -8.25326156616211
+          ],
+          "max": [
+            14.956318855285645,
+            14.1275634765625,
+            6.59386682510376
+          ]
+        },
+        "placed_world_bounds": {
+          "min": [
+            -3098.1524589773758,
+            -2532.8733265103833,
+            1276.4227348137676
+          ],
+          "max": [
+            -3079.6171228548487,
+            -2510.9402917326192,
+            1295.7894463746911
+          ]
+        },
+        "current_snapshot_wvp_projection": {
+          "vertices": 24,
+          "front": 0,
+          "inside_clip": 0,
+          "front_ndc_bounds": null
+        },
+        "after_captured_model_placement": {
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "front_ndc_bounds": {
+            "min": [
+              -0.10516806465762016,
+              -0.11628515249718924,
+              0.9726534446050288
+            ],
+            "max": [
+              -0.038313567794340773,
+              -0.029337875320368672,
+              0.9748886400329004
+            ]
+          }
+        },
+        "original_vs_position_prefix_projection": {
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "front_ndc_bounds": {
+            "min": [
+              -0.10516748258819181,
+              -0.1162850919235455,
+              0.9726534535775255
+            ],
+            "max": [
+              -0.038312992249586515,
+              -0.029337812593925983,
+              0.9748886490245713
+            ]
+          }
+        },
+        "max_abs_clip_difference_snapshot_vp_vs_original_c8_to_c11": 0.00015484966161238845,
+        "uv_transform_c48_to_c49": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "pipeline": {
+          "alpha_blend": 0,
+          "alpha_test": 0,
+          "depth": 1,
+          "depth_write": 1,
+          "conversion": [
+            12,
+            4,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "limits": "double precision projection of captured position path; not triangle visibility, GPU-bit-exact replay, occlusion or BLAS proof",
+        "weight_short2_counts": [
+          {
+            "values": [
+              32767,
+              -1
+            ],
+            "count": 24
+          }
+        ],
+        "bone_indices_d3dcolor_counts": {
+          "00000000": 24
+        },
+        "decoded_weights": [
+          1,
+          0,
+          0
+        ],
+        "palette_bone_indices": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "ordinal": 56101,
+        "vertex_count": 846,
+        "vs_sha256": "8eb1c8546fb7d3536f008f1e09998cf034849f5f67f23fc1d2fa61cea69774f9",
+        "vertices_sha256": "0a79d2af4723ac1c9138f4b27ecb2c82da81a964734d5bc45502b0b3b44d66d1",
+        "constants_sha256": "ec829cf514fb4a3bb8803f13cdb3701d2dac496428b11262751490c249da28d1",
+        "snapshot_world": [
+          [
+            0.010759919881820679,
+            0.999788224697113,
+            0.01754581741988659,
+            0.0
+          ],
+          [
+            -0.05109120160341263,
+            -0.016974229365587234,
+            0.9985498785972595,
+            0.0
+          ],
+          [
+            0.9986360669136047,
+            -0.011640799231827259,
+            0.050897736102342606,
+            0.0
+          ],
+          [
+            -3090.6708984375,
+            -2551.8544921875,
+            1282.471923828125,
+            1.0
+          ]
+        ],
+        "captured_model_rows_c58_to_c60": [
+          [
+            0.010759919881820679,
+            -0.05109120160341263,
+            0.9986360669136047,
+            -3090.6708984375
+          ],
+          [
+            0.999788224697113,
+            -0.016974229365587234,
+            -0.011640799231827259,
+            -2551.8544921875
+          ],
+          [
+            0.01754581741988659,
+            0.9985498785972595,
+            0.050897736102342606,
+            1282.471923828125
+          ]
+        ],
+        "c13_morph_control": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw_position_bounds": {
+          "min": [
+            -10.147407531738281,
+            -4.064555644989014,
+            -8.201395988464355
+          ],
+          "max": [
+            12.300336837768555,
+            3.260455846786499,
+            15.60036849975586
+          ]
+        },
+        "placed_world_bounds": {
+          "min": [
+            -3098.8391878904235,
+            -2562.0676544494204,
+            1278.4039951474338
+          ],
+          "max": [
+            -3075.0698511442542,
+            -2539.5942782029297,
+            1286.0622979399961
+          ]
+        },
+        "current_snapshot_wvp_projection": {
+          "vertices": 846,
+          "front": 846,
+          "inside_clip": 846,
+          "front_ndc_bounds": {
+            "min": [
+              -0.06049583382748152,
+              -0.08888049091510933,
+              0.9751789978309121
+            ],
+            "max": [
+              -0.0002917964938690897,
+              -0.050274362886497385,
+              0.9770692859549831
+            ]
+          }
+        },
+        "after_captured_model_placement": {
+          "vertices": 846,
+          "front": 846,
+          "inside_clip": 846,
+          "front_ndc_bounds": {
+            "min": [
+              -0.06049583382748152,
+              -0.08888049091510933,
+              0.9751789978309121
+            ],
+            "max": [
+              -0.0002917964938690897,
+              -0.050274362886497385,
+              0.9770692859549831
+            ]
+          }
+        },
+        "original_vs_position_prefix_projection": {
+          "vertices": 846,
+          "front": 846,
+          "inside_clip": 846,
+          "front_ndc_bounds": {
+            "min": [
+              -0.060495302067220244,
+              -0.08888043385538894,
+              0.9751790067705777
+            ],
+            "max": [
+              -0.00029126896236207823,
+              -0.05027430718974072,
+              0.9770692949102762
+            ]
+          }
+        },
+        "max_abs_clip_difference_snapshot_vp_vs_original_c8_to_c11": 0.00015491099838982336,
+        "uv_transform_c48_to_c49": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "pipeline": {
+          "alpha_blend": 0,
+          "alpha_test": 0,
+          "depth": 1,
+          "depth_write": 1,
+          "conversion": [
+            12,
+            4,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "limits": "double precision projection of captured position path; not triangle visibility, GPU-bit-exact replay, occlusion or BLAS proof",
+        "weight_short2_counts": [
+          {
+            "values": [
+              32767,
+              -1
+            ],
+            "count": 846
+          }
+        ],
+        "bone_indices_d3dcolor_counts": {
+          "00000000": 846
+        },
+        "decoded_weights": [
+          1,
+          0,
+          0
+        ],
+        "palette_bone_indices": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "rigid_bone_limits": "five complete samples in last phase; not evidence that all 720 layout refusals or arbitrary animated meshes are rigid; alpha blend/depth restrictions still apply",
+    "sky_interface": {
+      "representative_ordinal": 37322,
+      "shaders": [
+        {
+          "stage": "vs",
+          "sha256": "dffab44127263065d104ab598139af8552e40d018cb8dd7d4a1883baaaa35a21",
+          "declarations": [
+            {
+              "usage": 0,
+              "index": 0,
+              "type": 1,
+              "register": 0,
+              "mask": 15
+            },
+            {
+              "usage": 5,
+              "index": 0,
+              "type": 1,
+              "register": 1,
+              "mask": 15
+            },
+            {
+              "usage": 0,
+              "index": 0,
+              "type": 6,
+              "register": 0,
+              "mask": 15
+            },
+            {
+              "usage": 5,
+              "index": 0,
+              "type": 6,
+              "register": 1,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 1,
+              "type": 6,
+              "register": 2,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 2,
+              "type": 6,
+              "register": 3,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 3,
+              "type": 6,
+              "register": 4,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 4,
+              "type": 6,
+              "register": 5,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 5,
+              "type": 6,
+              "register": 6,
+              "mask": 7
+            },
+            {
+              "usage": 5,
+              "index": 6,
+              "type": 6,
+              "register": 7,
+              "mask": 3
+            }
+          ]
+        },
+        {
+          "stage": "ps",
+          "sha256": "b8a46b3d00003c8c7e02bc289c2c10162eab2657dc1ab175eb6af09d8f83ea57",
+          "declarations": [
+            {
+              "usage": 5,
+              "index": 0,
+              "type": 1,
+              "register": 0,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 1,
+              "type": 1,
+              "register": 1,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 2,
+              "type": 1,
+              "register": 2,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 3,
+              "type": 1,
+              "register": 3,
+              "mask": 3
+            },
+            {
+              "usage": 5,
+              "index": 4,
+              "type": 1,
+              "register": 4,
+              "mask": 3
+            },
+            {
+              "usage": 0,
+              "index": 0,
+              "type": 10,
+              "register": 0,
+              "mask": 15
+            }
+          ]
+        }
+      ],
+      "vs_texcoord_outputs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "retained_ps_required_texcoords": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "existing_replacement_supplied_texcoords": [
+        0
+      ],
+      "current_vs_guard": "extra_vs_output",
+      "current_ps_guard_satisfied": false,
+      "sky_vs_unique_hashes": [
+        "dffab44127263065d104ab598139af8552e40d018cb8dd7d4a1883baaaa35a21"
+      ],
+      "sky_ps_unique_hashes": [
+        "b8a46b3d00003c8c7e02bc289c2c10162eab2657dc1ab175eb6af09d8f83ea57"
+      ]
+    },
+    "sky_precision": {
+      "method": "current C++ bounded VM, offline removal of extra TEXCOORD declarations only; all original instructions and constants retained; not a PS interface fix, no GPU execution",
+      "float_contraction": "off",
+      "faces": [
+        {
+          "ordinal": 56042,
+          "vertices": [
+            {
+              "clip": [
+                -579200.4375,
+                -712437.75,
+                -134453.109375,
+                -134445.140625
+              ],
+              "unproject_w": 1.003300178796053
+            },
+            {
+              "clip": [
+                -579200.4375,
+                634638.125,
+                -305606.1875,
+                -305597
+              ],
+              "unproject_w": 1.0054400777662522
+            },
+            {
+              "clip": [
+                -164027,
+                810898.4375,
+                691344.6875,
+                691346.8125
+              ],
+              "unproject_w": 0.9982048218225827
+            },
+            {
+              "clip": [
+                -164027,
+                -536177.375,
+                862497.8125,
+                862498.6875
+              ],
+              "unproject_w": 0.9916006841522176
+            }
+          ],
+          "max_homogeneous_scale_delta_from_first": 0.011699494643835351,
+          "would_pass_existing_scale_guard": false
+        },
+        {
+          "ordinal": 56043,
+          "vertices": [
+            {
+              "clip": [
+                579200.4375,
+                -634637.9375,
+                305592.21875,
+                305597.0625
+              ],
+              "unproject_w": 0.9990102068841225
+            },
+            {
+              "clip": [
+                579200.4375,
+                712437.875,
+                134439.109375,
+                134445.203125
+              ],
+              "unproject_w": 1.0056143602450902
+            },
+            {
+              "clip": [
+                164027.046875,
+                536177.5,
+                -862511.8125,
+                -862498.6875
+              ],
+              "unproject_w": 1.0083852833049605
+            },
+            {
+              "clip": [
+                164027.046875,
+                -810898.3125,
+                -691358.6875,
+                -691346.8125
+              ],
+              "unproject_w": 1.0017811456345953
+            }
+          ],
+          "max_homogeneous_scale_delta_from_first": 0.009375076420838013,
+          "would_pass_existing_scale_guard": false
+        },
+        {
+          "ordinal": 56044,
+          "vertices": [
+            {
+              "clip": [
+                164027.046875,
+                -810898.3125,
+                -691358.6875,
+                -691346.8125
+              ],
+              "unproject_w": 1.0017811456345953
+            },
+            {
+              "clip": [
+                164027.046875,
+                536177.5,
+                -862511.8125,
+                -862498.6875
+              ],
+              "unproject_w": 1.0083852833049605
+            },
+            {
+              "clip": [
+                -579200.4375,
+                634638.125,
+                -305606.1875,
+                -305597
+              ],
+              "unproject_w": 1.0054400777662522
+            },
+            {
+              "clip": [
+                -579200.4375,
+                -712437.75,
+                -134453.109375,
+                -134445.140625
+              ],
+              "unproject_w": 1.003300178796053
+            }
+          ],
+          "max_homogeneous_scale_delta_from_first": 0.006604137670365162,
+          "would_pass_existing_scale_guard": false
+        },
+        {
+          "ordinal": 56045,
+          "vertices": [
+            {
+              "clip": [
+                -164027,
+                -536177.375,
+                862497.8125,
+                862498.6875
+              ],
+              "unproject_w": 0.9916006841522176
+            },
+            {
+              "clip": [
+                -164027,
+                810898.4375,
+                691344.6875,
+                691346.8125
+              ],
+              "unproject_w": 0.9982048218225827
+            },
+            {
+              "clip": [
+                579200.4375,
+                712437.875,
+                134439.109375,
+                134445.203125
+              ],
+              "unproject_w": 1.0056143602450902
+            },
+            {
+              "clip": [
+                579200.4375,
+                -634637.9375,
+                305592.21875,
+                305597.0625
+              ],
+              "unproject_w": 0.9990102068841225
+            }
+          ],
+          "max_homogeneous_scale_delta_from_first": 0.014013676092872629,
+          "would_pass_existing_scale_guard": false
+        },
+        {
+          "ordinal": 56046,
+          "vertices": [
+            {
+              "clip": [
+                -579200.4375,
+                634638.125,
+                -305606.1875,
+                -305597
+              ],
+              "unproject_w": 1.0054400777662522
+            },
+            {
+              "clip": [
+                164027.046875,
+                536177.5,
+                -862511.8125,
+                -862498.6875
+              ],
+              "unproject_w": 1.0083852833049605
+            },
+            {
+              "clip": [
+                579200.4375,
+                712437.875,
+                134439.109375,
+                134445.203125
+              ],
+              "unproject_w": 1.0056143602450902
+            },
+            {
+              "clip": [
+                -164027,
+                810898.4375,
+                691344.6875,
+                691346.8125
+              ],
+              "unproject_w": 0.9982048218225827
+            }
+          ],
+          "max_homogeneous_scale_delta_from_first": 0.007235255943669472,
+          "would_pass_existing_scale_guard": false
+        },
+        {
+          "ordinal": 56047,
+          "vertices": [
+            {
+              "clip": [
+                164027.046875,
+                -810898.3125,
+                -691358.6875,
+                -691346.8125
+              ],
+              "unproject_w": 1.0017811456345953
+            },
+            {
+              "clip": [
+                -579200.4375,
+                -712437.75,
+                -134453.109375,
+                -134445.140625
+              ],
+              "unproject_w": 1.003300178796053
+            },
+            {
+              "clip": [
+                -164027,
+                -536177.375,
+                862497.8125,
+                862498.6875
+              ],
+              "unproject_w": 0.9916006841522176
+            },
+            {
+              "clip": [
+                579200.4375,
+                -634637.9375,
+                305592.21875,
+                305597.0625
+              ],
+              "unproject_w": 0.9990102068841225
+            }
+          ],
+          "max_homogeneous_scale_delta_from_first": 0.010180461482377723,
+          "would_pass_existing_scale_guard": false
+        }
+      ]
+    }
+  },
+  "shutdown": {
+    "capture_interrupted": false,
+    "host_terminate_ack": "success",
+    "client_cleanup_and_input_hook_detach": "completed_before_exception",
+    "client_after_cleanup_exception": {
+      "code": "0xc0000005",
+      "execute_target": "0x104b0",
+      "active_bridge_command": false,
+      "bridge_history_count": 0,
+      "caller_frames": [
+        "necola.dll+0x1447fc",
+        "necola.dll+0x1448de"
+      ],
+      "termination_exit_code": "0xe04c3441",
+      "attribution": "shutdown-chain fault; caller presence does not establish root module fault"
+    },
+    "undisposed_common_device_objects": 40
+  },
+  "diagnostic_timing_ms": {
+    "span": 7028.7833,
+    "median_interval": 21.1031,
+    "longest": [
+      [
+        33,
+        1475.216
+      ],
+      [
+        181,
+        130.3803
+      ],
+      [
+        31,
+        126.536
+      ],
+      [
+        121,
+        124.3195
+      ],
+      [
+        2,
+        101.3097
+      ]
+    ],
+    "performance_claim": "diagnostic_only"
+  },
+  "next_scope": [
+    "Recover actual model placement from validated original VS constant/dataflow; do not assume D3D world is complete or apply transform twice.",
+    "Support proven rigid single-bone cases as a guarded batch; validate every accepted draw and preserve pipeline restrictions.",
+    "Replay all five sky interpolants consumed by retained PS and correct large-coordinate reconstruction precision without simply loosening guards.",
+    "Validate these input paths offline with this capture before another combined one-F9 game test; no unchanged recapture requested."
+  ],
+  "changes_this_review": "analysis and documentation only; no new runtime or ZIP published"
+}

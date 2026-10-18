@@ -39,6 +39,8 @@ world trace header7标识coverage revision10；snapshot wire2、原pipeline字�
 
 [下载文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/f21a7668aaf85ea1beca7bfd230dc09595252fc4/downloads/rt-world-pilot-dev.zip)，构建 `94ce852d30b8689a8c75019d2bc8d06c531a72f7`，身份 `ldb-rt-observer+90c1090847190e71`，11,930,485 字节。SHA256：`2a5a3a2ecac77195fd33ba48cdf478c430a2a22fcd4fe7ba9b4d70565cf6190f`。
 
-[独立核验记录](../../research/rt-world-pilot-v10-validation.json) 包含全部成员/源码/配套 PE 校验、双架构新增及既有原生门槛、固定 DLL/API 初始化和五轮旧实际回包回归。原生验证使用系统 D3D9 NULLREF，不执行 Remix/B580；本版实际覆盖图像未运行。
+[独立核验记录](../../research/rt-world-pilot-v10-validation.json) 包含全部成员/源码/配套 PE 校验、双架构新增及既有原生门槛、固定 DLL/API 初始化和五轮旧实际回包回归。原生验证使用系统 D3D9 NULLREF，不执行 Remix/B580。
+
+[v10 实机结果](rt-world-191200-result.md) 已完成：240 Present / 74,759 Draw 完整，原世界与 HUD 保留；新增静态转换60次仍未通过模型图像验收。实际 VS 使用 c58–c60 摆放模型，当前路径遗漏该变换；采到的五份骨骼布局输入均可归约为刚性单骨骼。天空因多组 UV 接口不支持而全部回退 v8，离线复算还发现大坐标反投影精度门槛问题。现有输入足够继续修正，无需原样重采；完整报告和退出阶段异常见结果文档。
 
 解压到旧测试包旁的独立目录并保留旧备份，运行 `run-test.cmd`；进入地图，选择天空、建筑/地面和多种道具同时可见的位置，按一次 F9 后保持镜头静止；按提示退出游戏，等控制台显示最终 ZIP 路径后上传该文件。对照、覆盖统计和输入诊断均自动合入一个结果 ZIP。
