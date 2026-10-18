@@ -92,7 +92,7 @@ inline Data capture(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,
     a.result=d->GetStreamSourceFreq(a.stream,&a.frequency);if (FAILED(a.result)) { continue; }
     D3DVERTEXBUFFER_DESC desc{};a.result=buffer.value->GetDesc(&desc);if (FAILED(a.result)) { continue; }
     if (a.offset>=desc.Size) { a.result=E_INVALIDARG;continue; }
-    const UINT bytes=std::min(256u,desc.Size-a.offset);a.bytes.resize(bytes);void* pointer=nullptr;
+    const UINT bytes=(std::min)(256u,desc.Size-a.offset);a.bytes.resize(bytes);void* pointer=nullptr;
     a.result=buffer.value->Lock(a.offset,bytes,&pointer,D3DLOCK_READONLY);if (FAILED(a.result)) { a.bytes.clear();continue; }
     if (pointer) { std::memcpy(a.bytes.data(),pointer,bytes); }a.result=buffer.value->Unlock();
     if (!pointer || FAILED(a.result)) { a.bytes.clear();if (!pointer && SUCCEEDED(a.result)) { a.result=E_FAIL; } }

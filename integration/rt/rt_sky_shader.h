@@ -129,7 +129,7 @@ inline bool evaluateAll(const Program& p,const Constants& constants,const Vec& p
         else {
           if (!source(ins.src[1],c,b)) { return false; }
           if (ins.op==2) { value=a+b; }else if (ins.op==5) { value=a*b; }
-          else if (ins.op==10) { value=std::min(a,b); }else if (ins.op==11) { value=std::max(a,b); }
+          else if (ins.op==10) { value=(std::min)(a,b); }else if (ins.op==11) { value=(std::max)(a,b); }
           else { if (!source(ins.src[2],c,d)) { return false; }value=a*b+d; }
         }
       }
@@ -171,9 +171,9 @@ inline bool unproject(const Vec& clip,const std::array<double,16>& inverse,Vec& 
 inline bool sameProjection(const Vec& position,const Vec& clip,const std::array<float,16>& viewMatrix,const std::array<float,16>& projection) {
   double view[4]{},direct[4]{};for (unsigned j=0;j<4;++j) { for (unsigned i=0;i<4;++i) { view[j]+=double(position[i])*viewMatrix[i*4+j]; } }
   for (unsigned j=0;j<4;++j) { for (unsigned i=0;i<4;++i) { direct[j]+=view[i]*projection[i*4+j]; } }
-  double scale=1;for (unsigned i=0;i<4;++i) { scale=std::max(scale,std::max(std::abs(direct[i]),std::abs(double(clip[i])))); }
+  double scale=1;for (unsigned i=0;i<4;++i) { scale=(std::max)(scale,(std::max)(std::abs(direct[i]),std::abs(double(clip[i])))); }
   for (unsigned i=0;i<4;++i) { if (!std::isfinite(direct[i]) || !std::isfinite(clip[i]) || std::abs(direct[i]-clip[i])>2e-6*scale) { return false; } }
-  return std::abs(direct[3]-clip[3])<=2e-6*std::max(1.0,std::max(std::abs(direct[3]),std::abs(double(clip[3]))));
+  return std::abs(direct[3]-clip[3])<=2e-6*(std::max)(1.0,(std::max)(std::abs(direct[3]),std::abs(double(clip[3]))));
 }
 struct Rebuilt {
   bool valid=false;const char* reason="invalid_sky_inputs";
@@ -195,7 +195,7 @@ inline Rebuilt rebuild(const Program& program,const PixelInterface& pixel,const 
     if (!direct) {
       double w=0;if (!unproject(clips[i],inverse,world,w)) { out.reason="invalid_unprojected_position";out.vertices.clear();return out; }
       if (!i) { firstW=w; }
-      if (std::abs(w-firstW)>1e-4*std::max(1.0,std::abs(firstW))) { out.reason="varying_homogeneous_scale";out.vertices.clear();return out; }
+      if (std::abs(w-firstW)>1e-4*(std::max)(1.0,std::abs(firstW))) { out.reason="varying_homogeneous_scale";out.vertices.clear();return out; }
     }
     for (unsigned j=0;j<3;++j) { if (!std::isfinite(world[j]) || std::abs(world[j])>1e8f) { out.reason="invalid_rebuilt_position";out.vertices.clear();return out; }out.vertices[i][j]=world[j]; }
     std::memcpy(out.vertices[i].data()+3,coords[i].data(),128);
