@@ -42,8 +42,9 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
 }
 inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) {
   DWORD blend=0,depth=0,write=0;scene_input::Prepared rejected;
-  for (auto pair:{std::make_pair(D3DRS_ALPHABLENDENABLE,&blend),std::make_pair(D3DRS_ZENABLE,&depth),std::make_pair(D3DRS_ZWRITEENABLE,&write)}) {
-    const auto hr=d->GetRenderState(pair.first,pair.second);if (FAILED(hr)) { rejected.result=hr;rejected.reason="model_pipeline_query_failed";return rejected; }
+  const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE};DWORD* values[]={&blend,&depth,&write};
+  for (unsigned i=0;i<3;++i) {
+    const auto hr=d->GetRenderState(names[i],values[i]);if (FAILED(hr)) { rejected.result=hr;rejected.reason="model_pipeline_query_failed";return rejected; }
   }
   if (blend || depth!=1 || write!=1) { rejected.reason="model_pipeline_unsupported";return rejected; }
   const auto input=scene_input::capture(d,kind,type,args,false);
