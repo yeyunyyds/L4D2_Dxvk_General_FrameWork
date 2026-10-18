@@ -63,7 +63,7 @@ try {
       "& `"$dir/transport.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$lightingCases`" /Fe:`"$dir/world-lighting.exe`" /Fo:`"$dir/world-lighting.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/world-lighting.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
-      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$repo/tests`" `"$overlayCases`" /Fe:`"$dir/world-overlay.exe`" /Fo:`"$dir/world-overlay.obj`" /link user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$repo/tests`" `"$overlayCases`" /Fe:`"$dir/world-overlay.exe`" /Fo:`"$dir/world-overlay.obj`" /link user32.lib bcrypt.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/world-overlay.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$skyCases`" /Fe:`"$dir/sky-shader.exe`" /Fo:`"$dir/sky-shader.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/sky-shader.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +

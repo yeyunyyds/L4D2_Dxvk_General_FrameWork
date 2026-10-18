@@ -155,26 +155,54 @@ inline Data capture(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,
 }
 struct Prepared {
   static_draw::Ref<IDirect3DVertexBuffer9> buffer;
+  static_draw::Ref<IDirect3DIndexBuffer9> indexBuffer;
   static_draw::Ref<IDirect3DVertexDeclaration9> declaration;
   UINT stride=32;
   std::array<float,16> world{{1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}};
   std::vector<D3DVERTEXELEMENT9> sourceDeclaration,elements;
   bool ready=false;const char* reason="unprepared";HRESULT result=S_OK;
   std::vector<uint8_t> bytes;
+  std::vector<uint8_t> indices;
+  std::array<uint32_t,6> drawArgs{};
+  UINT indexBytes=0;bool ownedDraw=false,uploadVerified=false;
   Prepared()=default;Prepared(const Prepared&)=delete;Prepared& operator=(const Prepared&)=delete;
   Prepared(Prepared&& other) noexcept:stride(other.stride),world(other.world),sourceDeclaration(std::move(other.sourceDeclaration)),elements(std::move(other.elements)),ready(other.ready),reason(other.reason),result(other.result),bytes(std::move(other.bytes)) {
     buffer.value=other.buffer.value;other.buffer.value=nullptr;declaration.value=other.declaration.value;other.declaration.value=nullptr;
+    indexBuffer.value=other.indexBuffer.value;other.indexBuffer.value=nullptr;indices=std::move(other.indices);
+    drawArgs=other.drawArgs;indexBytes=other.indexBytes;ownedDraw=other.ownedDraw;uploadVerified=other.uploadVerified;
   }
 };
+// Only our own readable buffers are checked here; never relock a WRITEONLY game
+// buffer or retry a failed lock with write flags.
+template<class Buffer> bool verifyUpload(Buffer* buffer,const std::vector<uint8_t>& bytes,HRESULT& result) {
+  void* memory=nullptr;result=buffer->Lock(0,UINT(bytes.size()),&memory,D3DLOCK_READONLY);
+  if (FAILED(result)) { return false; }
+  const bool matches=memory && !std::memcmp(memory,bytes.data(),bytes.size());
+  result=buffer->Unlock();if (!matches && SUCCEEDED(result)) { result=E_FAIL; }return SUCCEEDED(result);
+}
 inline bool upload(IDirect3DDevice9* d,Prepared& out) {
   out.result=d->CreateVertexDeclaration(out.elements.data(),&out.declaration.value);
   if (FAILED(out.result)||!out.declaration.value) { out.reason="rebuilt_declaration_create";if (SUCCEEDED(out.result)) { out.result=E_FAIL; }return false; }
-  out.result=d->CreateVertexBuffer(UINT(out.bytes.size()),D3DUSAGE_WRITEONLY,0,D3DPOOL_DEFAULT,&out.buffer.value,nullptr);
+  out.result=d->CreateVertexBuffer(UINT(out.bytes.size()),out.ownedDraw?0:D3DUSAGE_WRITEONLY,0,D3DPOOL_DEFAULT,&out.buffer.value,nullptr);
   if (FAILED(out.result)||!out.buffer.value) { out.reason="rebuilt_buffer_create";if (SUCCEEDED(out.result)) { out.result=E_FAIL; }return false; }
   void* memory=nullptr;out.result=out.buffer.value->Lock(0,UINT(out.bytes.size()),&memory,0);
   if (FAILED(out.result)) { out.reason="rebuilt_buffer_lock";return false; }
   if (memory) { std::memcpy(memory,out.bytes.data(),out.bytes.size()); }
   out.result=out.buffer.value->Unlock();if (!memory || FAILED(out.result)) { out.reason="rebuilt_buffer_unlock_or_null";if (SUCCEEDED(out.result)) { out.result=E_FAIL; }return false; }
+  if (out.ownedDraw) {
+    if (!verifyUpload(out.buffer.value,out.bytes,out.result)) { out.reason="rebuilt_vertex_readback_mismatch";return false; }
+    if (!out.indices.empty()) {
+      out.result=d->CreateIndexBuffer(UINT(out.indices.size()),0,out.indexBytes==2?D3DFMT_INDEX16:D3DFMT_INDEX32,D3DPOOL_DEFAULT,&out.indexBuffer.value,nullptr);
+      if (FAILED(out.result)||!out.indexBuffer.value) { out.reason="rebuilt_index_create";if (SUCCEEDED(out.result)) { out.result=E_FAIL; }return false; }
+      memory=nullptr;out.result=out.indexBuffer.value->Lock(0,UINT(out.indices.size()),&memory,0);
+      if (FAILED(out.result)) { out.reason="rebuilt_index_lock";return false; }
+      if (memory) { std::memcpy(memory,out.indices.data(),out.indices.size()); }
+      out.result=out.indexBuffer.value->Unlock();
+      if (!memory || FAILED(out.result)) { out.reason="rebuilt_index_unlock_or_null";if (SUCCEEDED(out.result)) { out.result=E_FAIL; }return false; }
+      if (!verifyUpload(out.indexBuffer.value,out.indices,out.result)) { out.reason="rebuilt_index_readback_mismatch";return false; }
+    }
+    out.uploadVerified=true;
+  }
   return true;
 }
 inline Prepared reconstruct(const draw_observe::Snapshot& snapshot,const Data& input) {

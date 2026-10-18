@@ -1,5 +1,6 @@
 #pragma once
 #include "rt_bulk_static.h"
+#include "rt_model_input.h"
 #include "rt_scene_cases.h"
 #include <iostream>
 #include <string>
@@ -14,9 +15,9 @@ struct Proxy {
 #define SET(name) template<class... A> HRESULT name(A... a) { return set(d->name(a...)); }
   GET(GetRenderTarget) GET(GetViewport) GET(GetRenderState) GET(GetVertexDeclaration)
   GET(GetStreamSource) GET(GetStreamSourceFreq) GET(GetTexture) GET(GetVertexShader)
-  GET(GetPixelShader) GET(GetTransform) GET(GetTextureStageState) GET(CreateVertexDeclaration)
+  GET(GetPixelShader) GET(GetTransform) GET(GetTextureStageState) GET(CreateVertexDeclaration) GET(GetIndices)
   SET(SetVertexShader) SET(SetPixelShader) SET(SetVertexDeclaration) SET(SetRenderState)
-  SET(SetTransform) SET(SetTexture) SET(SetTextureStageState) SET(SetStreamSource)
+  SET(SetTransform) SET(SetTexture) SET(SetTextureStageState) SET(SetStreamSource) SET(SetIndices)
 #undef GET
 #undef SET
 };
@@ -36,6 +37,7 @@ inline std::vector<uint64_t> state(IDirect3DDevice9* d) {
   ldb_rt::static_draw::Ref<IDirect3DVertexDeclaration9> decl;ldb_rt::static_draw::Ref<IDirect3DVertexShader9> vs;ldb_rt::static_draw::Ref<IDirect3DPixelShader9> ps;
   check(SUCCEEDED(d->GetVertexDeclaration(&decl.value)) && SUCCEEDED(d->GetVertexShader(&vs.value)) && SUCCEEDED(d->GetPixelShader(&ps.value)),"bulk read shaders/decl");
   r.push_back(uint64_t(reinterpret_cast<uintptr_t>(decl.value)));r.push_back(uint64_t(reinterpret_cast<uintptr_t>(vs.value)));r.push_back(uint64_t(reinterpret_cast<uintptr_t>(ps.value)));
+  ldb_rt::static_draw::Ref<IDirect3DIndexBuffer9> ib;check(SUCCEEDED(d->GetIndices(&ib.value)),"bulk read indices");r.push_back(uint64_t(reinterpret_cast<uintptr_t>(ib.value)));
   for (unsigned i:{0u,7u}) { ldb_rt::static_draw::Ref<IDirect3DBaseTexture9> t;check(SUCCEEDED(d->GetTexture(i,&t.value)),"bulk read texture");r.push_back(uint64_t(reinterpret_cast<uintptr_t>(t.value))); }
   return r;
 }
@@ -65,6 +67,23 @@ inline void modelGeometryBounds(IDirect3DDevice9* d) {
   auto shiftedArgs=args;shiftedArgs[0]=0;scene_input::Data shifted;
   ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,shiftedArgs,shifted,scene_input::kModelLimits));
   check(shifted.first==100 && shifted.count==vertices && !std::memcmp(shifted.vertices.data(),source.data()+offset+100*32,shifted.vertices.size()),"nonzero declared vertex base rejected or read incorrectly");
+  for (bool shiftedBase:{false,true}) {
+    const auto& input=shiftedBase?shifted:larger;const auto& original=shiftedBase?shiftedArgs:args;
+    scene_input::Prepared owned;owned.bytes.resize(size_t(input.first+input.count)*32);
+    std::memcpy(owned.bytes.data()+size_t(input.first)*32,input.vertices.data(),input.vertices.size());
+    check(model_input::ownDraw(owned,input,2,original) && owned.ownedDraw && owned.bytes==input.vertices && owned.drawArgs==std::array<uint32_t,6>{0,0,vertices,0,16919,0},"compact model changed vertex window or normalized Draw");
+    for (UINT i=0;i<indices;++i) { uint16_t value=0;std::memcpy(&value,owned.indices.data()+i*2,2);check(value==i%vertices,"compact model changed indexed vertex correspondence"); }
+  }
+  {
+    auto input=shifted;input.indexBytes=4;input.indices.resize(indices*4);
+    for (UINT i=0;i<indices;++i) { const uint32_t value=100+i%vertices;std::memcpy(input.indices.data()+i*4,&value,4); }
+    scene_input::Prepared owned;owned.bytes.resize(size_t(input.first+input.count)*32);
+    check(model_input::ownDraw(owned,input,2,shiftedArgs),"32-bit compact index rejected");
+    for (UINT i=0;i<indices;++i) { uint32_t value=0;std::memcpy(&value,owned.indices.data()+i*4,4);check(value==i%vertices,"32-bit compact index correspondence"); }
+    uint32_t invalidIndex=99;std::memcpy(input.indices.data(),&invalidIndex,4);scene_input::Prepared bad;bad.bytes.resize(size_t(input.first+input.count)*32);
+    check(!model_input::ownDraw(bad,input,2,shiftedArgs) && !bad.ownedDraw,"compact buffer accepted index before captured range");
+  }
+  std::cout << "RT compact owned 16/32-bit indices/signed-base/offset correspondence: PASS\n";
   auto invalid=args;invalid[2]=scene_input::kModelLimits.vertices+1;scene_input::Data rejected;
   check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,invalid,rejected,scene_input::kModelLimits)) && rejected.vertices.empty(),"model vertex cap absent");
   invalid=args;invalid[4]=scene_input::kModelLimits.indices/3+1;
@@ -185,6 +204,39 @@ inline void systemCases(IDirect3DDevice9* d,IDirect3DVertexShader9* vs,IDirect3D
       std::cout << "RT Neko prepared-only/first-diffuse/state rollback/system NULLREF: PASS\n";
       replacing=false;
       std::cout << "RT original model transform/rebuilt stream rollback/system NULLREF: PASS; synthetic prepared geometry, actual captured inputs checked separately\n";
+      scene_input::Prepared owned;owned.bytes=rebuilt.bytes;owned.elements=rebuilt.elements;owned.sourceDeclaration=elements;owned.world=rebuilt.world;
+      owned.ownedDraw=true;owned.indexBytes=2;owned.indices={0,0,1,0,2,0};
+      check(scene_input::upload(d,owned) && owned.uploadVerified,"owned upload readback failed");owned.ready=true;
+      const auto ownedBefore=state(d);
+      const auto ownedRun=[&](Proxy& proxy,unsigned& calls,bool physical) {
+        static_draw::Report report;ok(__LINE__,d->BeginScene());
+        const auto hr=bulk_static::execute(&proxy,s,D3DPT_TRIANGLELIST,false,[&](bool converted) {
+          ++calls;if (!physical || !converted) { return S_OK; }
+          static_draw::Ref<IDirect3DIndexBuffer9> bound;ok(__LINE__,d->GetIndices(&bound.value));check(bound.value==owned.indexBuffer.value,"owned IB not bound at physical Draw");
+          return d->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,0,0,3,0,1);
+        },report,&owned);ok(__LINE__,d->EndScene());return std::make_pair(hr,report);
+      };
+      { Proxy proxy{d};unsigned calls=0;const auto r=ownedRun(proxy,calls,true);check(SUCCEEDED(r.first) && r.second.converted && calls==1 && state(d)==ownedBefore,"owned indexed Draw/restoration");gets=proxy.gets;sets=proxy.sets/2; }
+      for (unsigned i=1;i<=gets;++i) { Proxy proxy{d};proxy.failGet=i;unsigned calls=0;const auto r=ownedRun(proxy,calls,false);check(SUCCEEDED(r.first) && !r.second.converted && calls==1 && state(d)==ownedBefore,"owned capture/bound-verification failure did not restore original"); }
+      for (unsigned i=1;i<=2*sets;++i) { Proxy proxy{d};proxy.failSet=i;unsigned calls=0;const auto r=ownedRun(proxy,calls,false);check(calls==1 && state(d)==ownedBefore && (i<=sets?SUCCEEDED(r.first) && !r.second.converted:FAILED(r.first)),"owned setter/index/restore failure hidden"); }
+      struct ReadProbe {
+        IDirect3DVertexBuffer9* buffer;unsigned fault=0;std::vector<uint8_t> wrong;
+        HRESULT Lock(UINT offset,UINT size,void** memory,DWORD flags) {
+          check(flags==D3DLOCK_READONLY,"upload verification wrote owned buffer");if (fault==1) { return E_FAIL; }
+          const auto hr=buffer->Lock(offset,size,memory,flags);if (SUCCEEDED(hr) && fault==2) { *memory=nullptr; }
+          if (SUCCEEDED(hr) && fault==3) { wrong.assign(size,0xff);*memory=wrong.data(); }return hr;
+        }
+        HRESULT Unlock() { const auto hr=buffer->Unlock();return fault==4?E_FAIL:hr; }
+      };
+      for (unsigned fault=0;fault<5;++fault) { ReadProbe probe{owned.buffer.value,fault,{}};HRESULT result=S_OK;
+        check(scene_input::verifyUpload(&probe,owned.bytes,result)==(fault==0),"owned upload failed-lock/null/mismatch/unlock validation"); }
+      for (auto name:{D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC}) {
+        DWORD old=0;ok(__LINE__,d->GetRenderState(name,&old));ok(__LINE__,d->SetRenderState(name,name==D3DRS_COLORWRITEENABLE?3:name==D3DRS_ZFUNC?D3DCMP_ALWAYS:1));
+        const auto rejected=model_input::prepare(d,s,2,D3DPT_TRIANGLELIST,{0,0,3,0,1,0});
+        check(!rejected.ready && !std::strcmp(rejected.reason,"model_pipeline_special_pass"),"special model pass not rejected before reconstruction");ok(__LINE__,d->SetRenderState(name,old));
+      }
+      std::cout << "RT owned VB/IB upload readback/binding/fault rollback/system NULLREF: PASS\n";
+      std::cout << "RT model stencil/clip/color/depth special-pass rejection/system NULLREF: PASS\n";
     }
     std::vector<D3DVERTEXELEMENT9> canonical;auto bad=elements;bad.insert(bad.end()-1,{0,28,D3DDECLTYPE_UBYTE4,0,D3DDECLUSAGE_BLENDINDICES,0});
     check(!bulk_static::layout(bad.data(),UINT(bad.size()),stride,canonical),"bulk bones accepted");bad=elements;bad[1].Offset=WORD(stride-4);

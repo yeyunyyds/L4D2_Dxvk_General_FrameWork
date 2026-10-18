@@ -13,7 +13,16 @@ inline const char* name(Phase phase) noexcept {
     default: return "raster";
   }
 }
-inline bool readback(uint64_t frame) noexcept { return frame == 30 || frame == 120 || frame == 180 || frame == 240; }
+constexpr uint64_t kCoveragePresents=420;
+inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 && frame<=kCoveragePresents && frame%60==0); }
+enum class ModelStage : uint32_t { Off, Ordinary, Neko, Combined, Recovery };
+inline ModelStage modelStage(uint64_t last) noexcept {
+  return last<180?ModelStage::Off:last<240?ModelStage::Ordinary:last<300?ModelStage::Neko:last<360?ModelStage::Combined:ModelStage::Recovery;
+}
+inline const char* name(ModelStage stage) noexcept {
+  switch(stage) { case ModelStage::Ordinary:return "ordinary";case ModelStage::Neko:return "neko";case ModelStage::Combined:return "combined";case ModelStage::Recovery:return "recovery";default:return "off"; }
+}
+inline bool includeModel(ModelStage stage,bool neko) noexcept { return stage==ModelStage::Combined || (neko?stage==ModelStage::Neko:stage==ModelStage::Ordinary); }
 enum class CoveragePhase : uint32_t { Raster, BaselineWorld, ExpandedWorld, ExpandedModels };
 inline const char* name(CoveragePhase phase) noexcept {
   return phase == CoveragePhase::Raster ? "raster" : phase == CoveragePhase::BaselineWorld ? "baseline_world" :
@@ -22,11 +31,12 @@ inline const char* name(CoveragePhase phase) noexcept {
 class CoverageComparison {
   uint64_t m_last = 0;
 public:
+  ModelStage models() const noexcept { return modelStage(m_last); }
   CoveragePhase phase() const noexcept { return m_last < 30 ? CoveragePhase::Raster : m_last < 120 ? CoveragePhase::BaselineWorld :
     m_last < 180 ? CoveragePhase::ExpandedWorld : CoveragePhase::ExpandedModels; }
   bool afterCapture(uint64_t frame) noexcept {
-    const uint64_t expected = m_last == 0 ? 30 : m_last == 30 ? 120 : m_last == 120 ? 180 : 240;
-    if (m_last == 240 || frame != expected) { return false; }
+    const uint64_t expected = m_last==0?30:m_last==30?120:m_last+60;
+    if (m_last==kCoveragePresents || frame!=expected) { return false; }
     m_last = frame; return true;
   }
 };

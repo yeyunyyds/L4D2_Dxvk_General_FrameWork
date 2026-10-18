@@ -44,7 +44,8 @@ def package(source,output,python_package):
             or status.get('world_scene_scope_development_execution')!='pass'
             or status.get('world_sky_reconstruction_development_execution')!='pass'
             or status.get('world_bulk_static_development_execution')!='pass'
-            or status.get('world_original_input_development_execution')!='pass'):
+            or status.get('world_original_input_development_execution')!='pass'
+            or status.get('world_owned_geometry_development_execution')!='pass'):
         raise ValueError('Current native paired observer and execution evidence required')
     if output.exists():raise FileExistsError('Preserve previous package directory')
     output.mkdir(parents=True)
@@ -84,25 +85,30 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_static_world_runtime_pilot','profile':'world_pilot','pilot_revision':13,
-              'readback_presents':[30,120,180,240],
+    manifest={'schema':1,'scope':'selected_static_world_runtime_pilot','profile':'world_pilot','pilot_revision':14,
+              'readback_presents':[30,120,180,240,300,360,420],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'constant_sphere_radiance':3000,'expanded_coverage_after_present':120,
               'baseline_world_revision':7,'hud_after_present':30,
               'expanded_world_vertex_formats':['0x80001','0x80503','0xa0403'],
-              'sky_after_present':120,'sky_rebuild_after_present':180,
+              'sky_after_present':120,'sky_rebuild_after_present':120,
               'sky_rebuild':'position_dp4_matrix_proof_full_ps_uv_six_face_gate_else_v8',
               'scene_input_samples_per_phase':198,'scene_input_max_vertices':4096,'scene_input_max_indices':16384,'rigid_after_present':180,'rigid_normals':'geometric_triangle_fallback',
               'bulk_static_after_present':180,'bulk_static_families':['LightmappedGeneric','LightmappedGeneric_DX9','UnlitGeneric','VertexLitGeneric','WorldVertexTransition','WorldVertexTransition_DX9','WorldTwoTextureBlend','NekoToon'],
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
               'model_rebuild':'audited_full_vs_matrix_proof_rigid_or_three_weight_palette_with_complete_morph_position',
+              'model_submission':'compact_owned_readable_default_vb_ib_readback_and_binding_verified; remix_staging_copy',
+              'model_input_pairs':'same_draw_original_geometry_vs_ps_constants_declaration_morph_and_owned_payload',
+              'model_stage_readbacks':{240:'ordinary',300:'neko',360:'combined',420:'recovery'},
+              'model_payload_limits_kib':{'ordinary':1024,'neko':2048,'combined':1024},
+              'model_special_passes':'reject_stencil_user_clip_partial_rgb_and_non_less_depth',
               'sky_rebuilt_stride':140,'model_geometry_max_vertices':32768,'model_geometry_max_indices':131072,
               'neko_material':'audited_full_vs_and_ps_sha256_first_diffuse_layer_original_alpha_test_no_full_toon',
               'model_morph':'complete_referenced_stream2_position1_float4_before_skinning_readonly',
               'scene_input_ps_float4_constants':224,'scene_input_complete_morph_positions':True,
               'bulk_static_stride_max':128,'scene_input_family_limits':[6,48,96,48],'scene_input_policy':'skinned_materials_v2','scene_input_payload_limits_mib':[2,2,2,12],'scene_input_family_payload_limits_kib':[[128,640,512,768]]*3+[[256,4096,1792,6144]],'scene_input_geometry_window':True,'audit_only_families':[],'custom_audit_max_vertices':32768,'custom_audit_max_indices':131072,
               'sky_category_contract':{'render_state':42,'sky_bit':4,'unused':0xfefefefe},
-              'draw_trace_version':10,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
+              'draw_trace_version':11,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
               'material_samples_per_phase_limit':64,
               'world_ipc_producer_wait_ms':60000,'normal_ipc_producer_wait_ms':2000,
               'startup_raytracing':False,'rt_activation':'after_control_and_successful_world_scope_then_deferred_by_runtime',
@@ -161,6 +167,7 @@ def package(source,output,python_package):
                 'world_sky_reconstruction_development_execution':'pass',
                 'world_bulk_static_development_execution':'pass',
                 'world_original_input_development_execution':'pass',
+                'world_owned_geometry_development_execution':'pass',
                 'pinned_native_loader_api_initialization':'pass',
                 'game_rt':'unrun','actual_game_observation':'unrun'}
     (output/'publish-index.json').write_text(json.dumps(validation,indent=2)+'\n')

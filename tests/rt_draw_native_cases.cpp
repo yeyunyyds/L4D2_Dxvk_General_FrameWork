@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
       rejectActivation=false;
     }
     uint32_t uid=1;
-    for (unsigned frame=0;frame<240;++frame) {
+    for (unsigned frame=0;frame<ldb_rt::world_diagnostics::kCoveragePresents;++frame) {
       for (unsigned draw=0;draw<3;++draw) {
         ++s.ordinal; s.materialInfo.format=draw==1 ? 0x80407 : 0x480003;
         s.maxZ=draw==2 ? .1f : 1.f;device.viewport.MaxZ=s.maxZ;

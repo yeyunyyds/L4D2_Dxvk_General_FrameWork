@@ -100,6 +100,30 @@ class ReadbackEvidenceTests(unittest.TestCase):
             events[:]=[e for e in events if e.get('frame')!=180]
             self.assertEqual(inspect()['runtime_outputs'],'incomplete')
 
+    def test_v14_requires_every_model_stage_and_recovery_readback(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);frames=(30,120,180,240,300,360,420)
+            events=[dict(event=name,code=0) for name in ('loaded_pinned_runtime','initialize_api_0_6_4','register_game_device','coverage_comparison_policy')]
+            events.extend([dict(event='world_coverage_revision',code=0,value='14'),dict(event='rtx.enableAlphaTest',code=0,value='True')])
+            matrix=[float(i%5==0) for i in range(16)]
+            stages=('off','off','off','ordinary','neko','combined','recovery')
+            for frame,stage in zip(frames,stages):
+                phase='raster' if frame==30 else 'baseline_world' if frame==120 else 'expanded_sky' if frame==180 else 'expanded_models'
+                for kind in (0,1,2):
+                    name=f'world-{frame}-{kind}.rgba32f'
+                    pixel=struct.pack('<4I',0x7fff7fff,0,0,1) if kind==2 else struct.pack('<4f',.5,.5,.5,1)
+                    (root/name).write_bytes(pixel*(640*400))
+                    events.append(dict(event='world_readback',frame=frame,phase=phase,kind=kind,file=name,width=640,height=400,initialized_to_zero=True,written=True,copy_code=0,hresult=0))
+                events.append(dict(event='world_camera_sample',frame=frame,available=True,view=matrix,projection=matrix))
+                events.append(dict(event='model_stage_readback',frame=frame,model_stage=stage))
+                events.append(dict(event='coverage_phase_requested',after_present=frame,phase='baseline_world' if frame==30 else 'expanded_sky' if frame==120 else 'expanded_models',code=0))
+                if frame!=30:events.append(dict(event='hud_injection',phase=phase,ordinal=frame,scope_code=9,capture_hresult=0,apply_hresult=0,draw_hresult=0,restore_hresult=0,replaced_post=True))
+            def inspect():
+                (root/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events));return analyze(root,previews=False)
+            report=inspect();self.assertEqual(report['runtime_outputs'],'pass',report['errors']);self.assertEqual(report['coverage_comparison']['revision'],14)
+            next(e for e in events if e.get('event')=='model_stage_readback' and e['frame']==420)['model_stage']='combined'
+            self.assertIn('incomplete_model_stage_readbacks',inspect()['errors'])
+
     def test_alpha_only_normals_are_not_geometry_even_with_nonzero_depth(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)

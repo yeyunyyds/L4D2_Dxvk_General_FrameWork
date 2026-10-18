@@ -13,6 +13,10 @@ int main() {
     require(coverage.afterCapture(120) && coverage.phase()==CoveragePhase::ExpandedWorld && !coverage.afterCapture(120), "expanded coverage only after baseline readback");
     require(coverage.afterCapture(180) && coverage.phase()==CoveragePhase::ExpandedModels &&
       coverage.afterCapture(240) && !coverage.afterCapture(240), "sky then model coverage is bounded");
+    require(coverage.models()==ModelStage::Neko && !includeModel(coverage.models(),false) && includeModel(coverage.models(),true),"ordinary/Neko contributions not isolated");
+    require(coverage.afterCapture(300) && coverage.models()==ModelStage::Combined && includeModel(coverage.models(),false) && includeModel(coverage.models(),true),"combined models missing");
+    require(coverage.afterCapture(360) && coverage.models()==ModelStage::Recovery && !includeModel(coverage.models(),false) && !includeModel(coverage.models(),true),"recovery retained model conversion");
+    require(coverage.afterCapture(420) && !coverage.afterCapture(420) && !coverage.afterCapture(480) && readback(420) && !readback(480),"coverage capture must stop at recovery");
     Comparison comparison;
     std::map<std::string, std::string> values;
     auto setter = [&](const char* key, const char* value) { values[key] = value; return true; };

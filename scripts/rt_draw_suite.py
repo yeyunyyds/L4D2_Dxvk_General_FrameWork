@@ -97,6 +97,7 @@ def install(root,game,manifest):
                      '0a579c30ef02a20be14ca4250c24f5ad4165309edd78b8df8a04e5741549bff3',
                      'e06caf633c2a3e1994c405470717dfbe73d3f1a877ea9b94e153e25e117ccb18',
                      '6036c11994ba91e881f255d160b91bf3906775c30af18bd1bfdac42e5c8c7773',
+                     '5ef8cd2d0c00070ec10d6f50f28ecd2707a4e2a8cc3fe3105332669b1c904341',
                      manifest['binaries'][TARGETS[0]]['sha256']}
     if inherited is None and digest(game/TARGETS[0]) in known_observers:
         raise ValueError('Earlier observer found without its recovery receipt. Restore it from its original package folder first.')
@@ -188,7 +189,7 @@ def wait_stopped(notify,timeout=300):
 
 def archive_result(directory,report):
     files=[p for p in directory.rglob('*') if p.is_file()]
-    if sum(p.stat().st_size for p in files)>192*1024*1024:
+    if sum(p.stat().st_size for p in files)>384*1024*1024:
         report['collection']='incomplete';report['errors'].append('result_budget_exceeded')
     save(directory/'summary.json',report)
     output=directory.with_suffix('.zip')
@@ -196,7 +197,7 @@ def archive_result(directory,report):
         used=0;omitted=[]
         for path in sorted(directory.rglob('*')):
             if not path.is_file():continue
-            if used+path.stat().st_size>192*1024*1024 and path.name!='summary.json':
+            if used+path.stat().st_size>384*1024*1024 and path.name!='summary.json':
                 omitted.append(str(path.relative_to(directory)));continue
             z.write(path,path.relative_to(directory));used+=path.stat().st_size
         z.writestr('omitted-files.json',json.dumps(omitted))
@@ -349,8 +350,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
-        notify('Enter a map, return to the game, and press F9 once. The '+('240' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Coverage comparison: keep sky, props and a character visible; press F9 once and hold the camera still. World/HUD baseline 31-120; v8 sky 121-180; corrected sky plus audited three-weight models/NekoToon and complete morph positions 181-240.')
+        notify('Enter a map, return to the game, and press F9 once. The '+('420' if world else '120')+'-Present capture stops automatically.')
+        if world:notify('Coverage comparison: keep sky, props and a character visible; press F9 once and hold the camera still. World/HUD 31-120; corrected sky 121-180; ordinary models 181-240; Neko 241-300; combined 301-360; models removed for recovery 361-420. All stages run automatically.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None
@@ -379,7 +380,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if not done.is_file():raise TimeoutError('No completed capture; partial logs are retained')
         marker=json.loads(done.read_text(encoding='utf-8'))
         report['capture_marker']=marker
-        expected=240 if world else 120
+        expected=420 if world else 120
         marker_ok=marker.get('session')==session and marker.get('reason')==0 and marker.get('presents')==expected
         if not marker_ok:
             notify('INCOMPLETE: capture stopped before the required '+str(expected)+' Presents. Collecting available evidence.')

@@ -170,7 +170,7 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
         if (mode!=ldb_rt::scene_draw::Mode::None) {
           if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
             auto& runtime=ldb_rt::world_runtime::state();HRESULT result=E_ABORT;
-            if (mode==ldb_rt::scene_draw::Mode::Sky && consumer->second->models() && runtime.scene &&
+            if (mode==ldb_rt::scene_draw::Mode::Sky && consumer->second->expanded() && runtime.scene &&
                 runtime.scene(graphics,current,consumer->second->kind(),type,consumer->second->args(),report,called,physical,result)) {
               consumer->second->conversion(uid,ldb_rt::consumer_world::Decision::Sky,report,called,physical);return result;
             }

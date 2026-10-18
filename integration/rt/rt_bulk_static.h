@@ -75,9 +75,10 @@ template<class Device> class Scope final {
   Device* d;static_draw::Report result;bool dirty=false,textureChanged=false;
   static_draw::Ref<IDirect3DVertexShader9> vs;static_draw::Ref<IDirect3DPixelShader9> ps;
   static_draw::Ref<IDirect3DVertexDeclaration9> decl,generated;static_draw::Ref<IDirect3DVertexBuffer9> vb;
+  static_draw::Ref<IDirect3DIndexBuffer9> ib;
   static_draw::Ref<IDirect3DBaseTexture9> originalTexture,sourceTexture;
   D3DMATRIX old[3]{};DWORD lighting=0,blend=0,indexed=0,tss[9]{};
-  UINT oldOffset=0,oldStride=0;bool streamChanged=false;
+  UINT oldOffset=0,oldStride=0;bool streamChanged=false,indexChanged=false;
   bool get(HRESULT hr) { if (FAILED(hr)) { result.capture=hr;result.code=static_draw::Code::CaptureFailed;return false; }return true; }
   bool set(HRESULT hr) { if (FAILED(hr)) { result.apply=hr;result.code=static_draw::Code::ApplyFailed;finish();return false; }return true; }
 public:
@@ -102,6 +103,9 @@ public:
       if (!rebuilt->ready || !rebuilt->buffer.value || !affine(rebuilt->world) || stride!=32 || n!=rebuilt->sourceDeclaration.size() ||
           std::memcmp(e,rebuilt->sourceDeclaration.data(),n*sizeof(*e))) { result.code=static_draw::Code::Layout;return; }
       simple=rebuilt->elements;oldOffset=offset;oldStride=stride;streamChanged=true;
+      indexChanged=rebuilt->ownedDraw && !rebuilt->indices.empty();
+      if (rebuilt->ownedDraw && (!rebuilt->uploadVerified || (indexChanged && !rebuilt->indexBuffer.value))) { result.code=static_draw::Code::Layout;return; }
+      if (indexChanged && !get(d->GetIndices(&ib.value))) { return; }
     } else if (!layout(e,n,stride,simple)) { result.code=static_draw::Code::Layout;return; }
     if (!get(d->GetTexture(0,&originalTexture.value))) { return; }
     textureChanged=family(s.materialInfo.shader.data())==4;
@@ -119,10 +123,27 @@ public:
     if (!set(d->SetVertexShader(nullptr)) || !set(d->SetPixelShader(nullptr)) || !set(d->SetVertexDeclaration(generated.value)) || !set(d->SetRenderState(D3DRS_LIGHTING,FALSE)) ||
         !set(d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_DISABLE)) || !set(d->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE,FALSE))) { return; }
     if (streamChanged && !set(d->SetStreamSource(0,rebuilt->buffer.value,0,rebuilt->stride))) { return; }
+    if (indexChanged && !set(d->SetIndices(rebuilt->indexBuffer.value))) { return; }
     const std::array<float,16>* matrices[]={rebuilt?&rebuilt->world:&s.world,&s.view,&s.projection};
     for (unsigned i=0;i<3;++i) { D3DMATRIX m{};std::memcpy(&m,matrices[i]->data(),sizeof(m));if (!set(d->SetTransform(transforms[i],&m))) { return; } }
     if (textureChanged && !set(d->SetTexture(0,sourceTexture.value))) { return; }
     for (const auto& x:stages) { if (!set(d->SetTextureStageState(x.stage,x.name,x.value))) { return; } }
+    if (rebuilt && rebuilt->ownedDraw) {
+      // Check what the public device actually bound, after all overrides and
+      // before Draw. These mapped uploads are not a GPU/BLAS readback claim.
+      static_draw::Ref<IDirect3DVertexBuffer9> boundVB;static_draw::Ref<IDirect3DIndexBuffer9> boundIB;
+      static_draw::Ref<IDirect3DVertexDeclaration9> boundDecl;
+      static_draw::Ref<IDirect3DVertexShader9> boundVS;static_draw::Ref<IDirect3DPixelShader9> boundPS;
+      UINT boundOffset=0,boundStride=0,frequencyValue=0;D3DMATRIX boundWorld{};
+      const HRESULT queries[]={d->GetStreamSource(0,&boundVB.value,&boundOffset,&boundStride),d->GetIndices(&boundIB.value),
+        d->GetVertexDeclaration(&boundDecl.value),d->GetVertexShader(&boundVS.value),d->GetPixelShader(&boundPS.value),
+        d->GetStreamSourceFreq(0,&frequencyValue),d->GetTransform(D3DTS_WORLD,&boundWorld)};
+      bool valid=boundVB.value==rebuilt->buffer.value && !boundOffset && boundStride==rebuilt->stride && frequencyValue==1 &&
+        (!indexChanged || boundIB.value==rebuilt->indexBuffer.value) && boundDecl.value==generated.value && !boundVS.value && !boundPS.value &&
+        !std::memcmp(&boundWorld,rebuilt->world.data(),sizeof(boundWorld));
+      for (auto hr:queries) { valid=valid && SUCCEEDED(hr); }
+      if (!valid) { result.apply=E_FAIL;result.code=static_draw::Code::ApplyFailed;finish();return; }
+    }
     // ALPHATESTENABLE/FUNC/REF, alpha blending, cull, depth, samplers and buffers
     // remain exact original state. The first diffuse layer is a diagnostic material.
     result.code=static_draw::Code::Applied;result.converted=true;
@@ -137,6 +158,7 @@ public:
     restore(d->SetVertexDeclaration(decl.value));restore(d->SetVertexShader(vs.value));restore(d->SetPixelShader(ps.value));restore(d->SetRenderState(D3DRS_LIGHTING,lighting));
     restore(d->SetRenderState(D3DRS_VERTEXBLEND,blend));restore(d->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE,indexed));
     if (streamChanged) { restore(d->SetStreamSource(0,vb.value,oldOffset,oldStride)); }
+    if (indexChanged) { restore(d->SetIndices(ib.value)); }
     if (textureChanged) { restore(d->SetTexture(0,originalTexture.value)); }
     for (unsigned i=0;i<9;++i) { restore(d->SetTextureStageState(stages[i].stage,stages[i].name,tss[i])); }
     if (FAILED(result.restore)) { result.code=static_draw::Code::RestoreFailed; }
@@ -145,6 +167,7 @@ public:
 };
 template<class Device,class Draw> HRESULT execute(Device* d,const draw_observe::Snapshot& s,D3DPRIMITIVETYPE type,bool up,Draw&& draw,static_draw::Report& report,const scene_input::Prepared* rebuilt=nullptr) {
   Scope<Device> scope(d,s,type,up,rebuilt);if (FAILED(scope.report().restore)) { report=scope.report();return report.restore; }
-  const auto hr=draw();scope.finish();report=scope.report();return FAILED(report.restore)?report.restore:hr;
+  const auto hr=[&] { if constexpr (std::is_invocable<Draw,bool>::value) { return draw(scope.report().converted); }else { return draw(); } }();
+  scope.finish();report=scope.report();return FAILED(report.restore)?report.restore:hr;
 }
 } // namespace ldb_rt::bulk_static

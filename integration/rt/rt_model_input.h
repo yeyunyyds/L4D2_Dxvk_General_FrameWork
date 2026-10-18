@@ -5,6 +5,24 @@
 
 namespace ldb_rt::model_input {
 static_assert(model_shader::kMaxVertices==scene_input::kModelLimits.vertices,"model capture/rebuild budget mismatch");
+inline bool ownDraw(scene_input::Prepared& out,const scene_input::Data& input,uint32_t kind,const std::array<uint32_t,6>& args) {
+  if (!input.count || out.bytes.size()!=size_t(input.first+input.count)*32) { out.reason="model_owned_vertex_range";return false; }
+  std::vector<uint8_t> compact(out.bytes.begin()+size_t(input.first)*32,out.bytes.end());out.bytes.swap(compact);
+  out.drawArgs={};out.indexBytes=input.indexBytes;
+  if (kind==2) {
+    if ((input.indexBytes!=2 && input.indexBytes!=4) || input.indices.empty() || input.indices.size()%input.indexBytes) { out.reason="model_owned_index_format";return false; }
+    out.indices.resize(input.indices.size());
+    for (size_t at=0;at<input.indices.size();at+=input.indexBytes) {
+      uint32_t old=0;std::memcpy(&old,input.indices.data()+at,input.indexBytes);
+      const int64_t local=int64_t(int32_t(args[0]))+old-input.first;
+      if (local<0 || uint64_t(local)>=input.count) { out.reason="model_owned_index_range";return false; }
+      const uint32_t value=uint32_t(local);std::memcpy(out.indices.data()+at,&value,input.indexBytes);
+    }
+    out.drawArgs={0,0,input.count,0,args[4],0};
+  } else if (kind==1) { out.drawArgs={0,args[1],0,0,0,0}; }
+  else { out.reason="model_owned_draw_kind";return false; }
+  out.ownedDraw=true;return true;
+}
 inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest) {
   scene_input::Prepared out;
   if (FAILED(input.result)) {
@@ -54,16 +72,18 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
   out.elements={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
   out.bytes.resize(size_t(input.first+input.count)*32);std::memcpy(out.bytes.data()+size_t(input.first)*32,transformed.vertices.data(),transformed.vertices.size());return out;
 }
-inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) {
-  DWORD blend=0,depth=0,write=0;scene_input::Prepared rejected;
-  const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE};DWORD* values[]={&blend,&depth,&write};
-  for (unsigned i=0;i<3;++i) {
-    const auto hr=d->GetRenderState(names[i],values[i]);if (FAILED(hr)) { rejected.result=hr;rejected.reason="model_pipeline_query_failed";return rejected; }
+inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr) {
+  DWORD values[7]{};scene_input::Prepared rejected;
+  const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
+  for (unsigned i=0;i<7;++i) {
+    const auto hr=d->GetRenderState(names[i],values+i);if (FAILED(hr)) { rejected.result=hr;rejected.reason="model_pipeline_query_failed";return rejected; }
   }
-  if (blend || depth!=1 || write!=1) { rejected.reason="model_pipeline_unsupported";return rejected; }
+  if (values[0] || values[1]!=1 || values[2]!=1) { rejected.reason="model_pipeline_unsupported";return rejected; }
+  if (values[3] || values[4] || (values[5]&7)!=7 || (values[5]&~15u) || (values[6]!=D3DCMP_LESS && values[6]!=D3DCMP_LESSEQUAL)) { rejected.reason="model_pipeline_special_pass";return rejected; }
   auto input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
   const auto digest=ldb_rt_file::bytesSha256(input.vs.data(),input.vs.size()*4);
   if (model_shader::profile(digest)!=model_shader::Profile::Unknown && SUCCEEDED(input.result) && input.constants[13][0]!=0) { scene_input::morphPositions(d,input); }
-  auto out=reconstruct(s,input,digest);if (!out.bytes.empty() && scene_input::upload(d,out)) { out.ready=true; }return out;
+  auto out=reconstruct(s,input,digest);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && scene_input::upload(d,out)) { out.ready=true; }
+  if (evidence && out.ready) { *evidence=std::move(input); }return out;
 }
 } // namespace ldb_rt::model_input

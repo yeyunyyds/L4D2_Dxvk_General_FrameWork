@@ -26,6 +26,24 @@ class DrawObservation(unittest.TestCase):
         events.append((8,0,struct.pack('<6QI',240,240,240,0,0,0,0)))
         return events
 
+    def test_v14_world_target_requires_complete_420_presents(self):
+        events=self.scene_fixture()
+        events[0]=(0,0,struct.pack('<IQQQII',11,42,7,10000000,420,30))
+        self.assertFalse(self.inspect(events)['pass'])
+        extra=[]
+        for i in range(240,420):
+            original=events[1+239*4:1+240*4]
+            for kind,uid,payload in original:
+                data=bytearray(payload)
+                if kind==1:struct.pack_into('<Q',data,16,i+1)
+                extra.append((kind,i*2+(2 if kind==3 else 1),bytes(data)))
+        events[-1:-1]=extra
+        events[-1]=(8,0,struct.pack('<6QI',420,420,420,0,0,0,0))
+        report=self.inspect(events)
+        self.assertTrue(report['pass'],report['errors'])
+        self.assertEqual(report['header']['coverage_revision'],14)
+        self.assertEqual(report['footer']['presents'],420)
+
     def test_v2_world_control_and_exact_padded_declaration(self):
         r=self.inspect(self.world_fixture())
         self.assertTrue(r['pass'],r['errors'])

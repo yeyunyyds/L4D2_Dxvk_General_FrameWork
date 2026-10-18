@@ -80,8 +80,8 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.world ? 10 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
-    if (request.world) { header.u32(240); header.u32(30); } record(0, 0, header.data);
+    Writer header; header.u32(request.world ? 11 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    if (request.world) { header.u32(uint32_t(world_diagnostics::kCoveragePresents)); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
   bool expanded() const noexcept { return request.world && presents >= 120 && !finished; }
@@ -99,7 +99,7 @@ public:
     if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
       if (request.world && world_runtime::state().active && world_runtime::state().inspect) { world_runtime::state().inspect(device,snapshot,kind,type,args); }
     }
-    if (written > 128 * 1024 * 1024) { finish(2); return; }
+    if (written > 256 * 1024 * 1024) { finish(2); return; }
     Writer payload; payload.data = pack(snapshot); payload.u32(kind); payload.u32(uint32_t(type));
     for (auto arg : args) { payload.u32(arg); }
     auto state = pipeline(device, request.world); payload.data.insert(payload.data.end(), state.begin(), state.end());
@@ -135,7 +135,7 @@ public:
     if (SUCCEEDED(result)) { ++presents; } else { ++failures; }
     if (request.world && world_runtime::state().active && world_runtime::state().capture && nativeDevice &&
         world_diagnostics::readback(presents)) { world_runtime::state().capture(nativeDevice, presents); }
-    trace.flush(); if (presents >= (request.world ? 240u : 120u)) { finish(0); }
+    trace.flush(); if (presents >= (request.world ? world_diagnostics::kCoveragePresents : 120u)) { finish(0); }
   }
   void reset(uint32_t uid, HRESULT result) {
     if (finished) { return; } Writer w; w.u32(uint32_t(result)); record(4, uid, w.data); ++resets;

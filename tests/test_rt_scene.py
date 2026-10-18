@@ -1,7 +1,7 @@
 import hashlib,json,struct,sys,tempfile,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from analyze_rt_scene import analyze
+from analyze_rt_scene import analyze, verify_model_payloads
 
 class SceneEvidence(unittest.TestCase):
  def fixture(self,root):
@@ -101,4 +101,27 @@ class SceneEvidence(unittest.TestCase):
  def test_old_capture_does_not_require_new_samples(self):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);self.assertEqual(self.inspect(root,[dict(event='world_coverage_revision',code=0,value='8')])['status'],'not_requested')
+
+ def test_v14_compact_submission_hash_indices_and_binding_proof(self):
+  with tempfile.TemporaryDirectory() as temporary:
+   root=Path(temporary);raw={'vertices.bin':struct.pack('<8f',1,2,3,.2,.3,0,0,0)*3,'indices.bin':struct.pack('<3H',0,1,2),'source-vertices.bin':bytes(96),'source-indices.bin':struct.pack('<3H',3,4,5),'vs.bin':struct.pack('<2I',0xfffe0300,0xffff),'ps.bin':struct.pack('<2I',0xffff0300,0xffff),'constants.bin':bytes(4096),'declaration.bin':bytes.fromhex('000000000200000000000c0001000500ff00000011000000')}
+   sample=dict(ordinal=10,model_stage='ordinary',upload_verified=True,binding_verified=True,owned_draw=True,payload_omitted=False,rebuilt_vertex_bytes=96,index_bytes=2,draw_args=[0,0,3,0,1,0],kind=2,topology=4,original_args=[2,3,3,7,1,0],source_first=5,source_count=3,source_stride=32,files=[])
+   for suffix,data in raw.items():
+    name='model-10-'+suffix;(root/name).write_bytes(data);sample['files'].append(dict(file=name,size=len(data),sha256=hashlib.sha256(data).hexdigest()))
+   errors=[];self.assertEqual(verify_model_payloads(root,[sample],errors),sum(map(len,raw.values())));self.assertEqual(errors,[])
+   sample['binding_verified']=False;errors=[];verify_model_payloads(root,[sample],errors);self.assertIn('unverified_model_submission',errors)
+   sample['binding_verified']=True;bad=struct.pack('<3H',0,1,3);(root/'model-10-indices.bin').write_bytes(bad);sample['files'][1]['sha256']=hashlib.sha256(bad).hexdigest()
+   errors=[];verify_model_payloads(root,[sample],errors);self.assertIn('compact_model_index_outside_vertices',errors)
+   sample['payload_omitted']=True;errors=[];verify_model_payloads(root,[sample],errors);self.assertIn('omitted_model_payload_present',errors)
+
+ def test_v14_stage_summaries_require_recovery_and_keep_main_phase_budget(self):
+  with tempfile.TemporaryDirectory() as temporary:
+   root=Path(temporary);events=self.fixture(root);events[0]['value']='14';events[1]['morph_position']={'hresult':1,'vertices':0}
+   for e in events:
+    if e.get('event')=='sky_rebuild_counts' and e['frame']==240:e['frame']=420
+   phases=('raster','baseline_world','expanded_sky')+('expanded_models',)*4
+   events.extend(dict(event='model_rebuild_counts',frame=f,phase=p,attempts=0,ready=0,reconstructed=0,fallback=0,reasons={}) for f,p in zip((30,120,180,240,300,360,420),phases))
+   report=self.inspect(root,events);self.assertTrue(report['pass'],report['errors'])
+   events.pop();self.assertIn('missing_model_rebuild_summaries',self.inspect(root,events)['errors'])
+
 if __name__=='__main__':unittest.main()
