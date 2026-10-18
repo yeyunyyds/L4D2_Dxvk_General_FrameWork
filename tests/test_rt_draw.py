@@ -173,6 +173,18 @@ class DrawObservation(unittest.TestCase):
         early=events.copy();dest=1+179*4;_,dest_uid,_=events[dest];changed=bytearray(data);struct.pack_into('<Q',changed,16,180)
         early[dest]=(e,dest_uid,bytes(changed));early[dest+1]=(6,dest_uid,events[at+1][2]);self.assertFalse(self.inspect(early)['pass'])
 
+    def test_v11_header_and_guarded_bone_declaration(self):
+        events=self.scene_fixture();events[0]=(0,0,struct.pack('<IQQQII',8,42,7,10000000,240,30))
+        at=1+180*4;e,u,p=events[at];data=bytearray(p)
+        events[at+1]=(6,u,struct.pack('<8I',12,9,0,0,0,1,1,0))
+        r=self.inspect(events);self.assertTrue(r['pass'],r['errors']);self.assertEqual(r['header']['coverage_revision'],11)
+        position=struct.pack('<HH4B',0,0,2,0,0,0);uv=struct.pack('<HH4B',0,24,1,0,5,0)
+        weight=struct.pack('<HH4B',0,12,6,0,1,0);index=struct.pack('<HH4B',0,16,4,0,2,0);end=bytes.fromhex('ff00000011000000')
+        declaration=position+weight+index+uv+end
+        self.assertTrue(check.static_layout(declaration,32,True));self.assertFalse(check.static_layout(declaration,32))
+        self.assertFalse(check.static_layout(position+index+uv+end,32,True))
+        self.assertFalse(check.static_layout(position+weight+weight+index+uv+end,32,True))
+
     def test_static_inventory_includes_rejected_bone_and_cutout_families(self):
         events=self.scene_fixture();at=1+180*4;e,u,p=events[at];data=bytearray(p);state_at=check.SNAPSHOT.size+check.MATERIAL.size+32
         struct.pack_into('<I',data,state_at+5*4,1);struct.pack_into('<B',data,state_at+check.PIPELINE_V8.size+8+6,2)

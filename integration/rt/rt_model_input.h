@@ -6,7 +6,13 @@
 namespace ldb_rt::model_input {
 inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest) {
   scene_input::Prepared out;
-  if (FAILED(input.result)) { out.reason=input.reason;out.result=input.result;return out; }
+  if (FAILED(input.result)) {
+    out.reason=input.reason;out.result=input.result;
+    // Budget rejection is unsupported input, not a failed state getter/setter.
+    if (input.geometryResult==E_INVALIDARG && (!std::strcmp(input.reason,"vertex_budget") || !std::strcmp(input.reason,"absolute_vertex_budget") ||
+        !std::strcmp(input.reason,"index_budget") || !std::strcmp(input.reason,"unsupported_draw"))) { out.result=S_FALSE; }
+    return out;
+  }
   const auto profile=model_shader::profile(digest);
   int position=-1,uv=-1,weight=-1,indices=-1;std::vector<D3DVERTEXELEMENT9> plain;
   auto elements=input.declaration;

@@ -68,6 +68,7 @@ inline void systemCases(IDirect3DDevice9* d,IDirect3DVertexShader9* vs,IDirect3D
     void* memory=nullptr;ok(__LINE__,vb.value->Lock(0,400,&memory,0));std::memset(memory,0,400);
     for (unsigned i=0;i<3;++i) { const float p[]={float(i)-1,i==1?1.f:-1.f,-10};std::memcpy(static_cast<uint8_t*>(memory)+16+i*stride+4,p,sizeof(p)); }ok(__LINE__,vb.value->Unlock());
     setup();const auto before=state(d);unsigned gets=0,sets=0;
+    scene_input::Prepared rebuilt;bool replacing=false;
     const auto run=[&](Proxy& proxy,unsigned& calls,bool physical) {
       static_draw::Report report;ok(__LINE__,d->BeginScene());
       const auto hr=bulk_static::execute(&proxy,s,D3DPT_TRIANGLELIST,false,[&] {
@@ -81,9 +82,13 @@ inline void systemCases(IDirect3DDevice9* d,IDirect3DVertexShader9* vs,IDirect3D
         ok(__LINE__,d->GetTextureStageState(0,D3DTSS_RESULTARG,&a));check(a==D3DTA_CURRENT,"bulk texture result routed to stale TEMP");
         ok(__LINE__,d->GetRenderState(D3DRS_VERTEXBLEND,&a));check(a==D3DVBF_DISABLE,"bulk inherited vertex blending");
         ok(__LINE__,d->GetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE,&a));check(!a,"bulk inherited indexed blending");
-        D3DMATRIX m{};ok(__LINE__,d->GetTransform(D3DTS_WORLD,&m));check(!std::memcmp(&m,s.world.data(),sizeof(m)),"bulk affine transform lost");
+        D3DMATRIX m{};ok(__LINE__,d->GetTransform(D3DTS_WORLD,&m));check(!std::memcmp(&m,(replacing?rebuilt.world:s.world).data(),sizeof(m)),"bulk affine transform lost");
+        if (replacing) {
+          static_draw::Ref<IDirect3DVertexBuffer9> bound;UINT offset=0,step=0;ok(__LINE__,d->GetStreamSource(0,&bound.value,&offset,&step));
+          check(bound.value==rebuilt.buffer.value && !offset && step==32,"original model rebuilt stream not bound");
+        }
         return d->DrawPrimitive(D3DPT_TRIANGLELIST,0,1);
-      },report);ok(__LINE__,d->EndScene());return std::make_pair(hr,report);
+      },report,replacing?&rebuilt:nullptr);ok(__LINE__,d->EndScene());return std::make_pair(hr,report);
     };
     { Proxy proxy{d};unsigned calls=0;const auto r=run(proxy,calls,true);check(SUCCEEDED(r.first) && r.second.converted && calls==1 && state(d)==before,"bulk success/restoration");gets=proxy.gets;sets=proxy.sets/2; }
     // Every getter and every mutation-then-failure setter, on actual COM state.
@@ -96,6 +101,20 @@ inline void systemCases(IDirect3DDevice9* d,IDirect3DVertexShader9* vs,IDirect3D
       if (fault==4) { s.world[0]=-2; }
       const auto rejected=state(d);Proxy proxy{d};unsigned calls=0;const auto r=run(proxy,calls,false);
       check(!r.second.converted && !proxy.sets && calls==1 && state(d)==rejected,"bulk unsupported input accepted");s.world[0]=2;
+    }
+    if (kind==0) {
+      setup();rebuilt.world=s.world;rebuilt.world[12]+=33;rebuilt.stride=32;rebuilt.sourceDeclaration=elements;
+      rebuilt.elements={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
+      rebuilt.bytes.resize(96);
+      for (unsigned i=0;i<3;++i) { const float v[]={float(i)-1,i==1?1.f:-1.f,-10,.2f,.3f};std::memcpy(rebuilt.bytes.data()+i*32,v,sizeof(v)); }
+      check(scene_input::upload(d,rebuilt),"model fixture upload failed");rebuilt.ready=true;replacing=true;
+      const auto originalState=state(d);
+      { Proxy proxy{d};unsigned calls=0;const auto r=run(proxy,calls,true);check(SUCCEEDED(r.first) && r.second.converted && calls==1 && state(d)==originalState,"model override success/restoration");gets=proxy.gets;sets=proxy.sets/2; }
+      for (unsigned i=1;i<=gets;++i) { Proxy proxy{d};proxy.failGet=i;unsigned calls=0;const auto r=run(proxy,calls,false);check(SUCCEEDED(r.first) && !r.second.converted && !proxy.sets && calls==1 && state(d)==originalState,"model getter failure mutated state"); }
+      for (unsigned i=1;i<=2*sets;++i) { Proxy proxy{d};proxy.failSet=i;unsigned calls=0;const auto r=run(proxy,calls,false);check(calls==1 && state(d)==originalState && (i<=sets?SUCCEEDED(r.first) && !r.second.converted:FAILED(r.first)),"model stream/setter rollback failure hidden"); }
+      { Proxy proxy{d};proxy.failSet=1;proxy.extra=2;unsigned calls=0;const auto r=run(proxy,calls,false);check(!calls && FAILED(r.first) && state(d)==originalState,"model drew after rollback failure"); }
+      replacing=false;
+      std::cout << "RT original model transform/rebuilt stream rollback/system NULLREF: PASS; synthetic prepared geometry, actual captured inputs checked separately\n";
     }
     std::vector<D3DVERTEXELEMENT9> canonical;auto bad=elements;bad.insert(bad.end()-1,{0,28,D3DDECLTYPE_UBYTE4,0,D3DDECLUSAGE_BLENDINDICES,0});
     check(!bulk_static::layout(bad.data(),UINT(bad.size()),stride,canonical),"bulk bones accepted");bad=elements;bad[1].Offset=WORD(stride-4);

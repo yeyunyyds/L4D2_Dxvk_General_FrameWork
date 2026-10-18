@@ -166,7 +166,7 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
             consumer->second->conversion(uid,ldb_rt::consumer_world::Decision::BulkStatic,report,called,physical);return result;
           }
         }
-        const auto mode=ldb_rt::scene_draw::candidate(current,consumer->second->expanded(),consumer->second->models());
+        const auto mode=ldb_rt::scene_draw::candidate(current,consumer->second->expanded(),consumer->second->models() && !ldb_rt::world_runtime::state().model);
         if (mode!=ldb_rt::scene_draw::Mode::None) {
           if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
             auto& runtime=ldb_rt::world_runtime::state();HRESULT result=E_ABORT;

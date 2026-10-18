@@ -1,17 +1,33 @@
 #pragma once
 #include "rt_scene_input.h"
 #include "rt_scene_cases.h"
+#include "rt_bulk_static_cases.h"
 #include <d3dcompiler.h>
 #include <string>
 
 namespace rt_sky_input_test {
 using rt_scene_test::check;
+struct FullAdapter:rt_scene_test::System {
+    unsigned gets=0,sets=0,failGet=0,failSet=0,extra=0;
+    HRESULT get(HRESULT hr) { return ++gets==failGet?E_FAIL:hr; }
+    HRESULT set(HRESULT hr) { ++sets;return sets==failSet || sets==extra?E_FAIL:hr; }
+#define SKY_GET(name) template<class... A> HRESULT name(A... a) { return get(d->name(a...)); }
+#define SKY_SET(name) template<class... A> HRESULT name(A... a) { return set(d->name(a...)); }
+    SKY_GET(GetRenderTarget) SKY_GET(GetViewport) SKY_GET(GetVertexDeclaration) SKY_GET(GetStreamSource) SKY_GET(GetStreamSourceFreq)
+    SKY_GET(GetVertexShader) SKY_GET(GetPixelShader) SKY_GET(GetTransform) SKY_GET(CreateVertexDeclaration) SKY_GET(GetTextureStageState)
+    SKY_SET(SetVertexShader) SKY_SET(SetVertexDeclaration) SKY_SET(SetTransform) SKY_SET(SetTextureStageState) SKY_SET(SetStreamSource)
+#undef SKY_GET
+#undef SKY_SET
+    HRESULT GetRenderState(D3DRENDERSTATETYPE n,DWORD* v) { return get(rt_scene_test::System::GetRenderState(n,v)); }
+    HRESULT SetRenderState(D3DRENDERSTATETYPE n,DWORD v) { return set(rt_scene_test::System::SetRenderState(n,v)); }
+  };
+
 inline void systemCases(IDirect3DDevice9* d,decltype(&D3DCompile) compile) {
   using namespace ldb_rt;
   static_draw::Ref<ID3DBlob> vsCode,psCode,errors;
   const auto ok=[&](unsigned line,HRESULT hr) { if (FAILED(hr)) { if (errors.value) { std::cerr << static_cast<const char*>(errors.value->GetBufferPointer()) << '\n'; }throw std::runtime_error("sky replay system API failure line="+std::to_string(line)+" HRESULT="+std::to_string(uint32_t(hr))); } };
-  const char vsText[]="float4 A:register(c0);float4 B:register(c1);float4 C:register(c2);float4 D:register(c3);float4 S:register(c4);float4 T:register(c5);struct I{float3 p:POSITION;float2 uv:TEXCOORD0;};struct O{float4 p:POSITION;float2 uv:TEXCOORD0;};O main(I i){O o;float4 p=float4(i.p,1);o.p=float4(dot(p,A),dot(p,B),dot(p,C),dot(p,D));o.uv=i.uv*S.xy+T.xy;return o;}";
-  const char psText[]="sampler2D image:register(s0);float4 main(float2 uv:TEXCOORD0):COLOR0{return tex2D(image,uv);}";
+  const char vsText[]="float4 A:register(c0);float4 B:register(c1);float4 C:register(c2);float4 D:register(c3);float4 S:register(c4);float4 T:register(c5);struct I{float3 p:POSITION;float2 uv:TEXCOORD0;};struct O{float4 p:POSITION;float2 uv:TEXCOORD0;float2 a:TEXCOORD1;float2 b:TEXCOORD2;float2 c:TEXCOORD3;float2 d:TEXCOORD4;};O main(I i){O o;float4 p=float4(i.p,1);o.p=float4(dot(p,A),dot(p,B),dot(p,C),dot(p,D));o.uv=i.uv*S.xy+T.xy;o.a=i.uv+T.xy;o.b=i.uv+S.xy;o.c=i.uv*T.xy;o.d=i.uv*S.yx;return o;}";
+  const char psText[]="sampler2D image:register(s0);float4 main(float2 uv:TEXCOORD0,float2 a:TEXCOORD1,float2 b:TEXCOORD2,float2 c:TEXCOORD3,float2 d:TEXCOORD4):COLOR0{return (tex2D(image,uv)+tex2D(image,a)+tex2D(image,b)+tex2D(image,c)+tex2D(image,d))*.2;}";
   ok(__LINE__,compile(vsText,sizeof(vsText)-1,nullptr,nullptr,nullptr,"main","vs_2_0",D3DCOMPILE_ENABLE_STRICTNESS,0,&vsCode.value,&errors.value));
   if (errors.value) { errors.value->Release();errors.value=nullptr; }
   // SM2 sampler2D is legacy HLSL; strict mode rejects that syntax itself.
@@ -29,7 +45,7 @@ inline void systemCases(IDirect3DDevice9* d,decltype(&D3DCompile) compile) {
   ok(__LINE__,d->SetVertexShaderConstantF(0,constants[0].data(),256));
   for (auto name:{D3DRS_ALPHABLENDENABLE,D3DRS_ALPHATESTENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE}) { ok(__LINE__,d->SetRenderState(name,0)); }
   const auto input=scene_input::capture(d,1,D3DPT_TRIANGLELIST,{0,1,0,0,0,0});check(SUCCEEDED(input.result) && input.count==3 && input.first==0 && input.vertices.size()==96,"original input capture failed");
-  auto prepared=scene_input::prepare(d,s,input);check(prepared.ready,"compiled original shader not replayed");
+  auto prepared=scene_input::prepare(d,s,input);check(prepared.ready && prepared.stride==140 && prepared.elements.size()==7,"compiled full PS interface not replayed");
   float first[5]{};std::memcpy(first,prepared.bytes.data(),sizeof(first));
   check(std::abs(first[0]+1)<.001 && std::abs(first[1]+2.5f)<.001 && std::abs(first[2]+10)<.001 && std::abs(first[3]-.65f)<1e-6 && std::abs(first[4]-.7f)<1e-6,"compiled shader position/UV not preserved");
   // Indexed capture: nonzero IB offset and negative base vertex; validate range.
@@ -60,6 +76,28 @@ inline void systemCases(IDirect3DDevice9* d,decltype(&D3DCompile) compile) {
     check(actual.value==source.value && offset==16 && stride==32,"source stream not restored");
     static_draw::Ref<IDirect3DVertexShader9> actualVS;ok(__LINE__,d->GetVertexShader(&actualVS.value));check(actualVS.value==vs.value,"original VS lost");
   }
+  // Full failure injection includes texcoord routing, blend flags and the new
+  // declaration, beyond the legacy stream-only cases above.
+  for (unsigned i=0;i<8;++i) { ok(__LINE__,d->SetTextureStageState(i,D3DTSS_TEXCOORDINDEX,7-i));ok(__LINE__,d->SetTextureStageState(i,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_COUNT3)); }
+  ok(__LINE__,d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_1WEIGHTS));ok(__LINE__,d->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE,TRUE));
+  const auto readState=[&] {
+    auto state=rt_bulk_static_test::state(d);
+    for (unsigned i=0;i<8;++i) { for (auto n:{D3DTSS_TEXCOORDINDEX,D3DTSS_TEXTURETRANSFORMFLAGS}) { DWORD v=0;ok(__LINE__,d->GetTextureStageState(i,n,&v));state.push_back(v); } }
+    DWORD fog=0;ok(__LINE__,d->GetRenderState(D3DRS_FOGENABLE,&fog));state.push_back(fog);return state;
+  };
+  const auto originalState=readState();unsigned gets=0,totalSets=0,applySets=0;
+  const auto run=[&](FullAdapter& adapter,unsigned& calls,bool physical) {
+    static_draw::Report report;ok(__LINE__,d->BeginScene());const auto hr=scene_input::execute(&adapter,s,prepared,D3DPT_TRIANGLELIST,[&] {
+      ++calls;if (!physical) { return S_OK; }applySets=adapter.sets;
+      for (unsigned i=0;i<5;++i) { DWORD v=0;ok(__LINE__,d->GetTextureStageState(i,D3DTSS_TEXCOORDINDEX,&v));check(v==i,"sky PS texcoord remapping inherited");ok(__LINE__,d->GetTextureStageState(i,D3DTSS_TEXTURETRANSFORMFLAGS,&v));check(v==D3DTTFF_DISABLE,"sky UV transformed twice"); }
+      DWORD v=0;ok(__LINE__,d->GetRenderState(D3DRS_VERTEXBLEND,&v));check(v==D3DVBF_DISABLE,"sky inherited model blending");
+      return d->DrawPrimitive(D3DPT_TRIANGLELIST,0,1);
+    },report);ok(__LINE__,d->EndScene());return std::make_pair(hr,report);
+  };
+  { FullAdapter adapter;adapter.d=d;unsigned calls=0;const auto r=run(adapter,calls,true);check(SUCCEEDED(r.first) && r.second.converted && calls==1 && readState()==originalState,"full sky restoration");gets=adapter.gets;totalSets=adapter.sets; }
+  for (unsigned i=1;i<=gets;++i) { FullAdapter adapter;adapter.d=d;adapter.failGet=i;unsigned calls=0;const auto r=run(adapter,calls,false);check(SUCCEEDED(r.first) && !r.second.converted && !adapter.sets && calls==1 && readState()==originalState,"sky failed getter changed state"); }
+  for (unsigned i=1;i<=totalSets;++i) { FullAdapter adapter;adapter.d=d;adapter.failSet=i;unsigned calls=0;const auto r=run(adapter,calls,false);check(calls==1 && readState()==originalState && (i<=applySets?SUCCEEDED(r.first) && !r.second.converted:FAILED(r.first)),"sky full binding/restore failure hidden"); }
+  { FullAdapter adapter;adapter.d=d;adapter.failSet=1;adapter.extra=2;unsigned calls=0;const auto r=run(adapter,calls,false);check(!calls && FAILED(r.first) && readState()==originalState,"sky drew after rollback failure"); }
   std::cout << "RT sky original VS reconstruction/geometry bounds/binding rollback/system NULLREF: PASS; actual Remix/B580 unrun\n";
 }
 } // namespace rt_sky_input_test

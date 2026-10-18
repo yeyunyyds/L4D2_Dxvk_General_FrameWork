@@ -42,6 +42,18 @@ class SceneEvidence(unittest.TestCase):
     events.insert(2,other)
    events[-1]['input_samples']=9
    r=self.inspect(root,events);self.assertIn('scene_family_quota_exceeded',r['errors'])
+ def test_v11_model_counts_require_audited_sample_and_final_phase(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.fixture(root);events[0]['value']='11'
+   phases=('raster','baseline_world','expanded_sky','expanded_models')
+   models=[dict(event='model_rebuild_counts',frame=f,phase=p,attempts=0,ready=0,reconstructed=0,fallback=0,reasons={}) for f,p in zip((30,120,180,240),phases)]
+   events+=models;self.assertTrue(self.inspect(root,events)['pass'])
+   models[-1].update(attempts=1,ready=1,reconstructed=1,reasons={'original_vs_model_matrix':1})
+   self.assertIn('missing_model_rebuild_samples',self.inspect(root,events)['errors'])
+   events.append(dict(event='model_rebuild_sample',phase='expanded_models',ordinal=13,reason='original_vs_model_matrix',rebuilt_stride=32,rebuilt_vertex_bytes=96,applied_world=[float(i%5==0) for i in range(16)]))
+   self.assertTrue(self.inspect(root,events)['pass'])
+   models[0].update(attempts=1,fallback=1,reasons={'unknown_model_program':1})
+   self.assertIn('premature_model_reconstruction',self.inspect(root,events)['errors'])
  def test_old_capture_does_not_require_new_samples(self):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);self.assertEqual(self.inspect(root,[dict(event='world_coverage_revision',code=0,value='8')])['status'],'not_requested')
