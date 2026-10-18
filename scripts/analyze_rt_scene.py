@@ -44,11 +44,13 @@ def analyze(directory):
     if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
     if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
     events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-    v12=any(e.get('event')=='world_coverage_revision' and e.get('value')=='12' for e in events)
+    v13=any(e.get('event')=='world_coverage_revision' and e.get('value')=='13' for e in events)
+    v12=v13 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='12' for e in events)
     v11=v12 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='11' for e in events)
     v10=v11 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='10' for e in events)
     requested=v10 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='9' for e in events)
-    wide=v12 and any(e.get('event')=='scene_input_policy' and e.get('code')==0 and e.get('value')=='wide_materials_v1' for e in events)
+    skinned=v13 and any(e.get('event')=='scene_input_policy' and e.get('code')==0 and e.get('value')=='skinned_materials_v2' for e in events)
+    wide=skinned or v12 and any(e.get('event')=='scene_input_policy' and e.get('code')==0 and e.get('value')=='wide_materials_v1' for e in events)
     sample_limit=198 if wide else 34 if v12 else 24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
     samples=[e for e in events if e.get('event')=='scene_input_sample'];summaries=[e for e in events if e.get('event')=='sky_rebuild_counts']
     errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception','model_rebuild_exception','scene_input_identity_failed')];reviews=[];ordinals=set();phases=Counter();family_counts=Counter();files=set();used=0
@@ -73,20 +75,30 @@ def analyze(directory):
             if len(auxiliary)>3 or len({a['stream'] for a in auxiliary})!=len(auxiliary):raise ValueError('invalid_auxiliary_streams')
             for a in auxiliary:
                 if a['stream'] not in (1,2,3) or not 0<=a['prefix_bytes']<=256 or (a['prefix_bytes'] and len(payload.get('stream-'+str(a['stream'])+'.bin',b''))!=a['prefix_bytes']):raise ValueError('auxiliary_prefix_mismatch')
-            for field,name,size in [('integer_constants_hresult','vs-integers.bin',256),('bool_constants_hresult','vs-bools.bin',64),('pixel_constants_hresult','ps-constants.bin',512)]:
+            for field,name,size in [('integer_constants_hresult','vs-integers.bin',256),('bool_constants_hresult','vs-bools.bin',64),('pixel_constants_hresult','ps-constants.bin',3584 if v13 else 512)]:
                 if field in sample and sample[field]==0 and len(payload.get(name,b''))!=size:raise ValueError('missing_optional_shader_constants')
+            if v13:
+                morph=sample.get('morph_position')
+                if not isinstance(morph,dict):raise ValueError('missing_morph_position_metadata')
+                if morph:
+                    n=morph.get('vertices',0)
+                    if not isinstance(n,int) or not 0<=n<=32768:raise ValueError('invalid_morph_vertex_count')
+                    if n:
+                        if morph.get('hresult')!=0 or morph.get('stream')!=2 or morph.get('frequency')!=1 or not 16<=morph.get('stride',0)<=128 or morph['stride']%4 or morph.get('offset',-1)<0 or morph['offset']%4 or morph.get('first_absolute_vertex')!=sample['first_absolute_vertex'] or n!=sample['vertex_count'] or len(payload.get('morph-positions.bin',b''))!=n*16:raise ValueError('invalid_complete_morph_position')
+                        if morph['offset']+(morph['first_absolute_vertex']+n-1)*morph['stride']+16>morph.get('source_buffer_bytes',0):raise ValueError('morph_position_outside_source_buffer')
+                    elif payload.get('morph-positions.bin') or morph.get('hresult')==0:raise ValueError('orphan_morph_position_payload')
             review={k:sample[k] for k in ('phase','ordinal','material','shader','format','geometry_status','replay_status')}
             review['shader_bytecode']={k:instructions(v) for k,v in payload.items() if k in ('vs.bin','ps.bin')}
             if sample['geometry_hresult']==0:
                 count=sample['vertex_count'];first=sample['first_absolute_vertex'];stride=sample['stride'];kind=sample['kind'];args=sample['args']
-                max_vertices=16384 if v12 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 4096
+                max_vertices=32768 if v13 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 16384 if v12 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 4096
                 window=wide and sample.get('geometry_window') is True
                 if not 0<count<=max_vertices or not 0<=first or (not window and first+count>max_vertices) or not 1<=stride<=stride_limit or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
                 decl=payload.get('declaration.bin',b'')
                 if len(decl)%8 or len(decl)>520 or decl[-8:]!=bytes.fromhex('ff00000011000000'):raise ValueError('invalid_scene_declaration')
                 if kind==2:
                     width=sample['index_bytes'];n=args[4]*3 if sample['topology']==4 else args[4]+2
-                    if width not in (2,4) or n>(131072 if v12 and sample['shader']=='NekoToon' else 65536 if v12 and sample['shader']=='VertexLitGeneric' else 16384) or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
+                    if width not in (2,4) or n>(131072 if v13 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 131072 if v12 and sample['shader']=='NekoToon' else 65536 if v12 and sample['shader']=='VertexLitGeneric' else 16384) or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
                     indices=struct.unpack('<'+('H' if width==2 else 'I')*n,payload['indices.bin'])
                     signed=args[0] if args[0]<2**31 else args[0]-2**32
                     if (first!=signed+min(indices) or count!=max(indices)-min(indices)+1 if window else first!=signed+args[1] or count!=args[2]) or any(not args[1]<=i<args[1]+args[2] for i in indices):raise ValueError('scene_index_outside_vertices')
@@ -114,11 +126,11 @@ def analyze(directory):
             phase=e.get('phase');position=PHASES.index(phase) if phase in PHASES else 0
             rows=[s for s in samples if s.get('phase')==phase];saved=sum(i['size'] for s in rows for i in s.get('files',[]))
             counts=e.get('family_captured',[]);quota=e.get('family_quota_omitted',[]);payload=e.get('family_payload_omitted',[])
-            if any(len(v)!=4 or any(not isinstance(x,int) or x<0 for x in v) for v in (counts,quota,payload)) or counts!=[family_counts[(phase,i)] for i in range(4)] or e.get('captured')!=len(rows) or e.get('payload_bytes')!=saved or saved>(8 if position==3 else 2)*1024*1024:errors.append('inconsistent_wide_capture_counts')
+            if any(len(v)!=4 or any(not isinstance(x,int) or x<0 for x in v) for v in (counts,quota,payload)) or counts!=[family_counts[(phase,i)] for i in range(4)] or e.get('captured')!=len(rows) or e.get('payload_bytes')!=saved or saved>((12 if skinned else 8) if position==3 else 2)*1024*1024:errors.append('inconsistent_wide_capture_counts')
             family_bytes=e.get('family_payload_bytes',[])
             group=lambda s:0 if s['shader']=='NekoSky' else 1 if s['shader']=='VertexLitGeneric' else 3 if s['shader']=='NekoToon' else 2
             saved_by_family=[sum(f['size'] for s in rows if group(s)==i for f in s.get('files',[])) for i in range(4)]
-            family_limits=(256,3072,1792,3072) if position==3 else (128,640,512,768)
+            family_limits=((256,4096,1792,6144) if skinned else (256,3072,1792,3072)) if position==3 else (128,640,512,768)
             if family_bytes!=saved_by_family or any(n>limit*1024 for n,limit in zip(saved_by_family,family_limits)):errors.append('inconsistent_wide_family_payload')
             if e.get('identity_failures',0):errors.append('scene_input_identity_failed')
     models=[e for e in events if e.get('event')=='model_rebuild_counts']
@@ -130,16 +142,16 @@ def analyze(directory):
             if not all(isinstance(e.get(k),int) and e[k]>=0 for k in keys):errors.append('invalid_model_rebuild_counts');continue
             if e['frame']<240 and e['attempts']:errors.append('premature_model_reconstruction')
             if e['attempts']!=e['reconstructed']+e['fallback'] or not e['reconstructed']<=e['ready']<=e['attempts'] or sum(e.get('reasons',{}).values())!=e['attempts']:errors.append('inconsistent_model_rebuild_counts')
-        if len(model_samples)>32 or len({e.get('ordinal') for e in model_samples})!=len(model_samples):errors.append('model_sample_identity_or_budget')
+        if len(model_samples)>(64 if v13 else 32) or len({e.get('ordinal') for e in model_samples})!=len(model_samples):errors.append('model_sample_identity_or_budget')
         for e in model_samples:
-            if e.get('phase')!='expanded_models' or e.get('reason') not in ('original_vs_model_matrix','original_vs_rigid_bone_zero') or e.get('rebuilt_stride')!=32 or not 0<e.get('rebuilt_vertex_bytes',0)<=(16384 if v12 else 4096)*32:errors.append('invalid_model_rebuild_sample')
+            if e.get('phase')!='expanded_models' or e.get('reason') not in (('original_vs_model_matrix','original_vs_rigid_bone_zero','original_vs_three_weight','original_vs_neko_three_weight') if v13 else ('original_vs_model_matrix','original_vs_rigid_bone_zero')) or e.get('rebuilt_stride')!=32 or not 0<e.get('rebuilt_vertex_bytes',0)<=(32768 if v13 else 16384 if v12 else 4096)*32:errors.append('invalid_model_rebuild_sample')
             matrix=e.get('applied_world',[])
             if len(matrix)!=16 or not all(isinstance(v,(float,int)) and math.isfinite(v) for v in matrix):errors.append('invalid_model_rebuild_world')
         if models and models[-1].get('reconstructed',0)>0 and not model_samples:errors.append('missing_model_rebuild_samples')
     final=summaries[-1] if summaries else {}
     rebuilt=final.get('reconstructed',0);attempts=final.get('attempts',0)
     return {'schema':1,'status':'valid_evidence_requires_review' if requested and not errors else 'incomplete' if requested else 'not_requested',
-            'pass':not errors,'errors':sorted(set(errors)),'capture_policy':'wide_materials_v1' if wide else 'legacy','capture_summaries':capture_counts,'sample_counts':dict(phases),'payload_bytes':used,'samples':reviews,'sky_rebuild_summaries':summaries,
+            'pass':not errors,'errors':sorted(set(errors)),'capture_policy':'skinned_materials_v2' if skinned else 'wide_materials_v1' if wide else 'legacy','capture_summaries':capture_counts,'sample_counts':dict(phases),'payload_bytes':used,'samples':reviews,'sky_rebuild_summaries':summaries,
             'model_rebuild_summaries':models,'model_rebuild_samples':model_samples,
             'model_rebuild_result':'applied_requires_image_review' if models and models[-1].get('reconstructed',0)>0 else 'no_model_reconstruction' if v11 else 'not_requested',
             'sky_rebuild_result':'applied_requires_image_review' if attempts and rebuilt==attempts else 'fallback_preserved_v8' if attempts and not rebuilt else 'partial_or_unrun',

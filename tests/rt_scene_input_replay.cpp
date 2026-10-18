@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <iomanip>
+#include <filesystem>
 using namespace ldb_rt;
 struct Reader {
   std::ifstream f;explicit Reader(const char* path):f(path,std::ios::binary) { if (!f) { throw std::runtime_error("input missing"); } }
@@ -13,12 +14,14 @@ struct Reader {
 };
 int main(int argc,char** argv) {
   try {
-    if (argc!=2) { return 1; }Reader r(argv[1]);if (r.u32()!=0x3152534cu) { throw std::runtime_error("input magic"); }
+    if (argc!=2 && argc!=3) { return 1; }Reader r(argv[1]);const auto magic=r.u32();
+    if (magic!=0x3152534cu && magic!=0x3252534cu) { throw std::runtime_error("input magic"); }
     const auto count=r.u32();if (count>792) { return 1; }std::cout<<std::setprecision(12)<<"[";
     for (uint32_t sample=0;sample<count;++sample) {
       const auto ordinal=r.u32(),kind=r.u32(),stride=r.u32(),pos=r.u32(),uv=r.u32();const int weight=int32_t(r.u32()),indices=int32_t(r.u32());
       std::array<char,64> hash{};r.read(hash.data(),hash.size());sky_shader::Constants c{};r.read(c.data(),sizeof(c));std::array<float,16> view{},projection{};r.read(view.data(),64);r.read(projection.data(),64);
       auto vs=r.vector<uint32_t>(16384),ps=r.vector<uint32_t>(16384);auto bytes=r.vector<uint8_t>(1024*1024);
+      std::vector<sky_shader::Vec> morph;if (magic==0x3252534cu) { morph=r.vector<sky_shader::Vec>(model_shader::kMaxVertices); }
       if (stride!=32 || pos>stride-12 || uv>stride-8 || bytes.empty() || bytes.size()%stride) { throw std::runtime_error("invalid vertex layout"); }
       bool valid=false;const char* reason="invalid_kind";size_t vertices=0;unsigned front=0,inside=0;double maxUV=0;
       if (kind==0) {
@@ -34,7 +37,7 @@ int main(int argc,char** argv) {
           for (unsigned j=0;j<5;++j) { for (unsigned k=0;k<2;++k) { maxUV=std::max(maxUV,std::abs(double(result.vertices[i][3+j*4+k])-expected[j][k])); } }
         } }
       } else {
-        auto result=model_shader::reconstruct(model_shader::profile(std::string(hash.data(),hash.size())),c,bytes,stride,pos,uv,weight,indices);
+        auto result=model_shader::reconstruct(model_shader::profile(std::string(hash.data(),hash.size())),c,bytes,stride,pos,uv,weight,indices,morph);
         valid=result.valid && model_shader::cameraCompatible(result,c,view,projection);reason=valid?result.reason:result.valid?"model_clip_camera_mismatch":result.reason;vertices=result.vertices.size()/32;
         if (valid) { for (size_t at=0;at<result.vertices.size();at+=32) {
           sky_shader::Vec local{0,0,0,1};std::memcpy(local.data(),result.vertices.data()+at,12);double world[4]={0,0,0,1},v[4]{},clip[4]{};
@@ -43,6 +46,11 @@ int main(int argc,char** argv) {
           for (unsigned j=0;j<4;++j) { for (unsigned i=0;i<4;++i) { clip[j]+=v[i]*projection[i*4+j]; } }
           if (clip[3]>0) { ++front;if (std::abs(clip[0])<=clip[3] && std::abs(clip[1])<=clip[3] && clip[2]>=0 && clip[2]<=clip[3]) { ++inside; } }
         } }
+        if (valid && argc==3) {
+          const auto path=std::filesystem::path(argv[2])/(std::to_string(ordinal)+".bin");std::ofstream dump(path,std::ios::binary);
+          dump.write(reinterpret_cast<const char*>(result.world.data()),64);dump.write(reinterpret_cast<const char*>(result.vertices.data()),std::streamsize(result.vertices.size()));
+          if (!dump) { throw std::runtime_error("position dump write failed"); }
+        }
       }
       if (sample) { std::cout<<","; }std::cout<<"{\"ordinal\":"<<ordinal<<",\"kind\":"<<kind<<",\"valid\":"<<(valid?"true":"false")<<",\"reason\":\""<<reason<<"\",\"vertices\":"<<vertices<<",\"front\":"<<front<<",\"inside_clip\":"<<inside<<",\"max_uv_error\":"<<maxUV<<"}";
     }

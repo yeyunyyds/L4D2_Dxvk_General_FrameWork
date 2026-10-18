@@ -181,6 +181,20 @@ class DrawObservation(unittest.TestCase):
         events[at+1]=(6,u,struct.pack('<8I',12,4,0,0,0,0,1,0))
         r=self.inspect(events);self.assertTrue(r['pass'],r['errors']);self.assertTrue(any(g['shader']=='NekoToon' and g['converted']==0 for g in r['static_family_inventory']['groups']))
         events[at+1]=(6,u,struct.pack('<8I',12,9,0,0,0,1,1,0));self.assertFalse(self.inspect(events)['pass'])
+    def test_v13_neko_conversion_is_phase_pipeline_and_layout_bounded(self):
+        events=self.scene_fixture();events[0]=(0,0,struct.pack('<IQQQII',10,42,7,10000000,240,30))
+        at=1+180*4;e,u,p=events[at];data=bytearray(p);state_at=check.SNAPSHOT.size+check.MATERIAL.size+32
+        struct.pack_into('<64s',data,check.SNAPSHOT.size+16,b'NekoToon')
+        declaration=b''.join(struct.pack('<HH4B',*x) for x in [(0,0,2,0,0,0),(0,12,6,0,1,0),(0,16,4,0,2,0),(0,24,1,0,5,0)])+bytes.fromhex('ff00000011000000')
+        state=list(check.PIPELINE_V8.unpack_from(data,state_at));state[17]=len(declaration)//8
+        data=data[:state_at]+check.PIPELINE_V8.pack(*state)+declaration
+        events[at]=(e,u,bytes(data));events[at+1]=(6,u,struct.pack('<8I',12,9,0,0,0,1,1,0))
+        r=self.inspect(events);self.assertTrue(r['pass'],r['errors']);self.assertEqual(r['header']['coverage_revision'],13)
+        for offset,value in [(state_at+4*4,1),(state_at+7*4,0),(state_at+3*4,2)]:
+            changed=bytearray(data);struct.pack_into('<I',changed,offset,value);bad=events.copy();bad[at]=(e,u,bytes(changed));self.assertFalse(self.inspect(bad)['pass'])
+        old=events.copy();old[0]=(0,0,struct.pack('<IQQQII',9,42,7,10000000,240,30));self.assertFalse(self.inspect(old)['pass'])
+        early=events.copy();dest=1+179*4;_,dest_uid,_=events[dest];changed=bytearray(data);struct.pack_into('<Q',changed,16,180)
+        early[dest]=(e,dest_uid,bytes(changed));early[dest+1]=(6,dest_uid,events[at+1][2]);self.assertFalse(self.inspect(early)['pass'])
     def test_v11_header_and_guarded_bone_declaration(self):
         events=self.scene_fixture();events[0]=(0,0,struct.pack('<IQQQII',8,42,7,10000000,240,30))
         at=1+180*4;e,u,p=events[at];data=bytearray(p)

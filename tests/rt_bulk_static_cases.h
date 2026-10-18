@@ -47,7 +47,7 @@ inline void modelGeometryBounds(IDirect3DDevice9* d) {
   ok(d->GetStreamSource(0,&oldVB.value,&oldOffset,&oldStride));ok(d->GetIndices(&oldIB.value));ok(d->GetVertexDeclaration(&oldDecl.value));
   const D3DVERTEXELEMENT9 elements[]={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,16,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
   ok(d->CreateVertexDeclaration(elements,&decl.value));ok(d->SetVertexDeclaration(decl.value));
-  constexpr UINT vertices=8951,sourceVertices=15189,indices=8979*3,offset=16,start=7;
+  constexpr UINT vertices=16977,sourceVertices=32768,indices=16919*3,offset=16,start=7;
   std::vector<uint8_t> source(offset+sourceVertices*32,0x5a);
   for (UINT i=0;i<sourceVertices;++i) { const float p[]={float(i%3),1,-10};const float uv[]={.2f,.3f};std::memcpy(source.data()+offset+i*32,p,12);std::memcpy(source.data()+offset+i*32+16,uv,8); }
   ok(d->CreateVertexBuffer(UINT(source.size()),0,0,D3DPOOL_MANAGED,&vb.value,nullptr));void* memory=nullptr;
@@ -57,7 +57,7 @@ inline void modelGeometryBounds(IDirect3DDevice9* d) {
   ok(d->CreateIndexBuffer(UINT(sourceIndices.size()*2),0,D3DFMT_INDEX16,D3DPOOL_MANAGED,&ib.value,nullptr));
   ok(ib.value->Lock(0,UINT(sourceIndices.size()*2),&memory,0));check(memory!=nullptr,"large IB null");std::memcpy(memory,sourceIndices.data(),sourceIndices.size()*2);ok(ib.value->Unlock());
   ok(d->SetStreamSource(0,vb.value,offset,32));ok(d->SetIndices(ib.value));
-  const std::array<uint32_t,6> args{{uint32_t(-100),100,vertices,start,8979,0}};scene_input::Data legacy,larger;
+  const std::array<uint32_t,6> args{{uint32_t(-100),100,vertices,start,16919,0}};scene_input::Data legacy,larger;
   check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,args,legacy)),"legacy scene geometry budget unexpectedly changed");
   ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,args,larger,scene_input::kModelLimits));
   check(larger.first==0 && larger.count==vertices && larger.vertices.size()==vertices*32 && larger.indices.size()==indices*2,"signed base/min/start range changed");
@@ -73,15 +73,15 @@ inline void modelGeometryBounds(IDirect3DDevice9* d) {
   check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,invalid,rejected,scene_input::kModelLimits)),"negative absolute vertex accepted");
   ok(vb.value->Lock(0,UINT(source.size()),&memory,D3DLOCK_READONLY));check(memory && !std::memcmp(memory,source.data(),source.size()),"capture modified original VB");ok(vb.value->Unlock());
   ok(ib.value->Lock(0,UINT(sourceIndices.size()*2),&memory,D3DLOCK_READONLY));check(memory && !std::memcmp(memory,sourceIndices.data(),sourceIndices.size()*2),"capture modified original IB");ok(ib.value->Unlock());
-  // Actual NekoToon shape exceeds the model index cap. Audit captures it
-  // independently without enabling conversion of this unknown shader.
+  // Large Neko meshes and standard models now share bounded geometry limits;
+  // shader identity and pipeline checks still decide conversion separately.
   constexpr UINT customTriangles=27456;std::vector<uint16_t> auditIndices(start+customTriangles*3);
   for (size_t i=start;i<auditIndices.size();++i) { auditIndices[i]=uint16_t(100+(i-start)%sourceVertices); }
   static_draw::Ref<IDirect3DIndexBuffer9> auditIB;
   ok(d->CreateIndexBuffer(UINT(auditIndices.size()*2),0,D3DFMT_INDEX16,D3DPOOL_MANAGED,&auditIB.value,nullptr));
   ok(auditIB.value->Lock(0,UINT(auditIndices.size()*2),&memory,0));check(memory!=nullptr,"audit IB null");std::memcpy(memory,auditIndices.data(),auditIndices.size()*2);ok(auditIB.value->Unlock());ok(d->SetIndices(auditIB.value));
   const std::array<uint32_t,6> customArgs{{uint32_t(-100),100,sourceVertices,start,customTriangles,0}};scene_input::Data custom;
-  check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,customArgs,custom,scene_input::kModelLimits)),"custom audit changed conversion cap");
+  ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,customArgs,custom,scene_input::kModelLimits));
   ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,customArgs,custom,scene_input::kAuditLimits));
   check(custom.count==sourceVertices && custom.indices.size()==customTriangles*6 && !std::memcmp(custom.vertices.data(),source.data()+offset,custom.vertices.size()),"large custom material audit incomplete");
   uint16_t selected[]={uint16_t(100+sourceVertices-3),uint16_t(100+sourceVertices-2),uint16_t(100+sourceVertices-1)};
@@ -173,6 +173,16 @@ inline void systemCases(IDirect3DDevice9* d,IDirect3DVertexShader9* vs,IDirect3D
       for (unsigned i=1;i<=gets;++i) { Proxy proxy{d};proxy.failGet=i;unsigned calls=0;const auto r=run(proxy,calls,false);check(SUCCEEDED(r.first) && !r.second.converted && !proxy.sets && calls==1 && state(d)==originalState,"model getter failure mutated state"); }
       for (unsigned i=1;i<=2*sets;++i) { Proxy proxy{d};proxy.failSet=i;unsigned calls=0;const auto r=run(proxy,calls,false);check(calls==1 && state(d)==originalState && (i<=sets?SUCCEEDED(r.first) && !r.second.converted:FAILED(r.first)),"model stream/setter rollback failure hidden"); }
       { Proxy proxy{d};proxy.failSet=1;proxy.extra=2;unsigned calls=0;const auto r=run(proxy,calls,false);check(!calls && FAILED(r.first) && state(d)==originalState,"model drew after rollback failure"); }
+      // Neko must never enter the generic no-shader-proof path. Its prepared
+      // first-diffuse path shares all stream/state restoration failure cases.
+      std::memcpy(s.materialInfo.shader.data(),"NekoToon",9);replacing=false;
+      { Proxy proxy{d};unsigned calls=0;const auto r=run(proxy,calls,false);check(!r.second.converted && !proxy.sets && calls==1 && state(d)==originalState,"unverified Neko entered generic conversion"); }
+      replacing=true;
+      { Proxy proxy{d};unsigned calls=0;const auto r=run(proxy,calls,true);check(SUCCEEDED(r.first) && r.second.converted && calls==1 && state(d)==originalState,"prepared Neko state/stream restoration");gets=proxy.gets;sets=proxy.sets/2; }
+      for (unsigned i=1;i<=gets;++i) { Proxy proxy{d};proxy.failGet=i;unsigned calls=0;const auto r=run(proxy,calls,false);check(!proxy.sets && calls==1 && !r.second.converted && state(d)==originalState,"Neko getter failure changed state"); }
+      for (unsigned i=1;i<=2*sets;++i) { Proxy proxy{d};proxy.failSet=i;unsigned calls=0;const auto r=run(proxy,calls,false);check(calls==1 && state(d)==originalState && (i<=sets?SUCCEEDED(r.first) && !r.second.converted:FAILED(r.first)),"Neko setter/restore failure hidden"); }
+      std::memcpy(s.materialInfo.shader.data(),names[kind],std::strlen(names[kind])+1);
+      std::cout << "RT Neko prepared-only/first-diffuse/state rollback/system NULLREF: PASS\n";
       replacing=false;
       std::cout << "RT original model transform/rebuilt stream rollback/system NULLREF: PASS; synthetic prepared geometry, actual captured inputs checked separately\n";
     }

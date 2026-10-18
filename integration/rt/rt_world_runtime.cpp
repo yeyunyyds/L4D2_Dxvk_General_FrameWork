@@ -153,9 +153,9 @@ std::array<unsigned,4> sceneSampleCounts{};
 std::array<std::array<unsigned,4>,4> sceneFamilyCounts{};
 std::set<std::array<uint64_t,16>> sceneSampled;
 constexpr unsigned sceneLimits[]={6,48,96,48};
-constexpr uint64_t sceneByteLimits[]={2u*1024*1024,2u*1024*1024,2u*1024*1024,8u*1024*1024};
+constexpr uint64_t sceneByteLimits[]={2u*1024*1024,2u*1024*1024,2u*1024*1024,12u*1024*1024};
 std::array<uint64_t,4> sceneBytes{};
-constexpr uint64_t sceneFamilyByteLimits[][4]={{128u*1024,640u*1024,512u*1024,768u*1024},{128u*1024,640u*1024,512u*1024,768u*1024},{128u*1024,640u*1024,512u*1024,768u*1024},{256u*1024,3072u*1024,1792u*1024,3072u*1024}};
+constexpr uint64_t sceneFamilyByteLimits[][4]={{128u*1024,640u*1024,512u*1024,768u*1024},{128u*1024,640u*1024,512u*1024,768u*1024},{128u*1024,640u*1024,512u*1024,768u*1024},{256u*1024,4096u*1024,1792u*1024,6144u*1024}};
 std::array<std::array<uint64_t,4>,4> sceneFamilyBytes{};
 std::array<std::array<unsigned,4>,4> sceneQuotaOmitted{},scenePayloadOmitted{};
 std::array<unsigned,4> sceneIdentityFailures{};
@@ -164,9 +164,9 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
   try {
     if (!events || device!=registered) { return; }
     const bool sky=scene_draw::candidate(s,true,false)==scene_draw::Mode::Sky;
-    if (!sky && !bulk_static::candidate(s) && !bulk_static::auditOnly(s)) { return; }
+    if (!sky && !bulk_static::candidate(s)) { return; }
     const auto phase=comparison.phase();const auto index=size_t(phase);
-    const unsigned group=sky?0u:bulk_static::auditOnly(s)?3u:bulk_static::family(s.materialInfo.shader.data())==1?1u:2u;
+    const unsigned group=sky?0u:bulk_static::customModel(s)?3u:bulk_static::family(s.materialInfo.shader.data())==1?1u:2u;
     static_draw::Ref<IDirect3DVertexShader9> identityShader;static_draw::Ref<IDirect3DVertexBuffer9> identityBuffer;UINT identityOffset=0,identityStride=0;
     const auto shaderIdentity=device->GetVertexShader(&identityShader.value),bufferIdentity=device->GetStreamSource(0,&identityBuffer.value,&identityOffset,&identityStride);
     if (FAILED(shaderIdentity) || FAILED(bufferIdentity)) {
@@ -178,7 +178,7 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     if (!sceneSampled.insert(key).second) { return; }
     if (sceneFamilyCounts[index][group]>=sceneLimits[group]) { ++sceneQuotaOmitted[index][group];return; }
     auto input=scene_input::capture(device,kind,type,args,true,group==1?scene_input::kModelLimits:group==3?scene_input::kAuditLimits:scene_input::Limits{},true);
-    const char* replay=group==3?"audit_only_unknown_program":"not_sky";
+    const char* replay=group==3?"model_input_audit":"not_sky";
     if (sky) {
       auto warmed=scene_input::prepare(device,s,input);replay=warmed.reason;
       if (phase==world_diagnostics::CoveragePhase::ExpandedWorld) { skyReadiness[s.material]=warmed.ready; }
@@ -186,7 +186,7 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     const uint64_t bytes=input.vertices.size()+input.indices.size()+(input.vs.size()+input.ps.size())*4+input.declaration.size()*sizeof(D3DVERTEXELEMENT9)+
       (SUCCEEDED(input.constantsResult)?sizeof(input.constants):0)+(SUCCEEDED(input.integerResult)?sizeof(input.integerConstants):0)+
       (SUCCEEDED(input.boolResult)?sizeof(input.boolConstants):0)+(SUCCEEDED(input.pixelResult)?sizeof(input.pixelConstants):0)+
-      input.auxiliary[0].bytes.size()+input.auxiliary[1].bytes.size()+input.auxiliary[2].bytes.size();
+      input.auxiliary[0].bytes.size()+input.auxiliary[1].bytes.size()+input.auxiliary[2].bytes.size()+input.morph.positions.size()*sizeof(sky_shader::Vec);
     if (bytes>sceneByteLimits[index]-sceneBytes[index] || bytes>sceneFamilyByteLimits[index][group]-sceneFamilyBytes[index][group]) { ++scenePayloadOmitted[index][group];return; }
     ++sceneFamilyCounts[index][group];++sceneSampleCounts[index];
     std::ostringstream log;log << std::setprecision(9);
@@ -202,6 +202,10 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
       << ",\"constants_hresult\":" << uint32_t(input.constantsResult) << ",\"geometry_status\":\"" << input.reason
       << "\",\"replay_status\":\"" << replay << "\",\"first_absolute_vertex\":" << input.first << ",\"vertex_count\":" << input.count << ",\"stride\":" << input.stride
       << ",\"geometry_window\":true,\"source_vertex_buffer_bytes\":" << input.vertexBufferBytes << ",\"stream_offset\":" << input.offset << ",\"index_bytes\":" << input.indexBytes << ",";
+    log << "\"morph_position\":{\"hresult\":" << uint32_t(input.morph.result) << ",\"stream\":" << input.morph.stream
+      << ",\"offset\":" << input.morph.offset << ",\"stride\":" << input.morph.stride << ",\"frequency\":" << input.morph.frequency
+      << ",\"source_buffer_bytes\":" << input.morph.bufferBytes << ",\"first_absolute_vertex\":" << input.first
+      << ",\"vertices\":" << input.morph.positions.size() << "},";
     // Prefix-only auxiliary streams are evidence, never claimed as complete vertices.
     log << "\"auxiliary\":[";
     for (unsigned i=0;i<3;++i) { const auto& a=input.auxiliary[i];if (i) { log << ','; }
@@ -221,6 +225,7 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     if (SUCCEEDED(input.integerResult)) { save("-vs-integers.bin",input.integerConstants.data(),sizeof(input.integerConstants)); }
     if (SUCCEEDED(input.boolResult)) { save("-vs-bools.bin",input.boolConstants.data(),sizeof(input.boolConstants)); }
     if (SUCCEEDED(input.pixelResult)) { save("-ps-constants.bin",input.pixelConstants.data(),sizeof(input.pixelConstants)); }
+    if (!input.morph.positions.empty()) { save("-morph-positions.bin",input.morph.positions.data(),input.morph.positions.size()*sizeof(sky_shader::Vec)); }
     for (unsigned i=0;i<3;++i) { const std::string name="-stream-"+std::to_string(i+1)+".bin";save(name.c_str(),input.auxiliary[i].bytes.data(),input.auxiliary[i].bytes.size()); }
 
     log << "]}\n";events << log.str() << std::flush;
@@ -262,7 +267,7 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
     if (prepared.ready && report.converted && SUCCEEDED(report.restore) && SUCCEEDED(result)) {
       ++counts.reconstructed;
       const auto phase=unsigned(comparison.phase());
-      if (modelSampled.size()<32 && modelSampled.insert({phase,s.material}).second) {
+      if (modelSampled.size()<64 && modelSampled.insert({phase,s.material}).second) {
         events << "{\"event\":\"model_rebuild_sample\",\"phase\":\"" << world_diagnostics::name(comparison.phase()) << "\",\"ordinal\":" << s.ordinal
           << ",\"material\":" << s.material << ",\"reason\":\"" << prepared.reason << "\",\"rebuilt_stride\":" << prepared.stride
           << ",\"rebuilt_vertex_bytes\":" << prepared.bytes.size() << ",\"applied_world\":[";
@@ -387,9 +392,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy", 0, "v12_matrix_proven_sky_and_bounded_larger_model_materials_with_custom_shader_audit");
-    event("world_coverage_revision", 0, "12");
-    event("scene_input_policy",0,"wide_materials_v1");
+    event("coverage_comparison_policy", 0, "v13_matrix_proven_model_camera_three_weight_palette_neko_and_complete_morph_positions");
+    event("world_coverage_revision", 0, "13");
+    event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw}; return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }

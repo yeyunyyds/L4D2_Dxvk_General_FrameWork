@@ -1,34 +1,31 @@
-LDB 1.3.2：受限世界 Remix 接入试验 v12（天空矩阵精度修正、更大模型与其余材质输入合并验证）
+LDB 1.3.2：受限世界 Remix 接入试验 v13（模型相机修正、三权重骨骼、NekoToon 与 morph 合并覆盖）
 
 一个入口、一次 F9、一个最终结果 ZIP：
-1. 解压到独立目录，建议放在旧测试包旁边。保留旧包的 backups 和 installed-observer.json，供自动继承原始恢复备份。
-2. 双击 run-test.cmd。脚本校验并复用固定 runtime 缓存，等待已有游戏正常退出，备份/安装配套 x86 client 与 x64 Host，再通过 Steam 启动。
-3. 主菜单应有正常光栅画面。进入上次地图，选择同时能看到天空、墙体和多种场景道具的位置，按一次 F9 后保持镜头静止。总计 240 次 Present，自动停止；首次 RT shader 初始化可能停顿，请等待。
-4. 按提示正常退出游戏，等待控制台显示最终 COMPLETE / INCOMPLETE 和 ZIP 路径，上传 results 中一个 rt-world-*.zip。不需要手动压缩中间目录。
+1. 解压到旧测试包旁的独立目录，保留旧包 backups 和 installed-observer.json，供自动继承原始恢复备份。
+2. 双击 run-test.cmd。脚本校验并复用固定 runtime 缓存，等待已有游戏正常退出，安装配套 x86 client/x64 Host，再通过 Steam 启动。
+3. 进入同一测试地图，选择天空、墙体、大小道具和人物尽量同时可见的位置。按一次 F9 后保持镜头静止；人物正常动画可以继续。共 240 Present 自动停止，首次 RT 初始化可能停顿。
+4. 按提示正常退出游戏，等待控制台显示最终 COMPLETE / INCOMPLETE 和 ZIP 路径，上传 results 中一个 rt-world-*.zip。不要手动压缩中间目录。
 
-自动完成四阶段对照，保持同一强球形诊断灯（半径5、辐射度3000）：
-- 1–30：普通 Remix 光栅控制段，RT 关闭。
-- 31–120：已验收的 v7 世界/Unlit/切线布局与 Neko HUD。
-- 121–180：增加 v8 NekoSky 作为映射对照，并预检六个天空面的原始输入。
-- 181–240：六面全部通过时重建天空所需的全部 UV；合并修正模型摆放与刚性单骨骼输入，并保留原世界路径及其他静态家族。
-30/120/180/240 保存640×400颜色、投影深度、解码法线及原始RGBA32F，共12份原始读回。诊断读回不是全分辨率画质或性能验收。
+同一强球形诊断灯下自动比较四阶段：
+- 1–30：光栅控制，RT 关闭。
+- 31–120：既有 v7 世界/Unlit/切线布局和 Neko HUD。
+- 121–180：加入旧 v8 NekoSky，作为天空映射对照。
+- 181–240：保留已修正的完整天空 UV 重建，同时加入更多已审核的普通模型、三权重骨骼、NekoToon 及必要的完整 morph 位置流。
+30/120/180/240 分别保存 640×400 颜色、投影深度和解码法线；保留全部原始读回。
 
-v12 模型扩展：在v11基础上加入已审查的另一份完整刚性VS程序，扩大几何范围；对实际回包已核对的完整 VS 字节码 SHA256，按当次 c58–c60 恢复摆放，按 c48–c49 重建 UV。直接替换 snapshot world，避免原 world 已包含该变换时重复应用。无骨骼模型与经逐顶点验证的刚性 bone0 输入分开处理；后者必须 SHORT2 权重(32767,-1)、D3DCOLOR索引全0，解码权重(1,0,0)。morph必须关闭，相机必须匹配。未知程序、其他骨骼权重/索引及任意人物蒙皮继续回退，不按具体道具名称猜测变换。
+本版合并内容：
+- 根据完整 VS SHA256 识别位置/UV 程序，通过矩阵系数验证主相机，修正大坐标相消导致的逐顶点精度误拒绝；不同相机继续拒绝。
+- 支持已审核程序的 SHORT2 三权重、D3DCOLOR 骨骼索引和 c58 起的调色板。蒙皮后的世界位置只应用一次，保留原 Draw 的索引、base/start 参数。
+- morph 开启时只读实际引用范围内完整 stream2 POSITION1，在蒙皮前应用位置增量。不用 256 字节前缀代替完整数据，不强制忽略形变。
+- NekoToon 必须同时匹配完整 VS 和已审核 PS 身份，并满足 HDR 主视图、无 alpha 混合、写深度等条件；未知程序不按材质名称套用。普通静态家族继续保留。
+- 模型上限 32768 个绝对顶点、131072 个索引；天空/其他静态仍为 4096/16384。源 VB/IB/morph 只读，任何越界、异常状态或不支持输入均拒绝。
 
-模型只用READONLY读取实际Draw的有界顶点/索引，模型单次16384个绝对顶点、65536个索引；NekoToon仅审计允许16384个顶点/131072个索引，以覆盖实际约1.5万顶点/2.7万三角形输入；天空和其他静态场景仍为4096/16384。重建buffer保留原索引、base/start参数；原buffer不改写。超预算或验证不通过则保留原Draw，并记录原因。模型材质仍为第一层漫反射，法线为几何面回退；完整PBR、原地图照明、人物/武器与动画未完成。
+模型材质当前是首层贴图诊断，保留原 alpha-test、剔除、深度和 sampler，法线使用几何面回退。完整 Toon 外观、多贴图混合、PBR、原地图照明以及全部人物/武器覆盖仍需后续验收。本版是功能对照包，不保证所有候选都进入画面。
 
-v12 天空修正：新增POSITION完整数据流检查，仅当四分量均由未修改的POSITION0 DP4产生，且VS矩阵各系数与主相机view×projection在浮点乘加/存储误差界内相等，才直接保留原世界顶点。此检查避免大天空顶点相消产生近零clip.w时，被逐顶点相对误差误拒绝；不删除反投影齐次比例限制，不允许任意变形。受限SM2/SM3直线VM按PS语义/分量保留TEXCOORD0–7中实际需要的输出，本次NekoSky为五组UV；不再只提供一组。若原VS位置投影与本帧主相机一致，则保留原世界坐标，避免约58万量级顶点经反投影放大浮点误差。其他位置路径仍要求可逆主相机及一致齐次缩放，不放宽旧门槛。未知指令、相对寻址、控制流、未定义输入、非法数据或不支持的PS接口拒绝；六面预检失败时整套保留v8天空。
+同次输入审计最多每阶段 198 份：天空6、模型48、其他静态96、自定义48；按实际输入身份/Draw 范围去重。前三阶段各 2 MiB，最终阶段 12 MiB，家族预算独立预留；所有配额和字节遗漏明确记录。主几何采样按真实索引窗口提取。PS 常量保存全部 224 个 float4；morph 位置单独完整保存及校验，其他辅助 stream1–3 仍只保存各 256 字节前缀。采样数量不是对象数或地图覆盖率。
 
-天空仍通过固定Remix的reserved RenderState42 Sky bit4分类，清除原VS、保留原PS，关闭FOG。替换声明/stream0及所需UV路由，临时关闭固定功能vertex/indexed blend，防止继承原VS下无效的固定功能状态。原PS常量、纹理和sampler保留；每Draw恢复全部修改。没有额外猜测90度旋转、天空相机或普通遮挡穹顶。
+world-runtime.jsonl 和 scene-analysis.json 记录模型/天空成功及回退原因、完整 morph 元数据与文件哈希。trace version10、coverage revision13，snapshot wire v2。提交成功还需结合实际颜色、深度、法线和遮挡审查；CPU 回放与系统 NULLREF 检查不替代 B580 画面验收。
 
-其他批量静态路径沿用v10语义检查：LightmappedGeneric/DX9、UnlitGeneric、WorldVertexTransition/DX9、WorldTwoTextureBlend；支持正行列式仿射world、无alpha混合且写深度的HDR主视图候选，保留原alpha-test函数/阈值、cull、深度与sampler。第一层漫反射通常选stage0，WorldVertexTransition选stage7；第二层混合、顶点色、通用原VS形变仍未完成。原世界路径符合原分类时优先保留。
+安装仅替换 bin\dxvk_d3d9.dll 和 bin\.l4d2bridge\L4D2Bridge64.exe，原备份校验并继承；Host 仅在本次请求下加载固定 SHA 的 Remix。退出后可运行 restore.cmd 恢复。无需 F8、capture.trigger 或环境变量。
 
-world-runtime.jsonl新增model_rebuild_counts/sample，保留sky_rebuild_counts。scene-analysis.json与summary.json区分重建成功、未知程序/预算拒绝及v8天空回退；提交成功仍需结合颜色、深度、法线及遮挡审查，不能当作物体已恢复。static-coverage.json保留全部候选和拒绝分组，不提供全地图覆盖百分比。
-
-同一F9保存每阶段最多198份源输入：天空6、VertexLit模型48、其他场景96、NekoToon审计48，共最多792份。按材质、VS/顶点buffer身份及实际Draw范围去重，同材质不同网格也可留样；payload分别限制2/2/2/8MiB，各家族另有独立预算，最终阶段为天空256KiB/模型3MiB/其他1.75MiB/NekoToon3MiB，避免前几类占满；记录配额/预算遗漏，不能把上限当作实际采齐数。仅采样时按IB引用窗口提取VB，避免共享大VB的NumVertices误耗预算；运行时转换仍保留原Draw参数与原限制。，附shader、常量、声明、几何及SHA256。NekoToon本版仅保存原始输入并列入覆盖清单，不转换未知自定义shader；已知静态材质和模型扩展与这项审计在同一次F9完成。辅助stream1–3各最多256字节仅为前缀证据，不代表完整形变数据。原始位置粗投影不会执行模型shader，不是实际可见性证明。trace version9、coverage revision12，snapshot wire仍为v2，保留原CULLMODE/LIGHTING/FOG/category42及查询结果。
-
-新增路径均要求本轮先成功转换世界，单Draw捕获失败不修改，应用失败先恢复再回退，恢复失败阻止继续Draw。Windows x86/x64检查包含原生NULLREF状态、重建stream/UV路由及逐项失败恢复；系统测试只模拟Remix的reserved42字段，不能替代B580实机画面验收。没有写Source线程CVar，没有移植全局prim context；Source准备线程实际并行、资源生命周期和生产性能仍待验收。
-
-安装只替换 bin\dxvk_d3d9.dll 与 bin\.l4d2bridge\L4D2Bridge64.exe，原备份逐哈希核对并继承。Host只在本次测试请求下加载固定SHA的Remix；backend与启动参数不改。退出后可运行restore.cmd恢复，保留backups到恢复完成。
-
-菜单若黑屏可正常退出并等最终ZIP，无需盲操作。超时/崩溃仍保留INCOMPLETE结果。不需要F8、capture.trigger或环境变量。等待启动/F9最多15分钟，F9后最多5分钟；有限IPC容量等待60秒、保留peer检查。记录和同步读回会降低诊断帧率。
+没有写 Source 线程 CVar，也没有移植全局 prim context。Source 准备线程并行、生产性能和完整资源生命周期仍未验收；此前 client 清理后的退出异常尚未修复。若菜单黑屏，正常退出并等待最终 ZIP；超时或崩溃仍保留 INCOMPLETE 结果。

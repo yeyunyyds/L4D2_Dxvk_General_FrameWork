@@ -5,9 +5,13 @@
 namespace ldb_rt::scene_input {
 constexpr uint32_t kMaxVertices=4096,kMaxIndices=16384;
 struct Limits { uint32_t vertices=kMaxVertices,indices=kMaxIndices; };
-constexpr Limits kModelLimits{16384,65536};
-constexpr Limits kAuditLimits{16384,131072};
+constexpr Limits kModelLimits{32768,131072};
+constexpr Limits kAuditLimits{32768,131072};
 struct Auxiliary { UINT stream=0,offset=0,stride=0,frequency=0;HRESULT result=E_FAIL;std::vector<uint8_t> bytes; };
+struct MorphPosition {
+  HRESULT result=S_FALSE;UINT stream=2,offset=0,stride=0,frequency=0,bufferBytes=0;
+  std::vector<sky_shader::Vec> positions;
+};
 struct Data {
   HRESULT result=S_OK;
   const char* reason="not_captured";
@@ -18,7 +22,8 @@ struct Data {
   sky_shader::Constants constants{};
   std::array<Auxiliary,3> auxiliary{};
   std::array<std::array<int,4>,16> integerConstants{};std::array<BOOL,16> boolConstants{};
-  std::array<sky_shader::Vec,32> pixelConstants{};
+  std::array<sky_shader::Vec,224> pixelConstants{};
+  MorphPosition morph;
   HRESULT integerResult=E_FAIL,boolResult=E_FAIL,pixelResult=E_FAIL;
   HRESULT geometryResult=E_FAIL,shaderResult=E_FAIL,constantsResult=E_FAIL;
 };
@@ -85,6 +90,38 @@ inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topol
   hr=vb.value->Unlock();if (FAILED(hr)||!memory) { out.reason="vertex_unlock_or_null";return FAILED(hr)?hr:E_FAIL; }
   out.first=uint32_t(first);out.count=uint32_t(count);out.offset=offset;out.stride=stride;out.reason="complete";return S_OK;
 }
+// Read only the POSITION1 range used by this Draw, not a prefix or normal data.
+// Addressing uses the same absolute vertex index as stream0 (frequency1).
+template<class Device> HRESULT morphPositions(Device* d,Data& input) {
+  auto& out=input.morph;out.positions.clear();unsigned declarations=0;
+  if (!input.count || input.count>kModelLimits.vertices || input.constants[13][0]==0) { return out.result=S_FALSE; }
+  for (const auto& e:input.declaration) {
+    if (e.Usage==D3DDECLUSAGE_POSITION && e.UsageIndex==1 && e.Stream!=0xff) {
+      ++declarations;
+      if (e.Stream!=2 || e.Offset || e.Type!=D3DDECLTYPE_FLOAT4 || e.Method) { return out.result=S_FALSE; }
+    }
+  }
+  if (declarations!=1) { return out.result=S_FALSE; }
+  static_draw::Ref<IDirect3DVertexBuffer9> buffer;
+  out.result=d->GetStreamSource(2,&buffer.value,&out.offset,&out.stride);
+  if (FAILED(out.result)) { return out.result; }if (!buffer.value) { return out.result=S_FALSE; }
+  out.result=d->GetStreamSourceFreq(2,&out.frequency);if (FAILED(out.result)) { return out.result; }
+  if (out.frequency!=1 || out.stride<16 || out.stride>128 || out.stride%4 || out.offset%4) { return out.result=S_FALSE; }
+  D3DVERTEXBUFFER_DESC desc{};out.result=buffer.value->GetDesc(&desc);if (FAILED(out.result)) { return out.result; }
+  out.bufferBytes=desc.Size;
+  const uint64_t start=uint64_t(out.offset)+uint64_t(input.first)*out.stride;
+  const uint64_t bytes=uint64_t(input.count-1)*out.stride+16;
+  if (start+bytes>desc.Size || bytes>4u*1024*1024) { return out.result=S_FALSE; }
+  out.positions.resize(input.count);
+  void* memory=nullptr;out.result=buffer.value->Lock(UINT(start),UINT(bytes),&memory,D3DLOCK_READONLY);
+  if (FAILED(out.result)) { out.positions.clear();return out.result; }
+  if (memory) {
+    for (uint32_t i=0;i<input.count;++i) { std::memcpy(out.positions[i].data(),static_cast<const uint8_t*>(memory)+size_t(i)*out.stride,16); }
+  }
+  out.result=buffer.value->Unlock();
+  if (!memory || FAILED(out.result)) { out.positions.clear();if (SUCCEEDED(out.result)) { out.result=E_FAIL; } }
+  return out.result;
+}
 inline Data capture(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,const std::array<uint32_t,6>& args,bool extended=true,Limits limits={},bool auditWindow=false) {
   Data result;result.geometryResult=geometry(d,kind,topology,args,result,limits,auditWindow);
   static_draw::Ref<IDirect3DVertexShader9> vs;static_draw::Ref<IDirect3DPixelShader9> ps;
@@ -95,7 +132,8 @@ inline Data capture(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,
   if (extended) {
   result.integerResult=d->GetVertexShaderConstantI(0,result.integerConstants[0].data(),16);
   result.boolResult=d->GetVertexShaderConstantB(0,result.boolConstants.data(),16);
-  result.pixelResult=d->GetPixelShaderConstantF(0,result.pixelConstants[0].data(),32);
+  result.pixelResult=d->GetPixelShaderConstantF(0,result.pixelConstants[0].data(),UINT(result.pixelConstants.size()));
+  if (SUCCEEDED(result.geometryResult) && SUCCEEDED(result.constantsResult) && result.constants[13][0]!=0) { morphPositions(d,result); }
   for (UINT i=0;i<3;++i) {
     auto& a=result.auxiliary[i];a.stream=i+1;static_draw::Ref<IDirect3DVertexBuffer9> buffer;
     a.result=d->GetStreamSource(a.stream,&buffer.value,&a.offset,&a.stride);

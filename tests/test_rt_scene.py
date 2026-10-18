@@ -80,6 +80,24 @@ class SceneEvidence(unittest.TestCase):
    sample['first_absolute_vertex']-=1;self.assertFalse(self.inspect(root,events)['pass']);sample['first_absolute_vertex']+=1
    sample['source_vertex_buffer_bytes']-=1;self.assertFalse(self.inspect(root,events)['pass']);sample['source_vertex_buffer_bytes']+=1
    events[-1]['payload_bytes']+=1;self.assertIn('inconsistent_wide_capture_counts',self.inspect(root,events)['errors'])
+ def test_v13_complete_morph_and_full_pixel_constants_are_required(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.fixture(root);events[0]['value']='13';sample=events[1]
+   phases=('raster','baseline_world','expanded_sky','expanded_models')
+   events += [dict(event='model_rebuild_counts',frame=f,phase=p,attempts=0,ready=0,reconstructed=0,fallback=0,reasons={}) for f,p in zip((30,120,180,240),phases)]
+   sample['shader']='NekoToon';sample['pixel_constants_hresult']=0
+   def payload(suffix,data):
+    name='scene-12-'+suffix;(root/name).write_bytes(data)
+    sample['files'].append(dict(file=name,size=len(data),sha256=hashlib.sha256(data).hexdigest()))
+   payload('ps-constants.bin',bytes(224*16));payload('morph-positions.bin',struct.pack('<4f',1,2,3,0)*3)
+   sample['morph_position']=dict(hresult=0,stream=2,offset=16,stride=28,frequency=1,source_buffer_bytes=100,first_absolute_vertex=0,vertices=3)
+   self.assertTrue(self.inspect(root,events)['pass'])
+   sample['morph_position']['vertices']=2;self.assertIn('invalid_complete_morph_position',self.inspect(root,events)['errors']);sample['morph_position']['vertices']=3
+   sample['morph_position']['source_buffer_bytes']=87;self.assertIn('morph_position_outside_source_buffer',self.inspect(root,events)['errors']);sample['morph_position']['source_buffer_bytes']=100
+   sample['morph_position']['frequency']=2;self.assertFalse(self.inspect(root,events)['pass']);sample['morph_position']['frequency']=1
+   saved=sample.pop('morph_position');self.assertIn('missing_morph_position_metadata',self.inspect(root,events)['errors']);sample['morph_position']=saved
+   sample['files'][-2]['size']=512
+   self.assertFalse(self.inspect(root,events)['pass'])
  def test_old_capture_does_not_require_new_samples(self):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);self.assertEqual(self.inspect(root,[dict(event='world_coverage_revision',code=0,value='8')])['status'],'not_requested')

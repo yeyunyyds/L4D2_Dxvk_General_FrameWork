@@ -8,6 +8,7 @@ inline unsigned family(const char* shader) noexcept {
   if (!std::strcmp(shader,"LightmappedGeneric") || !std::strcmp(shader,"LightmappedGeneric_DX9")) { return 3; }
   if (!std::strcmp(shader,"WorldVertexTransition") || !std::strcmp(shader,"WorldVertexTransition_DX9")) { return 4; }
   if (!std::strcmp(shader,"WorldTwoTextureBlend")) { return 5; }
+  if (!std::strcmp(shader,"NekoToon")) { return 6; }
   return 0;
 }
 inline bool affine(const std::array<float,16>& m) noexcept {
@@ -25,8 +26,8 @@ inline bool mainCamera(const draw_observe::Snapshot& s) noexcept {
   return std::abs(p[11]+1)<=1e-5f && std::abs(p[15])<=1e-5f && p[0]>0 && p[5]>0 && p[10]<-1 && p[14]/p[10]>=4 && p[14]/p[10]<=32;
 }
 inline bool candidate(const draw_observe::Snapshot& s) noexcept { return family(s.materialInfo.shader.data()) && mainCamera(s); }
-// These custom programs are captured for audit only, never normalized by name.
-inline bool auditOnly(const draw_observe::Snapshot& s) noexcept { return !std::strcmp(s.materialInfo.shader.data(),"NekoToon") && mainCamera(s); }
+// This family always goes through the full VS/PS identity and model input gate.
+inline bool customModel(const draw_observe::Snapshot& s) noexcept { return family(s.materialInfo.shader.data())==6; }
 inline unsigned elementBytes(BYTE type) noexcept {
   switch (type) {
     case D3DDECLTYPE_FLOAT1:return 4;case D3DDECLTYPE_FLOAT2:return 8;
@@ -96,6 +97,7 @@ public:
     if (!get(decl.value->GetDeclaration(e,&n)) || !get(d->GetStreamSource(0,&vb.value,&offset,&stride)) || !get(d->GetStreamSourceFreq(0,&frequency))) { return; }
     std::vector<D3DVERTEXELEMENT9> simple;
     if (!vb.value || offset%4 || frequency!=1) { result.code=static_draw::Code::Layout;return; }
+    if (customModel(s) && !rebuilt) { result.code=static_draw::Code::Layout;return; }
     if (rebuilt) {
       if (!rebuilt->ready || !rebuilt->buffer.value || !affine(rebuilt->world) || stride!=32 || n!=rebuilt->sourceDeclaration.size() ||
           std::memcmp(e,rebuilt->sourceDeclaration.data(),n*sizeof(*e))) { result.code=static_draw::Code::Layout;return; }

@@ -350,7 +350,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('240' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Coverage comparison: keep sky and foreground props visible; press F9 once and hold still. World/HUD baseline 31-120; v8 sky 121-180; matrix-proven full sky UV reconstruction, larger audited rigid/bone0 models, static families and custom shader audit 181-240.')
+        if world:notify('Coverage comparison: keep sky, props and a character visible; press F9 once and hold the camera still. World/HUD baseline 31-120; v8 sky 121-180; corrected sky plus audited three-weight models/NekoToon and complete morph positions 181-240.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

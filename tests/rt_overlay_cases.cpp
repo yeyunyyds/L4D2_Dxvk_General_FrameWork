@@ -5,6 +5,7 @@
 #include "rt_scene_cases.h"
 #include "rt_sky_input_cases.h"
 #include "rt_bulk_static_cases.h"
+#include "rt_morph_input_cases.h"
 #include <d3dcompiler.h>
 #include <iostream>
 #include <vector>
@@ -185,6 +186,7 @@ int main() {
     rt_scene_test::systemCases(d,vs.value,ps.value);
     rt_sky_input_test::systemCases(d,compile);
     rt_bulk_static_test::systemCases(d,vs.value,ps.value);
+    rt_morph_input_test::systemCases(d);
     DestroyWindow(window);
     std::cout << "RT rigid-unlit/overlay rollback/system NULLREF: PASS; effective Remix/HUD output unrun\n";
     return 0;

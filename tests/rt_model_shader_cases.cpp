@@ -39,6 +39,55 @@ int main() {
     check(model_shader::reconstruct(model_shader::Profile::Rigid,c,large,32,0,24,-1,-1).valid,"captured-size rigid model rejected by old budget");
     large.resize((model_shader::kMaxVertices+1)*32);
     check(!model_shader::reconstruct(model_shader::Profile::Rigid,c,large,32,0,24,-1,-1).valid,"model geometry allocation cap missing");
+    // Three distinct palette transforms and exact packed weights exercise the
+    // third weight, byte channel order, world-space output and every vertex.
+    auto palette=c;palette[8][3]=0;
+    for (unsigned k=0;k<3;++k) {
+      palette[58+k*3]={1,0,0,float(k*10)};palette[59+k*3]={0,1,0,float(k*20)};palette[60+k*3]={0,0,1,float(k*30)};
+    }
+    auto skinned=bytes;
+    const int16_t weights[]={8191,16383}; // 1/4,1/2,1/4
+    const uint8_t bones[]={2,0,1,255}; // VS D3DCOLOR.zyx reads these first3 bytes
+    for (unsigned i=0;i<3;++i) { std::memcpy(skinned.data()+i*32+12,weights,4);std::memcpy(skinned.data()+i*32+16,bones,4); }
+    for (auto p:{model_shader::Profile::Skin3,model_shader::Profile::Neko3}) {
+      auto rebuilt=model_shader::reconstruct(p,palette,skinned,32,0,24,12,16);
+      check(rebuilt.valid && rebuilt.world[0]==1 && rebuilt.world[12]==0,"skinning must emit world positions exactly once");
+      for (unsigned i=0;i<3;++i) {
+        float v[3]{};std::memcpy(v,rebuilt.vertices.data()+i*32,12);
+        check(v[0]==float(i)+7.5f && v[1]==17 && v[2]==12.5f,"three-bone matrix blend/channel order wrong");
+      }
+      auto morph=std::vector<sky_shader::Vec>{{1,2,3,999},{4,5,6,999},{7,8,9,999}};
+      auto mc=palette;mc[13][0]=.5f;
+      check(!model_shader::reconstruct(p,mc,skinned,32,0,24,12,16).valid,"missing morph silently ignored");
+      rebuilt=model_shader::reconstruct(p,mc,skinned,32,0,24,12,16,morph);
+      float v[3]{};std::memcpy(v,rebuilt.vertices.data()+64,12);
+      check(rebuilt.valid && v[0]==13 && v[1]==21 && v[2]==17,"per-vertex morph before skinning wrong");
+      morph.back()[2]=NAN;
+      check(!model_shader::reconstruct(p,mc,skinned,32,0,24,12,16,morph).valid,"nonfinite final morph vertex accepted");
+      for (unsigned fault=0;fault<4;++fault) {
+        auto bad=skinned;auto pc=palette;
+        if (fault==0) { const int16_t invalid[]={32767,0};std::memcpy(bad.data()+64+12,invalid,4); }
+        if (fault==1) { bad[64+16]=66; }
+        if (fault==2) { pc[58+2*3][0]=NAN; }
+        if (fault==3) { pc[0][1]=2; }
+        check(!model_shader::reconstruct(p,pc,bad,32,0,24,12,16).valid,"invalid skin palette/weight/control accepted");
+      }
+    }
+    palette[12][3]=.01f;
+    check(!model_shader::reconstruct(model_shader::Profile::Neko3,palette,skinned,32,0,24,12,16).valid,"Neko clip depth bias silently lost");
+    // 004208 VP coefficients: direct per-vertex relative clip testing is
+    // unstable at large world coordinates; matrix identity is camera proof.
+    view={-.840787113f,.174497947f,-.512471974f,0,-.541365921f,-.271010071f,.795912325f,0,-1.97363077e-17f,.946627676f,.322329015f,0,-3987.125f,-1319.37939f,-360.735565f,1};
+    projection={.737271011f,0,0,0,0,1.17963362f,0,0,0,0,-1.00000703f,-1,0,0,-7.00004911f,0};
+    for (unsigned j=0;j<4;++j) { for (unsigned i=0;i<4;++i) { double v=0;for (unsigned k=0;k<4;++k) { v+=double(view[i*4+k])*projection[k*4+j]; }c[8+j][i]=float(v); } }
+    check(model_shader::cameraCompatible(rigid,c,view,projection),"actual camera coefficient proof failed");
+    for (unsigned j=0;j<4;++j) { for (unsigned i=0;i<4;++i) {
+      auto foreign=c;foreign[8+j][i]+=.01f;
+      check(!model_shader::cameraCompatible(rigid,foreign,view,projection),"foreign coefficient accepted as main camera");
+    } }
+    c[8][0]=NAN;check(!model_shader::cameraCompatible(rigid,c,view,projection),"nonfinite camera accepted");
+    check(model_shader::profile("f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3")==model_shader::Profile::Neko3,"audited Neko VS missing");
+    std::cout<<"RT model matrix proof/foreign camera/three-weight skin/morph/rejections: PASS\n";
     std::cout<<"RT larger audited rigid model/bounded allocation: PASS\n";
     std::cout<<"RT audited model matrix/UV/bone0/range/rejection: PASS\n";return 0;
   } catch (const std::exception& e) { std::cerr<<e.what()<<'\n';return 1; }
