@@ -23,3 +23,13 @@ trace version8、coverage revision11，snapshot wire保持v2。新增model_rebui
 ## 测试操作
 
 解压到旧包旁的独立目录，运行run-test.cmd；进上次地图，选择天空、墙和多种道具可见的位置，按一次F9后保持镜头静止，按提示退出游戏，等控制台输出最终ZIP路径后上传。无需F8或capture.trigger。
+
+## 已发布与独立核验
+
+[下载文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/c557e24718f780d7dca0727135fb413e5f6e152b/downloads/rt-world-pilot-dev.zip)，构建 `ed656a6cdeb68b8ec439046a93e85575949a2f69`，身份 `ldb-rt-observer+4da2cbaa992b55ba`，11,940,088 字节，SHA256 `f9c8728c10b7d004a9cb37b3501f75581d5a554c643ef0683494b4ccc8676379`。
+
+[成品独立核验](../../research/rt-world-pilot-v11-validation.json) 已重新下载固定发布树中的主ZIP、原生与交付证据，核对全部成员、包内脚本/配置/README、配套PE架构与身份、源码指纹和固定DLL/API初始化。Windows x86/x64的新旧原生门槛均通过；分别独立重析两架构的观察和240 Present世界fixture。NULLREF只验证标准D3D9状态/提交，reserved42由测试适配器模拟，不执行Remix/B580。
+
+本地完整Python检查96项，94通过、2项因Windows环境而跳过；Host/Runtime/Overlay/Native四处严格MinGW交叉编译及min/max宏污染检查通过。六轮实际回包共587,528 Draw重析保持通过。[48份完整实机输入CPU回归](../../research/rt-world-v11-input-replay.json) 包含24份天空、4份无骨骼模型、20份单骨骼模型，均通过主相机匹配/重建；天空五组UV匹配独立公式。CPU投影不证明三角形可见、遮挡或BLAS接入。
+
+本轮交付不宣称模型/天空的B580实机画面已经通过；请使用同一次F9回包核对最终覆盖、映射及遮挡。原大模型预算拒绝、完整蒙皮/PBR、Source并行、退出生命周期和生产性能仍保留各自的未验收范围。

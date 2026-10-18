@@ -1,0 +1,503 @@
+{
+  "scope": "captured input CPU replay, no GPU/BLAS/visibility/performance acceptance",
+  "samples": [
+    {
+      "ordinal": 194,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 195,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 196,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 197,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 198,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 199,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 223,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_model_matrix",
+      "vertices": 815,
+      "front": 815,
+      "inside_clip": 815,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 224,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 4,
+      "front": 4,
+      "inside_clip": 4,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 225,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 4,
+      "front": 4,
+      "inside_clip": 4,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 226,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 16,
+      "front": 16,
+      "inside_clip": 16,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 227,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 24,
+      "front": 24,
+      "inside_clip": 24,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 253,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 846,
+      "front": 846,
+      "inside_clip": 846,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9242,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9243,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9244,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9245,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9246,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9247,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9271,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_model_matrix",
+      "vertices": 815,
+      "front": 815,
+      "inside_clip": 815,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9272,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 4,
+      "front": 4,
+      "inside_clip": 4,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9273,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 4,
+      "front": 4,
+      "inside_clip": 4,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9274,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 16,
+      "front": 16,
+      "inside_clip": 16,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9275,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 24,
+      "front": 24,
+      "inside_clip": 24,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 9301,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 846,
+      "front": 846,
+      "inside_clip": 846,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37322,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37323,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37324,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37325,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37326,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37327,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37351,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_model_matrix",
+      "vertices": 815,
+      "front": 815,
+      "inside_clip": 815,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37352,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 4,
+      "front": 4,
+      "inside_clip": 4,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37353,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 4,
+      "front": 4,
+      "inside_clip": 4,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37354,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 16,
+      "front": 16,
+      "inside_clip": 16,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37355,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 24,
+      "front": 24,
+      "inside_clip": 24,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 37381,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 846,
+      "front": 846,
+      "inside_clip": 846,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56042,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56043,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56044,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56045,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56046,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56047,
+      "kind": 0,
+      "valid": true,
+      "reason": "original_world_positions_full_ps_uv",
+      "vertices": 4,
+      "front": 0,
+      "inside_clip": 0,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56071,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_model_matrix",
+      "vertices": 815,
+      "front": 815,
+      "inside_clip": 815,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56072,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 4,
+      "front": 4,
+      "inside_clip": 4,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56073,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 4,
+      "front": 4,
+      "inside_clip": 4,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56074,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 16,
+      "front": 16,
+      "inside_clip": 16,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56075,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 24,
+      "front": 24,
+      "inside_clip": 24,
+      "max_uv_error": 0
+    },
+    {
+      "ordinal": 56101,
+      "kind": 1,
+      "valid": true,
+      "reason": "original_vs_rigid_bone_zero",
+      "vertices": 846,
+      "front": 846,
+      "inside_clip": 846,
+      "max_uv_error": 0
+    }
+  ],
+  "all_inputs_reconstructed": true,
+  "all_sky_uvs_match_independent_formula": true,
+  "input_archive": {
+    "name": "rt-world-20261017-191200-2e07a9d3.zip",
+    "sha256": "6a9ca130e882ebcc0030d59afc1a249a224d0fb408f3755f1e9f2e99380222ee"
+  },
+  "source_inputs_sha256": {
+    "integration/rt/rt_sky_shader.h": "565f96e5fd4416c0a06a3af77e5543001c8cefb964b93ab86ab63f29c2fb6a6f",
+    "integration/rt/rt_model_shader.h": "8e84f0920964fb68af140486ac076fed5a52e2c489affc47713e383fc37f792a",
+    "tests/rt_scene_input_replay.cpp": "ac9ae35337fefd331f62c77a4b84b4c2feba2ad7267ef109c166ed55372324f1",
+    "scripts/replay_rt_scene_inputs.py": "c18bfd121936f61e3b01e27024848c41be054df90af8335f3216aec544f0307b"
+  },
+  "counts": {
+    "original_world_positions_full_ps_uv": 24,
+    "original_vs_model_matrix": 4,
+    "original_vs_rigid_bone_zero": 20
+  },
+  "method": "Production portable CPU math with actual saved VS/constants/vertices; validates model main-camera compatibility and independently calculated five sky UVs; no GPU or triangle-visibility acceptance."
+}

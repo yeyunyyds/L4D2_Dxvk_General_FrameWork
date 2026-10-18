@@ -1,0 +1,1023 @@
+{
+  "schema": 1,
+  "scope": "independently verified v11 publication; actual Remix/B580 game image unrun",
+  "build_commit": "ed656a6cdeb68b8ec439046a93e85575949a2f69",
+  "download_ref": "c557e24718f780d7dca0727135fb413e5f6e152b",
+  "filename": "rt-world-pilot-dev.zip",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/c557e24718f780d7dca0727135fb413e5f6e152b/downloads/rt-world-pilot-dev.zip",
+  "size": 11940088,
+  "sha256": "f9c8728c10b7d004a9cb37b3501f75581d5a554c643ef0683494b4ccc8676379",
+  "zip_crc": "pass",
+  "all_manifest_members_verified": true,
+  "shipped_scripts_cmd_configuration_readme_exact_match": true,
+  "source_inputs_match_native_receipt": true,
+  "build_id": "ldb-rt-observer+4da2cbaa992b55ba",
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "architecture": "x86",
+      "sha256": "6f0e049d7741bf14db3922e0c59d4bf3878be317e6f805dc997743d28e4869bc",
+      "size": 1409024,
+      "compiled_identity_match": true
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "architecture": "x64",
+      "sha256": "e08710f123e8a4f464d1d6eaa48f063e74c40fedd4d7f32556c8f3b8abbe05b9",
+      "size": 1488384,
+      "compiled_identity_match": true
+    }
+  },
+  "foundation_status": {
+    "schema": 1,
+    "commit": "ed656a6cdeb68b8ec439046a93e85575949a2f69",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "e08710f123e8a4f464d1d6eaa48f063e74c40fedd4d7f32556c8f3b8abbe05b9",
+      "development/x86/d3d9.dll": "6f0e049d7741bf14db3922e0c59d4bf3878be317e6f805dc997743d28e4869bc"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "consumer_draw_development_execution": "pass",
+    "consumer_world_development_execution": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "world_tangent_layout_development_execution": "pass",
+    "world_scene_scope_development_execution": "pass",
+    "world_sky_reconstruction_development_execution": "pass",
+    "world_bulk_static_development_execution": "pass",
+    "world_original_input_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "native_status": {
+    "commit": "ed656a6cdeb68b8ec439046a93e85575949a2f69",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "package_validation": {
+    "schema": 1,
+    "commit": "ed656a6cdeb68b8ec439046a93e85575949a2f69",
+    "package_validation": "pass",
+    "launcher": "rt-world-pilot-dev.zip",
+    "payloads": [],
+    "primary_sha256": "f9c8728c10b7d004a9cb37b3501f75581d5a554c643ef0683494b4ccc8676379",
+    "primary_size": 11940088,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "world_tangent_layout_development_execution": "pass",
+    "world_scene_scope_development_execution": "pass",
+    "world_sky_reconstruction_development_execution": "pass",
+    "world_bulk_static_development_execution": "pass",
+    "world_original_input_development_execution": "pass",
+    "pinned_native_loader_api_initialization": "pass",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "native_fixture_independent_reviews": {
+    "x86": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30,
+          "coverage_revision": 11
+        },
+        "footer": {
+          "draws": 723,
+          "valid": 723,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210,
+          "10": 1,
+          "11": 2
+        },
+        "world_conversion": {
+          "reports": 723,
+          "converted": 213,
+          "sky_converted": 1,
+          "rigid_converted": 2
+        },
+        "world_normalization": "pass"
+      }
+    },
+    "x64": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30,
+          "coverage_revision": 11
+        },
+        "footer": {
+          "draws": 723,
+          "valid": 723,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210,
+          "10": 1,
+          "11": 2
+        },
+        "world_conversion": {
+          "reports": 723,
+          "converted": 213,
+          "sky_converted": 1,
+          "rigid_converted": 2
+        },
+        "world_normalization": "pass"
+      }
+    }
+  },
+  "new_native_gate_markers": {
+    "RT full sky interpolants/world-coordinate precision: PASS": 2,
+    "RT audited model matrix/UV/bone0/range/rejection: PASS": 2,
+    "RT original model transform/rebuilt stream rollback/system NULLREF: PASS": 2,
+    "RT sky original VS reconstruction/geometry bounds/binding rollback/system NULLREF: PASS": 2,
+    "RT full IPC normal-timeout/world-delayed-consumer/FIFO/peer-close: PASS": 2
+  },
+  "pinned_loader_positive_events": [
+    {
+      "event": "loaded_pinned_runtime",
+      "code": 0
+    },
+    {
+      "event": "initialize_api_0_6_4",
+      "code": 0
+    },
+    {
+      "event": "rtx.enableRaytracing",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.useVertexCapture",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.upscalerType",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "rtx.enableRayReconstruction",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.sceneScale",
+      "code": 0,
+      "value": "0.3937007874"
+    },
+    {
+      "event": "rtx.fallbackLightMode",
+      "code": 0,
+      "value": "2"
+    },
+    {
+      "event": "rtx.fallbackLightType",
+      "code": 0,
+      "value": "1"
+    },
+    {
+      "event": "rtx.fallbackLightRadiance",
+      "code": 0,
+      "value": "3000,3000,3000"
+    },
+    {
+      "event": "rtx.fallbackLightRadius",
+      "code": 0,
+      "value": "5"
+    },
+    {
+      "event": "rtx.fallbackLightPositionOffset",
+      "code": 0,
+      "value": "0,0,0"
+    },
+    {
+      "event": "rtx.enableFallbackLightShaping",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.fallbackLightDirection",
+      "code": 0,
+      "value": "0,0,-1"
+    },
+    {
+      "event": "rtx.autoExposure.enabled",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.autoExposure.evMinValue",
+      "code": 0,
+      "value": "-2"
+    },
+    {
+      "event": "rtx.autoExposure.evMaxValue",
+      "code": 0,
+      "value": "5"
+    },
+    {
+      "event": "rtx.tonemappingMode",
+      "code": 0,
+      "value": "1"
+    },
+    {
+      "event": "rtx.localtonemap.exposure",
+      "code": 0,
+      "value": "0.75"
+    },
+    {
+      "event": "rtx.orthographicIsUI",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.skipDrawCallsPostRTXInjection",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.enableAlphaBlend",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.enableAlphaTest",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.fogIgnoreSky",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.bloom.enable",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.postfx.enable",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "startup_raster_policy",
+      "code": 0,
+      "value": "RT_off_until_valid_converted_draw_after_control"
+    },
+    {
+      "event": "coverage_comparison_policy",
+      "code": 0,
+      "value": "v11_world_then_v8_sky_after120_then_full_ps_uv_sky_and_original_model_transform_after180"
+    },
+    {
+      "event": "world_coverage_revision",
+      "code": 0,
+      "value": "11"
+    },
+    {
+      "event": "material_audit_policy",
+      "code": 0,
+      "value": "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG"
+    },
+    {
+      "event": "host_draw_request_count",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "host_cleanup",
+      "code": 0
+    }
+  ],
+  "actual_input_cpu_replay": {
+    "scope": "captured input CPU replay, no GPU/BLAS/visibility/performance acceptance",
+    "samples": [
+      {
+        "ordinal": 194,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 195,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 196,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 197,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 198,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 199,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 223,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 224,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 225,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 226,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 16,
+        "front": 16,
+        "inside_clip": 16,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 227,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 24,
+        "front": 24,
+        "inside_clip": 24,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 253,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 846,
+        "front": 846,
+        "inside_clip": 846,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9242,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9243,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9244,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9245,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9246,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9247,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9271,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9272,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9273,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9274,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 16,
+        "front": 16,
+        "inside_clip": 16,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9275,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 24,
+        "front": 24,
+        "inside_clip": 24,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 9301,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 846,
+        "front": 846,
+        "inside_clip": 846,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37322,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37323,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37324,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37325,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37326,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37327,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37351,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37352,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37353,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37354,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 16,
+        "front": 16,
+        "inside_clip": 16,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37355,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 24,
+        "front": 24,
+        "inside_clip": 24,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37381,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 846,
+        "front": 846,
+        "inside_clip": 846,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56042,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56043,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56044,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56045,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56046,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56047,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56071,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56072,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56073,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56074,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 16,
+        "front": 16,
+        "inside_clip": 16,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56075,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 24,
+        "front": 24,
+        "inside_clip": 24,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 56101,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_rigid_bone_zero",
+        "vertices": 846,
+        "front": 846,
+        "inside_clip": 846,
+        "max_uv_error": 0
+      }
+    ],
+    "all_inputs_reconstructed": true,
+    "all_sky_uvs_match_independent_formula": true,
+    "input_archive": {
+      "name": "rt-world-20261017-191200-2e07a9d3.zip",
+      "sha256": "6a9ca130e882ebcc0030d59afc1a249a224d0fb408f3755f1e9f2e99380222ee"
+    },
+    "source_inputs_sha256": {
+      "integration/rt/rt_sky_shader.h": "565f96e5fd4416c0a06a3af77e5543001c8cefb964b93ab86ab63f29c2fb6a6f",
+      "integration/rt/rt_model_shader.h": "8e84f0920964fb68af140486ac076fed5a52e2c489affc47713e383fc37f792a",
+      "tests/rt_scene_input_replay.cpp": "ac9ae35337fefd331f62c77a4b84b4c2feba2ad7267ef109c166ed55372324f1",
+      "scripts/replay_rt_scene_inputs.py": "c18bfd121936f61e3b01e27024848c41be054df90af8335f3216aec544f0307b"
+    },
+    "counts": {
+      "original_world_positions_full_ps_uv": 24,
+      "original_vs_model_matrix": 4,
+      "original_vs_rigid_bone_zero": 20
+    },
+    "method": "Production portable CPU math with actual saved VS/constants/vertices; validates model main-camera compatibility and independently calculated five sky UVs; no GPU or triangle-visibility acceptance."
+  },
+  "old_actual_capture_regression": {
+    "130102": {
+      "footer": {
+        "draws": 193262,
+        "valid": 193262,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 193262,
+        "converted": 11805
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "165351": {
+      "footer": {
+        "draws": 76825,
+        "valid": 76825,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 76825,
+        "converted": 2730
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "192551": {
+      "footer": {
+        "draws": 83920,
+        "valid": 83920,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 83920,
+        "converted": 3630,
+        "hud_replaced": 120
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "202526": {
+      "footer": {
+        "draws": 76777,
+        "valid": 76777,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 76777,
+        "converted": 4290,
+        "hud_replaced": 210
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "141921": {
+      "footer": {
+        "draws": 81985,
+        "valid": 81985,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 81985,
+        "converted": 5190,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "rigid_converted": 60
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "191200": {
+      "footer": {
+        "draws": 74759,
+        "valid": 74759,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 74759,
+        "converted": 5610,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "bulk_static_converted": 60
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "valid_evidence_requires_review"
+    }
+  },
+  "local_strict_mingw_x64_compile": [
+    "rt_world_runtime.cpp",
+    "rt_overlay_cases.cpp",
+    "rt_draw_native_cases.cpp",
+    "rt_host_cases.cpp"
+  ],
+  "local_python_checks": {
+    "full_final_suite": {
+      "run": 96,
+      "passed": 94,
+      "skipped": 2,
+      "result": "pass"
+    },
+    "new_final_draw_and_scene_cases": {
+      "run": 18,
+      "result": "pass"
+    },
+    "final_world_and_collector_cases": {
+      "run": 21,
+      "result": "pass"
+    }
+  },
+  "game_rt": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun"
+}

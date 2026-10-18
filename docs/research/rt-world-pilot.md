@@ -2,7 +2,9 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/f21a7668aaf85ea1beca7bfd230dc09595252fc4/downloads/rt-world-pilot-dev.zip)。当前为 v10（在 v9 上扩展静态场景），构建提交为 `94ce852d30b8689a8c75019d2bc8d06c531a72f7`，包大小 11,930,485 字节，SHA256 为 `2a5a3a2ecac77195fd33ba48cdf478c430a2a22fcd4fe7ba9b4d70565cf6190f`。固定发布提交、全部成员哈希、配套身份及源码收据均已核验；[验证记录](../../research/rt-world-pilot-v10-validation.json) 包含新增批量静态门槛与全部既有门槛。[v10 实机复核](rt-world-191200-result.md) 已确认采集完整、原世界/HUD保留，但静态模型扩展仍未通过；实际输入定位到原VS模型摆放变换遗漏，以及天空多组UV和大坐标精度问题。现有数据足够修正，无需原样重采，不能把原生检查通过当作大多数静态物体已经恢复。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/c557e24718f780d7dca0727135fb413e5f6e152b/downloads/rt-world-pilot-dev.zip)。当前为 [v11 原模型变换与天空接口合并修正](rt-world-v11-inputs.md)，构建 `ed656a6cdeb68b8ec439046a93e85575949a2f69`，包大小 11,940,088 字节，SHA256 `f9c8728c10b7d004a9cb37b3501f75581d5a554c643ef0683494b4ccc8676379`。固定发布树的全部成员、配套PE架构/身份、源码收据和脚本已独立核验；[验证记录](../../research/rt-world-pilot-v11-validation.json) 包含Windows双架构原生检查、固定DLL/API加载和两架构fixture重析。48份完整实际输入的CPU回归及六轮共587,528 Draw兼容性回归通过；本版B580最终图像、覆盖和遮挡仍待一次F9实机验收。
+
+此前 [v10 实机复核](rt-world-191200-result.md) 确认采集完整、原世界/HUD保留，但静态模型扩展未通过；实际输入定位到原VS模型摆放变换遗漏，以及天空多组UV和大坐标精度问题。v11据此合并修正并交付，不再要求原样重采。
 
 [v4 实机完整回包](rt-world-130102-result.md) 已独立复核通过 240 Present、193,262 Draw、11,805 次受限世界转换，9 份读回齐全、无状态恢复错误、无本轮 IPC fault。按实际 primary GBuffer 编码离线解出的法线/深度轮廓与地图表面相符，受限静态世界的 RT 输出链路已跑通。读回仍偏暗，武器/HUD 等内容缺失；完整场景、照明材质正确性、Source 准备线程并行、资源释放和性能继续待验收。基础数据已经足够，下一步转向画面正确性与覆盖补全。
 
@@ -20,7 +22,7 @@
 
 此前 [v9 受限原始天空 VS 重建与场景输入诊断](rt-world-v9-sky-input.md) 已通过双架构构建、原生检查和成品核验并发布：保持v8天空对照，六面预检完整成功后尝试重建原VS位置/UV，同时采集成功道具及受限候选的实际输入。仍为一个F9，未知shader保留v8并自动记录原因。
 
-当前 [v10 成批静态场景扩展](rt-world-v10-static.md) 已构建、核验并发布。基于 v9 实现更多声明家族、正尺度/平移变换及透明裁切，并扩大分组输入采样；Windows x86/x64 新增及既有检查均通过。仍为一次 F9，完整蒙皮/PBR与Source并行不随覆盖扩展自动验收。
+此前 [v10 成批静态场景扩展](rt-world-v10-static.md) 已构建、核验并发布。基于 v9 实现更多声明家族、正尺度/平移变换及透明裁切，并扩大分组输入采样；Windows x86/x64 新增及既有检查均通过。仍为一次 F9，完整蒙皮/PBR与Source并行不随覆盖扩展自动验收。
 
 ## 从数据到实际转换
 
@@ -85,3 +87,6 @@ v2 的 [实际回包分析](rt-world-100133-result.md) 确认 240 Present/97,190
 [v9 成品核验](../../research/rt-world-pilot-v9-validation.json) 已逐项检查固定发布提交的全部成员哈希、包内脚本/配置/README、配套 PE 架构与身份、源码指纹及固定后端合约。Windows x86/x64 均通过新增受限原 VS 解析和系统 D3D9 NULLREF 重建：实际编译非平凡位置/UV 着色器、读取原常量和带 offset 的 VB/IB，核对重建结果，并执行有符号 base、INDEX16/32、范围拒绝及绑定/恢复失败用例。完整既有门槛、固定 DLL/API 和包内 Python 检查继续通过。本地 Python 91 项中 89 项通过、2 项需 Windows 而跳过；五轮 v4–v8 实际 trace 共 512,769 Draw 及原始读回回归通过。系统检查不执行 Remix/B580；真实 NekoSky 是否通过六面预检、映射/颜色及道具可见恢复仍需本版一次 F9 的回包。
 
 [v10 成品核验](../../research/rt-world-pilot-v10-validation.json) 已检查固定 GitHub 发布提交的全部成员哈希、包内脚本/配置/README、配套 PE 架构与身份、源码收据及固定 DLL/API 初始化。七个 shader 名称在 Windows x86/x64 系统 D3D9 NULLREF 上均执行仿射变换、非零字段偏移、透明裁切阈值/函数保留、首层贴图选择、真实 Draw 和逐项 getter/setter/恢复失败检查；所有原门槛保持通过。显式请求 `rtx.enableAlphaTest=True` 的固定运行时加载检查通过。完整本地 Python 94 项中 92 项通过、2 项需 Windows 跳过，最终配置修订后的5项输出分析检查通过；v4–v8 五轮实际 trace 共512,769 Draw及读回回归通过。新增几何/材质、透明裁切和天空映射在真实游戏中的效果仍待验收，骨骼路径继续拒绝。
+
+
+[v11 成品核验](../../research/rt-world-pilot-v11-validation.json) 已验证固定提交的成员哈希、源码/配置/配套PE身份、Windows x86/x64原模型数学/拒绝、天空完整PS插值与大坐标、重建stream及UV路由的逐项失败恢复，既有门槛均通过。主世界/HUD基线保留，六面预检失败仍回退v8；CNG完整程序身份、逐顶点bone0和相机检查阻止未知输入被当作模型。系统NULLREF与CPU输入回归均不替代实际Remix/B580图像验收，测试仍合并一个入口、一次F9、一个最终ZIP。
