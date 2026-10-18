@@ -1,6 +1,7 @@
 #include "rt_sky_shader.h"
 #include <iostream>
 #include <stdexcept>
+#include <string>
 using namespace ldb_rt::sky_shader;
 void require(bool condition,const char* why) { if (!condition) { throw std::runtime_error(why); } }
 uint32_t reg(unsigned kind,unsigned number,unsigned mask=15) { return 0x80000000u|((kind&7)<<28)|((kind&24)<<8)|number|(mask<<16); }
@@ -33,6 +34,23 @@ int main() {
   projection={};require(!inverseViewProjection(view,projection,inverse),"singular transform accepted");
   require(pixelInputs({0xffff0200,0x0200001f,0x80000000,reg(3,0,3),0xffff}),"PS texcoord0 rejected");
   require(!pixelInputs({0xffff0200,0x0200001f,0x80000000,reg(3,1,3),0xffff}),"PS extra interpolant accepted");
+  // Five PS interpolants with nonmatching SM3 semantic/register indices.
+  auto multi=shader(true);
+  for (unsigned i=1;i<5;++i) { multi.insert(multi.begin()+13,{0x0200001f,0x80000005u|(i<<16),reg(6,5+i,3)}); }
+  multi.pop_back();for (unsigned i=1;i<5;++i) { multi.insert(multi.end(),{0x03000002,reg(6,5+i,3),src(1,1),src(2,6+i)}); }multi.push_back(0xffff);
+  std::vector<uint32_t> pixel{0xffff0300};for (unsigned i=0;i<5;++i) { pixel.insert(pixel.end(),{0x0200001f,0x80000005u|(i<<16),reg(1,7-i,3)}); }pixel.push_back(0xffff);
+  const auto interface=pixelInterface(pixel);require(interface.valid && interface.masks[4]==3,"SM3 semantic mapping");
+  const auto program=parse(multi);require(program.valid,"multiple UV outputs rejected");
+  view={1,0,0,0,0,1,0,0,0,0,1,0,-3000,-1500,200,1};projection={.7f,0,0,0,0,1.1f,0,0,0,0,-1.00001f,-1,0,0,-7.00007f,0};
+  for (unsigned j=0;j<4;++j) { for (unsigned i=0;i<4;++i) { double v=0;for (unsigned k=0;k<4;++k) { v+=double(view[i*4+k])*projection[k*4+j]; }c[j][i]=float(v); } }
+  std::vector<Vec> positions{{574110,575043,-576007,1},{574110,-579655,578691,1}},texcoords{{.2f,.3f,0,1},{.6f,.7f,0,1}};
+  auto rebuilt=rebuild(program,interface,c,positions,texcoords,view,projection);
+  require(rebuilt.valid && std::string(rebuilt.reason)=="original_world_positions_full_ps_uv","large-coordinate world positions were inversely reconstructed");
+  require(rebuilt.vertices[0][0]==positions[0][0] && rebuilt.vertices[1][2]==positions[1][2],"large world coordinate changed");
+  for (unsigned i=1;i<5;++i) { require(std::abs(rebuilt.vertices[0][3+4*i]-(texcoords[0][0]+c[6+i][0]))<1e-6,"extra UV output lost"); }
+  auto missing=interface;missing.masks[7]=3;require(!rebuild(program,missing,c,positions,texcoords,view,projection).valid,"undefined PS interpolant accepted");
+  auto wrong=c;wrong[3][2]*=2;require(!rebuild(program,interface,wrong,positions,texcoords,view,projection).valid,"nonuniform homogeneous warp accepted");
+  std::cout << "RT full sky interpolants/world-coordinate precision: PASS\n";
   std::cout << "RT original sky shader bounded replay/UV/unprojection/rejection: PASS\n";return 0;
  } catch (const std::exception& e) { std::cerr << e.what() << '\n';return 1; }
 }

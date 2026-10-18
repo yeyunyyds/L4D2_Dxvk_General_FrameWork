@@ -44,11 +44,12 @@ def analyze(directory):
     if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
     if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
     events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-    v10=any(e.get('event')=='world_coverage_revision' and e.get('value')=='10' for e in events)
+    v11=any(e.get('event')=='world_coverage_revision' and e.get('value')=='11' for e in events)
+    v10=v11 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='10' for e in events)
     requested=v10 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='9' for e in events)
     sample_limit=24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
     samples=[e for e in events if e.get('event')=='scene_input_sample'];summaries=[e for e in events if e.get('event')=='sky_rebuild_counts']
-    errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception')];reviews=[];ordinals=set();phases=Counter();family_counts=Counter();files=set();used=0
+    errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception','model_rebuild_exception')];reviews=[];ordinals=set();phases=Counter();family_counts=Counter();files=set();used=0
     for sample in samples:
         try:
             phase=sample['phase'];ordinal=sample['ordinal'];phases[phase]+=1
@@ -101,9 +102,26 @@ def analyze(directory):
             if e['input_samples']!=phases[e['phase']]:errors.append('scene_sample_count_mismatch')
             if e['frame']<240 and e['attempts']:errors.append('premature_sky_reconstruction')
             if e['attempts']!=e['reconstructed']+e['fallback'] or not e['reconstructed']<=e['ready']<=e['attempts'] or sum(e.get('reasons',{}).values())!=e['attempts']:errors.append('inconsistent_rebuild_counts')
+    models=[e for e in events if e.get('event')=='model_rebuild_counts']
+    model_samples=[e for e in events if e.get('event')=='model_rebuild_sample']
+    if v11:
+        if [(e.get('frame'),e.get('phase')) for e in models]!=list(zip((30,120,180,240),PHASES)):errors.append('missing_model_rebuild_summaries')
+        for e in models:
+            keys=('attempts','ready','reconstructed','fallback')
+            if not all(isinstance(e.get(k),int) and e[k]>=0 for k in keys):errors.append('invalid_model_rebuild_counts');continue
+            if e['frame']<240 and e['attempts']:errors.append('premature_model_reconstruction')
+            if e['attempts']!=e['reconstructed']+e['fallback'] or not e['reconstructed']<=e['ready']<=e['attempts'] or sum(e.get('reasons',{}).values())!=e['attempts']:errors.append('inconsistent_model_rebuild_counts')
+        if len(model_samples)>32 or len({e.get('ordinal') for e in model_samples})!=len(model_samples):errors.append('model_sample_identity_or_budget')
+        for e in model_samples:
+            if e.get('phase')!='expanded_models' or e.get('reason') not in ('original_vs_model_matrix','original_vs_rigid_bone_zero') or e.get('rebuilt_stride')!=32 or not 0<e.get('rebuilt_vertex_bytes',0)<=4096*32:errors.append('invalid_model_rebuild_sample')
+            matrix=e.get('applied_world',[])
+            if len(matrix)!=16 or not all(isinstance(v,(float,int)) and math.isfinite(v) for v in matrix):errors.append('invalid_model_rebuild_world')
+        if models and models[-1].get('reconstructed',0)>0 and not model_samples:errors.append('missing_model_rebuild_samples')
     final=summaries[-1] if summaries else {}
     rebuilt=final.get('reconstructed',0);attempts=final.get('attempts',0)
     return {'schema':1,'status':'valid_evidence_requires_review' if requested and not errors else 'incomplete' if requested else 'not_requested',
             'pass':not errors,'errors':sorted(set(errors)),'sample_counts':dict(phases),'payload_bytes':used,'samples':reviews,'sky_rebuild_summaries':summaries,
+            'model_rebuild_summaries':models,'model_rebuild_samples':model_samples,
+            'model_rebuild_result':'applied_requires_image_review' if models and models[-1].get('reconstructed',0)>0 else 'no_model_reconstruction' if v11 else 'not_requested',
             'sky_rebuild_result':'applied_requires_image_review' if attempts and rebuilt==attempts else 'fallback_preserved_v8' if attempts and not rebuilt else 'partial_or_unrun',
             'limits':'verified input files and bounded raw position projection; shader replay API success is not image acceptance, per-object visibility or Source threading evidence'}

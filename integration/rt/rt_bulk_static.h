@@ -1,5 +1,5 @@
 #pragma once
-#include "rt_scene_draw.h"
+#include "rt_scene_input.h"
 
 namespace ldb_rt::bulk_static {
 inline unsigned family(const char* shader) noexcept {
@@ -73,10 +73,11 @@ template<class Device> class Scope final {
   static_draw::Ref<IDirect3DVertexDeclaration9> decl,generated;static_draw::Ref<IDirect3DVertexBuffer9> vb;
   static_draw::Ref<IDirect3DBaseTexture9> originalTexture,sourceTexture;
   D3DMATRIX old[3]{};DWORD lighting=0,blend=0,indexed=0,tss[9]{};
+  UINT oldOffset=0,oldStride=0;bool streamChanged=false;
   bool get(HRESULT hr) { if (FAILED(hr)) { result.capture=hr;result.code=static_draw::Code::CaptureFailed;return false; }return true; }
   bool set(HRESULT hr) { if (FAILED(hr)) { result.apply=hr;result.code=static_draw::Code::ApplyFailed;finish();return false; }return true; }
 public:
-  Scope(Device* device,const draw_observe::Snapshot& s,D3DPRIMITIVETYPE type,bool up):d(device) {
+  Scope(Device* device,const draw_observe::Snapshot& s,D3DPRIMITIVETYPE type,bool up,const scene_input::Prepared* rebuilt=nullptr):d(device) {
     if (!d || !candidate(s)) { result.code=static_draw::Code::Unlabelled;return; }
     if (up || (type!=D3DPT_TRIANGLELIST && type!=D3DPT_TRIANGLESTRIP)) { result.code=static_draw::Code::Topology;return; }
     static_draw::Ref<IDirect3DSurface9> target;D3DSURFACE_DESC surface{};D3DVIEWPORT9 viewport{};DWORD alpha=0,z=0,write=0;
@@ -91,7 +92,12 @@ public:
     D3DVERTEXELEMENT9 e[MAXD3DDECLLENGTH+1]{};UINT n=MAXD3DDECLLENGTH+1,offset=0,stride=0,frequency=0;
     if (!get(decl.value->GetDeclaration(e,&n)) || !get(d->GetStreamSource(0,&vb.value,&offset,&stride)) || !get(d->GetStreamSourceFreq(0,&frequency))) { return; }
     std::vector<D3DVERTEXELEMENT9> simple;
-    if (!vb.value || offset%4 || frequency!=1 || !layout(e,n,stride,simple)) { result.code=static_draw::Code::Layout;return; }
+    if (!vb.value || offset%4 || frequency!=1) { result.code=static_draw::Code::Layout;return; }
+    if (rebuilt) {
+      if (!rebuilt->ready || !rebuilt->buffer.value || !affine(rebuilt->world) || stride!=32 || n!=rebuilt->sourceDeclaration.size() ||
+          std::memcmp(e,rebuilt->sourceDeclaration.data(),n*sizeof(*e))) { result.code=static_draw::Code::Layout;return; }
+      simple=rebuilt->elements;oldOffset=offset;oldStride=stride;streamChanged=true;
+    } else if (!layout(e,n,stride,simple)) { result.code=static_draw::Code::Layout;return; }
     if (!get(d->GetTexture(0,&originalTexture.value))) { return; }
     textureChanged=family(s.materialInfo.shader.data())==4;
     auto* texture=originalTexture.value;
@@ -107,7 +113,8 @@ public:
     dirty=true;
     if (!set(d->SetVertexShader(nullptr)) || !set(d->SetPixelShader(nullptr)) || !set(d->SetVertexDeclaration(generated.value)) || !set(d->SetRenderState(D3DRS_LIGHTING,FALSE)) ||
         !set(d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_DISABLE)) || !set(d->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE,FALSE))) { return; }
-    const std::array<float,16>* matrices[]={&s.world,&s.view,&s.projection};
+    if (streamChanged && !set(d->SetStreamSource(0,rebuilt->buffer.value,0,rebuilt->stride))) { return; }
+    const std::array<float,16>* matrices[]={rebuilt?&rebuilt->world:&s.world,&s.view,&s.projection};
     for (unsigned i=0;i<3;++i) { D3DMATRIX m{};std::memcpy(&m,matrices[i]->data(),sizeof(m));if (!set(d->SetTransform(transforms[i],&m))) { return; } }
     if (textureChanged && !set(d->SetTexture(0,sourceTexture.value))) { return; }
     for (const auto& x:stages) { if (!set(d->SetTextureStageState(x.stage,x.name,x.value))) { return; } }
@@ -124,14 +131,15 @@ public:
     for (unsigned i=0;i<3;++i) { restore(d->SetTransform(transforms[i],old+i)); }
     restore(d->SetVertexDeclaration(decl.value));restore(d->SetVertexShader(vs.value));restore(d->SetPixelShader(ps.value));restore(d->SetRenderState(D3DRS_LIGHTING,lighting));
     restore(d->SetRenderState(D3DRS_VERTEXBLEND,blend));restore(d->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE,indexed));
+    if (streamChanged) { restore(d->SetStreamSource(0,vb.value,oldOffset,oldStride)); }
     if (textureChanged) { restore(d->SetTexture(0,originalTexture.value)); }
     for (unsigned i=0;i<9;++i) { restore(d->SetTextureStageState(stages[i].stage,stages[i].name,tss[i])); }
     if (FAILED(result.restore)) { result.code=static_draw::Code::RestoreFailed; }
   }
   const static_draw::Report& report() const noexcept { return result; }
 };
-template<class Device,class Draw> HRESULT execute(Device* d,const draw_observe::Snapshot& s,D3DPRIMITIVETYPE type,bool up,Draw&& draw,static_draw::Report& report) {
-  Scope<Device> scope(d,s,type,up);if (FAILED(scope.report().restore)) { report=scope.report();return report.restore; }
+template<class Device,class Draw> HRESULT execute(Device* d,const draw_observe::Snapshot& s,D3DPRIMITIVETYPE type,bool up,Draw&& draw,static_draw::Report& report,const scene_input::Prepared* rebuilt=nullptr) {
+  Scope<Device> scope(d,s,type,up,rebuilt);if (FAILED(scope.report().restore)) { report=scope.report();return report.restore; }
   const auto hr=draw();scope.finish();report=scope.report();return FAILED(report.restore)?report.restore:hr;
 }
 } // namespace ldb_rt::bulk_static

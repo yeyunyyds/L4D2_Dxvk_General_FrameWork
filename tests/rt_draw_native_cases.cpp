@@ -52,6 +52,7 @@ int main(int argc, char** argv) {
     struct Cleanup { fs::path path; ~Cleanup() { std::error_code ec; fs::remove(path,ec); } } cleanup{request};
     { std::ofstream file(output/"abc",std::ios::binary); file << "abc"; }
     require(fileSha256(output/"abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad","real CNG SHA256");
+    require(bytesSha256("abc",3)==fileSha256(output/"abc"),"CNG bytecode SHA256 differs from file digest");
     { std::ofstream file(request,std::ios::binary); file << "LDB_RT_DRAW_1\n2a\n" << output.u8string() << '\n'; }
     Request parsed; require(readRequest(parsed) && parsed.session == 42 && parsed.output == output,"real request parser");
     Binding binding; Snapshot s; require(binding.capture(s) == Status::ModuleMissing,"fixture must never claim game binding");

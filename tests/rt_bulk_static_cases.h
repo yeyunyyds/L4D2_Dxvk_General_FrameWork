@@ -16,7 +16,7 @@ struct Proxy {
   GET(GetStreamSource) GET(GetStreamSourceFreq) GET(GetTexture) GET(GetVertexShader)
   GET(GetPixelShader) GET(GetTransform) GET(GetTextureStageState) GET(CreateVertexDeclaration)
   SET(SetVertexShader) SET(SetPixelShader) SET(SetVertexDeclaration) SET(SetRenderState)
-  SET(SetTransform) SET(SetTexture) SET(SetTextureStageState)
+  SET(SetTransform) SET(SetTexture) SET(SetTextureStageState) SET(SetStreamSource)
 #undef GET
 #undef SET
 };

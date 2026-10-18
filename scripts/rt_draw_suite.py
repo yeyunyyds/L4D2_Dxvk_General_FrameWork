@@ -278,7 +278,7 @@ def finish_world_capture(directory,game,since,report,notify):
     report['static_inventory_omitted_draws']=sum(t.get('omitted_draws',0) for t in inventories.values())
     notify('Additional static conversions: '+str(report['bulk_static_converted_draws'])+'. Whole-family rejection counts are in static-coverage.json; counts do not prove image coverage.')
     scene=analyze_scene(directory);save(directory/'scene-analysis.json',scene)
-    report['scene_input_evidence']=scene['status'];report['sky_rebuild_result']=scene['sky_rebuild_result'] if 'sky_rebuild_result' in scene else 'not_requested'
+    report['model_rebuild_result']=scene.get('model_rebuild_result','not_requested');report['scene_input_evidence']=scene['status'];report['sky_rebuild_result']=scene['sky_rebuild_result'] if 'sky_rebuild_result' in scene else 'not_requested'
     if not scene['pass']:report['collection']='incomplete'
     if scene.get('sky_rebuild_summaries'):
         counts=scene['sky_rebuild_summaries'][-1]

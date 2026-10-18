@@ -8,6 +8,7 @@
 #include "rt_overlay.h"
 #include "rt_scene_input.h"
 #include "rt_bulk_static.h"
+#include "rt_model_input.h"
 #include <map>
 #include <sstream>
 // A separate TU prevents mixing the Bridge's old API with the pinned 0.6.4 ABI.
@@ -223,8 +224,40 @@ bool scene(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
     if (prepared.ready && report.converted && SUCCEEDED(report.restore) && SUCCEEDED(result)) { ++counts.reconstructed; }else { ++counts.fallback; }return true;
   } catch (...) { event("sky_rebuild_exception",uint32_t(E_FAIL));physical=E_FAIL;result=E_FAIL;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true; }
 }
+std::array<SceneCounts,4> modelCounts{};
+std::set<std::pair<unsigned,uint32_t>> modelSampled;
+bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,
+    static_draw::Report& report,bool& called,HRESULT& physical,HRESULT& result) noexcept {
+  try {
+    if (device!=registered || !raytracingRequested) { return false; }
+    auto& counts=modelCounts[size_t(comparison.phase())];++counts.attempts;
+    auto prepared=model_input::prepare(device,s,kind,type,args);
+    ++counts.reasons[prepared.reason];if (prepared.ready) { ++counts.ready; }
+    const auto original=[&] { called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]);return physical; };
+    if (prepared.ready) { result=bulk_static::execute(device,s,type,false,original,report,&prepared); }
+    else {
+      report.code=FAILED(prepared.result)?static_draw::Code::CaptureFailed:
+        !std::strncmp(prepared.reason,"model_pipeline",14)?static_draw::Code::Pipeline:static_draw::Code::Layout;
+      report.capture=prepared.result;result=original();
+    }
+    if (prepared.ready && report.converted && SUCCEEDED(report.restore) && SUCCEEDED(result)) {
+      ++counts.reconstructed;
+      const auto phase=unsigned(comparison.phase());
+      if (modelSampled.size()<32 && modelSampled.insert({phase,s.material}).second) {
+        events << "{\"event\":\"model_rebuild_sample\",\"phase\":\"" << world_diagnostics::name(comparison.phase()) << "\",\"ordinal\":" << s.ordinal
+          << ",\"material\":" << s.material << ",\"reason\":\"" << prepared.reason << "\",\"rebuilt_stride\":" << prepared.stride
+          << ",\"rebuilt_vertex_bytes\":" << prepared.bytes.size() << ",\"applied_world\":[";
+        for (unsigned i=0;i<16;++i) { if (i) { events << ','; }events << prepared.world[i]; }events << "]}\n" << std::flush;
+      }
+    } else { ++counts.fallback; }return true;
+  } catch (...) { event("model_rebuild_exception",uint32_t(E_FAIL));result=E_FAIL;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true; }
+}
 void sceneSummary(uint64_t frame) {
-  const auto phase=comparison.phase();const auto& c=sceneCounts[size_t(phase)];
+  const auto phase=comparison.phase();const auto& m=modelCounts[size_t(phase)];
+  events << "{\"event\":\"model_rebuild_counts\",\"frame\":" << frame << ",\"phase\":\"" << world_diagnostics::name(phase)
+    << "\",\"attempts\":" << m.attempts << ",\"ready\":" << m.ready << ",\"reconstructed\":" << m.reconstructed << ",\"fallback\":" << m.fallback << ",\"reasons\":{";
+  bool modelComma=false;for (const auto& pair:m.reasons) { if (modelComma) { events << ','; }modelComma=true;events << '"' << pair.first << "\":" << pair.second; }events << "}}\n" << std::flush;
+  const auto& c=sceneCounts[size_t(phase)];
   events << "{\"event\":\"sky_rebuild_counts\",\"frame\":" << frame << ",\"phase\":\"" << world_diagnostics::name(phase)
     << "\",\"attempts\":" << c.attempts << ",\"ready\":" << c.ready << ",\"reconstructed\":" << c.reconstructed << ",\"fallback\":" << c.fallback << ",\"input_samples\":" << sceneSampleCounts[size_t(phase)] << ",\"reasons\":{";
   bool comma=false;for (const auto& pair:c.reasons) { if (comma) { events << ','; }comma=true;events << '"' << pair.first << "\":" << pair.second; }events << "}}\n" << std::flush;
@@ -328,10 +361,10 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy", 0, "v9_world_then_v8_sky_after120_then_guarded_original_vs_sky_and_rigid_after180");
-    event("world_coverage_revision", 0, "10");
+    event("coverage_comparison_policy", 0, "v11_world_then_v8_sky_after120_then_full_ps_uv_sky_and_original_model_transform_after180");
+    event("world_coverage_revision", 0, "11");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
-    state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &scene, &overlayDraw}; return module;
+    state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw}; return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }
 }
 bool configureRaster() noexcept {

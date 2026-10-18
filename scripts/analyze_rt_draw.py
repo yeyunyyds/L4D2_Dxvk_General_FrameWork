@@ -45,13 +45,16 @@ def static_affine(m):
     return 1e-8<det<1e12
 
 
-def static_layout(declaration,stride):
+def static_layout(declaration,stride,allow_rigid_bone=False):
     sizes=(4,8,12,16,4,4,4,8,4,4,8,4,8,4,4,4,8)
     if len(declaration)%8 or not 24<=len(declaration)<=520 or declaration[-8:]!=bytes.fromhex('ff00000011000000') or not 0<stride<=128 or stride%4:return False
-    position=uv=False
+    position=uv=False;bone_fields=set()
     for at in range(0,len(declaration)-8,8):
         stream,offset,kind,method,usage,index=struct.unpack_from('<HH4B',declaration,at)
-        if method or kind>=len(sizes) or usage in (1,2,9):return False
+        if method or kind>=len(sizes) or usage==9:return False
+        if usage in (1,2):
+            if not allow_rigid_bone or stream or index or offset%4 or offset+4>stride or kind!=(6 if usage==1 else 4) or usage in bone_fields:return False
+            bone_fields.add(usage);continue
         if stream:
             if not ((stream,offset,kind,usage,index)==(1,0,4,10,1) or (stream,offset,kind,usage,index)==(2,0,3,0,1)
                 or stream==2 and offset==16 and kind in (2,5) and (usage,index)==(3,1) or (stream,offset,kind,usage,index)==(3,0,0,0,2)):return False
@@ -66,7 +69,7 @@ def static_layout(declaration,stride):
                 if uv:return False
                 uv=True
         elif usage not in (3,6,7,10) or index:return False
-    return position and uv
+    return position and uv and (not bone_fields or bone_fields=={1,2})
 
 
 def analyze(path):
@@ -103,10 +106,10 @@ def analyze(path):
                 if header or counts.total() != 1 or len(payload) not in (28,36):
                     raise ValueError('invalid_header')
                 version, session, device, frequency = struct.unpack_from('<IQQQ', payload)
-                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36),(5,36),(6,36),(7,36)) or not all((session, device, frequency)):
+                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36),(5,36),(6,36),(7,36),(8,36)) or not all((session, device, frequency)):
                     raise ValueError('invalid_identity')
                 header = {'session':session,'device':device,'frequency':frequency}
-                if version in (2,3,4,5,6,7):
+                if version in (2,3,4,5,6,7,8):
                     target,control=struct.unpack_from('<2I',payload,28)
                     if (target,control)!=(240,30):raise ValueError('invalid_world_profile_boundaries')
                     header.update(profile='world_pilot',target_presents=target,control_presents=control)
@@ -115,6 +118,7 @@ def analyze(path):
                     if version==5:header['coverage_revision']=8
                     if version==6:header['coverage_revision']=9
                     if version==7:header['coverage_revision']=10
+                    if version==8:header['coverage_revision']=11
             elif event == 1:
                 if not header or pending is not None or len(payload) < SNAPSHOT.size + 32 + PIPELINE.size:
                     raise ValueError('unpaired_or_short_draw')
@@ -145,8 +149,8 @@ def analyze(path):
                     raise ValueError('invalid_draw_arguments')
                 kinds[kind] += 1
                 state_at = snapshot_size + 32
-                v8=header.get('coverage_revision') in (8,9,10)
-                v7=header.get('coverage_revision') in (7,8,9,10)
+                v8=header.get('coverage_revision') in (8,9,10,11)
+                v7=header.get('coverage_revision') in (7,8,9,10,11)
                 pipeline=PIPELINE_V8 if v8 else PIPELINE_V7 if v7 else PIPELINE
                 state = pipeline.unpack_from(payload, state_at)
                 failures, stream_offset, stride, stream_frequency = state[:4]
@@ -200,11 +204,11 @@ def analyze(path):
                 pending_rigid_safe=(scene_common and counts[3]>=180 and affine_rigid(matrices[:16]) and shader=='VertexLitGeneric' and depth==depth_write==1
                     and ((vertex_format==0x80503 and declaration==rigid_decl) or (vertex_format==0xa0403 and declaration==rigid_alt)))
                 all_identity=all(abs(v-float(i%5==0))<=1e-6 for part in (matrices[:16],matrices[16:32],matrices[32:48]) for i,v in enumerate(part))
-                pending_bulk_safe=(header.get('coverage_revision')==10 and counts[3]>=180 and status==1 and fields[55] and fields[56] and flags==3
+                pending_bulk_safe=(header.get('coverage_revision') in (10,11) and counts[3]>=180 and status==1 and fields[55] and fields[56] and flags==3
                     and shader in STATIC_SHADERS and static_affine(matrices[:16]) and affine_rigid(matrices[16:32]) and camera
                     and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==113 and (width,height)==fields[59:61]
                     and not failures and kind in (1,2) and topology in (4,5) and not alpha and depth==depth_write==1
-                    and stream_frequency==1 and stream_offset%4==0 and static_layout(declaration,stride))
+                    and stream_frequency==1 and stream_offset%4==0 and static_layout(declaration,stride,header.get('coverage_revision')==11 and shader=='VertexLitGeneric'))
                 pending_hud_safe=(unlit_hud_enabled and status==1 and fields[55] and fields[56] and flags==3 and shader=='Neko_Engine_Post' and vertex_format==0x80001
                     and kind in (1,2) and topology==4 and stride==32 and stream_frequency==1 and stream_offset%4==0 and declaration==post_decl
                     and all_identity and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==21
@@ -265,7 +269,7 @@ def analyze(path):
                 if pending!=uid or pending_conversion or len(payload)!=32 or not header.get('profile'):
                     raise ValueError('conversion_uid_or_scope_mismatch')
                 decision,code,capture,apply,restore,converted,called,physical=struct.unpack('<8I',payload)
-                if decision>(12 if header.get('coverage_revision')==10 else 11 if header.get('coverage_revision') in (8,9) else 9) or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
+                if decision>(12 if header.get('coverage_revision') in (10,11) else 11 if header.get('coverage_revision') in (8,9) else 9) or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
                 decisions[decision]+=1;conversions['reports']+=1;pending_conversion=True
                 if pending_attribution is not None:
                     pending_attribution['converted']+=converted

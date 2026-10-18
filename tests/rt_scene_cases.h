@@ -113,6 +113,7 @@ struct System {
   GET(GetRenderTarget) GET(GetViewport) GET(GetVertexDeclaration) GET(GetStreamSource) GET(GetStreamSourceFreq)
   GET(GetVertexShader) GET(GetPixelShader) GET(GetTransform) GET(CreateVertexDeclaration)
   GET(SetVertexShader) GET(SetPixelShader) GET(SetVertexDeclaration) GET(SetTransform)
+  GET(GetTextureStageState) GET(SetTextureStageState)
 #undef GET
   HRESULT GetRenderState(D3DRENDERSTATETYPE name,DWORD* out) { if (name==scene_draw::kCategoryState) { *out=category;return S_OK; }return d->GetRenderState(name,out); }
   HRESULT SetRenderState(D3DRENDERSTATETYPE name,DWORD value) { if (name==scene_draw::kCategoryState) { category=value;return S_OK; }return d->SetRenderState(name,value); }
