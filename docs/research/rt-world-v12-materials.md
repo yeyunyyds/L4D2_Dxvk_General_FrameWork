@@ -33,3 +33,13 @@ trace version9 对应 coverage revision12，snapshot wire2 不变；分析器兼
 ## 验收边界
 
 离线重放和系统 NULLREF 检查验证数学、范围与状态合同；B580 实机天空朝向、较大模型可见性/遮挡以及剩余材质画面需由下一次 F9 验证。武器/人物、完整地图、PBR/原照明、Source 准备线程并行和生产性能仍未验收。上一轮退出清理后访问异常是独立生命周期问题，本版不宣称已修复。
+
+## 交付核验与本次操作
+
+[固定 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/b53314db056371b2cf229e7a98d5df8074a173f5/downloads/rt-world-pilot-dev.zip)，11,944,303字节，SHA256 `2b7b68b28ed31370854b4b9a1affc289f55c135c650d630798a9b65b60dd629c`；构建 `ec66bbd9b29804dc5aadb33c63310a34385ef1ca`，身份 `ldb-rt-observer+dcfd05d04d5bec21`。配套x86 client/x64 Host、全部包内脚本/配置/README、源码收据、CRC及成员哈希均独立匹配。下载树29个成员全部为ZIP。
+
+Windows x86/x64均实际通过天空矩阵系数/近零w/变形拒绝、较大模型预算、自定义材质大块几何、带signed base/非零offset/start的只读提取、共享VB索引窗口和越界拒绝，以及原有getter/setter/restore失败注入。固定DLL/API、依赖加载及产品Python入口验证通过；两架构原生trace独立重析通过。这些是原生状态/数学证据，不是本版GPU图像验收。详细记录见[交付JSON](../../research/rt-world-pilot-v12-validation.json)。
+
+解压至旧包旁独立目录，保留旧包备份。运行`run-test.cmd`，进入同一测试地图，选择天空、墙体、道具及人物尽量同时可见的位置；按一次F9后保持镜头静止。自动完成240 Present，按提示正常退出，等待最终ZIP路径，上传一个结果ZIP。不要手动压缩中间目录。
+
+范围受当前镜头和游戏本次实际提交的Draw限制；预算/配额遗漏会在`scene_input_counts`及分析结果中按家族列出。VS保存256个float4/16个int4/16个BOOL，PS常量为前32个float4，辅助流各最多256字节；采样不等于完整纹理资源导出或完整材质实现。

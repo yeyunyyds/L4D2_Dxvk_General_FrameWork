@@ -2,9 +2,11 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-正在准备 [v12 天空边界、更大模型与其余材质合并验证](rt-world-v12-materials.md)。发布前继续保留下面固定 v11 下载链接；不将未验证构建称为成品。
+已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/b53314db056371b2cf229e7a98d5df8074a173f5/downloads/rt-world-pilot-dev.zip)。当前为 [v12 天空边界、更大模型与其余材质合并验证](rt-world-v12-materials.md)，构建 `ec66bbd9b29804dc5aadb33c63310a34385ef1ca`，身份 `ldb-rt-observer+dcfd05d04d5bec21`，包大小 11,944,303 字节，SHA256 `2b7b68b28ed31370854b4b9a1affc289f55c135c650d630798a9b65b60dd629c`。[交付核验](../../research/rt-world-pilot-v12-validation.json) 已独立确认固定发布树、全部成员、配套 x86/x64 PE 与源码收据一致，Windows 双架构的天空矩阵证明、大模型/自定义材质范围、共享 VB 引用窗口及状态恢复检查均实际通过。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/c557e24718f780d7dca0727135fb413e5f6e152b/downloads/rt-world-pilot-dev.zip)。当前为 [v11 原模型变换与天空接口合并修正](rt-world-v11-inputs.md)，构建 `ed656a6cdeb68b8ec439046a93e85575949a2f69`，包大小 11,940,088 字节，SHA256 `f9c8728c10b7d004a9cb37b3501f75581d5a554c643ef0683494b4ccc8676379`。固定发布树的全部成员、配套PE架构/身份、源码收据和脚本已独立核验；[验证记录](../../research/rt-world-pilot-v11-validation.json) 包含Windows双架构原生检查、固定DLL/API加载和两架构fixture重析。48份完整实际输入的CPU回归及六轮共587,528 Draw兼容性回归通过；本版已完成[一次 F9 的 B580 实机复核](rt-world-204924-result.md)：部分模型具备颜色/深度/法线对应，天空仍因三面的齐次 w 精度门槛整体回退 v8；完整场景、武器/人物和 Source 并行仍未验收。
+一次 F9 仍保存四阶段对照。每阶段采样上限为天空6、模型48、其他静态96、自定义NekoToon48，按实际网格/程序/Draw范围去重，分家族预留字节预算并报告遗漏。仅审计时按实际索引窗口提取几何，避免小面片因共享大缓冲而缺数据；未知NekoToon仍不转换为RT。运行时模型扩大至16384顶点/65536索引，保留原Draw参数。[离线回归](../../research/rt-world-v12-input-regression.json) 包含两轮92份完整输入和七轮666,000 Draw；本地99项检查97通过、2项需Windows跳过，最终扩展分析器8项通过。本版B580天空映射、较大模型可见性和材质覆盖仍待实机读回。
+
+此前 [v11 一次 F9 的 B580 实机复核](rt-world-204924-result.md) 已确认部分模型具备颜色/深度/法线对应，但天空因三个面的齐次 w 精度门槛整体回退 v8。v12修正此边界并扩大同次采样，无需先重复旧版本采集。
 
 此前 [v10 实机复核](rt-world-191200-result.md) 确认采集完整、原世界/HUD保留，但静态模型扩展未通过；实际输入定位到原VS模型摆放变换遗漏，以及天空多组UV和大坐标精度问题。v11据此合并修正并交付，不再要求原样重采。
 

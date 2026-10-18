@@ -1,0 +1,1486 @@
+{
+  "schema": 1,
+  "scope": "independently verified v12 publication; actual Remix/B580 game image unrun",
+  "build_commit": "ec66bbd9b29804dc5aadb33c63310a34385ef1ca",
+  "download_ref": "b53314db056371b2cf229e7a98d5df8074a173f5",
+  "filename": "rt-world-pilot-dev.zip",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/b53314db056371b2cf229e7a98d5df8074a173f5/downloads/rt-world-pilot-dev.zip",
+  "size": 11944303,
+  "sha256": "2b7b68b28ed31370854b4b9a1affc289f55c135c650d630798a9b65b60dd629c",
+  "zip_crc": "pass",
+  "all_manifest_members_verified": true,
+  "shipped_scripts_cmd_configuration_readme_exact_match": true,
+  "source_inputs_match_native_receipt": true,
+  "build_id": "ldb-rt-observer+dcfd05d04d5bec21",
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "architecture": "x86",
+      "sha256": "d99add89194cd4267768ac11a7c87c022969d4090f162c021b5b4c865d6343b2",
+      "size": 1409024,
+      "compiled_identity_match": true
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "architecture": "x64",
+      "sha256": "5c312bacdb7b78febe2911cab9d67c55c84a48eee8a18b5b23eebf4352a8dcd0",
+      "size": 1493504,
+      "compiled_identity_match": true
+    }
+  },
+  "foundation_status": {
+    "schema": 1,
+    "commit": "ec66bbd9b29804dc5aadb33c63310a34385ef1ca",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "5c312bacdb7b78febe2911cab9d67c55c84a48eee8a18b5b23eebf4352a8dcd0",
+      "development/x86/d3d9.dll": "d99add89194cd4267768ac11a7c87c022969d4090f162c021b5b4c865d6343b2"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "consumer_draw_development_execution": "pass",
+    "consumer_world_development_execution": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "world_tangent_layout_development_execution": "pass",
+    "world_scene_scope_development_execution": "pass",
+    "world_sky_reconstruction_development_execution": "pass",
+    "world_bulk_static_development_execution": "pass",
+    "world_original_input_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "native_status": {
+    "commit": "ec66bbd9b29804dc5aadb33c63310a34385ef1ca",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "package_validation": {
+    "schema": 1,
+    "commit": "ec66bbd9b29804dc5aadb33c63310a34385ef1ca",
+    "package_validation": "pass",
+    "launcher": "rt-world-pilot-dev.zip",
+    "payloads": [],
+    "primary_sha256": "2b7b68b28ed31370854b4b9a1affc289f55c135c650d630798a9b65b60dd629c",
+    "primary_size": 11944303,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "world_tangent_layout_development_execution": "pass",
+    "world_scene_scope_development_execution": "pass",
+    "world_sky_reconstruction_development_execution": "pass",
+    "world_bulk_static_development_execution": "pass",
+    "world_original_input_development_execution": "pass",
+    "pinned_native_loader_api_initialization": "pass",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "native_fixture_independent_reviews": {
+    "x86": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30,
+          "coverage_revision": 12
+        },
+        "footer": {
+          "draws": 723,
+          "valid": 723,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210,
+          "10": 1,
+          "11": 2
+        },
+        "world_conversion": {
+          "reports": 723,
+          "converted": 213,
+          "sky_converted": 1,
+          "rigid_converted": 2
+        },
+        "world_normalization": "pass"
+      }
+    },
+    "x64": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 240,
+          "control_presents": 30,
+          "coverage_revision": 12
+        },
+        "footer": {
+          "draws": 723,
+          "valid": 723,
+          "presents": 240,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 210,
+          "3": 210,
+          "5": 210,
+          "10": 1,
+          "11": 2
+        },
+        "world_conversion": {
+          "reports": 723,
+          "converted": 213,
+          "sky_converted": 1,
+          "rigid_converted": 2
+        },
+        "world_normalization": "pass"
+      }
+    }
+  },
+  "new_native_gate_markers": {
+    "RT indexed audit window/large shared VB/range rejection/system NULLREF: PASS": 2,
+    "RT custom shader audit large geometry independent cap/system NULLREF: PASS": 2,
+    "RT sky matrix coefficient proof/cancelled-w/warp rejection: PASS": 2,
+    "RT larger audited rigid model/bounded allocation: PASS": 2,
+    "RT larger model signed-base/index-window/read-only/caps/system NULLREF: PASS": 2,
+    "RT full sky interpolants/world-coordinate precision: PASS": 2,
+    "RT audited model matrix/UV/bone0/range/rejection: PASS": 2,
+    "RT original model transform/rebuilt stream rollback/system NULLREF: PASS": 2,
+    "RT sky original VS reconstruction/geometry bounds/binding rollback/system NULLREF: PASS": 2,
+    "RT full IPC normal-timeout/world-delayed-consumer/FIFO/peer-close: PASS": 2
+  },
+  "pinned_loader_positive_events": [
+    {
+      "event": "loaded_pinned_runtime",
+      "code": 0
+    },
+    {
+      "event": "initialize_api_0_6_4",
+      "code": 0
+    },
+    {
+      "event": "rtx.enableRaytracing",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.useVertexCapture",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.upscalerType",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "rtx.enableRayReconstruction",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.sceneScale",
+      "code": 0,
+      "value": "0.3937007874"
+    },
+    {
+      "event": "rtx.fallbackLightMode",
+      "code": 0,
+      "value": "2"
+    },
+    {
+      "event": "rtx.fallbackLightType",
+      "code": 0,
+      "value": "1"
+    },
+    {
+      "event": "rtx.fallbackLightRadiance",
+      "code": 0,
+      "value": "3000,3000,3000"
+    },
+    {
+      "event": "rtx.fallbackLightRadius",
+      "code": 0,
+      "value": "5"
+    },
+    {
+      "event": "rtx.fallbackLightPositionOffset",
+      "code": 0,
+      "value": "0,0,0"
+    },
+    {
+      "event": "rtx.enableFallbackLightShaping",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.fallbackLightDirection",
+      "code": 0,
+      "value": "0,0,-1"
+    },
+    {
+      "event": "rtx.autoExposure.enabled",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.autoExposure.evMinValue",
+      "code": 0,
+      "value": "-2"
+    },
+    {
+      "event": "rtx.autoExposure.evMaxValue",
+      "code": 0,
+      "value": "5"
+    },
+    {
+      "event": "rtx.tonemappingMode",
+      "code": 0,
+      "value": "1"
+    },
+    {
+      "event": "rtx.localtonemap.exposure",
+      "code": 0,
+      "value": "0.75"
+    },
+    {
+      "event": "rtx.orthographicIsUI",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.skipDrawCallsPostRTXInjection",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.enableAlphaBlend",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.enableAlphaTest",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.fogIgnoreSky",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.bloom.enable",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.postfx.enable",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "startup_raster_policy",
+      "code": 0,
+      "value": "RT_off_until_valid_converted_draw_after_control"
+    },
+    {
+      "event": "coverage_comparison_policy",
+      "code": 0,
+      "value": "v12_matrix_proven_sky_and_bounded_larger_model_materials_with_custom_shader_audit"
+    },
+    {
+      "event": "world_coverage_revision",
+      "code": 0,
+      "value": "12"
+    },
+    {
+      "event": "scene_input_policy",
+      "code": 0,
+      "value": "wide_materials_v1"
+    },
+    {
+      "event": "material_audit_policy",
+      "code": 0,
+      "value": "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG"
+    },
+    {
+      "event": "host_draw_request_count",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "host_cleanup",
+      "code": 0
+    }
+  ],
+  "actual_input_cpu_replay": {
+    "191200": {
+      "scope": "captured input CPU replay, no GPU/BLAS/visibility/performance acceptance",
+      "samples": [
+        {
+          "ordinal": 194,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 195,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 196,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 197,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 198,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 199,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 223,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_model_matrix",
+          "vertices": 815,
+          "front": 815,
+          "inside_clip": 815,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 224,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 225,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 226,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 227,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 253,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 846,
+          "front": 846,
+          "inside_clip": 846,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9242,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9243,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9244,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9245,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9246,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9247,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9271,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_model_matrix",
+          "vertices": 815,
+          "front": 815,
+          "inside_clip": 815,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9272,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9273,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9274,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9275,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9301,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 846,
+          "front": 846,
+          "inside_clip": 846,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37322,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37323,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37324,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37325,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37326,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37327,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37351,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_model_matrix",
+          "vertices": 815,
+          "front": 815,
+          "inside_clip": 815,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37352,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37353,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37354,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37355,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37381,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 846,
+          "front": 846,
+          "inside_clip": 846,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56042,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56043,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56044,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56045,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56046,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56047,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56071,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_model_matrix",
+          "vertices": 815,
+          "front": 815,
+          "inside_clip": 815,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56072,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56073,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56074,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56075,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 56101,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 846,
+          "front": 846,
+          "inside_clip": 846,
+          "max_uv_error": 0
+        }
+      ],
+      "all_inputs_reconstructed": true,
+      "all_sky_uvs_match_independent_formula": true
+    },
+    "204924": {
+      "scope": "captured input CPU replay, no GPU/BLAS/visibility/performance acceptance",
+      "samples": [
+        {
+          "ordinal": 1,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 34,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_model_matrix",
+          "vertices": 815,
+          "front": 815,
+          "inside_clip": 815,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 35,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 36,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 37,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 38,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 323,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 324,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 325,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 326,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 327,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9806,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9807,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9808,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9809,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9810,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9811,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9844,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_model_matrix",
+          "vertices": 815,
+          "front": 815,
+          "inside_clip": 815,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9845,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9846,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9847,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 9848,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39236,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39237,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39238,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39239,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39240,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39241,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39274,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_model_matrix",
+          "vertices": 815,
+          "front": 815,
+          "inside_clip": 815,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39275,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39276,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39277,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 39278,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58856,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58857,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58858,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58859,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58860,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58861,
+          "kind": 0,
+          "valid": true,
+          "reason": "original_world_positions_full_ps_uv",
+          "vertices": 4,
+          "front": 0,
+          "inside_clip": 0,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58894,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_model_matrix",
+          "vertices": 815,
+          "front": 815,
+          "inside_clip": 815,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58895,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58896,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 4,
+          "front": 4,
+          "inside_clip": 4,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58897,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 16,
+          "front": 16,
+          "inside_clip": 16,
+          "max_uv_error": 0
+        },
+        {
+          "ordinal": 58898,
+          "kind": 1,
+          "valid": true,
+          "reason": "original_vs_rigid_bone_zero",
+          "vertices": 24,
+          "front": 24,
+          "inside_clip": 24,
+          "max_uv_error": 0
+        }
+      ],
+      "all_inputs_reconstructed": true,
+      "all_sky_uvs_match_independent_formula": true
+    }
+  },
+  "old_actual_capture_regression": {
+    "130102": {
+      "footer": {
+        "draws": 193262,
+        "valid": 193262,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 193262,
+        "converted": 11805
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "165351": {
+      "footer": {
+        "draws": 76825,
+        "valid": 76825,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 76825,
+        "converted": 2730
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "192551": {
+      "footer": {
+        "draws": 83920,
+        "valid": 83920,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 83920,
+        "converted": 3630,
+        "hud_replaced": 120
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "202526": {
+      "footer": {
+        "draws": 76777,
+        "valid": 76777,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 76777,
+        "converted": 4290,
+        "hud_replaced": 210
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "141921": {
+      "footer": {
+        "draws": 81985,
+        "valid": 81985,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 81985,
+        "converted": 5190,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "rigid_converted": 60
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "191200": {
+      "footer": {
+        "draws": 74759,
+        "valid": 74759,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 74759,
+        "converted": 5610,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "bulk_static_converted": 60
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "valid_evidence_requires_review"
+    },
+    "204924": {
+      "footer": {
+        "draws": 78472,
+        "valid": 78472,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 78472,
+        "converted": 7710,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "bulk_static_converted": 480
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "valid_evidence_requires_review"
+    }
+  },
+  "local_strict_mingw_x64_compile": [
+    "rt_world_runtime.cpp",
+    "rt_overlay_cases.cpp",
+    "rt_draw_native_cases.cpp",
+    "rt_host_cases.cpp"
+  ],
+  "local_python_checks": {
+    "full_final_suite": {
+      "run": 99,
+      "passed": 97,
+      "skipped": 2,
+      "result": "pass"
+    },
+    "final_draw_cases": {
+      "run": 13,
+      "result": "pass"
+    },
+    "final_scene_cases": {
+      "run": 8,
+      "result": "pass"
+    }
+  },
+  "game_rt": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun"
+}
