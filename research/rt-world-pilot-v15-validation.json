@@ -1,0 +1,2779 @@
+{
+  "schema": 1,
+  "scope": "independently verified v15 publication; actual Remix/B580 game image unrun",
+  "build_commit": "3a29404fcb8c9d5e5386d9926eecf5aa07d5278e",
+  "download_ref": "521f8725c4e7c9b00e5cce1e23a251d270cb108c",
+  "filename": "rt-world-pilot-dev.zip",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/521f8725c4e7c9b00e5cce1e23a251d270cb108c/downloads/rt-world-pilot-dev.zip",
+  "size": 11957595,
+  "sha256": "f0819f95e8c809bf4c35167b5b252bd2452d3ebe057675c0d446219d699f9ef8",
+  "zip_crc": "pass",
+  "publication_tree_zip_only": true,
+  "publication_tree_entries": 29,
+  "http_zip_matches_git_blob": true,
+  "git_blob": "1e733f7e6a406d1294a08b7741f738e8914bc582",
+  "all_manifest_members_verified": true,
+  "shipped_scripts_cmd_configuration_readme_exact_match": true,
+  "source_inputs_match_native_receipt": true,
+  "build_id": "ldb-rt-observer+c71012573905d521",
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "architecture": "x86",
+      "sha256": "b39a73c667023225dd5fbd666357ea854386f08928d009182e2d2aff62bd6e58",
+      "size": 1409024,
+      "compiled_identity_match": true
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "architecture": "x64",
+      "sha256": "67d88b725c3949b746a4cc8bf0952f48444d18647cd57736e47b93d8ee112b7a",
+      "size": 1517056,
+      "compiled_identity_match": true
+    }
+  },
+  "foundation_status": {
+    "schema": 1,
+    "commit": "3a29404fcb8c9d5e5386d9926eecf5aa07d5278e",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "67d88b725c3949b746a4cc8bf0952f48444d18647cd57736e47b93d8ee112b7a",
+      "development/x86/d3d9.dll": "b39a73c667023225dd5fbd666357ea854386f08928d009182e2d2aff62bd6e58"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "consumer_draw_development_execution": "pass",
+    "consumer_world_development_execution": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "world_tangent_layout_development_execution": "pass",
+    "world_scene_scope_development_execution": "pass",
+    "world_sky_reconstruction_development_execution": "pass",
+    "world_bulk_static_development_execution": "pass",
+    "world_original_input_development_execution": "pass",
+    "world_owned_geometry_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "native_status": {
+    "commit": "3a29404fcb8c9d5e5386d9926eecf5aa07d5278e",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "package_validation": {
+    "schema": 1,
+    "commit": "3a29404fcb8c9d5e5386d9926eecf5aa07d5278e",
+    "package_validation": "pass",
+    "launcher": "rt-world-pilot-dev.zip",
+    "payloads": [],
+    "primary_sha256": "f0819f95e8c809bf4c35167b5b252bd2452d3ebe057675c0d446219d699f9ef8",
+    "primary_size": 11957595,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "world_tangent_layout_development_execution": "pass",
+    "world_scene_scope_development_execution": "pass",
+    "world_sky_reconstruction_development_execution": "pass",
+    "world_bulk_static_development_execution": "pass",
+    "world_original_input_development_execution": "pass",
+    "world_owned_geometry_development_execution": "pass",
+    "pinned_native_loader_api_initialization": "pass",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "native_fixture_independent_reviews": {
+    "x86": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 600,
+          "control_presents": 30,
+          "coverage_revision": 15
+        },
+        "footer": {
+          "draws": 1803,
+          "valid": 1803,
+          "presents": 600,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 570,
+          "3": 570,
+          "5": 570,
+          "10": 1,
+          "11": 2
+        },
+        "world_conversion": {
+          "reports": 1803,
+          "converted": 573,
+          "sky_converted": 1,
+          "rigid_converted": 2
+        },
+        "world_normalization": "pass"
+      }
+    },
+    "x64": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 600,
+          "control_presents": 30,
+          "coverage_revision": 15
+        },
+        "footer": {
+          "draws": 1803,
+          "valid": 1803,
+          "presents": 600,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 570,
+          "3": 570,
+          "5": 570,
+          "10": 1,
+          "11": 2
+        },
+        "world_conversion": {
+          "reports": 1803,
+          "converted": 573,
+          "sky_converted": 1,
+          "rigid_converted": 2
+        },
+        "world_normalization": "pass"
+      }
+    }
+  },
+  "new_native_gate_markers": {
+    "RT model preserve OFF/ON/OFF/material/light/recovery/partial-failure: PASS": 2,
+    "RT neutral model color/original texture alpha/owned IB/fault rollback/system NULLREF: PASS": 2,
+    "RT full geometry hash beyond shader cap/empty index: PASS": 2,
+    "RT compact owned 16/32-bit indices/signed-base/offset correspondence: PASS": 2,
+    "RT owned VB/IB upload readback/binding/fault rollback/system NULLREF: PASS": 2,
+    "RT model stencil/clip/color/depth special-pass rejection/system NULLREF: PASS": 2,
+    "RT model matrix proof/foreign camera/three-weight skin/morph/rejections: PASS": 2,
+    "RT Neko prepared-only/first-diffuse/state rollback/system NULLREF: PASS": 2,
+    "RT full morph read-only range/last vertex/failures/PS224/system NULLREF: PASS": 2,
+    "RT indexed audit window/large shared VB/range rejection/system NULLREF: PASS": 2,
+    "RT custom shader audit large geometry independent cap/system NULLREF: PASS": 2,
+    "RT sky matrix coefficient proof/cancelled-w/warp rejection: PASS": 2,
+    "RT larger audited rigid model/bounded allocation: PASS": 2,
+    "RT larger model signed-base/index-window/read-only/caps/system NULLREF: PASS": 2,
+    "RT full sky interpolants/world-coordinate precision: PASS": 2,
+    "RT audited model matrix/UV/bone0/range/rejection: PASS": 2,
+    "RT original model transform/rebuilt stream rollback/system NULLREF: PASS": 2,
+    "RT sky original VS reconstruction/geometry bounds/binding rollback/system NULLREF: PASS": 2,
+    "RT full IPC normal-timeout/world-delayed-consumer/FIFO/peer-close: PASS": 2
+  },
+  "pinned_loader_positive_events": [
+    {
+      "event": "loaded_pinned_runtime",
+      "code": 0
+    },
+    {
+      "event": "initialize_api_0_6_4",
+      "code": 0
+    },
+    {
+      "event": "rtx.enableRaytracing",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.useVertexCapture",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.useBuffersDirectly",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.enablePreservePath",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.upscalerType",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "rtx.enableRayReconstruction",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.sceneScale",
+      "code": 0,
+      "value": "0.3937007874"
+    },
+    {
+      "event": "rtx.fallbackLightMode",
+      "code": 0,
+      "value": "2"
+    },
+    {
+      "event": "rtx.fallbackLightType",
+      "code": 0,
+      "value": "1"
+    },
+    {
+      "event": "rtx.fallbackLightRadiance",
+      "code": 0,
+      "value": "3000,3000,3000"
+    },
+    {
+      "event": "rtx.fallbackLightRadius",
+      "code": 0,
+      "value": "5"
+    },
+    {
+      "event": "rtx.fallbackLightPositionOffset",
+      "code": 0,
+      "value": "0,0,0"
+    },
+    {
+      "event": "rtx.enableFallbackLightShaping",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.fallbackLightDirection",
+      "code": 0,
+      "value": "0,0,-1"
+    },
+    {
+      "event": "rtx.autoExposure.enabled",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.autoExposure.evMinValue",
+      "code": 0,
+      "value": "-2"
+    },
+    {
+      "event": "rtx.autoExposure.evMaxValue",
+      "code": 0,
+      "value": "5"
+    },
+    {
+      "event": "rtx.tonemappingMode",
+      "code": 0,
+      "value": "1"
+    },
+    {
+      "event": "rtx.localtonemap.exposure",
+      "code": 0,
+      "value": "0.75"
+    },
+    {
+      "event": "rtx.orthographicIsUI",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.skipDrawCallsPostRTXInjection",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.enableAlphaBlend",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.enableAlphaTest",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.fogIgnoreSky",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.bloom.enable",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.postfx.enable",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "startup_raster_policy",
+      "code": 0,
+      "value": "RT_off_until_valid_converted_draw_after_control"
+    },
+    {
+      "event": "coverage_comparison_policy",
+      "code": 0,
+      "value": "v15_preserve_off_on_off_combined_matte_light_recovery"
+    },
+    {
+      "event": "world_coverage_revision",
+      "code": 0,
+      "value": "15"
+    },
+    {
+      "event": "scene_input_policy",
+      "code": 0,
+      "value": "skinned_materials_v2"
+    },
+    {
+      "event": "material_audit_policy",
+      "code": 0,
+      "value": "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG"
+    },
+    {
+      "event": "host_draw_request_count",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "host_cleanup",
+      "code": 0
+    }
+  ],
+  "prior_paired_original_vs_and_submission": {
+    "scope": "same-readback-Present original Draw inputs, production CPU output, readback-verified submitted buffers and independent original VS POSITION/UV oracle; not GPU BLAS identity proof",
+    "samples": [
+      {
+        "ordinal": 81437,
+        "frame": 240,
+        "vertices": 815,
+        "reason": "original_vs_model_matrix",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0002602569132914567,
+          0.00012844579936333034
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3094.795351560297,
+            -2534.204755953856,
+            1280.4780055357335
+          ],
+          [
+            -3084.1063132763848,
+            -2530.030926103544,
+            1288.037498106567
+          ]
+        ]
+      },
+      {
+        "ordinal": 81438,
+        "frame": 240,
+        "vertices": 4,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.436776015774967e-05,
+          6.430459709994008e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1283.1754150390625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1283.175537109375
+          ]
+        ]
+      },
+      {
+        "ordinal": 81439,
+        "frame": 240,
+        "vertices": 4,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.5497580697096964e-05,
+          3.357575325546591e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1286.636962890625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1286.6370849609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 81440,
+        "frame": 240,
+        "vertices": 16,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.5497580697096964e-05,
+          6.430459709994008e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1283.1754150390625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1286.6370849609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 81441,
+        "frame": 240,
+        "vertices": 24,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.00019691947603206472,
+          9.327834383787703e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3098.140380859375,
+            -2532.824462890625,
+            1276.475830078125
+          ],
+          [
+            -3079.619873046875,
+            -2510.918212890625,
+            1295.789794921875
+          ]
+        ]
+      },
+      {
+        "ordinal": 81442,
+        "frame": 240,
+        "vertices": 536,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.001484297336700191,
+          0.0007150579446224548
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3229.21533203125,
+            -2244.972412109375,
+            1328.4619140625
+          ],
+          [
+            -3211.722412109375,
+            -2243.654296875,
+            1332.0167236328125
+          ]
+        ]
+      },
+      {
+        "ordinal": 81464,
+        "frame": 240,
+        "vertices": 5899,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          7.05541734546955e-05,
+          2.6875764025380278e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            488.8538818359375,
+            -2209.41943359375,
+            1278.068359375
+          ],
+          [
+            555.7145385742188,
+            -2152.831787109375,
+            1325.9049072265625
+          ]
+        ]
+      },
+      {
+        "ordinal": 81470,
+        "frame": 240,
+        "vertices": 846,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.00022432323381949004,
+          0.0001055929189391902
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3098.839111328125,
+            -2562.067626953125,
+            1278.404052734375
+          ],
+          [
+            -3075.06982421875,
+            -2539.59423828125,
+            1286.062255859375
+          ]
+        ]
+      },
+      {
+        "ordinal": 81471,
+        "frame": 240,
+        "vertices": 822,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0002130844782843866,
+          0.00011230021086938713
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3094.67041015625,
+            -2551.3310546875,
+            1278.721435546875
+          ],
+          [
+            -3079.30810546875,
+            -2544.828369140625,
+            1287.7027587890625
+          ]
+        ]
+      },
+      {
+        "ordinal": 81472,
+        "frame": 240,
+        "vertices": 1693,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.00021531003125296877,
+          0.0001020934418727304
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3098.853759765625,
+            -2562.096923828125,
+            1278.3641357421875
+          ],
+          [
+            -3075.051513671875,
+            -2539.5576171875,
+            1287.74169921875
+          ]
+        ]
+      },
+      {
+        "ordinal": 81479,
+        "frame": 240,
+        "vertices": 566,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.001943689818304506,
+          0.0013206981259061834
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3222.826416015625,
+            -2253.69580078125,
+            1335.3134765625
+          ],
+          [
+            -3222.19287109375,
+            -2225.465576171875,
+            1340.41748046875
+          ]
+        ]
+      },
+      {
+        "ordinal": 81480,
+        "frame": 240,
+        "vertices": 387,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0012211563029040917,
+          0.0005506868327675996
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3222.8994140625,
+            -2267.508544921875,
+            1333.0548095703125
+          ],
+          [
+            -3222.033935546875,
+            -2264.326171875,
+            1333.940673828125
+          ]
+        ]
+      },
+      {
+        "ordinal": 81483,
+        "frame": 240,
+        "vertices": 639,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014929167910482377,
+          0.0007934766418138395
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3227.392822265625,
+            -2244.866943359375,
+            1303.414306640625
+          ],
+          [
+            -3214.261474609375,
+            -2242.373291015625,
+            1329.165283203125
+          ]
+        ]
+      },
+      {
+        "ordinal": 101723,
+        "frame": 300,
+        "vertices": 3179,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014432938473174506,
+          0.0007430827662080475
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3219.887451171875,
+            -2254.52734375,
+            1335.2147216796875
+          ],
+          [
+            -3213.230712890625,
+            -2248.895263671875,
+            1340.3211669921875
+          ]
+        ]
+      },
+      {
+        "ordinal": 101725,
+        "frame": 300,
+        "vertices": 1102,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.001418460029014093,
+          0.0007492270963194159
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3218.598876953125,
+            -2253.39892578125,
+            1337.30224609375
+          ],
+          [
+            -3214.275390625,
+            -2250.156005859375,
+            1339.5103759765625
+          ]
+        ]
+      },
+      {
+        "ordinal": 101727,
+        "frame": 300,
+        "vertices": 15189,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014815256957301237,
+          0.0010457755433623817
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3230.17578125,
+            -2262.94140625,
+            1280.009765625
+          ],
+          [
+            -3211.833740234375,
+            -2243.021484375,
+            1338.9637451171875
+          ]
+        ]
+      },
+      {
+        "ordinal": 101729,
+        "frame": 300,
+        "vertices": 301,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013763750687603715,
+          0.0006651816209513051
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3220.02880859375,
+            -2255.0849609375,
+            1338.50830078125
+          ],
+          [
+            -3213.123291015625,
+            -2248.870849609375,
+            1344.8726806640625
+          ]
+        ]
+      },
+      {
+        "ordinal": 101730,
+        "frame": 300,
+        "vertices": 2053,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0015819256374527413,
+          0.0008017558041362172
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3225.629638671875,
+            -2253.330322265625,
+            1338.4761962890625
+          ],
+          [
+            -3212.84814453125,
+            -2242.234130859375,
+            1346.8175048828125
+          ]
+        ]
+      },
+      {
+        "ordinal": 101732,
+        "frame": 300,
+        "vertices": 1112,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013814064291667316,
+          0.0007480674979132296
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3219.65380859375,
+            -2250.509521484375,
+            1334.488037109375
+          ],
+          [
+            -3218.440673828125,
+            -2249.783203125,
+            1335.4266357421875
+          ]
+        ]
+      },
+      {
+        "ordinal": 101740,
+        "frame": 300,
+        "vertices": 379,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013333826355887979,
+          0.000963297506917371
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3227.659912109375,
+            -2250.856201171875,
+            1302.185546875
+          ],
+          [
+            -3222.545166015625,
+            -2245.24462890625,
+            1305.2147216796875
+          ]
+        ]
+      },
+      {
+        "ordinal": 121997,
+        "frame": 360,
+        "vertices": 815,
+        "reason": "original_vs_model_matrix",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0002602569132914567,
+          0.00012844579936333034
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3094.795351560297,
+            -2534.204755953856,
+            1280.4780055357335
+          ],
+          [
+            -3084.1063132763848,
+            -2530.030926103544,
+            1288.037498106567
+          ]
+        ]
+      },
+      {
+        "ordinal": 121998,
+        "frame": 360,
+        "vertices": 4,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.436776015774967e-05,
+          6.430459709994008e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1283.1754150390625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1283.175537109375
+          ]
+        ]
+      },
+      {
+        "ordinal": 121999,
+        "frame": 360,
+        "vertices": 4,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.5497580697096964e-05,
+          3.357575325546591e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1286.636962890625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1286.6370849609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122000,
+        "frame": 360,
+        "vertices": 16,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          3.5497580697096964e-05,
+          6.430459709994008e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3089.574462890625,
+            -2541.574462890625,
+            1283.1754150390625
+          ],
+          [
+            -3086.113037109375,
+            -2538.113037109375,
+            1286.6370849609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122001,
+        "frame": 360,
+        "vertices": 24,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.00019691947603206472,
+          9.327834383787703e-05
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3098.140380859375,
+            -2532.824462890625,
+            1276.475830078125
+          ],
+          [
+            -3079.619873046875,
+            -2510.918212890625,
+            1295.789794921875
+          ]
+        ]
+      },
+      {
+        "ordinal": 122002,
+        "frame": 360,
+        "vertices": 536,
+        "reason": "original_vs_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014187953003456932,
+          0.0007725979388584214
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3229.24072265625,
+            -2245.121337890625,
+            1328.4669189453125
+          ],
+          [
+            -3211.770751953125,
+            -2243.89794921875,
+            1332.1595458984375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122003,
+        "frame": 360,
+        "vertices": 3179,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014170089634168992,
+          0.0008646331726147594
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3219.98193359375,
+            -2254.732177734375,
+            1335.132568359375
+          ],
+          [
+            -3213.279541015625,
+            -2249.074462890625,
+            1340.166259765625
+          ]
+        ]
+      },
+      {
+        "ordinal": 122005,
+        "frame": 360,
+        "vertices": 1102,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013874744340025558,
+          0.0007074340897084141
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3218.688720703125,
+            -2253.58203125,
+            1337.2034912109375
+          ],
+          [
+            -3214.314697265625,
+            -2250.388427734375,
+            1339.38134765625
+          ]
+        ]
+      },
+      {
+        "ordinal": 122009,
+        "frame": 360,
+        "vertices": 301,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.001315230704632131,
+          0.0006837310355112258
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3220.12158203125,
+            -2255.363525390625,
+            1338.3795166015625
+          ],
+          [
+            -3213.187744140625,
+            -2249.148193359375,
+            1344.7218017578125
+          ]
+        ]
+      },
+      {
+        "ordinal": 122010,
+        "frame": 360,
+        "vertices": 2053,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0016185536420643132,
+          0.0008065735295575971
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3225.63427734375,
+            -2253.552734375,
+            1338.4971923828125
+          ],
+          [
+            -3212.8017578125,
+            -2242.551025390625,
+            1346.7095947265625
+          ]
+        ]
+      },
+      {
+        "ordinal": 122011,
+        "frame": 360,
+        "vertices": 1774,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0014392633356985485,
+          0.000702472350540273
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3220.592041015625,
+            -2256.97119140625,
+            1343.9444580078125
+          ],
+          [
+            -3210.93798828125,
+            -2248.54638671875,
+            1349.7552490234375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122020,
+        "frame": 360,
+        "vertices": 379,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013518224644903931,
+          0.0009352661816564023
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3227.662841796875,
+            -2250.853515625,
+            1302.161865234375
+          ],
+          [
+            -3222.5478515625,
+            -2245.2421875,
+            1305.1917724609375
+          ]
+        ]
+      },
+      {
+        "ordinal": 122021,
+        "frame": 360,
+        "vertices": 270,
+        "reason": "original_vs_neko_three_weight",
+        "cpu_submission_exact_bytes": true,
+        "original_vs_max_pixel_delta_640x400": [
+          0.0013253873990226595,
+          0.0006979181144561863
+        ],
+        "max_uv_abs_error": 0.0,
+        "world_bounds": [
+          [
+            -3226.537353515625,
+            -2250.677001953125,
+            1302.25830078125
+          ],
+          [
+            -3224.376708984375,
+            -2250.2099609375,
+            1303.54296875
+          ]
+        ]
+      }
+    ],
+    "count": 33,
+    "vertices": 46023,
+    "max_pixel_delta": 0.001943689818304506,
+    "max_uv_abs_error": 0.0
+  },
+  "actual_input_cpu_replay": {
+    "scope": "captured input CPU replay, no GPU/BLAS/visibility/performance acceptance",
+    "samples": [
+      {
+        "ordinal": 3,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 4,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 5,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 6,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 7,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 8,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 35,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 36,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 37,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 38,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 16,
+        "front": 16,
+        "inside_clip": 16,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 39,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 24,
+        "front": 24,
+        "inside_clip": 24,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 40,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 536,
+        "front": 536,
+        "inside_clip": 536,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 3179,
+        "front": 3179,
+        "inside_clip": 3179,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 42,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1700,
+        "front": 1700,
+        "inside_clip": 1700,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 43,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1102,
+        "front": 1102,
+        "inside_clip": 1102,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 44,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 216,
+        "front": 216,
+        "inside_clip": 216,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 47,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 301,
+        "front": 301,
+        "inside_clip": 301,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 48,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 2053,
+        "front": 2053,
+        "inside_clip": 2053,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 49,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1774,
+        "front": 1774,
+        "inside_clip": 1774,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 50,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1112,
+        "front": 1112,
+        "inside_clip": 1112,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 52,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1844,
+        "front": 1844,
+        "inside_clip": 1844,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 58,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 379,
+        "front": 379,
+        "inside_clip": 322,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 62,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 5899,
+        "front": 5899,
+        "inside_clip": 5899,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 68,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 846,
+        "front": 846,
+        "inside_clip": 846,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 69,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 822,
+        "front": 822,
+        "inside_clip": 822,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 70,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 1693,
+        "front": 1693,
+        "inside_clip": 1693,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 71,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 288,
+        "front": 288,
+        "inside_clip": 288,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 77,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 566,
+        "front": 566,
+        "inside_clip": 566,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 78,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 387,
+        "front": 387,
+        "inside_clip": 387,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10763,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10764,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10765,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10766,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10767,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10768,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10795,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10796,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10797,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10798,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 16,
+        "front": 16,
+        "inside_clip": 16,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10799,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 24,
+        "front": 24,
+        "inside_clip": 24,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10800,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 536,
+        "front": 536,
+        "inside_clip": 536,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10801,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 3179,
+        "front": 3179,
+        "inside_clip": 3179,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10802,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1700,
+        "front": 1700,
+        "inside_clip": 1700,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10803,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1102,
+        "front": 1102,
+        "inside_clip": 1102,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10804,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 216,
+        "front": 216,
+        "inside_clip": 216,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10807,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 301,
+        "front": 301,
+        "inside_clip": 301,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10808,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 2053,
+        "front": 2053,
+        "inside_clip": 2053,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10809,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1774,
+        "front": 1774,
+        "inside_clip": 1774,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10810,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1112,
+        "front": 1112,
+        "inside_clip": 1112,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10812,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1844,
+        "front": 1844,
+        "inside_clip": 1844,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10818,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 379,
+        "front": 379,
+        "inside_clip": 317,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10822,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 5899,
+        "front": 5899,
+        "inside_clip": 5899,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10828,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 846,
+        "front": 846,
+        "inside_clip": 846,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10829,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 822,
+        "front": 822,
+        "inside_clip": 822,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10830,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 1693,
+        "front": 1693,
+        "inside_clip": 1693,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10831,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 288,
+        "front": 288,
+        "inside_clip": 288,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10837,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 566,
+        "front": 566,
+        "inside_clip": 566,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 10838,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 387,
+        "front": 387,
+        "inside_clip": 387,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41183,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41184,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41185,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41186,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41187,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41188,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41215,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41216,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41217,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41218,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 16,
+        "front": 16,
+        "inside_clip": 16,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41219,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 24,
+        "front": 24,
+        "inside_clip": 24,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41220,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 536,
+        "front": 536,
+        "inside_clip": 536,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41221,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 3179,
+        "front": 3179,
+        "inside_clip": 3179,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41222,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1700,
+        "front": 1700,
+        "inside_clip": 1700,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41223,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1102,
+        "front": 1102,
+        "inside_clip": 1102,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41224,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 216,
+        "front": 216,
+        "inside_clip": 216,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41227,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 301,
+        "front": 301,
+        "inside_clip": 301,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41228,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 2053,
+        "front": 2053,
+        "inside_clip": 2053,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41229,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1774,
+        "front": 1774,
+        "inside_clip": 1774,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41230,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1112,
+        "front": 1112,
+        "inside_clip": 1112,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41232,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1844,
+        "front": 1844,
+        "inside_clip": 1844,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41238,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 379,
+        "front": 379,
+        "inside_clip": 351,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41242,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 5899,
+        "front": 5899,
+        "inside_clip": 5899,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41248,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 846,
+        "front": 846,
+        "inside_clip": 846,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41249,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 822,
+        "front": 822,
+        "inside_clip": 822,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41250,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 1693,
+        "front": 1693,
+        "inside_clip": 1693,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41251,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 288,
+        "front": 288,
+        "inside_clip": 288,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41257,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 566,
+        "front": 566,
+        "inside_clip": 566,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 41258,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 387,
+        "front": 387,
+        "inside_clip": 387,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61463,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61464,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61465,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61466,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61467,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61468,
+        "kind": 0,
+        "valid": true,
+        "reason": "original_world_positions_full_ps_uv",
+        "vertices": 4,
+        "front": 0,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61495,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_model_matrix",
+        "vertices": 815,
+        "front": 815,
+        "inside_clip": 815,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61496,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61497,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 4,
+        "front": 4,
+        "inside_clip": 4,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61498,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 16,
+        "front": 16,
+        "inside_clip": 16,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61499,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 24,
+        "front": 24,
+        "inside_clip": 24,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61500,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 536,
+        "front": 536,
+        "inside_clip": 536,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61501,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 3179,
+        "front": 3179,
+        "inside_clip": 3179,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61502,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1700,
+        "front": 1700,
+        "inside_clip": 1700,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61503,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1102,
+        "front": 1102,
+        "inside_clip": 1102,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61504,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 216,
+        "front": 216,
+        "inside_clip": 216,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61505,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 15189,
+        "front": 15189,
+        "inside_clip": 11908,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61506,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 12621,
+        "front": 12621,
+        "inside_clip": 12621,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61507,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 301,
+        "front": 301,
+        "inside_clip": 301,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61508,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 2053,
+        "front": 2053,
+        "inside_clip": 2053,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61509,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1774,
+        "front": 1774,
+        "inside_clip": 1774,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61510,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1112,
+        "front": 1112,
+        "inside_clip": 1112,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61511,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 14694,
+        "front": 14694,
+        "inside_clip": 14524,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61512,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1844,
+        "front": 1844,
+        "inside_clip": 1844,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61513,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 2269,
+        "front": 2269,
+        "inside_clip": 2269,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61514,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 3297,
+        "front": 3297,
+        "inside_clip": 3297,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61515,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 3368,
+        "front": 3368,
+        "inside_clip": 3368,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61516,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 3976,
+        "front": 3976,
+        "inside_clip": 2382,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61517,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1396,
+        "front": 1396,
+        "inside_clip": 636,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61518,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 379,
+        "front": 379,
+        "inside_clip": 354,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61519,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 270,
+        "front": 270,
+        "inside_clip": 270,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61520,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 2910,
+        "front": 2910,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61521,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_neko_three_weight",
+        "vertices": 1092,
+        "front": 1092,
+        "inside_clip": 0,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61522,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 5899,
+        "front": 5899,
+        "inside_clip": 5899,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61523,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 8854,
+        "front": 8854,
+        "inside_clip": 8854,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61528,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 846,
+        "front": 846,
+        "inside_clip": 846,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61529,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 822,
+        "front": 822,
+        "inside_clip": 822,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61530,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 1693,
+        "front": 1693,
+        "inside_clip": 1693,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61531,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 288,
+        "front": 288,
+        "inside_clip": 288,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61536,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 2643,
+        "front": 2643,
+        "inside_clip": 2643,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61537,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 566,
+        "front": 566,
+        "inside_clip": 566,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61538,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 387,
+        "front": 387,
+        "inside_clip": 387,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61539,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 968,
+        "front": 968,
+        "inside_clip": 968,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61540,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 1091,
+        "front": 1091,
+        "inside_clip": 1091,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61541,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 639,
+        "front": 639,
+        "inside_clip": 473,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61542,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 6296,
+        "front": 6296,
+        "inside_clip": 6129,
+        "max_uv_error": 0
+      },
+      {
+        "ordinal": 61543,
+        "kind": 1,
+        "valid": true,
+        "reason": "original_vs_three_weight",
+        "vertices": 6296,
+        "front": 6296,
+        "inside_clip": 6129,
+        "max_uv_error": 0
+      }
+    ],
+    "all_inputs_reconstructed": true,
+    "all_sky_uvs_match_independent_formula": true
+  },
+  "old_actual_capture_regression": {
+    "130102": {
+      "footer": {
+        "draws": 193262,
+        "valid": 193262,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 193262,
+        "converted": 11805
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "165351": {
+      "footer": {
+        "draws": 76825,
+        "valid": 76825,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 76825,
+        "converted": 2730
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "192551": {
+      "footer": {
+        "draws": 83920,
+        "valid": 83920,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 83920,
+        "converted": 3630,
+        "hud_replaced": 120
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "202526": {
+      "footer": {
+        "draws": 76777,
+        "valid": 76777,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 76777,
+        "converted": 4290,
+        "hud_replaced": 210
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "141921": {
+      "footer": {
+        "draws": 81985,
+        "valid": 81985,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 81985,
+        "converted": 5190,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "rigid_converted": 60
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "not_requested"
+    },
+    "191200": {
+      "footer": {
+        "draws": 74759,
+        "valid": 74759,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 74759,
+        "converted": 5610,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "bulk_static_converted": 60
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "valid_evidence_requires_review"
+    },
+    "204924": {
+      "footer": {
+        "draws": 78472,
+        "valid": 78472,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 78472,
+        "converted": 7710,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "bulk_static_converted": 480
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "valid_evidence_requires_review"
+    },
+    "004208": {
+      "footer": {
+        "draws": 81346,
+        "valid": 81346,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 81346,
+        "converted": 6600,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "bulk_static_converted": 420
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "valid_evidence_requires_review"
+    },
+    "133627": {
+      "footer": {
+        "draws": 89609,
+        "valid": 89609,
+        "presents": 240,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 89609,
+        "converted": 9240,
+        "hud_replaced": 210,
+        "sky_converted": 720,
+        "bulk_static_converted": 3480
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "valid_evidence_requires_review"
+    },
+    "145737": {
+      "footer": {
+        "draws": 142550,
+        "valid": 142550,
+        "presents": 420,
+        "resets": 0,
+        "failures": 0,
+        "unobserved": 0,
+        "reason": 0
+      },
+      "conversion": {
+        "reports": 142550,
+        "converted": 16980,
+        "hud_replaced": 390,
+        "sky_converted": 1800,
+        "bulk_static_converted": 5040
+      },
+      "world_outputs": "pass",
+      "scene_inputs": "valid_evidence_requires_review"
+    }
+  },
+  "local_strict_mingw_x64_compile": [
+    "rt_world_runtime.cpp",
+    "rt_overlay_cases.cpp",
+    "rt_draw_native_cases.cpp",
+    "rt_host_cases.cpp"
+  ],
+  "local_python_checks": {
+    "full_suite": {
+      "run": 108,
+      "passed": 106,
+      "skipped": 2,
+      "result": "pass"
+    },
+    "final_scene": {
+      "run": 12,
+      "result": "pass"
+    }
+  },
+  "game_rt": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun"
+}

@@ -2,15 +2,15 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [v14 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/bd736ea9f9a96970bd3f9d1a9ba69efe0ec79a8d/downloads/rt-world-pilot-dev.zip)，方案见 [模型独立提交与分组恢复对照](rt-world-v14-submission.md)。构建 `d1ed8a0e23bd117b1b90612693f6c2aa517bf51c`，身份 `ldb-rt-observer+ca9009cca3123af0`，包大小 11,954,685 字节，SHA256 `26eb3d601e464c5ebd254aed2dff59a3f0fddfad9e589bbddcfe94930fdf21fd`。[交付核验](../../research/rt-world-pilot-v14-validation.json) 已检查固定发布树、全部成员、配套 x86/x64 PE、源码收据与原生执行证据。
+已发布 [v15 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/521f8725c4e7c9b00e5cce1e23a251d270cb108c/downloads/rt-world-pilot-dev.zip)，方案见 [模型缓存兼容与材质灯光合并验证](rt-world-v15-compatibility.md)。构建 `3a29404fcb8c9d5e5386d9926eecf5aa07d5278e`，身份 `ldb-rt-observer+c71012573905d521`，包大小 11,957,595 字节，SHA256 `f0819f95e8c809bf4c35167b5b252bd2452d3ebe057675c0d446219d699f9ef8`。[交付核验](../../research/rt-world-pilot-v15-validation.json) 已验证配套二进制、源码收据、Windows原生检查、全部包成员及固定ZIP发布树。B580本版画面仍待实测。
 
 最近的 [v14 B580 实机结果](rt-world-145737-result.md) 已完整结束420 Present、142,550 Draw。普通模型与 Neko 合并时，完整人物、武器和可辨的世界/天空同时出现；撤去模型后背景恢复。**Neko 单独阶段仍白屏并有异常长条几何，模型路径整体尚未验收**。33份完整配对、46,023顶点的提交字节和原VS位置/UV独立核验通过，后续重点转向后端缓存/实例及材质照明交互，现有数据足够继续定位，无需原样重采。
 
-本版模型使用独立、可读、紧凑的 VB/IB，重映射原索引并核对上传内容与实际绑定；特殊 stencil/clip/颜色/深度通道保留原绘制。请求固定 Remix 后端复制几何到 staging，保留原有 Source 线程设置；曝光和诊断灯不变。三权重、Neko、完整 morph、主相机证明及既有其他静态家族保留。
+本版保留独立可读的紧凑VB/IB及上传/绑定核验，默认关闭后端preserve转换复用并保留staging复制。曝光参数不变；单独模型中性色与定向诊断灯阶段用于区分材质、照明和几何问题，不代表完整Toon或原地图灯光。Source线程设置保留。
 
-仍为一个入口、一次 F9、一个最终 ZIP。自动取图为30光栅、120世界、180修正天空、240普通模型、300 Neko、360合并、420撤去模型。取图帧的同一 Draw 配对保存原始输入与重建缓冲，另存状态与哈希；预算遗漏明确记录。只需运行 `run-test.cmd`、进图按一次 F9 并保持镜头不动，结束后按提示退出，上传最终 ZIP。完整 Toon/PBR/地图照明、全地图与全部人物武器、Source 并行和生产性能继续未验收。
+仍为一个入口、一次F9、一个最终ZIP。自动取图30光栅、120世界、180天空、240/300/360 Neko复用OFF/ON/OFF、420合并、480中性色、540定向灯、600撤去模型。取图帧逐次Draw最多64份，三个Neko阶段各12 MiB完整配对，合并阶段16 MiB；额外两个材质/灯光阶段只存摘要。运行`run-test.cmd`、进同图按一次F9并保持镜头不动，结束后正常退出，上传脚本最终ZIP。
 
-Windows x86/x64 新增上传只读核验、IB绑定/索引对应、逐点故障回滚、特殊通道筛选与 Present 关联检查已通过；固定运行时/API、产品入口及依赖加载验证通过。[离线回归](../../research/rt-world-v14-input-regression.json) 覆盖九份实际采集、836,955 Draw，最新 v13 的137份相关输入有135份通过CPU重建，另2份未知程序原本被运行时通道筛选拒绝。上述检查不替代本版实际颜色、深度、法线与遮挡验收。
+Windows x86/x64已通过新增阶段切换/部分配置失败、中性色与原alpha、逐点状态回滚、完整几何哈希及既有原生检查；固定runtime/API及产品入口核验通过。[离线回归](../../research/rt-world-v15-input-regression.json) 覆盖十份实际采集、979,505 Draw，最新v14的134份相关输入CPU重建全部有效。源码中的模型数学不变。这些检查不替代B580颜色、深度、法线与稳定性验收。
 
 [v12 一次 F9 的 B580 实机复核](rt-world-004208-result.md) 已确认 240 Present、81,346 Draw 完整，最终天空 360 次重建全部成功，云层映射与光栅对照相符。扩大采样保存 244 份输入，其中 52 份 NekoToon 主几何完整；模型仍仅每帧七次 Draw 成功，人物缺失。现有输入已定位四组模型相机精度误拒绝，以及共同 Neko VS 的三权重骨骼/morph 需求，可合并下一版功能，无需先重复收集。完整模型、材质/照明、Source 并行和性能继续未验收。
 
@@ -58,13 +58,13 @@ Host 启动时读取本次 `LDB_RT_WORLD_1` 请求，只在该模式下加载包
 
 发行包 `rt-world-pilot-dev.zip` 的 `run-test.cmd` 复用既有 preflight 缓存或下载固定 SHA 依赖，等待正常退出游戏，校验并继承相邻旧观察包的原始备份，安装 x86 client/x64 Host，再由 Steam 启动。没有改 backend 文件、Source CVar 或 Steam 启动选项；请求仅对本次 Host 启动选择 Remix。
 
-进图后面向同时包含地面与墙壁的位置，按一次 F9 后保持镜头静止。前 30 次 Present 保留未转换光栅观察，之后尝试选定世界转换并请求开启 RT，总共 240 次 Present；这些都是同一个 Remix 后端，不能冒充普通 DXVK 的 R0 对照。30/120/180/240 后分别用 API 读回颜色、primary depth、primary world shading normal，输出为 640×400 最近邻缩放的 RGBA32F 和预览。目标先清零：参考 API 在没有源图时也可能返回成功，因此检查实际缓冲内容，不能只检查返回值。
+进图后面向同时包含地面与墙壁的位置，按一次 F9 后保持镜头静止。前 30 次 Present 保留未转换光栅观察，之后尝试选定世界转换并请求开启 RT，总共 600 次 Present；这些都是同一个 Remix 后端，不能冒充普通 DXVK 的 R0 对照。30/120/180/240/300/360/420/480/540/600 后分别用 API 读回颜色、primary depth、primary world shading normal，输出为 640×400 最近邻缩放的 RGBA32F 和预览。目标先清零：参考 API 在没有源图时也可能返回成功，因此检查实际缓冲内容，不能只检查返回值。
 
 v2 在 F9 前独立保留有界启动模块清单、首次 Draw 到达 Host/调用计数和 client 的请求/F9/前台 PID 记录。菜单若仍黑屏可直接正常退出，不要求盲操作；脚本会保存 INCOMPLETE 部分包。最终的完成提示和退出码区分完整采集与部分结果；模块清单成功或库加载成功都不表示 240 Present 已完成。用户主动退出与退出阶段 ReShade/驱动异常也分别记录，不能倒推成游戏此前自动崩溃。
 
 采集完成先读取仍在运行的模块和 0～255 context 槽位，再提示正常退出游戏，最终日志与数据合并为一个 ZIP。ConVar 只保存 SDK 布局候选、原始字段及模块身份，不把读到一个整数当作 ABI 或并行通过。退出、异常、模块失败和预算截断保留分项状态。旧 40,952-Draw 数据仍能由新版分析器复核。
 
-诊断期持续逐 Draw getter/内存读取，并同步读回，因此不评价 60 FPS 预算。结果约 192 MiB 原始文件、每 trace 128 MiB，最多等待 15 分钟启动/F9、5 分钟采集；游戏退出或明确 runtime 错误会提前保存部分包。`restore.cmd` 按原始备份恢复配套文件，并拒绝覆盖测试后的用户更新。
+诊断期持续逐 Draw getter/内存读取，并同步读回，因此不评价 60 FPS 预算。结果归档预算384 MiB、每 trace 256 MiB，最多等待 15 分钟启动/F9、5 分钟采集；游戏退出或明确 runtime 错误会提前保存部分包。`restore.cmd` 按原始备份恢复配套文件，并拒绝覆盖测试后的用户更新。
 
 ## 发行前检查及实际边界
 
