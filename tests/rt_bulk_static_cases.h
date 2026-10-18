@@ -23,7 +23,7 @@ struct Proxy {
 };
 inline std::vector<uint64_t> state(IDirect3DDevice9* d) {
   std::vector<uint64_t> r;
-  for (auto name:{D3DRS_ALPHABLENDENABLE,D3DRS_ALPHATESTENABLE,D3DRS_ALPHAFUNC,D3DRS_ALPHAREF,D3DRS_CULLMODE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_LIGHTING,D3DRS_VERTEXBLEND,D3DRS_INDEXEDVERTEXBLENDENABLE}) {
+  for (auto name:{D3DRS_ALPHABLENDENABLE,D3DRS_ALPHATESTENABLE,D3DRS_ALPHAFUNC,D3DRS_ALPHAREF,D3DRS_CULLMODE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_LIGHTING,D3DRS_TEXTUREFACTOR,D3DRS_VERTEXBLEND,D3DRS_INDEXEDVERTEXBLENDENABLE}) {
     DWORD v=0;check(SUCCEEDED(d->GetRenderState(name,&v)),"bulk read render state");r.push_back(v);
   }
   for (const auto& x:ldb_rt::bulk_static::stages) { DWORD v=0;check(SUCCEEDED(d->GetTextureStageState(x.stage,x.name,&v)),"bulk read TSS");r.push_back(v); }
@@ -43,6 +43,11 @@ inline std::vector<uint64_t> state(IDirect3DDevice9* d) {
 }
 inline void modelGeometryBounds(IDirect3DDevice9* d) {
   using namespace ldb_rt;
+  std::vector<uint8_t> hashBytes(128u*1024,0x5a);
+  check(ldb_rt_file::bytesSha256(hashBytes.data(),hashBytes.size()).empty(),"shader byte budget changed");
+  check(ldb_rt_file::geometrySha256(hashBytes.data(),hashBytes.size())=="4742cc452b30002f46343efd2714e07f0dd467da4a83d396a025468f5e8ba495", "large geometry hash truncated or rejected");
+  check(ldb_rt_file::geometrySha256(nullptr,0)=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "empty nonindexed digest wrong");
+  std::cout << "RT full geometry hash beyond shader cap/empty index: PASS\n";
   const auto ok=[](HRESULT h) { check(SUCCEEDED(h),"larger model geometry fixture API"); };
   static_draw::Ref<IDirect3DVertexBuffer9> oldVB,vb;static_draw::Ref<IDirect3DIndexBuffer9> oldIB,ib;
   static_draw::Ref<IDirect3DVertexDeclaration9> oldDecl,decl;UINT oldOffset=0,oldStride=0;
@@ -219,6 +224,20 @@ inline void systemCases(IDirect3DDevice9* d,IDirect3DVertexShader9* vs,IDirect3D
       { Proxy proxy{d};unsigned calls=0;const auto r=ownedRun(proxy,calls,true);check(SUCCEEDED(r.first) && r.second.converted && calls==1 && state(d)==ownedBefore,"owned indexed Draw/restoration");gets=proxy.gets;sets=proxy.sets/2; }
       for (unsigned i=1;i<=gets;++i) { Proxy proxy{d};proxy.failGet=i;unsigned calls=0;const auto r=ownedRun(proxy,calls,false);check(SUCCEEDED(r.first) && !r.second.converted && calls==1 && state(d)==ownedBefore,"owned capture/bound-verification failure did not restore original"); }
       for (unsigned i=1;i<=2*sets;++i) { Proxy proxy{d};proxy.failSet=i;unsigned calls=0;const auto r=ownedRun(proxy,calls,false);check(calls==1 && state(d)==ownedBefore && (i<=sets?SUCCEEDED(r.first) && !r.second.converted:FAILED(r.first)),"owned setter/index/restore failure hidden"); }
+      const auto matteRun=[&](Proxy& proxy,unsigned& calls,bool physical) {
+        static_draw::Report report;ok(__LINE__,d->BeginScene());
+        const auto hr=bulk_static::execute(&proxy,s,D3DPT_TRIANGLELIST,false,[&](bool converted) {
+          ++calls;if (!physical || !converted) { return S_OK; }
+          DWORD value=0;ok(__LINE__,d->GetRenderState(D3DRS_TEXTUREFACTOR,&value));check(value==0xff808080u,"neutral factor wrong");
+          ok(__LINE__,d->GetTextureStageState(0,D3DTSS_COLORARG1,&value));check(value==D3DTA_TFACTOR,"neutral material still samples diffuse RGB");
+          ok(__LINE__,d->GetTextureStageState(0,D3DTSS_ALPHAARG1,&value));check(value==D3DTA_TEXTURE,"neutral material changed original texture alpha");
+          return d->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,0,0,3,0,1);
+        },report,&owned,true);ok(__LINE__,d->EndScene());return std::make_pair(hr,report);
+      };
+      { Proxy proxy{d};unsigned calls=0;const auto a=matteRun(proxy,calls,true);check(SUCCEEDED(a.first) && a.second.converted && calls==1 && state(d)==ownedBefore,"neutral model material/restoration");gets=proxy.gets;sets=proxy.sets/2; }
+      for (unsigned i=1;i<=gets;++i) { Proxy proxy{d};proxy.failGet=i;unsigned calls=0;const auto a=matteRun(proxy,calls,false);check(SUCCEEDED(a.first) && !a.second.converted && calls==1 && state(d)==ownedBefore,"neutral capture/binding failure leaked state"); }
+      for (unsigned i=1;i<=2*sets;++i) { Proxy proxy{d};proxy.failSet=i;unsigned calls=0;const auto a=matteRun(proxy,calls,false);check(calls==1 && state(d)==ownedBefore && (i<=sets?SUCCEEDED(a.first) && !a.second.converted:FAILED(a.first)),"neutral setter/restore failure hidden"); }
+      std::cout << "RT neutral model color/original texture alpha/owned IB/fault rollback/system NULLREF: PASS\n";
       struct ReadProbe {
         IDirect3DVertexBuffer9* buffer;unsigned fault=0;std::vector<uint8_t> wrong;
         HRESULT Lock(UINT offset,UINT size,void** memory,DWORD flags) {

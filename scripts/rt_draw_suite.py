@@ -350,8 +350,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
-        notify('Enter a map, return to the game, and press F9 once. The '+('420' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Coverage comparison: keep sky, props and a character visible; press F9 once and hold the camera still. World/HUD 31-120; corrected sky 121-180; ordinary models 181-240; Neko 241-300; combined 301-360; models removed for recovery 361-420. All stages run automatically.')
+        notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
+        if world:notify('Coverage comparison: keep sky, props and a character visible; press F9 once and hold the camera still. World/HUD 31-120; corrected sky 121-180; Neko preserve OFF/ON/OFF 181-360; combined 361-420; neutral model color 421-480; directional light 481-540; models removed for recovery 541-600. All stages run automatically.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None
@@ -380,7 +380,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if not done.is_file():raise TimeoutError('No completed capture; partial logs are retained')
         marker=json.loads(done.read_text(encoding='utf-8'))
         report['capture_marker']=marker
-        expected=420 if world else 120
+        expected=600 if world else 120
         marker_ok=marker.get('session')==session and marker.get('reason')==0 and marker.get('presents')==expected
         if not marker_ok:
             notify('INCOMPLETE: capture stopped before the required '+str(expected)+' Presents. Collecting available evidence.')

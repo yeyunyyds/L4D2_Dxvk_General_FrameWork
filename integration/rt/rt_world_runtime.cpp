@@ -35,7 +35,7 @@ std::array<float, 16> lastView{}, lastProjection{};
 bool haveWorldCamera = false;
 const std::pair<const char*, const char*> options[] = {
   {"rtx.enableRaytracing", "False"}, {"rtx.useVertexCapture", "False"},
-  {"rtx.useBuffersDirectly", "False"},
+  {"rtx.useBuffersDirectly", "False"}, {"rtx.enablePreservePath", "False"},
   {"rtx.upscalerType", "0"}, {"rtx.enableRayReconstruction", "False"},
   {"rtx.sceneScale", "0.3937007874"},
   {"rtx.fallbackLightMode", "2"}, {"rtx.fallbackLightType", "1"},
@@ -250,13 +250,12 @@ bool scene(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
   } catch (...) { event("sky_rebuild_exception",uint32_t(E_FAIL));physical=E_FAIL;result=E_FAIL;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true; }
 }
 std::array<SceneCounts,4> modelCounts{};
-std::set<std::pair<unsigned,uint32_t>> modelSampled,modelStateSampled;
-std::array<uint64_t,5> modelPayloadBytes{};
-std::array<unsigned,5> modelSampleCounts{},modelStateCounts{};
+std::array<uint64_t,world_diagnostics::kModelStages> modelPayloadBytes{};
+std::array<unsigned,world_diagnostics::kModelStages> modelSampleCounts{},modelStateCounts{},modelSampleOmitted{};
 void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
   const auto stage=unsigned(comparison.models());
-  if (modelStateCounts[stage]>=24 || !modelStateSampled.insert({stage,s.material}).second) { return; }++modelStateCounts[stage];
-  const unsigned names[]={7,14,15,23,24,25,27,28,42,52,137,149,150,168,169,174,175,177,195,196,197,206,210,211,212,213,214,215,216,217,218,219,220};
+  if (modelStateCounts[stage]>=world_diagnostics::kModelSampleLimit) { return; }++modelStateCounts[stage];
+  const unsigned names[]={7,14,15,23,24,25,27,28,22,42,52,137,149,150,152,168,169,174,175,177,195,196,197,206,210,211,212,213,214,215,216,217,218,219,220};
   events << "{\"event\":\"model_state_sample\",\"ordinal\":" << s.ordinal << ",\"material\":" << s.material
     << ",\"frame\":" << state().presents+1 << ",\"model_stage\":\"" << world_diagnostics::name(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data() << "\",\"states\":[";
   for (unsigned i=0;i<sizeof(names)/sizeof(names[0]);++i) {
@@ -265,11 +264,11 @@ void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
   }
   events << "]}\n" << std::flush;
 }
-void modelPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& prepared,const scene_input::Data& input,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) {
+void modelPayload(IDirect3DDevice9* device,const draw_observe::Snapshot& s,const scene_input::Prepared& prepared,const scene_input::Data& input,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) {
   const auto stage=unsigned(comparison.models());
   const auto frame=state().presents+1;
-  if (frame!=240 && frame!=300 && frame!=360) { return; }
-  if (modelSampleCounts[stage]>=24 || !modelSampled.insert({stage,s.material}).second) { return; }++modelSampleCounts[stage];
+  if (frame<240 || frame>=world_diagnostics::kCoveragePresents || !world_diagnostics::readback(frame)) { return; }
+  if (modelSampleCounts[stage]>=world_diagnostics::kModelSampleLimit) { ++modelSampleOmitted[stage];return; }++modelSampleCounts[stage];
   std::ostringstream log;log << std::setprecision(9);
   log << "{\"event\":\"model_rebuild_sample\",\"phase\":\"" << world_diagnostics::name(comparison.phase()) << "\",\"model_stage\":\""
     << world_diagnostics::name(comparison.models()) << "\",\"ordinal\":" << s.ordinal
@@ -278,7 +277,7 @@ void modelPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& p
     << ",\"binding_verified\":true,\"owned_draw\":true,\"index_bytes\":" << prepared.indexBytes << ",\"draw_args\":[";
   for (unsigned i=0;i<6;++i) { if (i) { log << ','; }log << prepared.drawArgs[i]; }
   log << "],\"applied_world\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << prepared.world[i]; }
-  const uint64_t limit=(comparison.models()==world_diagnostics::ModelStage::Neko?2u:1u)*1024*1024;
+  const uint64_t limit=world_diagnostics::modelPayloadLimit(comparison.models());
   const size_t sourceBytes=input.vertices.size()+input.indices.size()+(input.vs.size()+input.ps.size())*4+sizeof(input.constants)+input.declaration.size()*sizeof(D3DVERTEXELEMENT9)+input.morph.positions.size()*sizeof(sky_shader::Vec);
   const bool save=prepared.bytes.size()+prepared.indices.size()+sourceBytes<=limit-modelPayloadBytes[stage];
   log << "],\"kind\":" << kind << ",\"topology\":" << uint32_t(type) << ",\"source_first\":" << input.first
@@ -286,7 +285,21 @@ void modelPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& p
   for (unsigned i=0;i<6;++i) { if (i) { log << ','; }log << args[i]; }
   log << "],\"view\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << s.view[i]; }
   log << "],\"projection\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << s.projection[i]; }
-  log << "],\"payload_omitted\":" << (save?"false":"true") << ",\"files\":[";
+  log << "],\"vertices_sha256\":\"" << ldb_rt_file::geometrySha256(prepared.bytes.data(),prepared.bytes.size())
+    << "\",\"indices_sha256\":\"" << ldb_rt_file::geometrySha256(prepared.indices.data(),prepared.indices.size())
+    << "\",\"preserve_requested\":" << (world_diagnostics::preserve(comparison.models())?"true":"false")
+    << ",\"neutral_material\":" << (world_diagnostics::matte(comparison.models())?"true":"false")
+    << ",\"payload_omitted\":" << (save?"false":"true");
+  DWORD factor=0,srgb=0;uint32_t queryFailures=0;
+  if (FAILED(device->GetRenderState(D3DRS_TEXTUREFACTOR,&factor))) { queryFailures|=1; }
+  if (FAILED(device->GetSamplerState(0,D3DSAMP_SRGBTEXTURE,&srgb))) { queryFailures|=2; }
+  log << ",\"material_texture_factor\":" << factor << ",\"material_srgb\":" << srgb << ",\"material_stage0\":[";
+  const D3DTEXTURESTAGESTATETYPE materialNames[]={D3DTSS_COLOROP,D3DTSS_COLORARG1,D3DTSS_ALPHAOP,D3DTSS_ALPHAARG1};
+  for (unsigned i=0;i<4;++i) {
+    DWORD value=0;if (FAILED(device->GetTextureStageState(0,materialNames[i],&value))) { queryFailures|=4u<<i; }
+    if (i) { log << ','; }log << value;
+  }
+  log << "],\"material_query_failure_bits\":" << queryFailures << ",\"files\":[";
   bool comma=false;
   const auto write=[&](const char* suffix,const void* bytes,size_t size) {
     if (!save || !size) { return; }
@@ -310,20 +323,20 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
     auto& counts=modelCounts[size_t(comparison.phase())];++counts.attempts;
     const bool included=world_diagnostics::includeModel(comparison.models(),bulk_static::customModel(s));
     const auto frame=state().presents+1;
-    const bool imageFrame=frame==240 || frame==300 || frame==360;
-    if ((imageFrame && included) || frame==420) { modelState(device,s); }
+    const bool imageFrame=frame>=240 && frame<world_diagnostics::kCoveragePresents && world_diagnostics::readback(frame);
+    if ((imageFrame && included) || frame==world_diagnostics::kCoveragePresents) { modelState(device,s); }
     scene_input::Data sourceEvidence;
     const auto stage=unsigned(comparison.models());
-    const bool paired=imageFrame && modelSampleCounts[stage]<24 && !modelSampled.count({stage,s.material});
+    const bool paired=imageFrame && modelSampleCounts[stage]<world_diagnostics::kModelSampleLimit;
     auto prepared=[&] { if (included) { return model_input::prepare(device,s,kind,type,args,paired?&sourceEvidence:nullptr); }
       scene_input::Prepared disabled;disabled.reason="model_stage_excluded";return disabled; }();
     ++counts.reasons[prepared.reason];if (prepared.ready) { ++counts.ready; }
     const auto original=[&] { called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]);return physical; };
     if (prepared.ready) { result=bulk_static::execute(device,s,type,false,[&](bool converted) {
       if (!converted) { return original(); }
-      modelPayload(s,prepared,sourceEvidence,kind,type,args);called=true;const auto& a=prepared.drawArgs;
+      modelPayload(device,s,prepared,sourceEvidence,kind,type,args);called=true;const auto& a=prepared.drawArgs;
       physical=kind==1?device->DrawPrimitive(type,a[0],a[1]):device->DrawIndexedPrimitive(type,INT(int32_t(a[0])),a[1],a[2],a[3],a[4]);return physical;
-    },report,&prepared); }
+    },report,&prepared,world_diagnostics::matte(comparison.models())); }
     else {
       report.code=FAILED(prepared.result)?static_draw::Code::CaptureFailed:
         !std::strncmp(prepared.reason,"model_pipeline",14)?static_draw::Code::Pipeline:static_draw::Code::Layout;
@@ -409,7 +422,18 @@ void capture(IDirect3DDevice9* device, uint64_t frame) noexcept {
     for (size_t i = 0; i < lastProjection.size(); ++i) { if (i) { events << ','; } events << lastProjection[i]; }
     events << "]}\n" << std::flush;
     events << "{\"event\":\"model_stage_readback\",\"frame\":" << frame << ",\"model_stage\":\"" << world_diagnostics::name(comparison.models()) << "\"}\n" << std::flush;
-    const bool advanced = comparison.afterCapture(frame);
+    events << "{\"event\":\"model_path_readback\",\"frame\":" << frame
+      << ",\"preserve_requested\":" << (world_diagnostics::preserve(comparison.models())?"true":"false")
+      << ",\"neutral_material\":" << (world_diagnostics::matte(comparison.models())?"true":"false")
+      << ",\"directional_light_requested\":" << (world_diagnostics::directional(comparison.models())?"true":"false")
+      << ",\"submission_samples\":" << modelSampleCounts[unsigned(comparison.models())]
+      << ",\"submission_sample_omitted\":" << modelSampleOmitted[unsigned(comparison.models())] << "}\n" << std::flush;
+    const bool advanced = comparison.afterCapture(frame,[&](const char* key,const char* value) {
+      const auto code=api.SetConfigVariable(key,value);
+      events << "{\"event\":\"model_path_config_requested\",\"after_present\":" << frame << ",\"key\":\"" << key
+        << "\",\"value\":\"" << value << "\",\"code\":" << uint32_t(code) << "}\n" << std::flush;
+      return code==REMIXAPI_ERROR_CODE_SUCCESS;
+    });
     events << "{\"event\":\"coverage_phase_requested\",\"code\":" << (advanced ? 0 : uint32_t(E_FAIL))
       << ",\"after_present\":" << frame << ",\"phase\":\"" << world_diagnostics::name(comparison.phase()) << "\"}\n" << std::flush;
     if (!advanced) { (void)raytracing(false); state().active = false; }
@@ -422,7 +446,7 @@ HMODULE load(const draw_observe::Request& request) noexcept {
   try {
     state() = {};
     initialized = false; registered = nullptr; raytracingRequested = false; physicalDraws = 0;
-    comparison = {}; audited.clear(); auditCounts = {}; modelCounts={};modelSampled.clear();modelStateSampled.clear();modelPayloadBytes={};modelSampleCounts={};modelStateCounts={}; haveWorldCamera = false; lastView = {}; lastProjection = {};
+    comparison = {}; audited.clear(); auditCounts = {}; modelCounts={};modelPayloadBytes={};modelSampleCounts={};modelStateCounts={};modelSampleOmitted={}; haveWorldCamera = false; lastView = {}; lastProjection = {};
     launch = request;
     events.open(request.output / "world-runtime.jsonl", std::ios::binary);
     if (!events || !request.world || sizeof(void*) != 8) { return nullptr; }
@@ -454,8 +478,8 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy", 0, "v14_owned_verified_geometry_ordinary_neko_combined_recovery");
-    event("world_coverage_revision", 0, "14");
+    event("coverage_comparison_policy", 0, "v15_preserve_off_on_off_combined_matte_light_recovery");
+    event("world_coverage_revision", 0, "15");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw}; return module;

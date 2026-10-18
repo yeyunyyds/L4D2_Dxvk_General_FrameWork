@@ -109,6 +109,12 @@ class SceneEvidence(unittest.TestCase):
    for suffix,data in raw.items():
     name='model-10-'+suffix;(root/name).write_bytes(data);sample['files'].append(dict(file=name,size=len(data),sha256=hashlib.sha256(data).hexdigest()))
    errors=[];self.assertEqual(verify_model_payloads(root,[sample],errors),sum(map(len,raw.values())));self.assertEqual(errors,[])
+   newer=dict(sample,frame=240,model_stage='neko',preserve_requested=False,neutral_material=False,vertices_sha256=hashlib.sha256(raw['vertices.bin']).hexdigest(),indices_sha256=hashlib.sha256(raw['indices.bin']).hexdigest(),material_query_failure_bits=0,material_stage0=[2,2,2,2],material_texture_factor=0xffffffff)
+   errors=[];verify_model_payloads(root,[newer],errors,revision=15);self.assertEqual(errors,[])
+   newer['vertices_sha256']='0'*64;errors=[];verify_model_payloads(root,[newer],errors,revision=15);self.assertIn('model_submission_payload_digest_mismatch',errors)
+   newer.update(model_stage='combined_matte',frame=480,payload_omitted=True,files=[],neutral_material=True,material_stage0=[2,3,2,2],material_texture_factor=0xff808080)
+   errors=[];verify_model_payloads(root,[newer],errors,revision=15);self.assertEqual(errors,[])
+   newer['material_stage0']=[2,2,2,2];errors=[];verify_model_payloads(root,[newer],errors,revision=15);self.assertIn('model_material_binding_mismatch',errors)
    sample['binding_verified']=False;errors=[];verify_model_payloads(root,[sample],errors);self.assertIn('unverified_model_submission',errors)
    sample['binding_verified']=True;bad=struct.pack('<3H',0,1,3);(root/'model-10-indices.bin').write_bytes(bad);sample['files'][1]['sha256']=hashlib.sha256(bad).hexdigest()
    errors=[];verify_model_payloads(root,[sample],errors);self.assertIn('compact_model_index_outside_vertices',errors)
@@ -121,6 +127,16 @@ class SceneEvidence(unittest.TestCase):
     if e.get('event')=='sky_rebuild_counts' and e['frame']==240:e['frame']=420
    phases=('raster','baseline_world','expanded_sky')+('expanded_models',)*4
    events.extend(dict(event='model_rebuild_counts',frame=f,phase=p,attempts=0,ready=0,reconstructed=0,fallback=0,reasons={}) for f,p in zip((30,120,180,240,300,360,420),phases))
+   report=self.inspect(root,events);self.assertTrue(report['pass'],report['errors'])
+   events.pop();self.assertIn('missing_model_rebuild_summaries',self.inspect(root,events)['errors'])
+
+ def test_v15_stage_summaries_require_complete_600_and_keep_source_budget(self):
+  with tempfile.TemporaryDirectory() as temporary:
+   root=Path(temporary);events=self.fixture(root);events[0]['value']='15';events[1]['morph_position']={'hresult':1,'vertices':0}
+   for e in events:
+    if e.get('event')=='sky_rebuild_counts' and e['frame']==240:e['frame']=600
+   phases=('raster','baseline_world','expanded_sky')+('expanded_models',)*7
+   events.extend(dict(event='model_rebuild_counts',frame=f,phase=p,attempts=0,ready=0,reconstructed=0,fallback=0,reasons={}) for f,p in zip((30,120,180,240,300,360,420,480,540,600),phases))
    report=self.inspect(root,events);self.assertTrue(report['pass'],report['errors'])
    events.pop();self.assertIn('missing_model_rebuild_summaries',self.inspect(root,events)['errors'])
 

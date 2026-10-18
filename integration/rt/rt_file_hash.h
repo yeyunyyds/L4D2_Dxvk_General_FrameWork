@@ -7,8 +7,8 @@
 #include <vector>
 namespace ldb_rt_file {
 namespace fs = std::filesystem;
-inline std::string bytesSha256(const void* data,size_t size) {
-  if (!data || !size || size>65536) { return {}; }
+inline std::string bytesSha256(const void* data,size_t size,size_t limit=65536) {
+  if (!data || !size || size>limit) { return {}; }
   BCRYPT_ALG_HANDLE algorithm=nullptr;BCRYPT_HASH_HANDLE hash=nullptr;
   struct Cleanup { BCRYPT_ALG_HANDLE& a;BCRYPT_HASH_HANDLE& h;~Cleanup() { if (h) { BCryptDestroyHash(h); }if (a) { BCryptCloseAlgorithmProvider(a,0); } } } cleanup{algorithm,hash};
   if (BCryptOpenAlgorithmProvider(&algorithm,BCRYPT_SHA256_ALGORITHM,nullptr,0)<0) { return {}; }
@@ -20,6 +20,10 @@ inline std::string bytesSha256(const void* data,size_t size) {
   unsigned char bytes[32]{};if (BCryptFinishHash(hash,bytes,sizeof(bytes),0)<0) { return {}; }
   static const char hex[]="0123456789abcdef";std::string result;
   for (auto c:bytes) { result+=hex[c>>4];result+=hex[c&15]; }return result;
+}
+// Geometry uses the audited 32K-vertex/128K-index budgets, unlike shader bytecode.
+inline std::string geometrySha256(const void* data,size_t size) {
+  return size?bytesSha256(data,size,4u*1024*1024):"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 }
 inline std::string fileSha256(const fs::path& path) {
   BCRYPT_ALG_HANDLE algorithm = nullptr; BCRYPT_HASH_HANDLE hash = nullptr;

@@ -66,7 +66,8 @@ def analyze(directory,previews=True):
         if len(on)!=1 or not off or off[-1]<=on[0]:errors.append('missing_gated_rt_on_off_sequence')
     comparison=any(e.get('event')=='lighting_comparison_policy' for e in events)
     coverage=any(e.get('event')=='coverage_comparison_policy' for e in events)
-    v14=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='14' for e in events)
+    v15=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='15' for e in events)
+    v14=v15 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='14' for e in events)
     v13=v14 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='13' for e in events)
     v12=v13 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='12' for e in events)
     v11=v12 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='11' for e in events)
@@ -76,12 +77,12 @@ def analyze(directory,previews=True):
     v9=v10 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='9' for e in events)
     v8=v9 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='8' for e in events)
     v7=v8 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='7' for e in events)
-    frames=(30,120,180,240,300,360,420) if v14 else (30,120,180,240) if comparison or coverage else (30,120,240)
+    frames=(30,120,180,240,300,360,420,480,540,600) if v15 else (30,120,180,240,300,360,420) if v14 else (30,120,180,240) if comparison or coverage else (30,120,240)
     phase_names={30:'raster',120:'baseline_sphere',180:'strong_sphere',240:'distant'}
     if coverage:
         phase_names={30:'raster',120:'baseline_world',180:'expanded_world',240:'expanded_world'}
         if v8:phase_names={30:'raster',120:'baseline_world',180:'expanded_sky',240:'expanded_models'}
-        if v14:phase_names.update({300:'expanded_models',360:'expanded_models',420:'expanded_models'})
+        if v14:phase_names.update({f:'expanded_models' for f in frames if f>240})
         requested=[(e.get('after_present'),e.get('phase'),e.get('code')) for e in events if e.get('event')=='coverage_phase_requested']
         wanted=[(30,'baseline_world',0),(120,'expanded_sky',0),(180,'expanded_models',0),(240,'expanded_models',0)] if v8 else [(30,'baseline_world',0),(120,'expanded_world',0),(180,'expanded_world',0),(240,'expanded_world',0)]
         if v14:wanted=[(f,phase_names.get(f+60,'expanded_models') if f>=120 else 'baseline_world',0) for f in frames]
@@ -183,13 +184,27 @@ def analyze(directory,previews=True):
     if v7 and (not coverage or not all(hud_phases.values()) or any(e.get('phase') not in hud_phases for e in hud)):
         errors.append('missing_baseline_or_expanded_hud_injection')
     model_stages=[e for e in events if e.get('event')=='model_stage_readback']
-    if v14 and [(e.get('frame'),e.get('model_stage')) for e in model_stages]!=list(zip(frames,('off','off','off','ordinary','neko','combined','recovery'))):errors.append('incomplete_model_stage_readbacks')
+    expected_stages=('off','off','off','neko','neko_preserve','neko_recheck','combined','combined_matte','combined_directional','recovery') if v15 else ('off','off','off','ordinary','neko','combined','recovery')
+    if v14 and [(e.get('frame'),e.get('model_stage')) for e in model_stages]!=list(zip(frames,expected_stages)):errors.append('incomplete_model_stage_readbacks')
+    model_paths=[e for e in events if e.get('event')=='model_path_readback']
+    if v15:
+        wanted_paths=[(f,f==300,f==480,f==540) for f in frames]
+        if [(e.get('frame'),e.get('preserve_requested'),e.get('neutral_material'),e.get('directional_light_requested')) for e in model_paths]!=wanted_paths:errors.append('incomplete_model_path_readbacks')
+        requested=[(e.get('after_present'),e.get('key'),e.get('value'),e.get('code')) for e in events if e.get('event')=='model_path_config_requested']
+        wanted=[]
+        for f in frames[:-1]:
+            wanted.extend([(f,'rtx.enablePreservePath','True' if f==240 else 'False',0),
+                           (f,'rtx.fallbackLightType','0' if f==480 else '1',0),
+                           (f,'rtx.fallbackLightRadiance','3,3,3' if f==480 else '3000,3000,3000',0)])
+        if requested!=wanted:errors.append('incomplete_or_failed_model_path_requests')
+        if not any(e.get('event')=='rtx.enablePreservePath' and e.get('code')==0 and e.get('value')=='False' for e in events):errors.append('missing_startup_preserve_disable')
+        if any(not isinstance(e.get('submission_samples'),int) or not 0<=e['submission_samples']<=64 or e.get('submission_sample_omitted',0)<0 for e in model_paths):errors.append('invalid_model_path_sample_counts')
     return {'schema':2,'scope':'reduced_runtime_output_readback_not_full_game_rt_or_performance_acceptance',
             'runtime_outputs':'pass' if not errors else 'incomplete','errors':errors,'samples':samples,
             'startup_raster_gate':'requested_events_present_not_effective_state_proof' if gated else 'legacy_ungated',
             'rt_activation_requests':sum(e.get('event')=='raytracing_requested_on' and e.get('code')==0 for e in events),
             'nonzero_world_depth_and_normals':nonzero,
-            'coverage_comparison':{'present':coverage,**({'model_stage_readbacks':model_stages} if v14 else {}),'revision':14 if v14 else 13 if v13 else 12 if v12 else 11 if v11 else 10 if v10 else 9 if v9 else 8 if v8 else 7 if v7 else 6 if coverage else None,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'hud_phase_counts':hud_phases,'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; full characters/weapons image acceptance pending'},
+            'coverage_comparison':{'present':coverage,**({'model_stage_readbacks':model_stages} if v14 else {}),**({'model_path_readbacks':model_paths,'model_path_config_scope':'successful queued requests, effective GPU options require image review'} if v15 else {}),'revision':15 if v15 else 14 if v14 else 13 if v13 else 12 if v12 else 11 if v11 else 10 if v10 else 9 if v9 else 8 if v8 else 7 if v7 else 6 if coverage else None,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'hud_phase_counts':hud_phases,'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; full characters/weapons image acceptance pending'},
             'lighting_comparison':{'present':comparison,'status':'requests_complete_requires_image_review' if comparison and not errors else 'incomplete' if comparison else 'not_requested',
                 'phases':phase_names if comparison else {},'camera_comparisons':movement,
                 'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),

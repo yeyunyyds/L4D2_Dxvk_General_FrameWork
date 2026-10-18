@@ -135,7 +135,10 @@ if __name__ == '__main__':
         if (queue_log.exists() and all(queue_log.read_text(errors='replace').count(marker)==2 for marker in (
                 'RT compact owned 16/32-bit indices/signed-base/offset correspondence: PASS',
                 'RT owned VB/IB upload readback/binding/fault rollback/system NULLREF: PASS',
-                'RT model stencil/clip/color/depth special-pass rejection/system NULLREF: PASS'))):
+                'RT model stencil/clip/color/depth special-pass rejection/system NULLREF: PASS',
+                'RT neutral model color/original texture alpha/owned IB/fault rollback/system NULLREF: PASS',
+                'RT full geometry hash beyond shader cap/empty index: PASS',
+                'RT model preserve OFF/ON/OFF/material/light/recovery/partial-failure: PASS'))):
             status['world_owned_geometry_development_execution']='pass'
         if (sdk_receipt.exists() and (source / 'checks-x86/source-queue.exe').exists() and queue_log.exists()
                 and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace')):

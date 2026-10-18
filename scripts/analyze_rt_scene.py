@@ -44,7 +44,8 @@ def analyze(directory):
     if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
     if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
     events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-    v14=any(e.get('event')=='world_coverage_revision' and e.get('value')=='14' for e in events)
+    v15=any(e.get('event')=='world_coverage_revision' and e.get('value')=='15' for e in events)
+    v14=v15 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='14' for e in events)
     v13=v14 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='13' for e in events)
     v12=v13 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='12' for e in events)
     v11=v12 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='11' for e in events)
@@ -112,7 +113,7 @@ def analyze(directory):
             if sample['constants_hresult']==0 and len(payload.get('constants.bin',b''))!=4096:raise ValueError('missing_shader_constants')
             reviews.append(review)
         except (ValueError,KeyError,TypeError,struct.error,OSError) as e:errors.append(str(e))
-    summary_frames=(30,120,180,420) if v14 else (30,120,180,240)
+    summary_frames=(30,120,180,600) if v15 else (30,120,180,420) if v14 else (30,120,180,240)
     if requested:
         if not samples:errors.append('missing_scene_input_samples')
         if [(e.get('frame'),e.get('phase')) for e in summaries]!=list(zip(summary_frames,PHASES)):errors.append('missing_scene_rebuild_summaries')
@@ -138,19 +139,19 @@ def analyze(directory):
     models=[e for e in events if e.get('event')=='model_rebuild_counts']
     model_samples=[e for e in events if e.get('event')=='model_rebuild_sample']
     if v11:
-        if [(e.get('frame'),e.get('phase')) for e in models]!=(list(zip((30,120,180,240,300,360,420),PHASES[:3]+('expanded_models',)*4)) if v14 else list(zip(summary_frames,PHASES))):errors.append('missing_model_rebuild_summaries')
+        if [(e.get('frame'),e.get('phase')) for e in models]!=(list(zip((30,120,180,240,300,360,420,480,540,600),PHASES[:3]+('expanded_models',)*7)) if v15 else list(zip((30,120,180,240,300,360,420),PHASES[:3]+('expanded_models',)*4)) if v14 else list(zip(summary_frames,PHASES))):errors.append('missing_model_rebuild_summaries')
         for e in models:
             keys=('attempts','ready','reconstructed','fallback')
             if not all(isinstance(e.get(k),int) and e[k]>=0 for k in keys):errors.append('invalid_model_rebuild_counts');continue
             if e['frame']<240 and e['attempts']:errors.append('premature_model_reconstruction')
             if e['attempts']!=e['reconstructed']+e['fallback'] or not e['reconstructed']<=e['ready']<=e['attempts'] or sum(e.get('reasons',{}).values())!=e['attempts']:errors.append('inconsistent_model_rebuild_counts')
-        if len(model_samples)>(72 if v14 else 64 if v13 else 32) or len({e.get('ordinal') for e in model_samples})!=len(model_samples):errors.append('model_sample_identity_or_budget')
+        if len(model_samples)>(384 if v15 else 72 if v14 else 64 if v13 else 32) or len({e.get('ordinal') for e in model_samples})!=len(model_samples):errors.append('model_sample_identity_or_budget')
         for e in model_samples:
             if e.get('phase')!='expanded_models' or e.get('reason') not in (('original_vs_model_matrix','original_vs_rigid_bone_zero','original_vs_three_weight','original_vs_neko_three_weight') if v13 else ('original_vs_model_matrix','original_vs_rigid_bone_zero')) or e.get('rebuilt_stride')!=32 or not 0<e.get('rebuilt_vertex_bytes',0)<=(32768 if v13 else 16384 if v12 else 4096)*32:errors.append('invalid_model_rebuild_sample')
             matrix=e.get('applied_world',[])
             if len(matrix)!=16 or not all(isinstance(v,(float,int)) and math.isfinite(v) for v in matrix):errors.append('invalid_model_rebuild_world')
         if models and models[-1].get('reconstructed',0)>0 and not model_samples:errors.append('missing_model_rebuild_samples')
-    model_payload_bytes=verify_model_payloads(directory,model_samples,errors) if v14 else 0
+    model_payload_bytes=verify_model_payloads(directory,model_samples,errors,revision=15 if v15 else 14) if v14 else 0
     final=summaries[-1] if summaries else {}
     rebuilt=final.get('reconstructed',0);attempts=final.get('attempts',0)
     return {'schema':1,'status':'valid_evidence_requires_review' if requested and not errors else 'incomplete' if requested else 'not_requested',
@@ -161,13 +162,16 @@ def analyze(directory):
             'limits':'verified input files and bounded raw position projection; shader replay API success is not image acceptance, per-object visibility or Source threading evidence'}
 
 
-def verify_model_payloads(directory,samples,errors):
+def verify_model_payloads(directory,samples,errors,revision=14):
     used=0;files=set();stage_bytes=Counter()
+    stage_counts=Counter()
+    frames={'neko':240,'neko_preserve':300,'neko_recheck':360,'combined':420,'combined_matte':480,'combined_directional':540} if revision==15 else {'ordinary':240,'neko':300,'combined':360}
     for e in samples:
         try:
-            stage=e['model_stage']
-            if stage not in ('ordinary','neko','combined') or any(e.get(k) is not True for k in ('upload_verified','binding_verified','owned_draw')):raise ValueError('unverified_model_submission')
-            if e.get('frame')!={'ordinary':240,'neko':300,'combined':360}[stage]:raise ValueError('model_submission_readback_frame_mismatch')
+            stage=e['model_stage'];stage_counts[stage]+=1
+            if stage_counts[stage]>(64 if revision==15 else 24):raise ValueError('model_stage_sample_budget')
+            if stage not in frames or any(e.get(k) is not True for k in ('upload_verified','binding_verified','owned_draw')):raise ValueError('unverified_model_submission')
+            if e.get('frame')!=frames[stage]:raise ValueError('model_submission_readback_frame_mismatch')
             payload={}
             for item in e['files']:
                 name=item['file'];path=directory/name
@@ -177,7 +181,15 @@ def verify_model_payloads(directory,samples,errors):
                 raw=path.read_bytes();used+=len(raw);stage_bytes[stage]+=len(raw)
                 if hashlib.sha256(raw).hexdigest()!=item['sha256']:raise ValueError('model_payload_hash_mismatch')
                 payload[name.split(str(e['ordinal'])+'-',1)[1]]=raw
-            if stage_bytes[stage]>(2 if stage=='neko' else 1)*1024*1024:raise ValueError('model_payload_budget_exceeded')
+            limit=(16 if stage=='combined' else 12 if stage in ('neko','neko_preserve','neko_recheck') else 0) if revision==15 else (2 if stage=='neko' else 1)
+            if stage_bytes[stage]>limit*1024*1024:raise ValueError('model_payload_budget_exceeded')
+            if revision==15:
+                if e.get('preserve_requested')!=(stage=='neko_preserve') or e.get('neutral_material')!=(stage=='combined_matte'):raise ValueError('model_submission_policy_mismatch')
+                if any(not isinstance(e.get(k),str) or len(e[k])!=64 or any(c not in '0123456789abcdef' for c in e[k]) for k in ('vertices_sha256','indices_sha256')):raise ValueError('missing_model_submission_hash')
+                if e.get('material_query_failure_bits')!=0 or e.get('material_stage0')!=[2,3 if stage=='combined_matte' else 2,2,2]:raise ValueError('model_material_binding_mismatch')
+                if stage=='combined_matte' and e.get('material_texture_factor')!=0xff808080:raise ValueError('model_neutral_factor_mismatch')
+                for suffix,key in [('vertices.bin','vertices_sha256'),('indices.bin','indices_sha256')]:
+                    if suffix in payload and hashlib.sha256(payload[suffix]).hexdigest()!=e[key]:raise ValueError('model_submission_payload_digest_mismatch')
             if e.get('payload_omitted') is True:
                 if payload:raise ValueError('omitted_model_payload_present')
                 continue
