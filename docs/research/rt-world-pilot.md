@@ -2,13 +2,15 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/9855ee856210ebc53de8b0d21f4d32acc14af9b9/downloads/rt-world-pilot-dev.zip)。当前为 [v13 模型相机、三权重骨骼与 NekoToon/morph 合并覆盖](rt-world-v13-skinning.md)，构建 `18cdf6eacf68a6cd96fd512df119030b7aa92fed`，身份 `ldb-rt-observer+3f514b2619cb03ad`，包大小 11,945,511 字节，SHA256 `0dfb76f50f95f40b19c65380b3adff911066eabb8cac6f12cec0003431779379`。[交付核验](../../research/rt-world-pilot-v13-validation.json) 已确认固定发布树、全部成员、配套 x86/x64 PE 与源码收据一致；双架构新增及既有原生检查、固定运行时/API 与依赖加载、产品入口验证通过。
+已发布 [v14 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/bd736ea9f9a96970bd3f9d1a9ba69efe0ec79a8d/downloads/rt-world-pilot-dev.zip)，方案见 [模型独立提交与分组恢复对照](rt-world-v14-submission.md)。构建 `d1ed8a0e23bd117b1b90612693f6c2aa517bf51c`，身份 `ldb-rt-observer+ca9009cca3123af0`，包大小 11,954,685 字节，SHA256 `26eb3d601e464c5ebd254aed2dff59a3f0fddfad9e589bbddcfe94930fdf21fd`。[交付核验](../../research/rt-world-pilot-v14-validation.json) 已检查固定发布树、全部成员、配套 x86/x64 PE、源码收据与原生执行证据。
 
-**[v13 实机复核](rt-world-133627-result.md) 已发现最终模型扩展阶段大面积白屏、人物轮廓未正常恢复，本版画面验收失败。** 采集、完整morph和原shader位置/UV独立回放通过，后续应先验证实际缓冲提交、状态与后端场景处理，不必原样重测本包。当前下载保留供复核，不能作为已通过的扩展模型看图版。
+最近的 [v13 实机结果](rt-world-133627-result.md) 在模型扩展阶段出现白屏和缺失的人物轮廓，**画面验收失败**。v14 已修改提交路径，仍待 B580 实测，不能预先宣称白屏或人物覆盖已修复。
 
-最后阶段合并修正模型相机精度误拒绝，支持已审核完整程序的三权重调色板、Neko 位置/UV 与必要的完整 morph POSITION1，只用首层贴图作为模型诊断材质。模型范围为32768个绝对顶点/131072个索引，PS常量采样为224个float4；最终阶段12MiB、分家族预算继续记录遗漏。未知程序、混合或不写深度的模型继续拒绝，不强制忽略 morph。仍为一个入口、一次F9、一个最终ZIP。
+本版模型使用独立、可读、紧凑的 VB/IB，重映射原索引并核对上传内容与实际绑定；特殊 stencil/clip/颜色/深度通道保留原绘制。请求固定 Remix 后端复制几何到 staging，保留原有 Source 线程设置；曝光和诊断灯不变。三权重、Neko、完整 morph、主相机证明及既有其他静态家族保留。
 
-[离线回归](../../research/rt-world-v13-input-regression.json) 已通过八轮实际747,346 Draw兼容检查；当前126份相关完整主输入中118份CPU可重建，8份缺完整morph而明确拒绝。独立执行原VS位置/UV字节码，与生产重建的94份模型、171,423个顶点比较，UV完全一致，640×400下最大投影差约0.0033像素。本地101项检查99通过、2项需Windows而跳过；Windows x86/x64已执行新相机/骨骼/morph、PS224和Neko状态恢复检查。这些证据不替代本版B580实际人物/道具、材质和遮挡验收，完整地图、原照明/PBR、Source并行与性能继续未验收。
+仍为一个入口、一次 F9、一个最终 ZIP。自动取图为30光栅、120世界、180修正天空、240普通模型、300 Neko、360合并、420撤去模型。取图帧的同一 Draw 配对保存原始输入与重建缓冲，另存状态与哈希；预算遗漏明确记录。只需运行 `run-test.cmd`、进图按一次 F9 并保持镜头不动，结束后按提示退出，上传最终 ZIP。完整 Toon/PBR/地图照明、全地图与全部人物武器、Source 并行和生产性能继续未验收。
+
+Windows x86/x64 新增上传只读核验、IB绑定/索引对应、逐点故障回滚、特殊通道筛选与 Present 关联检查已通过；固定运行时/API、产品入口及依赖加载验证通过。[离线回归](../../research/rt-world-v14-input-regression.json) 覆盖九份实际采集、836,955 Draw，最新 v13 的137份相关输入有135份通过CPU重建，另2份未知程序原本被运行时通道筛选拒绝。上述检查不替代本版实际颜色、深度、法线与遮挡验收。
 
 [v12 一次 F9 的 B580 实机复核](rt-world-004208-result.md) 已确认 240 Present、81,346 Draw 完整，最终天空 360 次重建全部成功，云层映射与光栅对照相符。扩大采样保存 244 份输入，其中 52 份 NekoToon 主几何完整；模型仍仅每帧七次 Draw 成功，人物缺失。现有输入已定位四组模型相机精度误拒绝，以及共同 Neko VS 的三权重骨骼/morph 需求，可合并下一版功能，无需先重复收集。完整模型、材质/照明、Source 并行和性能继续未验收。
 

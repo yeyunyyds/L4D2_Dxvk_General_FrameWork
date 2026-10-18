@@ -13,3 +13,11 @@
 原始输入仍按四个大阶段及独立家族预算采样，最后在420汇总。额外提交样本对齐到240/300/360取图前的Draw，以Present编号关联，同次Draw同时保存原始输入和重建结果；这不是GPU fence时间戳证明。普通/Neko/合并分别最多24个材质，同一 Draw 原始输入与完整重建载荷预算1/2/1 MiB，哈希和遗漏明确记录。设备状态样本也按子阶段限额。420 trace上限256 MiB，结果打包上限384 MiB，以免新增恢复对照被旧的240帧预算截断。
 
 原生检查覆盖实际 NULLREF 上的自有 IB 绑定/恢复、每个 getter/setter故障、上传只读校验的失败锁/null/错字节/失败Unlock、特殊通道拒绝，以及大共享 VB 的 signed base/offset/start 与16/32位局部索引对应。发布要求两架构新检查各成功一次并校验配套二进制源码身份。Linux 交叉编译不能替代这些 Windows 执行检查，Windows NULLREF 也不能替代 B580 画面验收。
+
+## 交付核验
+
+最终构建 `d1ed8a0e23bd117b1b90612693f6c2aa517bf51c`，身份 `ldb-rt-observer+ca9009cca3123af0`。下载：[ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/bd736ea9f9a96970bd3f9d1a9ba69efe0ec79a8d/downloads/rt-world-pilot-dev.zip)。大小 11,954,685 字节；SHA256 `26eb3d601e464c5ebd254aed2dff59a3f0fddfad9e589bbddcfe94930fdf21fd`。
+
+[独立发布核验](../../research/rt-world-pilot-v14-validation.json) 已验证归档CRC、所有成员哈希、配套架构、二进制编译身份、全部源码收据、发布/构建状态同一提交、内置脚本/配置/README与源码一致、双架构原生测试标记与系统NULLREF、固定运行时/API正负加载检查、原生trace的420 Present与世界状态恢复。发布分支仍只包含ZIP。
+
+[历史输入兼容检查](../../research/rt-world-v14-input-regression.json) 的九份采集共836,955 Draw全部通过结构/读回/原始输入检查；最新v13保存报告经JSON统一后与重新计算一致。位置/UV数学头文件未改变，最新137份相关主输入CPU回放135份有效，2份未知程序对应运行时已拒绝的特殊混合通道。v14 B580实际画面、Source准备并行与性能均为unrun。
