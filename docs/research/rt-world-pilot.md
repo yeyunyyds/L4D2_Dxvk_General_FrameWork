@@ -4,6 +4,8 @@
 
 已发布 [rt-world-pilot-dev.zip 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/9855ee856210ebc53de8b0d21f4d32acc14af9b9/downloads/rt-world-pilot-dev.zip)。当前为 [v13 模型相机、三权重骨骼与 NekoToon/morph 合并覆盖](rt-world-v13-skinning.md)，构建 `18cdf6eacf68a6cd96fd512df119030b7aa92fed`，身份 `ldb-rt-observer+3f514b2619cb03ad`，包大小 11,945,511 字节，SHA256 `0dfb76f50f95f40b19c65380b3adff911066eabb8cac6f12cec0003431779379`。[交付核验](../../research/rt-world-pilot-v13-validation.json) 已确认固定发布树、全部成员、配套 x86/x64 PE 与源码收据一致；双架构新增及既有原生检查、固定运行时/API 与依赖加载、产品入口验证通过。
 
+**[v13 实机复核](rt-world-133627-result.md) 已发现最终模型扩展阶段大面积白屏、人物轮廓未正常恢复，本版画面验收失败。** 采集、完整morph和原shader位置/UV独立回放通过，后续应先验证实际缓冲提交、状态与后端场景处理，不必原样重测本包。当前下载保留供复核，不能作为已通过的扩展模型看图版。
+
 最后阶段合并修正模型相机精度误拒绝，支持已审核完整程序的三权重调色板、Neko 位置/UV 与必要的完整 morph POSITION1，只用首层贴图作为模型诊断材质。模型范围为32768个绝对顶点/131072个索引，PS常量采样为224个float4；最终阶段12MiB、分家族预算继续记录遗漏。未知程序、混合或不写深度的模型继续拒绝，不强制忽略 morph。仍为一个入口、一次F9、一个最终ZIP。
 
 [离线回归](../../research/rt-world-v13-input-regression.json) 已通过八轮实际747,346 Draw兼容检查；当前126份相关完整主输入中118份CPU可重建，8份缺完整morph而明确拒绝。独立执行原VS位置/UV字节码，与生产重建的94份模型、171,423个顶点比较，UV完全一致，640×400下最大投影差约0.0033像素。本地101项检查99通过、2项需Windows而跳过；Windows x86/x64已执行新相机/骨骼/morph、PS224和Neko状态恢复检查。这些证据不替代本版B580实际人物/道具、材质和遮挡验收，完整地图、原照明/PBR、Source并行与性能继续未验收。
