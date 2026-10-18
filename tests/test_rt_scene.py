@@ -63,7 +63,9 @@ class SceneEvidence(unittest.TestCase):
    raw=struct.pack('<3f',1,2,-10)*8952;path=root/'scene-12-vertices.bin';path.write_bytes(raw);sample['files'][0].update(size=len(raw),sha256=hashlib.sha256(raw).hexdigest())
    self.assertTrue(self.inspect(root,events)['pass'])
    events[0]['value']='11';self.assertFalse(self.inspect(root,events)['pass'])
-   events[0]['value']='12';sample['shader']='NekoToon';self.assertFalse(self.inspect(root,events)['pass'])
+   events[0]['value']='12';sample['shader']='NekoToon';self.assertTrue(self.inspect(root,events)['pass'])
+   sample['shader']='UnlitGeneric';self.assertFalse(self.inspect(root,events)['pass'])
+   sample['shader']='NekoToon'
    sample['vertex_count']=3;sample['args']=[0,1,0,0,0,0];raw=raw[:36];path.write_bytes(raw);sample['files'][0].update(size=len(raw),sha256=hashlib.sha256(raw).hexdigest())
    self.assertTrue(self.inspect(root,events)['pass'])
  def test_old_capture_does_not_require_new_samples(self):

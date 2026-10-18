@@ -164,7 +164,7 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     const std::array<uint64_t,4> key{{uint64_t(phase),s.material,s.materialTable,s.materialInfo.format}};
     if (sceneFamilyCounts[index][group]>=limits[group] || !sceneSampled.insert(key).second) { return; }
     ++sceneFamilyCounts[index][group];++sceneSampleCounts[index];
-    auto input=scene_input::capture(device,kind,type,args,true,group==1?scene_input::kModelLimits:scene_input::Limits{});
+    auto input=scene_input::capture(device,kind,type,args,true,group==1?scene_input::kModelLimits:group==3?scene_input::kAuditLimits:scene_input::Limits{});
     const char* replay=group==3?"audit_only_unknown_program":"not_sky";
     if (sky) {
       auto warmed=scene_input::prepare(device,s,input);replay=warmed.reason;

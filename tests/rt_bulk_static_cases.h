@@ -47,9 +47,9 @@ inline void modelGeometryBounds(IDirect3DDevice9* d) {
   ok(d->GetStreamSource(0,&oldVB.value,&oldOffset,&oldStride));ok(d->GetIndices(&oldIB.value));ok(d->GetVertexDeclaration(&oldDecl.value));
   const D3DVERTEXELEMENT9 elements[]={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,16,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
   ok(d->CreateVertexDeclaration(elements,&decl.value));ok(d->SetVertexDeclaration(decl.value));
-  constexpr UINT vertices=8951,indices=8979*3,offset=16,start=7;
-  std::vector<uint8_t> source(offset+vertices*32,0x5a);
-  for (UINT i=0;i<vertices;++i) { const float p[]={float(i%3),1,-10};const float uv[]={.2f,.3f};std::memcpy(source.data()+offset+i*32,p,12);std::memcpy(source.data()+offset+i*32+16,uv,8); }
+  constexpr UINT vertices=8951,sourceVertices=15189,indices=8979*3,offset=16,start=7;
+  std::vector<uint8_t> source(offset+sourceVertices*32,0x5a);
+  for (UINT i=0;i<sourceVertices;++i) { const float p[]={float(i%3),1,-10};const float uv[]={.2f,.3f};std::memcpy(source.data()+offset+i*32,p,12);std::memcpy(source.data()+offset+i*32+16,uv,8); }
   ok(d->CreateVertexBuffer(UINT(source.size()),0,0,D3DPOOL_MANAGED,&vb.value,nullptr));void* memory=nullptr;
   ok(vb.value->Lock(0,UINT(source.size()),&memory,0));check(memory!=nullptr,"large VB null");std::memcpy(memory,source.data(),source.size());ok(vb.value->Unlock());
   std::vector<uint16_t> sourceIndices(start+indices,0x5555);
@@ -70,6 +70,18 @@ inline void modelGeometryBounds(IDirect3DDevice9* d) {
   check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,invalid,rejected,scene_input::kModelLimits)),"negative absolute vertex accepted");
   ok(vb.value->Lock(0,UINT(source.size()),&memory,D3DLOCK_READONLY));check(memory && !std::memcmp(memory,source.data(),source.size()),"capture modified original VB");ok(vb.value->Unlock());
   ok(ib.value->Lock(0,UINT(sourceIndices.size()*2),&memory,D3DLOCK_READONLY));check(memory && !std::memcmp(memory,sourceIndices.data(),sourceIndices.size()*2),"capture modified original IB");ok(ib.value->Unlock());
+  // Actual NekoToon shape exceeds the model index cap. Audit captures it
+  // independently without enabling conversion of this unknown shader.
+  constexpr UINT customTriangles=27456;std::vector<uint16_t> auditIndices(start+customTriangles*3);
+  for (size_t i=start;i<auditIndices.size();++i) { auditIndices[i]=uint16_t(100+(i-start)%sourceVertices); }
+  static_draw::Ref<IDirect3DIndexBuffer9> auditIB;
+  ok(d->CreateIndexBuffer(UINT(auditIndices.size()*2),0,D3DFMT_INDEX16,D3DPOOL_MANAGED,&auditIB.value,nullptr));
+  ok(auditIB.value->Lock(0,UINT(auditIndices.size()*2),&memory,0));check(memory!=nullptr,"audit IB null");std::memcpy(memory,auditIndices.data(),auditIndices.size()*2);ok(auditIB.value->Unlock());ok(d->SetIndices(auditIB.value));
+  const std::array<uint32_t,6> customArgs{{uint32_t(-100),100,sourceVertices,start,customTriangles,0}};scene_input::Data custom;
+  check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,customArgs,custom,scene_input::kModelLimits)),"custom audit changed conversion cap");
+  ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,customArgs,custom,scene_input::kAuditLimits));
+  check(custom.count==sourceVertices && custom.indices.size()==customTriangles*6 && !std::memcmp(custom.vertices.data(),source.data()+offset,custom.vertices.size()),"large custom material audit incomplete");
+  std::cout << "RT custom shader audit large geometry independent cap/system NULLREF: PASS\n";
   ok(d->SetStreamSource(0,oldVB.value,oldOffset,oldStride));ok(d->SetIndices(oldIB.value));ok(d->SetVertexDeclaration(oldDecl.value));
   std::cout << "RT larger model signed-base/index-window/read-only/caps/system NULLREF: PASS\n";
 }

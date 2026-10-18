@@ -97,7 +97,7 @@ def package(source,output,python_package):
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
               'model_rebuild':'audited_full_vs_sha256_c58_c60_c48_c49_rigid_or_verified_bone0',
               'sky_rebuilt_stride':140,'model_geometry_max_vertices':16384,'model_geometry_max_indices':65536,
-              'bulk_static_stride_max':128,'scene_input_family_limits':[6,12,10,6], 'audit_only_families':['NekoToon'],
+              'bulk_static_stride_max':128,'scene_input_family_limits':[6,12,10,6], 'audit_only_families':['NekoToon'],'custom_audit_max_vertices':16384,'custom_audit_max_indices':131072,
               'sky_category_contract':{'render_state':42,'sky_bit':4,'unused':0xfefefefe},
               'draw_trace_version':9,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
               'material_samples_per_phase_limit':64,

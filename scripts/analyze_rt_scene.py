@@ -78,13 +78,13 @@ def analyze(directory):
             review['shader_bytecode']={k:instructions(v) for k,v in payload.items() if k in ('vs.bin','ps.bin')}
             if sample['geometry_hresult']==0:
                 count=sample['vertex_count'];first=sample['first_absolute_vertex'];stride=sample['stride'];kind=sample['kind'];args=sample['args']
-                max_vertices=16384 if v12 and sample['shader']=='VertexLitGeneric' else 4096
+                max_vertices=16384 if v12 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 4096
                 if not 0<count<=max_vertices or not 0<=first or first+count>max_vertices or not 1<=stride<=stride_limit or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
                 decl=payload.get('declaration.bin',b'')
                 if len(decl)%8 or len(decl)>520 or decl[-8:]!=bytes.fromhex('ff00000011000000'):raise ValueError('invalid_scene_declaration')
                 if kind==2:
                     width=sample['index_bytes'];n=args[4]*3 if sample['topology']==4 else args[4]+2
-                    if width not in (2,4) or n>(65536 if v12 and sample['shader']=='VertexLitGeneric' else 16384) or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
+                    if width not in (2,4) or n>(131072 if v12 and sample['shader']=='NekoToon' else 65536 if v12 and sample['shader']=='VertexLitGeneric' else 16384) or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
                     indices=struct.unpack('<'+('H' if width==2 else 'I')*n,payload['indices.bin'])
                     signed=args[0] if args[0]<2**31 else args[0]-2**32
                     if first!=signed+args[1] or count!=args[2] or any(not args[1]<=i<args[1]+args[2] for i in indices):raise ValueError('scene_index_outside_vertices')

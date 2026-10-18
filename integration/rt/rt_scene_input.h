@@ -6,6 +6,7 @@ namespace ldb_rt::scene_input {
 constexpr uint32_t kMaxVertices=4096,kMaxIndices=16384;
 struct Limits { uint32_t vertices=kMaxVertices,indices=kMaxIndices; };
 constexpr Limits kModelLimits{16384,65536};
+constexpr Limits kAuditLimits{16384,131072};
 struct Auxiliary { UINT stream=0,offset=0,stride=0,frequency=0;HRESULT result=E_FAIL;std::vector<uint8_t> bytes; };
 struct Data {
   HRESULT result=S_OK;

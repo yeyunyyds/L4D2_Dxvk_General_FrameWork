@@ -12,7 +12,7 @@ v12 新增有界 POSITION 数据流证明：输出四分量必须各有且只有
 
 ## 更大的已知模型，以及新增刚性程序
 
-模型独立上限由 4096 顶点/16384 索引提升到 16384 顶点/65536 索引；天空及其他场景上限不变。范围、signed BaseVertex、MinVertexIndex、StartIndex、原 buffer 大小和索引引用仍逐次检查，源 Lock 仍为 READONLY，重建后保留原 Draw 参数。顶点单文件最多 1 MiB，最终重建模型 stride32、最大 512 KiB；任何超预算继续回退。
+模型独立上限由 4096 顶点/16384 索引提升到 16384 顶点/65536 索引；自定义 NekoToon 仅审计上限独立为16384顶点/131072索引；天空及其他静态场景上限不变。范围、signed BaseVertex、MinVertexIndex、StartIndex、原 buffer 大小和索引引用仍逐次检查，源 Lock 仍为 READONLY，重建后保留原 Draw 参数。顶点单文件最多 1 MiB，最终重建模型 stride32、最大 512 KiB；任何超预算继续回退。
 
 新增完整 VS SHA256 `3566b4c8bed75da732f7c8cdb1bce1bb1b5025c932916b2d739ec748f9b8526b` 的刚性 profile。已保存的实际程序中：POSITION0→morph(c13.x)→c58–c60→c8–c11；TEXCOORD0→c48–c49；最终 POSITION 写入在直线路径完成，后续照明分支不再写 POSITION。这与现有刚性位置/UV 合同一致，仍逐 Draw 要求 morph 关闭、常量/布局合法及主相机匹配。
 
@@ -24,7 +24,7 @@ Windows 系统用例增加 8951 顶点、26937 索引、非零 StreamOffset/Star
 
 LightmappedGeneric/DX9、UnlitGeneric、VertexLitGeneric、WorldVertexTransition/DX9、WorldTwoTextureBlend 的现有受限扩展继续开启；alpha-test、cull、depth 和采样器按原状态保留，第一层漫反射仍是诊断材质。第二层混合、PBR、原 shader 的完整照明不在本次完成范围。
 
-NekoToon 在 v11 有大量 Draw，但没有完整原 shader/几何采样，不能按材质名套普通模型矩阵。v12 将它作为独立的“仅审计”家族：在有效 HDR 主相机候选中保存原 shader/常量/声明/几何，并纳入 static-coverage 分组，保留原 Draw，不转换未知程序。不能把新增采样计数当作材质已经进入 RT。
+NekoToon 在 v11 有大量 Draw，但没有完整原 shader/几何采样，不能按材质名套普通模型矩阵。v12 将它作为独立的“仅审计”家族：在有效 HDR 主相机候选中保存原 shader/常量/声明/几何，并纳入 static-coverage 分组，保留原 Draw，不转换未知程序。原始 trace 中有15189顶点/27456三角形及12621顶点/12460三角形的NekoToon；独立扩大审计预算，避免再次只收集到shader而漏掉大块几何。不能把新增采样计数当作材质已经进入 RT。
 
 每阶段配额改为天空6、VertexLitGeneric12、其他静态10、自定义 NekoToon6，总共34；四阶段最多136份。原来8份模型配额容易在大模型和首批小道具后耗尽，扩大并单独预留自定义配额，可在同一次 F9 同时定位剩余权重、未知程序和材质覆盖缺口。辅助流仍仅前缀证据，不能当完整 morph。
 
