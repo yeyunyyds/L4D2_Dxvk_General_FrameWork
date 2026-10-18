@@ -25,7 +25,7 @@ v12 天空修正：新增POSITION完整数据流检查，仅当四分量均由�
 
 world-runtime.jsonl新增model_rebuild_counts/sample，保留sky_rebuild_counts。scene-analysis.json与summary.json区分重建成功、未知程序/预算拒绝及v8天空回退；提交成功仍需结合颜色、深度、法线及遮挡审查，不能当作物体已恢复。static-coverage.json保留全部候选和拒绝分组，不提供全地图覆盖百分比。
 
-同一F9保存每阶段最多34份源输入：天空6、VertexLit模型12、其他场景10、NekoToon审计6，共最多136份，附shader、常量、声明、几何及SHA256。NekoToon本版仅保存原始输入并列入覆盖清单，不转换未知自定义shader；已知静态材质和模型扩展与这项审计在同一次F9完成。辅助stream1–3各最多256字节仅为前缀证据，不代表完整形变数据。原始位置粗投影不会执行模型shader，不是实际可见性证明。trace version9、coverage revision12，snapshot wire仍为v2，保留原CULLMODE/LIGHTING/FOG/category42及查询结果。
+同一F9保存每阶段最多198份源输入：天空6、VertexLit模型48、其他场景96、NekoToon审计48，共最多792份。按材质、VS/顶点buffer身份及实际Draw范围去重，同材质不同网格也可留样；payload分别限制2/2/2/8MiB，各家族另有独立预算，最终阶段为天空256KiB/模型3MiB/其他1.75MiB/NekoToon3MiB，避免前几类占满；记录配额/预算遗漏，不能把上限当作实际采齐数。仅采样时按IB引用窗口提取VB，避免共享大VB的NumVertices误耗预算；运行时转换仍保留原Draw参数与原限制。，附shader、常量、声明、几何及SHA256。NekoToon本版仅保存原始输入并列入覆盖清单，不转换未知自定义shader；已知静态材质和模型扩展与这项审计在同一次F9完成。辅助stream1–3各最多256字节仅为前缀证据，不代表完整形变数据。原始位置粗投影不会执行模型shader，不是实际可见性证明。trace version9、coverage revision12，snapshot wire仍为v2，保留原CULLMODE/LIGHTING/FOG/category42及查询结果。
 
 新增路径均要求本轮先成功转换世界，单Draw捕获失败不修改，应用失败先恢复再回退，恢复失败阻止继续Draw。Windows x86/x64检查包含原生NULLREF状态、重建stream/UV路由及逐项失败恢复；系统测试只模拟Remix的reserved42字段，不能替代B580实机画面验收。没有写Source线程CVar，没有移植全局prim context；Source准备线程实际并行、资源生命周期和生产性能仍待验收。
 

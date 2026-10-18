@@ -26,7 +26,7 @@ LightmappedGeneric/DX9、UnlitGeneric、VertexLitGeneric、WorldVertexTransition
 
 NekoToon 在 v11 有大量 Draw，但没有完整原 shader/几何采样，不能按材质名套普通模型矩阵。v12 将它作为独立的“仅审计”家族：在有效 HDR 主相机候选中保存原 shader/常量/声明/几何，并纳入 static-coverage 分组，保留原 Draw，不转换未知程序。原始 trace 中有15189顶点/27456三角形及12621顶点/12460三角形的NekoToon；独立扩大审计预算，避免再次只收集到shader而漏掉大块几何。不能把新增采样计数当作材质已经进入 RT。
 
-每阶段配额改为天空6、VertexLitGeneric12、其他静态10、自定义 NekoToon6，总共34；四阶段最多136份。原来8份模型配额容易在大模型和首批小道具后耗尽，扩大并单独预留自定义配额，可在同一次 F9 同时定位剩余权重、未知程序和材质覆盖缺口。辅助流仍仅前缀证据，不能当完整 morph。
+每阶段配额改为天空6、VertexLitGeneric48、其他静态96、自定义NekoToon48，总共198；四阶段最多792份。按材质、实际VS/VB身份及Draw参数去重，不再只按材质名称留一份。同次采样使用实际索引引用窗口，避免共享VB声明32021顶点、实际只绘制一个小面时被整段顶点上限拒绝；转换路径不使用此裁剪。payload分别限制2/2/2/8MiB，且按家族预留预算（最终阶段天空256KiB、模型3MiB、其他1.75MiB、自定义3MiB），并按家族汇总实际采样、配额遗漏和payload遗漏。原来8份模型配额容易在大模型和首批小道具后耗尽，扩大并单独预留自定义配额，可在同一次 F9 同时定位剩余权重、未知程序和材质覆盖缺口。辅助流仍仅前缀证据，不能当完整 morph。
 
 trace version9 对应 coverage revision12，snapshot wire2 不变；分析器兼容全部旧版本，并仅对 v12 模型允许扩大范围。产品 manifest、collector、README 和报告共同记录配额与范围。
 

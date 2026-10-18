@@ -11,7 +11,7 @@ struct Auxiliary { UINT stream=0,offset=0,stride=0,frequency=0;HRESULT result=E_
 struct Data {
   HRESULT result=S_OK;
   const char* reason="not_captured";
-  uint32_t first=0,count=0,stride=0,offset=0,indexBytes=0;
+  uint32_t first=0,count=0,stride=0,offset=0,indexBytes=0,vertexBufferBytes=0;
   std::vector<uint8_t> vertices,indices;
   std::vector<uint32_t> vs,ps;
   std::vector<D3DVERTEXELEMENT9> declaration;
@@ -30,7 +30,7 @@ template<class Shader> HRESULT shaderBytes(Shader* shader,std::vector<uint32_t>&
 }
 // Bounds are computed in 64 bits before Lock. All source locks are READONLY;
 // a failed read never retries with write flags or modifies a game buffer.
-inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,const std::array<uint32_t,6>& args,Data& out,Limits limits={}) {
+inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,const std::array<uint32_t,6>& args,Data& out,Limits limits={},bool auditWindow=false) {
   if ((kind!=1 && kind!=2) || (topology!=D3DPT_TRIANGLELIST && topology!=D3DPT_TRIANGLESTRIP)) { out.reason="unsupported_draw";return E_INVALIDARG; }
   static_draw::Ref<IDirect3DVertexDeclaration9> declaration;auto hr=d->GetVertexDeclaration(&declaration.value);
   if (FAILED(hr) || !declaration.value) { out.reason="declaration_unavailable";return FAILED(hr)?hr:E_FAIL; }
@@ -40,9 +40,9 @@ inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topol
   if (!primitive || indexCount>limits.indices) { out.reason="index_budget";return E_INVALIDARG; }
   uint64_t first=0,count=0;
   if (kind==2) {
-    if (!args[2] || args[2]>limits.vertices || uint64_t(args[1])+args[2]>uint64_t(UINT32_MAX)) { out.reason="vertex_budget";return E_INVALIDARG; }
+    if (!args[2] || (!auditWindow && args[2]>limits.vertices) || uint64_t(args[1])+args[2]>uint64_t(UINT32_MAX)) { out.reason="vertex_budget";return E_INVALIDARG; }
     const int64_t begin=int64_t(int32_t(args[0]))+args[1];
-    if (begin<0 || uint64_t(begin)+args[2]>limits.vertices) { out.reason="absolute_vertex_budget";return E_INVALIDARG; }first=uint64_t(begin);count=args[2];
+    if (begin<0 || (!auditWindow && uint64_t(begin)+args[2]>limits.vertices)) { out.reason="absolute_vertex_budget";return E_INVALIDARG; }first=uint64_t(begin);count=args[2];
     static_draw::Ref<IDirect3DIndexBuffer9> ib;hr=d->GetIndices(&ib.value);D3DINDEXBUFFER_DESC desc{};
     if (FAILED(hr)||!ib.value) { out.reason="indices_unavailable";return FAILED(hr)?hr:E_FAIL; }
     hr=ib.value->GetDesc(&desc);if (FAILED(hr)) { out.reason="index_description";return hr; }
@@ -54,13 +54,20 @@ inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topol
     if (FAILED(hr)) { out.indices.clear();out.reason="index_readonly_lock";return hr; }
     if (memory) { std::memcpy(out.indices.data(),memory,size_t(bytes)); }
     hr=ib.value->Unlock();if (FAILED(hr)||!memory) { out.reason="index_unlock_or_null";return FAILED(hr)?hr:E_FAIL; }
+    uint32_t low=UINT32_MAX,high=0;
     for (size_t i=0;i<size_t(indexCount);++i) {
       uint32_t value=0;if (out.indexBytes==2) { uint16_t v=0;std::memcpy(&v,out.indices.data()+i*2,2);value=v; }else { std::memcpy(&value,out.indices.data()+i*4,4); }
+      low=(std::min)(low,value);high=(std::max)(high,value);
       if (value<args[1] || uint64_t(value)>=uint64_t(args[1])+args[2]) { out.reason="index_outside_declared_vertices";return E_INVALIDARG; }
+    }
+    if (auditWindow) {
+      const int64_t beginWindow=int64_t(int32_t(args[0]))+low;
+      if (beginWindow<0 || uint64_t(high)-low+1>limits.vertices) { out.reason="vertex_budget";return E_INVALIDARG; }
+      first=uint64_t(beginWindow);count=uint64_t(high)-low+1;
     }
   } else {
     first=args[0];count=indexCount;
-    if (first+count>limits.vertices) { out.reason="absolute_vertex_budget";return E_INVALIDARG; }
+    if (count>limits.vertices || (!auditWindow && first+count>limits.vertices)) { out.reason="absolute_vertex_budget";return E_INVALIDARG; }
   }
   static_draw::Ref<IDirect3DVertexBuffer9> vb;UINT offset=0,stride=0,frequency=0;
   hr=d->GetStreamSource(0,&vb.value,&offset,&stride);
@@ -70,6 +77,7 @@ inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topol
   hr=vb.value->GetDesc(&desc);if (FAILED(hr)) { out.reason="vertex_description";return hr; }
   const uint64_t start=uint64_t(offset)+first*stride,bytes=count*stride;
   if (!bytes || start+bytes>desc.Size || bytes>1024u*1024u) { out.reason="vertex_range";return E_INVALIDARG; }
+  out.vertexBufferBytes=desc.Size;
   out.vertices.resize(size_t(bytes));
   void* memory=nullptr;hr=vb.value->Lock(UINT(start),UINT(bytes),&memory,D3DLOCK_READONLY);
   if (FAILED(hr)) { out.vertices.clear();out.reason="vertex_readonly_lock";return hr; }
@@ -77,8 +85,8 @@ inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topol
   hr=vb.value->Unlock();if (FAILED(hr)||!memory) { out.reason="vertex_unlock_or_null";return FAILED(hr)?hr:E_FAIL; }
   out.first=uint32_t(first);out.count=uint32_t(count);out.offset=offset;out.stride=stride;out.reason="complete";return S_OK;
 }
-inline Data capture(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,const std::array<uint32_t,6>& args,bool extended=true,Limits limits={}) {
-  Data result;result.geometryResult=geometry(d,kind,topology,args,result,limits);
+inline Data capture(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,const std::array<uint32_t,6>& args,bool extended=true,Limits limits={},bool auditWindow=false) {
+  Data result;result.geometryResult=geometry(d,kind,topology,args,result,limits,auditWindow);
   static_draw::Ref<IDirect3DVertexShader9> vs;static_draw::Ref<IDirect3DPixelShader9> ps;
   auto hr=d->GetVertexShader(&vs.value);if (SUCCEEDED(hr)) { hr=shaderBytes(vs.value,result.vs); }
   auto pixel=d->GetPixelShader(&ps.value);if (SUCCEEDED(pixel)) { pixel=shaderBytes(ps.value,result.ps); }

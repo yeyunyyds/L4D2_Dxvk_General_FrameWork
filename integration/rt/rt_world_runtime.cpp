@@ -151,7 +151,14 @@ struct SceneCounts { uint64_t attempts=0,ready=0,reconstructed=0,fallback=0;std:
 std::array<SceneCounts,4> sceneCounts{};
 std::array<unsigned,4> sceneSampleCounts{};
 std::array<std::array<unsigned,4>,4> sceneFamilyCounts{};
-std::set<std::array<uint64_t,4>> sceneSampled;
+std::set<std::array<uint64_t,16>> sceneSampled;
+constexpr unsigned sceneLimits[]={6,48,96,48};
+constexpr uint64_t sceneByteLimits[]={2u*1024*1024,2u*1024*1024,2u*1024*1024,8u*1024*1024};
+std::array<uint64_t,4> sceneBytes{};
+constexpr uint64_t sceneFamilyByteLimits[][4]={{128u*1024,640u*1024,512u*1024,768u*1024},{128u*1024,640u*1024,512u*1024,768u*1024},{128u*1024,640u*1024,512u*1024,768u*1024},{256u*1024,3072u*1024,1792u*1024,3072u*1024}};
+std::array<std::array<uint64_t,4>,4> sceneFamilyBytes{};
+std::array<std::array<unsigned,4>,4> sceneQuotaOmitted{},scenePayloadOmitted{};
+std::array<unsigned,4> sceneIdentityFailures{};
 std::map<uint32_t,bool> skyReadiness;
 void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) noexcept {
   try {
@@ -160,16 +167,28 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     if (!sky && !bulk_static::candidate(s) && !bulk_static::auditOnly(s)) { return; }
     const auto phase=comparison.phase();const auto index=size_t(phase);
     const unsigned group=sky?0u:bulk_static::auditOnly(s)?3u:bulk_static::family(s.materialInfo.shader.data())==1?1u:2u;
-    constexpr unsigned limits[]={6,12,10,6};
-    const std::array<uint64_t,4> key{{uint64_t(phase),s.material,s.materialTable,s.materialInfo.format}};
-    if (sceneFamilyCounts[index][group]>=limits[group] || !sceneSampled.insert(key).second) { return; }
-    ++sceneFamilyCounts[index][group];++sceneSampleCounts[index];
-    auto input=scene_input::capture(device,kind,type,args,true,group==1?scene_input::kModelLimits:group==3?scene_input::kAuditLimits:scene_input::Limits{});
+    static_draw::Ref<IDirect3DVertexShader9> identityShader;static_draw::Ref<IDirect3DVertexBuffer9> identityBuffer;UINT identityOffset=0,identityStride=0;
+    const auto shaderIdentity=device->GetVertexShader(&identityShader.value),bufferIdentity=device->GetStreamSource(0,&identityBuffer.value,&identityOffset,&identityStride);
+    if (FAILED(shaderIdentity) || FAILED(bufferIdentity)) {
+      if (!sceneIdentityFailures[index]++) { event("scene_input_identity_failed",uint32_t(FAILED(shaderIdentity)?shaderIdentity:bufferIdentity)); }return;
+    }
+    std::array<uint64_t,16> key{{uint64_t(phase),s.material,s.materialTable,s.materialInfo.format,
+      uint64_t(reinterpret_cast<uintptr_t>(identityShader.value)),uint64_t(reinterpret_cast<uintptr_t>(identityBuffer.value)),identityOffset,identityStride,kind,uint32_t(type)}};
+    for (unsigned i=0;i<6;++i) { key[10+i]=args[i]; }
+    if (!sceneSampled.insert(key).second) { return; }
+    if (sceneFamilyCounts[index][group]>=sceneLimits[group]) { ++sceneQuotaOmitted[index][group];return; }
+    auto input=scene_input::capture(device,kind,type,args,true,group==1?scene_input::kModelLimits:group==3?scene_input::kAuditLimits:scene_input::Limits{},true);
     const char* replay=group==3?"audit_only_unknown_program":"not_sky";
     if (sky) {
       auto warmed=scene_input::prepare(device,s,input);replay=warmed.reason;
       if (phase==world_diagnostics::CoveragePhase::ExpandedWorld) { skyReadiness[s.material]=warmed.ready; }
     }
+    const uint64_t bytes=input.vertices.size()+input.indices.size()+(input.vs.size()+input.ps.size())*4+input.declaration.size()*sizeof(D3DVERTEXELEMENT9)+
+      (SUCCEEDED(input.constantsResult)?sizeof(input.constants):0)+(SUCCEEDED(input.integerResult)?sizeof(input.integerConstants):0)+
+      (SUCCEEDED(input.boolResult)?sizeof(input.boolConstants):0)+(SUCCEEDED(input.pixelResult)?sizeof(input.pixelConstants):0)+
+      input.auxiliary[0].bytes.size()+input.auxiliary[1].bytes.size()+input.auxiliary[2].bytes.size();
+    if (bytes>sceneByteLimits[index]-sceneBytes[index] || bytes>sceneFamilyByteLimits[index][group]-sceneFamilyBytes[index][group]) { ++scenePayloadOmitted[index][group];return; }
+    ++sceneFamilyCounts[index][group];++sceneSampleCounts[index];
     std::ostringstream log;log << std::setprecision(9);
     const std::string prefix="scene-"+std::to_string(s.ordinal);
     log << "{\"event\":\"scene_input_sample\",\"phase\":\"" << world_diagnostics::name(phase) << "\",\"ordinal\":" << s.ordinal
@@ -182,7 +201,7 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     log << "],\"geometry_hresult\":" << uint32_t(input.geometryResult) << ",\"shader_hresult\":" << uint32_t(input.shaderResult)
       << ",\"constants_hresult\":" << uint32_t(input.constantsResult) << ",\"geometry_status\":\"" << input.reason
       << "\",\"replay_status\":\"" << replay << "\",\"first_absolute_vertex\":" << input.first << ",\"vertex_count\":" << input.count << ",\"stride\":" << input.stride
-      << ",\"stream_offset\":" << input.offset << ",\"index_bytes\":" << input.indexBytes << ",";
+      << ",\"geometry_window\":true,\"source_vertex_buffer_bytes\":" << input.vertexBufferBytes << ",\"stream_offset\":" << input.offset << ",\"index_bytes\":" << input.indexBytes << ",";
     // Prefix-only auxiliary streams are evidence, never claimed as complete vertices.
     log << "\"auxiliary\":[";
     for (unsigned i=0;i<3;++i) { const auto& a=input.auxiliary[i];if (i) { log << ','; }
@@ -192,7 +211,7 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     const auto save=[&](const char* suffix,const void* bytes,size_t size) {
       if (!size) { return; }const std::string name=prefix+suffix;
       std::ofstream file(launch.output/name,std::ios::binary);file.write(static_cast<const char*>(bytes),std::streamsize(size));file.close();
-      if (!file) { return; }if (comma) { log << ','; }comma=true;
+      if (!file) { return; }sceneBytes[index]+=size;sceneFamilyBytes[index][group]+=size;if (comma) { log << ','; }comma=true;
       log << "{\"file\":\"" << name << "\",\"size\":" << size << ",\"sha256\":\"" << ldb_rt_file::fileSha256(launch.output/name) << "\"}";
     };
     save("-vertices.bin",input.vertices.data(),input.vertices.size());save("-indices.bin",input.indices.data(),input.indices.size());
@@ -253,6 +272,13 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
   } catch (...) { event("model_rebuild_exception",uint32_t(E_FAIL));result=E_FAIL;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true; }
 }
 void sceneSummary(uint64_t frame) {
+  const auto index=size_t(comparison.phase());
+  events << "{\"event\":\"scene_input_counts\",\"frame\":" << frame << ",\"phase\":\"" << world_diagnostics::name(comparison.phase())
+    << "\",\"payload_bytes\":" << sceneBytes[index] << ",\"captured\":" << sceneSampleCounts[index] << ",\"identity_failures\":" << sceneIdentityFailures[index];
+  const auto counts=[&](const char* name,const auto& values) {
+    events << ",\"" << name << "\":[";for (unsigned i=0;i<4;++i) { if (i) { events << ','; }events << values[i]; }events << ']';
+  };
+  counts("family_payload_bytes",sceneFamilyBytes[index]);counts("family_captured",sceneFamilyCounts[index]);counts("family_quota_omitted",sceneQuotaOmitted[index]);counts("family_payload_omitted",scenePayloadOmitted[index]);events << "}\n" << std::flush;
   const auto phase=comparison.phase();const auto& m=modelCounts[size_t(phase)];
   events << "{\"event\":\"model_rebuild_counts\",\"frame\":" << frame << ",\"phase\":\"" << world_diagnostics::name(phase)
     << "\",\"attempts\":" << m.attempts << ",\"ready\":" << m.ready << ",\"reconstructed\":" << m.reconstructed << ",\"fallback\":" << m.fallback << ",\"reasons\":{";
@@ -363,6 +389,7 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy", 0, "v12_matrix_proven_sky_and_bounded_larger_model_materials_with_custom_shader_audit");
     event("world_coverage_revision", 0, "12");
+    event("scene_input_policy",0,"wide_materials_v1");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw}; return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }

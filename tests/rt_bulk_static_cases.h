@@ -62,6 +62,9 @@ inline void modelGeometryBounds(IDirect3DDevice9* d) {
   ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,args,larger,scene_input::kModelLimits));
   check(larger.first==0 && larger.count==vertices && larger.vertices.size()==vertices*32 && larger.indices.size()==indices*2,"signed base/min/start range changed");
   check(!std::memcmp(larger.vertices.data(),source.data()+offset,larger.vertices.size()) && !std::memcmp(larger.indices.data(),sourceIndices.data()+start,larger.indices.size()),"original model payload differs");
+  auto shiftedArgs=args;shiftedArgs[0]=0;scene_input::Data shifted;
+  ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,shiftedArgs,shifted,scene_input::kModelLimits));
+  check(shifted.first==100 && shifted.count==vertices && !std::memcmp(shifted.vertices.data(),source.data()+offset+100*32,shifted.vertices.size()),"nonzero declared vertex base rejected or read incorrectly");
   auto invalid=args;invalid[2]=scene_input::kModelLimits.vertices+1;scene_input::Data rejected;
   check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,invalid,rejected,scene_input::kModelLimits)) && rejected.vertices.empty(),"model vertex cap absent");
   invalid=args;invalid[4]=scene_input::kModelLimits.indices/3+1;
@@ -81,6 +84,17 @@ inline void modelGeometryBounds(IDirect3DDevice9* d) {
   check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,customArgs,custom,scene_input::kModelLimits)),"custom audit changed conversion cap");
   ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,customArgs,custom,scene_input::kAuditLimits));
   check(custom.count==sourceVertices && custom.indices.size()==customTriangles*6 && !std::memcmp(custom.vertices.data(),source.data()+offset,custom.vertices.size()),"large custom material audit incomplete");
+  uint16_t selected[]={uint16_t(100+sourceVertices-3),uint16_t(100+sourceVertices-2),uint16_t(100+sourceVertices-1)};
+  ok(auditIB.value->Lock(start*2,sizeof(selected),&memory,0));std::memcpy(memory,selected,sizeof(selected));ok(auditIB.value->Unlock());
+  auto windowArgs=customArgs;windowArgs[4]=1;scene_input::Data window;
+  ok(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,windowArgs,window,{},true));
+  check(window.first==sourceVertices-3 && window.count==3 && window.vertices.size()==96 && window.vertexBufferBytes==source.size() && !std::memcmp(window.vertices.data(),source.data()+offset+window.first*32,96),"indexed audit window lost absolute vertex offset");
+  scene_input::Data nonindexed;std::array<uint32_t,6> directArgs{{sourceVertices-3,1,0,0,0,0}};
+  check(FAILED(scene_input::geometry(d,1,D3DPT_TRIANGLELIST,directArgs,nonindexed)),"legacy nonindexed absolute cap changed");
+  ok(scene_input::geometry(d,1,D3DPT_TRIANGLELIST,directArgs,nonindexed,{},true));check(nonindexed.first==sourceVertices-3 && nonindexed.count==3 && nonindexed.vertices.size()==96,"nonindexed audit window failed");
+  selected[2]=uint16_t(100+sourceVertices);ok(auditIB.value->Lock(start*2,sizeof(selected),&memory,0));std::memcpy(memory,selected,sizeof(selected));ok(auditIB.value->Unlock());
+  check(FAILED(scene_input::geometry(d,2,D3DPT_TRIANGLELIST,windowArgs,window,{},true)),"audit window accepted index outside original declared range");
+  std::cout << "RT indexed audit window/large shared VB/range rejection/system NULLREF: PASS\n";
   std::cout << "RT custom shader audit large geometry independent cap/system NULLREF: PASS\n";
   ok(d->SetStreamSource(0,oldVB.value,oldOffset,oldStride));ok(d->SetIndices(oldIB.value));ok(d->SetVertexDeclaration(oldDecl.value));
   std::cout << "RT larger model signed-base/index-window/read-only/caps/system NULLREF: PASS\n";

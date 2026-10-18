@@ -68,6 +68,18 @@ class SceneEvidence(unittest.TestCase):
    sample['shader']='NekoToon'
    sample['vertex_count']=3;sample['args']=[0,1,0,0,0,0];raw=raw[:36];path.write_bytes(raw);sample['files'][0].update(size=len(raw),sha256=hashlib.sha256(raw).hexdigest())
    self.assertTrue(self.inspect(root,events)['pass'])
+ def test_wide_window_and_omission_accounting(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.fixture(root);events[0]['value']='12';events.insert(1,dict(event='scene_input_policy',code=0,value='wide_materials_v1'));sample=events[2]
+   sample.update(kind=2,index_bytes=2,args=[0,0,32021,0,1,0],first_absolute_vertex=32018,geometry_window=True,source_vertex_buffer_bytes=32021*12,stream_offset=0)
+   raw=struct.pack('<3H',32018,32019,32020);name='scene-12-indices.bin';(root/name).write_bytes(raw);sample['files'].append(dict(file=name,size=len(raw),sha256=hashlib.sha256(raw).hexdigest()))
+   for frame,phase in zip((30,120,180,240),('raster','baseline_world','expanded_sky','expanded_models')):
+    events.append(dict(event='model_rebuild_counts',frame=frame,phase=phase,attempts=0,ready=0,reconstructed=0,fallback=0,reasons={}))
+    events.append(dict(event='scene_input_counts',frame=frame,phase=phase,payload_bytes=sum(x['size'] for x in sample['files']) if frame==240 else 0,captured=int(frame==240),identity_failures=0,family_payload_bytes=[0,sum(x['size'] for x in sample['files']) if frame==240 else 0,0,0],family_captured=[0,int(frame==240),0,0],family_quota_omitted=[0,0,0,3 if frame==240 else 0],family_payload_omitted=[0,1 if frame==240 else 0,0,0]))
+   self.assertTrue(self.inspect(root,events)['pass'])
+   sample['first_absolute_vertex']-=1;self.assertFalse(self.inspect(root,events)['pass']);sample['first_absolute_vertex']+=1
+   sample['source_vertex_buffer_bytes']-=1;self.assertFalse(self.inspect(root,events)['pass']);sample['source_vertex_buffer_bytes']+=1
+   events[-1]['payload_bytes']+=1;self.assertIn('inconsistent_wide_capture_counts',self.inspect(root,events)['errors'])
  def test_old_capture_does_not_require_new_samples(self):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);self.assertEqual(self.inspect(root,[dict(event='world_coverage_revision',code=0,value='8')])['status'],'not_requested')

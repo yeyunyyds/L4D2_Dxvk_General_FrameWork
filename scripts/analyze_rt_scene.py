@@ -48,9 +48,10 @@ def analyze(directory):
     v11=v12 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='11' for e in events)
     v10=v11 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='10' for e in events)
     requested=v10 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='9' for e in events)
-    sample_limit=34 if v12 else 24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
+    wide=v12 and any(e.get('event')=='scene_input_policy' and e.get('code')==0 and e.get('value')=='wide_materials_v1' for e in events)
+    sample_limit=198 if wide else 34 if v12 else 24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
     samples=[e for e in events if e.get('event')=='scene_input_sample'];summaries=[e for e in events if e.get('event')=='sky_rebuild_counts']
-    errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception','model_rebuild_exception')];reviews=[];ordinals=set();phases=Counter();family_counts=Counter();files=set();used=0
+    errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception','model_rebuild_exception','scene_input_identity_failed')];reviews=[];ordinals=set();phases=Counter();family_counts=Counter();files=set();used=0
     for sample in samples:
         try:
             phase=sample['phase'];ordinal=sample['ordinal'];phases[phase]+=1
@@ -58,7 +59,7 @@ def analyze(directory):
             if v10:
                 group=0 if sample['shader']=='NekoSky' else 1 if sample['shader']=='VertexLitGeneric' else 3 if v12 and sample['shader']=='NekoToon' else 2
                 family_counts[(phase,group)]+=1
-                if family_counts[(phase,group)]>((6,12,10,6) if v12 else (6,8,10))[group]:raise ValueError('scene_family_quota_exceeded')
+                if family_counts[(phase,group)]>((6,48,96,48) if wide else (6,12,10,6) if v12 else (6,8,10))[group]:raise ValueError('scene_family_quota_exceeded')
             ordinals.add(ordinal);payload={}
             for item in sample['files']:
                 name=item['file'];file=directory/name
@@ -79,7 +80,8 @@ def analyze(directory):
             if sample['geometry_hresult']==0:
                 count=sample['vertex_count'];first=sample['first_absolute_vertex'];stride=sample['stride'];kind=sample['kind'];args=sample['args']
                 max_vertices=16384 if v12 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 4096
-                if not 0<count<=max_vertices or not 0<=first or first+count>max_vertices or not 1<=stride<=stride_limit or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
+                window=wide and sample.get('geometry_window') is True
+                if not 0<count<=max_vertices or not 0<=first or (not window and first+count>max_vertices) or not 1<=stride<=stride_limit or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
                 decl=payload.get('declaration.bin',b'')
                 if len(decl)%8 or len(decl)>520 or decl[-8:]!=bytes.fromhex('ff00000011000000'):raise ValueError('invalid_scene_declaration')
                 if kind==2:
@@ -87,8 +89,9 @@ def analyze(directory):
                     if width not in (2,4) or n>(131072 if v12 and sample['shader']=='NekoToon' else 65536 if v12 and sample['shader']=='VertexLitGeneric' else 16384) or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
                     indices=struct.unpack('<'+('H' if width==2 else 'I')*n,payload['indices.bin'])
                     signed=args[0] if args[0]<2**31 else args[0]-2**32
-                    if first!=signed+args[1] or count!=args[2] or any(not args[1]<=i<args[1]+args[2] for i in indices):raise ValueError('scene_index_outside_vertices')
+                    if (first!=signed+min(indices) or count!=max(indices)-min(indices)+1 if window else first!=signed+args[1] or count!=args[2]) or any(not args[1]<=i<args[1]+args[2] for i in indices):raise ValueError('scene_index_outside_vertices')
                 elif kind!=1 or first!=args[0] or count!=(args[1]*3 if sample['topology']==4 else args[1]+2):raise ValueError('scene_draw_range_mismatch')
+                if window and (not 0<sample.get('source_vertex_buffer_bytes',0)<=2**32-1 or not 0<=sample.get('stream_offset',-1) or sample['stream_offset']+(first+count)*stride>sample['source_vertex_buffer_bytes']):raise ValueError('scene_window_outside_source_buffer')
                 pos=any(struct.unpack_from('<HH4B',decl,i)==(0,0,2,0,0,0) for i in range(0,len(decl),8))
                 review['raw_geometry']=projection(sample,payload['vertices.bin']) if pos else {'status':'position_layout_unavailable'}
             else:review['raw_geometry']={'status':'unavailable','hresult':sample['geometry_hresult']}
@@ -104,6 +107,20 @@ def analyze(directory):
             if e['input_samples']!=phases[e['phase']]:errors.append('scene_sample_count_mismatch')
             if e['frame']<240 and e['attempts']:errors.append('premature_sky_reconstruction')
             if e['attempts']!=e['reconstructed']+e['fallback'] or not e['reconstructed']<=e['ready']<=e['attempts'] or sum(e.get('reasons',{}).values())!=e['attempts']:errors.append('inconsistent_rebuild_counts')
+    capture_counts=[e for e in events if e.get('event')=='scene_input_counts']
+    if wide:
+        if [(e.get('frame'),e.get('phase')) for e in capture_counts]!=list(zip((30,120,180,240),PHASES)):errors.append('missing_wide_capture_summaries')
+        for e in capture_counts:
+            phase=e.get('phase');position=PHASES.index(phase) if phase in PHASES else 0
+            rows=[s for s in samples if s.get('phase')==phase];saved=sum(i['size'] for s in rows for i in s.get('files',[]))
+            counts=e.get('family_captured',[]);quota=e.get('family_quota_omitted',[]);payload=e.get('family_payload_omitted',[])
+            if any(len(v)!=4 or any(not isinstance(x,int) or x<0 for x in v) for v in (counts,quota,payload)) or counts!=[family_counts[(phase,i)] for i in range(4)] or e.get('captured')!=len(rows) or e.get('payload_bytes')!=saved or saved>(8 if position==3 else 2)*1024*1024:errors.append('inconsistent_wide_capture_counts')
+            family_bytes=e.get('family_payload_bytes',[])
+            group=lambda s:0 if s['shader']=='NekoSky' else 1 if s['shader']=='VertexLitGeneric' else 3 if s['shader']=='NekoToon' else 2
+            saved_by_family=[sum(f['size'] for s in rows if group(s)==i for f in s.get('files',[])) for i in range(4)]
+            family_limits=(256,3072,1792,3072) if position==3 else (128,640,512,768)
+            if family_bytes!=saved_by_family or any(n>limit*1024 for n,limit in zip(saved_by_family,family_limits)):errors.append('inconsistent_wide_family_payload')
+            if e.get('identity_failures',0):errors.append('scene_input_identity_failed')
     models=[e for e in events if e.get('event')=='model_rebuild_counts']
     model_samples=[e for e in events if e.get('event')=='model_rebuild_sample']
     if v11:
@@ -122,7 +139,7 @@ def analyze(directory):
     final=summaries[-1] if summaries else {}
     rebuilt=final.get('reconstructed',0);attempts=final.get('attempts',0)
     return {'schema':1,'status':'valid_evidence_requires_review' if requested and not errors else 'incomplete' if requested else 'not_requested',
-            'pass':not errors,'errors':sorted(set(errors)),'sample_counts':dict(phases),'payload_bytes':used,'samples':reviews,'sky_rebuild_summaries':summaries,
+            'pass':not errors,'errors':sorted(set(errors)),'capture_policy':'wide_materials_v1' if wide else 'legacy','capture_summaries':capture_counts,'sample_counts':dict(phases),'payload_bytes':used,'samples':reviews,'sky_rebuild_summaries':summaries,
             'model_rebuild_summaries':models,'model_rebuild_samples':model_samples,
             'model_rebuild_result':'applied_requires_image_review' if models and models[-1].get('reconstructed',0)>0 else 'no_model_reconstruction' if v11 else 'not_requested',
             'sky_rebuild_result':'applied_requires_image_review' if attempts and rebuilt==attempts else 'fallback_preserved_v8' if attempts and not rebuilt else 'partial_or_unrun',
