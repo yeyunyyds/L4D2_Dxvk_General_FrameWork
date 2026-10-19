@@ -1,0 +1,525 @@
+{
+  "schema": 1,
+  "scope": "v18 texture hash fix, complete 600-Present B580 capture; positive sampled character albedo evidence, partial texture coverage, abnormal client exit after capture",
+  "input": {
+    "volumes": 2,
+    "outer_zip_crc": "pass",
+    "inner_zip_crc": "pass",
+    "inner_size": 41530725,
+    "inner_sha256": "bcb25bf91e49ee0dc885a3132cf3f459704ad720b33a9c62710562242d9a51e5",
+    "inner_members": 3718,
+    "inner_uncompressed_bytes": 415611550,
+    "original_payload_preserved": true
+  },
+  "build_commit": "985ed8830b4991c2e18a798e00f5925cc65b4e5d",
+  "build_id": "ldb-rt-observer+e77327d1980ca3d9",
+  "installed_pair_hashes_match_published_binaries": true,
+  "published_file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/ad457c4a4597fb413be82185b5704587c0ae9d35/downloads/rt-world-pilot-dev.zip",
+  "capture_marker": {
+    "session": 2111157266324996462,
+    "reason": 0,
+    "draws": 265102,
+    "valid": 265102,
+    "presents": 600,
+    "game_rt": "attempted_requires_review",
+    "source_queue": "unrun"
+  },
+  "trace_footer": {
+    "draws": 265102,
+    "valid": 265102,
+    "presents": 600,
+    "resets": 0,
+    "failures": 0,
+    "unobserved": 0,
+    "reason": 0
+  },
+  "uploaded_summary": {
+    "schema": 1,
+    "scope": "selected_static_world_runtime_pilot",
+    "build_commit": "985ed8830b4991c2e18a798e00f5925cc65b4e5d",
+    "collection": "complete",
+    "errors": [],
+    "game_rt": "attempted_requires_review",
+    "source_queue_execution": "unrun",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun",
+    "capture_marker": {
+      "session": 2111157266324996462,
+      "reason": 0,
+      "draws": 265102,
+      "valid": 265102,
+      "presents": 600,
+      "game_rt": "attempted_requires_review",
+      "source_queue": "unrun"
+    },
+    "draw_observation": "pass",
+    "module_evidence": "snapshot_collected",
+    "result_scope": "consumer state / RPC ordering only; no Source producer queue or RT image acceptance",
+    "pre_exit_game_logs": "snapshot_collected",
+    "world_outputs": "pass",
+    "model_texture_coverage": "partial_with_synthetic_fallback",
+    "model_texture_fallback_submissions": 6335,
+    "model_budget_omissions": 0,
+    "model_budget_coverage": "no_recorded_budget_omissions",
+    "world_geometry_buffers": "nonzero_requires_review",
+    "world_converted_draws": 52322,
+    "sky_converted_draws": 2880,
+    "rigid_converted_draws": 0,
+    "bulk_static_converted_draws": 22798,
+    "static_inventory_omitted_draws": 0,
+    "model_rebuild_result": "applied_requires_image_review",
+    "scene_input_evidence": "valid_evidence_requires_review",
+    "sky_rebuild_result": "applied_requires_image_review",
+    "rt_activation_requests": 1,
+    "world_normalization": "pass",
+    "collection_phase": "finalized",
+    "archive_compression": "zip_lzma_lossless"
+  },
+  "independent_checks": {
+    "draw_pass": true,
+    "draw_errors": [],
+    "world_outputs": "pass",
+    "world_errors": [],
+    "scene_pass": true,
+    "scene_errors": [],
+    "texture_file_accounting_pass": true,
+    "runtime_nonzero_codes": [],
+    "readbacks": 30,
+    "scene_samples": 293,
+    "scene_payload_bytes": 15503482,
+    "api_geometry_payload_bytes": 22188752,
+    "source_texture_hashes_unchanged_after_preview": true
+  },
+  "conversion": {
+    "reports": 265102,
+    "converted": 52322,
+    "hud_replaced": 570,
+    "sky_converted": 2880,
+    "bulk_static_converted": 22798
+  },
+  "shader_inventory": {
+    "ShadowBuild_DX9": 26722,
+    "NekoSky": 3600,
+    "LightmappedGeneric": 30741,
+    "UnlitGeneric": 124249,
+    "NekoToon": 12600,
+    "VertexLitGeneric": 39759,
+    "Shadow": 1200,
+    "Spritecard": 32,
+    "MotionBlur_dx9": 600,
+    "Neko_Downsample_nohdr": 1200,
+    "BlurFilterX": 1200,
+    "BlurFilterY": 1200,
+    "NekoBloom": 7800,
+    "Neko_Engine_Post": 600,
+    "NekoGlowColor": 1200,
+    "neko_screenspace_general": 600,
+    "Infected": 10531,
+    "Occlusion_DX9": 668
+  },
+  "live_model_resources": {
+    "last": {
+      "event": "api_mesh_frame",
+      "frame": 600,
+      "stage": "recovery",
+      "submitted": 21455,
+      "created": 12344,
+      "reused": 9111,
+      "destroyed": 12344,
+      "entries": 0,
+      "bytes": 0,
+      "material_updates": 289,
+      "textured_submissions": 15120,
+      "texture_fallback_submissions": 6335,
+      "texture_exports": 37,
+      "texture_bytes": 67081576,
+      "texture_held": 0,
+      "texture_read_failures": 0,
+      "texture_budget_deferred": 6335,
+      "peak_bytes": 208121616,
+      "completed_through": 540,
+      "pending_fences": 0,
+      "frame_draws": 0,
+      "frame_new_bytes": 0,
+      "frame_omitted": 0,
+      "omitted_total": 0,
+      "omission_reasons": {
+        "draw_limit": 0,
+        "frame_geometry_bytes": 0,
+        "live_geometry_bytes": 0,
+        "mesh_entries": 0,
+        "gpu_backlog": 0
+      }
+    },
+    "max_pending_fences": 1,
+    "max_frame_draws": 167,
+    "max_entries": 221,
+    "peak_geometry_accounting_bytes": 208121616,
+    "model_budget_omissions": 0,
+    "notes": "Geometry accounting is expanded API buffers, not total GPU VRAM. Camera and submissions differ from v17, so counts are not a performance comparison."
+  },
+  "textures": {
+    "schema": 1,
+    "pass": true,
+    "errors": [],
+    "coverage": "partial_with_synthetic_fallback",
+    "bindings": 289,
+    "unique_dds_files": 37,
+    "verified_dds_bytes": 67081576,
+    "textured_submissions": 15120,
+    "fallback_submissions": 6335,
+    "gpu_texture_acceptance": "unrun",
+    "limits": "Validated static sampler0 base-level DDS and API intent; original PS/Toon/tints, animated textures, mips and actual GPU preload/appearance remain separate.",
+    "pinned_gli_cpu_parse_files": 37,
+    "source_format_counts": {
+      "894720068": 25,
+      "827611204": 8,
+      "22": 4
+    },
+    "all_exported_srgb": true,
+    "first_export": {
+      "frame": 181,
+      "file": "model-textures/0d7438a6d1e94aabe11138333927b8c40d62c394d5ca71e293947d6ec7ce3cae.dds",
+      "width": 2048,
+      "height": 2048,
+      "format": 894720068
+    },
+    "first_export_bytes": 4194452,
+    "cap_bytes": 67108864,
+    "remaining_export_bytes": 27288,
+    "first_cache_budget_frame": 281,
+    "fallback_submission_fraction": 0.29526916802610115,
+    "fallback_binding_reasons": {
+      "texture_frame_budget": 13,
+      "texture_cache_budget": 148
+    },
+    "fallback_binding_count_is_not_submission_count": true,
+    "sampled_neko_texture_files": 5,
+    "sampled_neko_at_readbacks_all_textured": true,
+    "sampled_fallback_shader": "VertexLitGeneric",
+    "mip_levels_exported": 1,
+    "runtime_missing_mips_warnings": 29,
+    "alpha_evidence": [
+      {
+        "file": "model-textures/0d7438a6d1e94aabe11138333927b8c40d62c394d5ca71e293947d6ec7ce3cae.dds",
+        "material_handles": [
+          5495602386867060737
+        ],
+        "dxgi": 78,
+        "width": 2048,
+        "height": 2048,
+        "alpha_min": 0,
+        "alpha_max": 255,
+        "alpha_zero_fraction": 0.4058213233947754,
+        "alpha_below_128_fraction": 0.48052000999450684,
+        "rgb_std": [
+          113.3370369850566,
+          98.84883095958214,
+          98.43558999368935
+        ],
+        "alpha_test_values": [
+          7
+        ]
+      },
+      {
+        "file": "model-textures/cbb459e6456e98791617f1d6fb6004b4aba62476ef902fc08e8376ac38169bdb.dds",
+        "material_handles": [
+          5495602386867060738
+        ],
+        "dxgi": 72,
+        "width": 2048,
+        "height": 2048,
+        "alpha_min": 255,
+        "alpha_max": 255,
+        "alpha_zero_fraction": 0.0,
+        "alpha_below_128_fraction": 0.0,
+        "rgb_std": [
+          120.8115621456923,
+          111.29229975047613,
+          111.59753525433699
+        ],
+        "alpha_test_values": [
+          7
+        ]
+      },
+      {
+        "file": "model-textures/df54dd9de02a08d2d48f7033146cea6ce02a012aab66dbfe9cd82941a2929cb1.dds",
+        "material_handles": [
+          5495602386867060739
+        ],
+        "dxgi": 72,
+        "width": 2048,
+        "height": 2048,
+        "alpha_min": 255,
+        "alpha_max": 255,
+        "alpha_zero_fraction": 0.0,
+        "alpha_below_128_fraction": 0.0,
+        "rgb_std": [
+          24.214145612887787,
+          38.33190387116622,
+          37.71438087756979
+        ],
+        "alpha_test_values": [
+          7
+        ]
+      },
+      {
+        "file": "model-textures/74ac683143c7f3065dfe4cdcd54e3096f9d6b2aa1e8bc80efbe51a27311f8dd3.dds",
+        "material_handles": [
+          5495602386867060740
+        ],
+        "dxgi": 72,
+        "width": 2048,
+        "height": 2048,
+        "alpha_min": 255,
+        "alpha_max": 255,
+        "alpha_zero_fraction": 0.0,
+        "alpha_below_128_fraction": 0.0,
+        "rgb_std": [
+          52.065867426946845,
+          50.33482111875307,
+          52.139282078819896
+        ],
+        "alpha_test_values": [
+          7
+        ]
+      },
+      {
+        "file": "model-textures/6f0ac40d640d0e81e298ec8babeff59eceea5d706ff77c5bd2bf7ba5f979a176.dds",
+        "material_handles": [
+          5495602386867060742
+        ],
+        "dxgi": 72,
+        "width": 2048,
+        "height": 2048,
+        "alpha_min": 255,
+        "alpha_max": 255,
+        "alpha_zero_fraction": 0.0,
+        "alpha_below_128_fraction": 0.0,
+        "rgb_std": [
+          109.82842396377735,
+          100.32470931251065,
+          102.92994534988087
+        ],
+        "alpha_test_values": [
+          7
+        ]
+      }
+    ],
+    "sampled_neko_ps_unique_programs": 2,
+    "sampled_neko_ps_texkill_instruction_count": 0,
+    "alpha_interpretation": "Face atlas alpha exists but sampled Neko fixed alpha/blend is off and neither observed PS uses TEXKILL; do not infer a generic alpha-cutout threshold from alpha pixels alone.",
+    "sampled_neko_ps_bytecode_hashes": [
+      "23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a",
+      "f2da6f64daa0d3bad8b1ac86309ac191371a51e44733c7ec927dd0a9729ae8e9"
+    ]
+  },
+  "stage_accounting": [
+    {
+      "end_frame": 180,
+      "stage": "off",
+      "submitted": 0,
+      "textured_submissions": 0,
+      "texture_fallback_submissions": 0,
+      "texture_exports": 0,
+      "texture_bytes": 0
+    },
+    {
+      "end_frame": 240,
+      "stage": "api_neko_textured",
+      "submitted": 1260,
+      "textured_submissions": 1259,
+      "texture_fallback_submissions": 1,
+      "texture_exports": 5,
+      "texture_bytes": 12583652
+    },
+    {
+      "end_frame": 300,
+      "stage": "api_combined_textured",
+      "submitted": 3054,
+      "textured_submissions": 2887,
+      "texture_fallback_submissions": 167,
+      "texture_exports": 30,
+      "texture_bytes": 54399324
+    },
+    {
+      "end_frame": 360,
+      "stage": "api_combined_textured_low_light",
+      "submitted": 5820,
+      "textured_submissions": 2823,
+      "texture_fallback_submissions": 2997,
+      "texture_exports": 2,
+      "texture_bytes": 98600
+    },
+    {
+      "end_frame": 420,
+      "stage": "api_combined_textured_metal",
+      "submitted": 2574,
+      "textured_submissions": 2538,
+      "texture_fallback_submissions": 36,
+      "texture_exports": 0,
+      "texture_bytes": 0
+    },
+    {
+      "end_frame": 480,
+      "stage": "api_combined_textured_alpha",
+      "submitted": 6392,
+      "textured_submissions": 3298,
+      "texture_fallback_submissions": 3094,
+      "texture_exports": 0,
+      "texture_bytes": 0
+    },
+    {
+      "end_frame": 540,
+      "stage": "api_combined_textured_emissive",
+      "submitted": 2355,
+      "textured_submissions": 2315,
+      "texture_fallback_submissions": 40,
+      "texture_exports": 0,
+      "texture_bytes": 0
+    },
+    {
+      "end_frame": 600,
+      "stage": "recovery",
+      "submitted": 0,
+      "textured_submissions": 0,
+      "texture_fallback_submissions": 0,
+      "texture_exports": 0,
+      "texture_bytes": 0
+    }
+  ],
+  "material_and_light": {
+    "material_create_or_update_events": 289,
+    "stable_material_handles": 118,
+    "light_requests": [
+      {
+        "event": "model_light_config_requested",
+        "after_present": 300,
+        "value": "30,30,30",
+        "code": 0
+      },
+      {
+        "event": "model_light_config_requested",
+        "after_present": 540,
+        "value": "3000,3000,3000",
+        "code": 0
+      }
+    ],
+    "manual_visual_review": {
+      "original_raster": "sampled character has pink-white hair, dark dress, colored weapon",
+      "neutral_strong_light_240_300": "very bright hair and desaturated dress remain",
+      "neutral_reduced_light_360": "visible pink-white hair, dark dress and skin/clothing variation closely resemble sampled original base colors",
+      "metal_420": "strong dark/reflective appearance change visible; roughness/normals fidelity unaccepted",
+      "alpha_480": "stage and material request completed; full transparency correctness unaccepted",
+      "emissive_540": "orange emissive appearance visible",
+      "recovery_600": "explicit API character removed; tracked Mesh/material/source texture refs retired",
+      "nonfinite_color_rgb_values": 0,
+      "exact_cyan_color_pixels": 0,
+      "manual_gpu_albedo_evidence": "positive_for_sampled_character; not full shader/material acceptance",
+      "same_camera_pose_across_stages": false,
+      "light_causality": "Same neutral material, same sampled character texture bindings, requested radiance3000->30 with exposure policy unchanged; qualitative evidence that lighting/exposure contributes to whitening. Different pose/camera/distance prevents treating it as a controlled single-variable experiment."
+    }
+  },
+  "adjacent_geometry_groups": {
+    "239": {
+      "summary_samples": 21,
+      "saved_samples": 21,
+      "saved_payload_bytes": 3050466,
+      "saved_triangles": 109787,
+      "shaders": {
+        "NekoToon": 21
+      }
+    },
+    "240": {
+      "summary_samples": 21,
+      "saved_samples": 21,
+      "saved_payload_bytes": 3050466,
+      "saved_triangles": 109787,
+      "shaders": {
+        "NekoToon": 21
+      }
+    },
+    "299": {
+      "summary_samples": 64,
+      "saved_samples": 63,
+      "saved_payload_bytes": 8373294,
+      "saved_triangles": 235821,
+      "shaders": {
+        "VertexLitGeneric": 43,
+        "NekoToon": 21
+      }
+    },
+    "300": {
+      "summary_samples": 64,
+      "saved_samples": 64,
+      "saved_payload_bytes": 7714526,
+      "saved_triangles": 232613,
+      "shaders": {
+        "VertexLitGeneric": 43,
+        "NekoToon": 21
+      }
+    }
+  },
+  "exit_and_archive": {
+    "uploaded_final_summary": "complete/finalized",
+    "all_inner_zip_entries_use_lossless_lzma": true,
+    "recovery_zip_saved_log": true,
+    "final_logs_included_and_inventory_hashes_verified": true,
+    "tracked_api_shutdown_events": [
+      {
+        "event": "api_mesh_shutdown_retire",
+        "code": 0
+      },
+      {
+        "event": "api_mesh_shutdown_remaining",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "model_texture_shutdown_held",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "host_cleanup",
+        "code": 0
+      }
+    ],
+    "host_cleanup_log": "success",
+    "client_bridge_cleanup_log": "success before later execute access violation",
+    "client_exception": {
+      "phase": "process exit, after complete capture and Bridge cleanup",
+      "code": "0xc0000005",
+      "access": "execute",
+      "target": "0x104b0",
+      "fault_module": "unknown",
+      "nearest_named_frames": [
+        "necola.dll+0x1447fc",
+        "necola.dll+0x1448de"
+      ],
+      "active_bridge_command_on_faulting_thread": false,
+      "reported_termination_code": "0xe04c3441",
+      "causality": "Unresolved module-unload/lifetime compatibility. necola frames do not prove exclusive fault; no client DLL included for symbol/disassembly. Prior pre-exit-only captures do not establish this is a new regression."
+    },
+    "remix_remaining_common_device_objects": 40,
+    "fully_clean_exit": false,
+    "collector_exit_classification_gap": "collection complete/errors[] means evidence collection passed; current summary does not flag this post-capture Bridge exception as an abnormal exit"
+  },
+  "acceptance": {
+    "complete_capture_and_raw_input_validation": "pass",
+    "sampled_character_base_texture_path": "positive_manual_evidence",
+    "whole_scene_texture_coverage": "partial",
+    "all_shader_material_fidelity": "unaccepted",
+    "clean_client_exit": "fail",
+    "long_running_realtime_mode": "unrun",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun"
+  },
+  "next_priorities": [
+    "Keep low-light neutral as the useful preview baseline; tune exposure/light with camera and distance taken into account.",
+    "Replace the exhausted cumulative64MiB export policy with a larger bounded working-set/archival plan; include full source mips and retain per-draw fallback accounting. Existing fallback sampled shaders are VertexLitGeneric.",
+    "Add or audit Infected (10531 observed Draws) and special model/material channels; the current result is not all-game dynamic coverage.",
+    "Inspect client DLL unload/resource lifetime compatibility and backend leftover objects; report abnormal exit separately from complete collection.",
+    "Use this complete dataset for fixes; do not repeat the same baseline capture. Batch future texture/coverage/exit verification into one session."
+  ]
+}
