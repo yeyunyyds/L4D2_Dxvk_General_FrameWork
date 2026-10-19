@@ -24,7 +24,7 @@ def analyze(directory,events):
             digest=e['sha256'];check(isinstance(digest,str) and len(digest)==64 and all(x in '0123456789abcdef' for x in digest),'invalid_texture_digest')
             name=e['file'];check(name=='model-textures/'+digest+'.dds','unsafe_texture_path')
             check(0<e['width']<=4096 and 0<e['height']<=4096,'invalid_texture_dimensions')
-            formats={int.from_bytes(b'DXT1','little'):(71,72,8),int.from_bytes(b'DXT3','little'):(74,75,16),int.from_bytes(b'DXT5','little'):(77,78,16),21:(87,91,0),22:(88,93,0)}
+            formats={int.from_bytes(b'DXT1','little'):(71,72,8),int.from_bytes(b'DXT3','little'):(74,75,16),int.from_bytes(b'DXT5','little'):(77,78,16),21:(87,91,0),22:(87,91,0)}
             check(e['format'] in formats,'unsupported_exported_texture_format');linear,srgb,block=formats[e['format']]
             path=directory/name;check(path.is_file() and 148<path.stat().st_size<=16*1024*1024+148,'missing_or_oversized_texture')
             if name not in files:

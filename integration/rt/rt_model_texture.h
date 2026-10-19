@@ -7,7 +7,7 @@
 #include <memory>
 
 namespace ldb_rt::model_texture {
-struct Layout { uint32_t dxgi=0,rowBytes=0,rows=0;bool compressed=false;uint64_t bytes() const { return uint64_t(rowBytes)*rows; } };
+struct Layout { uint32_t dxgi=0,rowBytes=0,rows=0;bool compressed=false,opaqueAlpha=false;uint64_t bytes() const { return uint64_t(rowBytes)*rows; } };
 inline Layout layout(UINT width,UINT height,D3DFORMAT format,bool srgb) {
   Layout out;if(!width||!height||width>4096||height>4096) { return out; }
   unsigned block=0;
@@ -16,7 +16,7 @@ inline Layout layout(UINT width,UINT height,D3DFORMAT format,bool srgb) {
     case D3DFMT_DXT3:out.dxgi=srgb?75u:74u;block=16;break;
     case D3DFMT_DXT5:out.dxgi=srgb?78u:77u;block=16;break;
     case D3DFMT_A8R8G8B8:out.dxgi=srgb?91u:87u;break;
-    case D3DFMT_X8R8G8B8:out.dxgi=srgb?93u:88u;break;
+    case D3DFMT_X8R8G8B8:out.dxgi=srgb?91u:87u;out.opaqueAlpha=true;break;
     default:return out;
   }
   out.compressed=block!=0;out.rowBytes=block?((width+3)/4)*block:width*4;out.rows=block?(height+3)/4:height;
@@ -31,7 +31,9 @@ inline std::vector<uint8_t> dds(UINT width,UINT height,const Layout& l,const voi
   header[19]=32;header[20]=4;header[21]=0x30315844;header[27]=0x1000;
   header[32]=l.dxgi;header[33]=3;header[35]=1;
   std::memcpy(out.data(),header,sizeof(header));
-  for(UINT row=0;row<l.rows;++row) { std::memcpy(out.data()+148+size_t(row)*l.rowBytes,static_cast<const uint8_t*>(data)+size_t(row)*size_t(pitch),l.rowBytes); }
+  for(UINT row=0;row<l.rows;++row) { std::memcpy(out.data()+148+size_t(row)*l.rowBytes,static_cast<const uint8_t*>(data)+size_t(row)*size_t(pitch),l.rowBytes);
+    if(l.opaqueAlpha) { for(UINT x=0;x<width;++x) { out[148+size_t(row)*l.rowBytes+size_t(x)*4+3]=255; } }
+  }
   return out;
 }
 template<class Texture> struct ReadLock {

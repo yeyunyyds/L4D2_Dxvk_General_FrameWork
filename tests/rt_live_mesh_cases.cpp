@@ -8,13 +8,13 @@ using namespace ldb_rt;
 void require(bool value,const char* why) { if(!value) { throw std::runtime_error(why); } }
 namespace fixture {
 unsigned failureCode=1,fail=0,created=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live,materialLive;
-uint8_t lastAlpha=7,lastRef=0;bool lastTextured=false;
+int lastAlpha=7;uint8_t lastRef=0;bool lastTextured=false;
 std::vector<remixapi_HardcodedVertex> received;remixapi_Transform lastTransform{};
 remixapi_ErrorCode result(unsigned at) { return static_cast<remixapi_ErrorCode>(fail==at?failureCode:0); }
 remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remixapi_MaterialHandle* out) {
   if(fail==1) { return result(1); }require(info&&info->pNext,"material extension missing");
   const auto& p=*static_cast<remixapi_MaterialInfoOpaqueEXT*>(info->pNext);
-  require(p.alphaTestType<=7&&!p.useDrawCallAlphaState&&p.opacityConstant>0,"invalid API material alpha");
+  require(p.alphaTestType>=0&&p.alphaTestType<=7&&!p.useDrawCallAlphaState&&p.opacityConstant>0,"invalid API material alpha");
   require(materialLive.insert(info->hash).second,"repeated registration ignored by pinned runtime; destroy first");lastAlpha=p.alphaTestType;lastRef=p.alphaReferenceValue;lastTextured=info->albedoTexture!=nullptr;
   ++materials;*out=reinterpret_cast<remixapi_MaterialHandle>(info->hash);return static_cast<remixapi_ErrorCode>(0);
 }
@@ -98,6 +98,9 @@ int main() {
     require(!std::memcmp(encoded.data()+148,rows.data(),32)&&!std::memcmp(encoded.data()+180,rows.data()+40,32),"texture row padding leaked into DDS");
     require(model_texture::dds(5,7,bc,rows.data(),31).empty()&&model_texture::dds(5,7,bc,rows.data(),-40).empty(),"invalid texture pitch accepted");
     require(model_texture::layout(4,4,D3DFMT_A8R8G8B8,false).dxgi==87&&model_texture::layout(4,4,D3DFMT_A8R8G8B8,true).dxgi==91,"BGRA color space lost");
+    const auto xrgb=model_texture::layout(4,4,D3DFMT_X8R8G8B8,true);auto opaque=model_texture::dds(4,4,xrgb,rows.data(),16);
+    require(xrgb.dxgi==91&&opaque.size()==212,"X8 mapped to unsupported Vulkan format through GLI");
+    for(unsigned pixel=0;pixel<16;++pixel) { require(opaque[148+pixel*4+3]==255&&!std::memcmp(opaque.data()+148+pixel*4,rows.data()+pixel*4,3),"X8 conversion changed RGB or kept undefined alpha"); }
     require(!model_texture::layout(4097,4,D3DFMT_DXT1,true).dxgi&&!model_texture::layout(0,4,D3DFMT_DXT1,true).dxgi&&!model_texture::layout(4,4,D3DFMT_A16B16G16R16F,true).dxgi,"unsupported texture accepted");
     uint8_t address=99;require(model_texture::wrap(D3DTADDRESS_CLAMP,address)&&address==0&&model_texture::wrap(D3DTADDRESS_WRAP,address)&&address==1&&!model_texture::wrap(D3DTADDRESS_BORDER,address),"MDL sampler address mismatch");
   }
