@@ -1,4 +1,4 @@
-"""Validate v16 live API evidence; GPU geometry/image acceptance remains separate."""
+"""Validate v16/v17 live API evidence; GPU geometry/image acceptance remains separate."""
 from collections import Counter
 import hashlib
 import math
@@ -13,6 +13,8 @@ CONFIG=('rtx.enablePreservePath','rtx.useBuffersDirectly','rtx.bloom.enable','rt
 
 def analyze(directory,events):
     errors=[];directory=Path(directory);samples=[];payload_bytes=0
+    v17=any(e.get('event')=='world_coverage_revision' and e.get('value')=='17' and e.get('code')==0 for e in events)
+    reasons=('draw_limit','frame_geometry_bytes','live_geometry_bytes','mesh_entries','gpu_backlog')
     def check(value,why):
         if not value:raise ValueError(why)
     for e in events:
@@ -37,20 +39,29 @@ def analyze(directory,events):
             check(e['completed_through']<=e['frame'],'invalid_live_completion')
             if e['destroyed']>previous.get('destroyed',0):check(e['completed_through']>0,'retirement_without_completion')
             if e['frame']<=180:check(e['submitted']==0,'premature_live_submission')
+            if v17:
+                for k in ('frame_draws','frame_new_bytes','frame_omitted','omitted_total'):
+                    check(type(e.get(k)) is int and e[k]>=0,'invalid_live_budget_counter')
+                check(e['frame_draws']==e['submitted']-previous.get('submitted',0) and e['frame_draws']<=512,'invalid_live_frame_draws')
+                check(e['frame_new_bytes']<=96*1024*1024,'invalid_live_frame_bytes')
+                check(e['omitted_total']-previous.get('omitted_total',0)==e['frame_omitted'],'live_omission_delta')
+                omission=e.get('omission_reasons',{})
+                check(set(omission)==set(reasons) and all(type(n) is int and n>=0 for n in omission.values()) and sum(omission.values())==e['omitted_total'],'live_omission_reason_accounting')
+                check(all(omission[k]>=previous.get('omission_reasons',{}).get(k,0) for k in reasons),'regressing_live_omission_reason')
             previous=e
         except (KeyError,TypeError,ValueError) as exc:errors.append(str(exc))
     readbacks=[e for e in events if e.get('event')=='api_model_path_readback']
     if [(e.get('frame'),e.get('stage'),e.get('material')) for e in readbacks]!=list(zip(FRAMES,STAGES,MATERIALS)):errors.append('live_readback_sequence')
-    rows=[e for e in events if e.get('event')=='api_model_sample'];ordinals=set();files=set();counts=Counter();stage_bytes=Counter()
+    rows=[e for e in events if e.get('event') in (('api_model_sample','api_model_previous_sample') if v17 else ('api_model_sample',))];ordinals=set();files=set();counts=Counter();stage_bytes=Counter()
     for e in rows:
         try:
-            frame=e['frame'];check(frame in FRAMES[3:-1],'invalid_live_sample_frame');index=FRAMES.index(frame)
+            frame=e['frame'];previous_sample=e['event']=='api_model_previous_sample';check(frame in ((239,299) if previous_sample else FRAMES[3:-1]),'invalid_live_sample_frame');index=FRAMES.index(frame+1 if previous_sample else frame)
             check(e['stage']==STAGES[index] and e['material']==MATERIALS[index],'live_sample_material_stage')
             counts[frame]+=1;check(counts[frame]<=64,'live_sample_budget')
             check(type(e['ordinal']) is int and e['ordinal']>0 and e['ordinal'] not in ordinals,'live_sample_identity');ordinals.add(e['ordinal'])
             check(e['ignored_category_at_original_draw']&8 and e['cull'] in (1,2,3),'original_model_not_isolated')
             check(e['gpu_upload']=='pinned_CreateMesh_synchronous_copy_queued_owned_buffers','unknown_live_upload_contract')
-            check(e['shader'] in ('NekoToon','VertexLitGeneric') and (frame!=240 or e['shader']=='NekoToon'),'unapproved_live_shader')
+            check(e['shader'] in ('NekoToon','VertexLitGeneric') and (frame not in (239,240) or e['shader']=='NekoToon'),'unapproved_live_shader')
             check(e['kind'] in (1,2) and e['topology'] in (4,5) and 0<e['vertices']<=32768 and 0<e['triangles']<=131072,'live_geometry_range')
             for key in ('world','view','projection'):
                 check(len(e[key])==16 and all(type(x) in (float,int) and math.isfinite(x) for x in e[key]),'live_invalid_matrix')
@@ -63,10 +74,10 @@ def analyze(directory,events):
                 suffix=name.split(str(e['ordinal'])+'-',1)[1];check(suffix in ('vertices.bin','indices.bin'),'live_unexpected_payload')
                 path=directory/name;check(path.is_file() and 0<item['size']<=1048576 and path.stat().st_size==item['size'],'live_missing_payload')
                 raw=path.read_bytes();digest=hashlib.sha256(raw).hexdigest();check(digest==item['sha256']==e[suffix.split('.')[0]+'_sha256'],'live_payload_digest')
-                payload[suffix]=raw;payload_bytes+=len(raw);stage_bytes[frame]+=len(raw)
-            check(stage_bytes[frame]<=16*1024*1024,'live_payload_budget')
+                payload[suffix]=raw;payload_bytes+=len(raw);stage_bytes[frame+1 if previous_sample else frame]+=len(raw)
+            check(stage_bytes[frame+1 if previous_sample else frame]<=16*1024*1024,'live_payload_budget')
             if e['payload_saved']:
-                check(frame in (240,300),'live_unrequested_payload');vertices=payload['vertices.bin'];check(len(vertices)==e['vertices']*32,'live_vertex_correspondence')
+                check(frame in ((239,240,299,300) if v17 else (240,300)),'live_unrequested_payload');vertices=payload['vertices.bin'];check(len(vertices)==e['vertices']*32,'live_vertex_correspondence')
                 for at in range(0,len(vertices),32):check(all(math.isfinite(x) and abs(x)<=1e7 for x in struct.unpack_from('<5f',vertices,at)),'live_nonfinite_vertex')
                 if e['kind']==2:
                     check(e['index_bytes'] in (2,4),'live_index_width');raw=payload['indices.bin'];n=e['triangles']*3 if e['topology']==4 else e['triangles']+2
@@ -80,9 +91,15 @@ def analyze(directory,events):
             check(e['submission_samples']==counts[e['frame']] and 0<=e['submission_sample_omitted'],'live_sample_count_mismatch')
             if e['frame'] in FRAMES[3:-1]:check(e['submission_samples']>0,'live_model_stage_unrun')
             if e['frame']==600:check(e['live_entries']==0,'live_recovery_resources_remaining')
+            if v17:
+                check(e['previous_samples']==counts[e['frame']-1] if e['frame'] in (240,300) else e['previous_samples']==0,'live_previous_count_mismatch')
+                if e['frame'] in (240,300):check(e['previous_samples']>0,'missing_live_previous_pose')
+                account=next((f for f in frames if f['frame']==e['frame']),{})
+                check(e['omitted_total']==account.get('omitted_total'),'live_readback_omission_mismatch')
         except (KeyError,ValueError,TypeError) as exc:errors.append(str(exc))
     if not stage_bytes[240] or not stage_bytes[300]:errors.append('live_missing_neutral_geometry_pairs')
-    return {'schema':1,'pass':not errors,'status':'valid_evidence_requires_image_review' if not errors else 'incomplete',
+    omissions=frames[-1].get('omitted_total',0) if v17 and frames else 0
+    return {'schema':1,'budget_omissions':omissions,'model_budget_coverage':'partial_due_to_budget' if omissions else 'no_recorded_budget_omissions','previous_pose_samples':sum(e.get('event')=='api_model_previous_sample' for e in samples),'pass':not errors,'status':'valid_evidence_requires_image_review' if not errors else 'incomplete',
             'errors':sorted(set(errors)),'readbacks':readbacks,'payload_bytes':payload_bytes,'samples':samples,
             'final_counters':frames[-1] if frames else {},'gpu_image_acceptance':'unrun',
             'limits':'API success, CPU hashes and event completion do not establish correct BLAS, materials, original textures or game performance'}

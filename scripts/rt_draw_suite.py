@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import lzma  # Required by lossless result ZIP compression; checked in packaged Python.
 import os
 from pathlib import Path
 import secrets
@@ -99,6 +100,7 @@ def install(root,game,manifest):
                      '6036c11994ba91e881f255d160b91bf3906775c30af18bd1bfdac42e5c8c7773',
                      '5ef8cd2d0c00070ec10d6f50f28ecd2707a4e2a8cc3fe3105332669b1c904341',
                      'b39a73c667023225dd5fbd666357ea854386f08928d009182e2d2aff62bd6e58',
+                     '719a95eaa9f7defa7b7dc0f8987a9227fcdc35b89663f6a990cb8f86895b17c9',
                      manifest['binaries'][TARGETS[0]]['sha256']}
     if inherited is None and digest(game/TARGETS[0]) in known_observers:
         raise ValueError('Earlier observer found without its recovery receipt. Restore it from its original package folder first.')
@@ -190,15 +192,16 @@ def wait_stopped(notify,timeout=300):
 
 def archive_result(directory,report):
     files=[p for p in directory.rglob('*') if p.is_file()]
-    if sum(p.stat().st_size for p in files)>384*1024*1024:
+    if sum(p.stat().st_size for p in files)>512*1024*1024:
         report['collection']='incomplete';report['errors'].append('result_budget_exceeded')
+    report['archive_compression']='zip_lzma_lossless'
     save(directory/'summary.json',report)
     output=directory.with_suffix('.zip')
-    with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as z:
+    with zipfile.ZipFile(output,'w',zipfile.ZIP_LZMA) as z:
         used=0;omitted=[]
         for path in sorted(directory.rglob('*')):
             if not path.is_file():continue
-            if used+path.stat().st_size>384*1024*1024 and path.name!='summary.json':
+            if used+path.stat().st_size>512*1024*1024 and path.name!='summary.json':
                 omitted.append(str(path.relative_to(directory)));continue
             z.write(path,path.relative_to(directory));used+=path.stat().st_size
         z.writestr('omitted-files.json',json.dumps(omitted))
@@ -270,6 +273,11 @@ def finish_world_capture(directory,game,since,report,notify):
     wait_stopped(notify)
     outputs=analyze_world(directory);save(directory/'world-analysis.json',outputs)
     report['world_outputs']=outputs['runtime_outputs']
+    live=outputs.get('live_mesh',{})
+    report['model_budget_omissions']=live.get('budget_omissions',0)
+    report['model_budget_coverage']=live.get('model_budget_coverage','unrun')
+    if report['model_budget_omissions']:
+        notify('Model budget omissions: '+str(report['model_budget_omissions'])+'. Collection continues; model coverage is PARTIAL and requires review.')
     report['world_geometry_buffers']='nonzero_requires_review' if outputs.get('nonzero_world_depth_and_normals') else 'incomplete'
     reviews=json.loads((directory/'draw-analysis.json').read_text())
     report['world_converted_draws']=sum(t.get('world_conversion',{}).get('converted',0) for t in reviews.values())
@@ -352,7 +360,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Coverage comparison: keep sky, props and a character visible; press F9 once and hold the camera still. World/HUD 31-120; corrected sky 121-180; Neko preserve OFF/ON/OFF 181-360; combined 361-420; neutral model color 421-480; directional light 481-540; models removed for recovery 541-600. All stages run automatically.')
+        if world:notify('Live Mesh comparison: press F9 once; slow movement and turning are allowed. World/HUD 31-120; sky 121-180; Neko neutral 181-240; combined neutral 241-300; rough 301-360; metal 361-420; alpha 421-480; emissive 481-540; recovery 541-600. Adjacent pose probes and all stages run automatically.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

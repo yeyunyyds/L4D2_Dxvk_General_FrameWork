@@ -26,6 +26,37 @@ class LiveEvidence(unittest.TestCase):
      name='api-'+str(index)+'-'+suffix;(root/name).write_bytes(data);row['files'].append(dict(file=name,size=len(data),sha256=hashlib.sha256(data).hexdigest()))
    events.append(row)
   return events
+ def v17_fixture(self,root):
+  events=self.fixture(root);events.append(dict(event='world_coverage_revision',code=0,value='17'))
+  for e in events:
+   if e['event']=='api_mesh_frame':
+    e.update(frame_draws=int(181<=e['frame']<=540),frame_new_bytes=216*int(181<=e['frame']<=540),frame_omitted=0,omitted_total=0,omission_reasons={k:0 for k in ('draw_limit','frame_geometry_bytes','live_geometry_bytes','mesh_entries','gpu_backlog')})
+   if e['event']=='api_model_path_readback':e.update(previous_samples=int(e['frame'] in (240,300)),previous_sample_omitted=0,omitted_total=0)
+  for frame in (240,300):
+   original=next(e for e in events if e['event']=='api_model_sample' and e['frame']==frame);previous=copy.deepcopy(original)
+   previous.update(event='api_model_previous_sample',frame=frame-1,ordinal=original['ordinal']+1000)
+   for item in previous['files']:
+    old=item['file'];item['file']=old.replace('api-'+str(original['ordinal'])+'-','api-'+str(previous['ordinal'])+'-');(root/item['file']).write_bytes((root/old).read_bytes())
+   events.append(previous)
+  return events
+ def test_v17_budget_omissions_continue_evidence_and_remain_partial_coverage(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.v17_fixture(root);r=analyze(root,events);self.assertTrue(r['pass'],r['errors']);self.assertEqual(r['previous_pose_samples'],2)
+   for e in events:
+    if e['event']=='api_mesh_frame' and e['frame']>=339:
+     e['omitted_total']=1;e['omission_reasons']['draw_limit']=1;e['frame_omitted']=int(e['frame']==339)
+    if e['event']=='api_model_path_readback' and e['frame']>=339:e['omitted_total']=1
+   events.append(dict(event='api_model_budget_omitted',code=0,frame=339,reason='draw_limit'))
+   r=analyze(root,events);self.assertTrue(r['pass'],r['errors']);self.assertEqual(r['budget_omissions'],1);self.assertEqual(r['model_budget_coverage'],'partial_due_to_budget')
+   next(e for e in events if e['event']=='api_mesh_frame' and e['frame']==340)['frame_omitted']=1
+   self.assertIn('live_omission_delta',analyze(root,events)['errors'])
+ def test_v17_previous_pose_and_actual_api_error_are_not_hidden(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.v17_fixture(root)
+   missing=[e for e in events if not(e['event']=='api_model_previous_sample' and e['frame']==239)]
+   self.assertIn('live_previous_count_mismatch',analyze(root,missing)['errors'])
+   events.append(dict(event='api_model_submit_failed',code=8,operation='create_mesh'))
+   self.assertIn('api_model_submit_failed',analyze(root,events)['errors'])
  def test_complete_live_batch_still_requires_image_review(self):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);result=analyze(root,self.fixture(root));self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['gpu_image_acceptance'],'unrun')

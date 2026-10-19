@@ -1,0 +1,192 @@
+{
+  "schema": 1,
+  "scope": "v16 B580 live game result; positive sampled geometry with application draw-budget interruption; not full RT acceptance",
+  "input": {
+    "filename": "rt-world-20261018-225042-51997d90.zip",
+    "size": 23890793,
+    "sha256": "5635ee693249201ffc5f944ea3d5bbe2809d49705c80146607661b316614e02f",
+    "members": 3807,
+    "expanded_bytes": 201801971,
+    "crc": "pass",
+    "omitted_files": []
+  },
+  "build_commit": "91e81fd5f6589d0ea1a310227d772b6019489967",
+  "build_id": "ldb-rt-observer+4dcb9eeb84ea6c09",
+  "installed_pair_matches_published_build": true,
+  "collection": {
+    "schema": 1,
+    "scope": "selected_static_world_runtime_pilot",
+    "build_commit": "91e81fd5f6589d0ea1a310227d772b6019489967",
+    "collection": "incomplete",
+    "errors": [
+      "RuntimeError: World runtime failed at api_model_submit_failed; partial results retained"
+    ],
+    "game_rt": "attempted_requires_review",
+    "source_queue_execution": "unrun",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun",
+    "collection_phase": "finalized"
+  },
+  "failure": {
+    "event": "api_model_submit_failed",
+    "code": 8,
+    "frame": 339,
+    "source": "v16 Scene.draw frameDraws>=128 application guard, before any API mesh call",
+    "successful_model_draws_at_failure_frame": 128,
+    "remaining_native_presents_observed": 41,
+    "native_presents_observed": 379,
+    "native_trace_footer": null,
+    "native_trace_errors": [
+      "invalid_record_or_data_after_footer",
+      "missing_header_or_footer"
+    ],
+    "no_claim_of_gpu_oom_or_game_crash": true
+  },
+  "api_frames_recorded": 338,
+  "last_completed_frame_counters": {
+    "event": "api_mesh_frame",
+    "frame": 338,
+    "stage": "api_combined_rough",
+    "submitted": 6141,
+    "created": 4294,
+    "reused": 1847,
+    "destroyed": 4126,
+    "entries": 168,
+    "bytes": 172012800,
+    "peak_bytes": 231523272,
+    "completed_through": 337,
+    "pending_fences": 1
+  },
+  "frame_accounting_consistent": true,
+  "max_pending_fences": 1,
+  "sampled_model_frames": {
+    "240": {
+      "samples": 21,
+      "vertices": 74742,
+      "triangles": 109787,
+      "shaders": {
+        "NekoToon": 21
+      }
+    },
+    "300": {
+      "samples": 41,
+      "vertices": 102819,
+      "triangles": 135058,
+      "shaders": {
+        "VertexLitGeneric": 20,
+        "NekoToon": 21
+      }
+    }
+  },
+  "verified_api_payload_bytes": 7151022,
+  "verified_original_input_samples": 324,
+  "verified_original_input_payload_bytes": 15496040,
+  "world_errors": [
+    "incomplete_or_failed_coverage_phase_requests",
+    "incomplete_control_and_world_output_set",
+    "api_model_submit_failed",
+    "live_configuration_sequence",
+    "live_readback_sequence",
+    "missing_live_present_accounting",
+    "incomplete_model_stage_readbacks"
+  ],
+  "scene_errors": [
+    "api_model_submit_failed",
+    "live_configuration_sequence",
+    "live_readback_sequence",
+    "missing_live_present_accounting",
+    "missing_model_rebuild_summaries",
+    "missing_scene_rebuild_summaries",
+    "missing_wide_capture_summaries"
+  ],
+  "visual_review": {
+    "30": "original raster world and third-person character; RT depth/normal buffers zero",
+    "120": "world and HUD coherent, no reconstructed sky or explicit models yet",
+    "180": "sky/world coherent; extended models not yet added",
+    "240": "coherent third-person Neko silhouette, depth and normals; bright synthetic neutral material, no observed cyan or long strips",
+    "300": "combined API scene with coherent character/weapon and several props; bright synthetic material, no observed cyan or long strips",
+    "later_materials_and_recovery": "unrun; rough interrupted before360; metal/alpha/emissive/recovery absent",
+    "cross_stage_camera_static": false,
+    "exact_cyan_pixels_at240_300": [
+      0,
+      0
+    ]
+  },
+  "independent_cpu_projection": {
+    "240": {
+      "samples": 21,
+      "vertices": 74742,
+      "triangles": 109787,
+      "payload_verified": true,
+      "model_projection_pixels": 8608,
+      "model_projection_bounds_xy": [
+        [
+          274,
+          197
+        ],
+        [
+          354,
+          399
+        ]
+      ],
+      "gpu_depth_matching_within_1e_4": 5830,
+      "gpu_depth_shallower_possible_occlusion": 1270,
+      "gpu_depth_further_or_missing": 1508,
+      "interior_pixels": 6648,
+      "interior_gpu_depth_further_or_missing": 911,
+      "depth_error_median_on_mask_valid": 5.7578086853027344e-05,
+      "depth_error_p95_on_mask_valid": 0.001022618729621172,
+      "exact_cyan_pixels_full_output": 0,
+      "nonfinite_color_values": 0,
+      "model_depth_matched_rgb_at_least_0_99_fraction": 0.0,
+      "limits": "projection of current submitted triangles; opaque double-sided CPU depth omits world occlusion, RT sampling, alpha and post processing; diagnostic tolerance 1e-4 not full image or GPU BLAS acceptance"
+    },
+    "300": {
+      "samples": 41,
+      "vertices": 102819,
+      "triangles": 135058,
+      "payload_verified": true,
+      "model_projection_pixels": 10403,
+      "model_projection_bounds_xy": [
+        [
+          38,
+          165
+        ],
+        [
+          512,
+          397
+        ]
+      ],
+      "gpu_depth_matching_within_1e_4": 6606,
+      "gpu_depth_shallower_possible_occlusion": 2238,
+      "gpu_depth_further_or_missing": 1559,
+      "interior_pixels": 7698,
+      "interior_gpu_depth_further_or_missing": 1033,
+      "depth_error_median_on_mask_valid": 5.936622619628906e-05,
+      "depth_error_p95_on_mask_valid": 0.013049435801804066,
+      "exact_cyan_pixels_full_output": 0,
+      "nonfinite_color_values": 0,
+      "model_depth_matched_rgb_at_least_0_99_fraction": 0.0,
+      "limits": "projection of current submitted triangles; opaque double-sided CPU depth omits world occlusion, RT sampling, alpha and post processing; diagnostic tolerance 1e-4 not full image or GPU BLAS acceptance"
+    }
+  },
+  "limits": [
+    "Only five output readbacks and two model geometry groups exist; no completed 600-Present acceptance.",
+    "CPU/GPU projected outlines are close but depth is not pixel-identical; temporal pose, camera/sampling and visibility remain to be checked with adjacent frames.",
+    "No full original model textures, full Toon/lighting, complete map/model coverage, clean shutdown or performance acceptance."
+  ],
+  "next_changes": [
+    "512 bounded model submissions per frame; application budget omission remains explicit and does not abort remaining collection",
+    "poll completion and retire completed idle Meshes before allocating new poses",
+    "log failure operation and precise budget/counters; preserve fatal behavior for actual API/state failure",
+    "automatically capture239/240 and299/300 pose groups within shared bounded payload budget",
+    "correct stale v15 console instructions and losslessly compress final result ZIP to reduce upload size"
+  ],
+  "lossless_result_recompression": {
+    "method": "ZIP_LZMA",
+    "same_uncompressed_member_payloads": true,
+    "size": 14168172,
+    "original_size": 23890793,
+    "crc": "pass"
+  }
+}

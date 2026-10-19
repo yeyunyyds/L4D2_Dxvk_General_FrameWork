@@ -78,44 +78,67 @@ inline remixapi_MaterialInfoOpaqueEXT opaque(Material kind) {
   return p;
 }
 struct Record { remixapi_MeshHandle mesh=nullptr;uint64_t last=0,bytes=0; };
-struct Submission { bool success=false,created=false;uint64_t handle=0,triangles=0;uint32_t code=0;std::string key; };
+enum class Budget : unsigned { None,Draws,FrameBytes,LiveBytes,Entries,GpuBacklog,Count };
+inline const char* name(Budget reason) {
+  switch(reason) { case Budget::Draws:return "draw_limit";case Budget::FrameBytes:return "frame_geometry_bytes";
+    case Budget::LiveBytes:return "live_geometry_bytes";case Budget::Entries:return "mesh_entries";
+    case Budget::GpuBacklog:return "gpu_backlog";default:return "none"; }
+}
+struct Limits { uint64_t bytes=256ull*1024*1024,frameBytes=96ull*1024*1024;unsigned draws=512,entries=512; };
+struct Submission {
+  bool success=false,created=false,deferred=false;Budget budget=Budget::None;
+  uint64_t handle=0,triangles=0;uint32_t code=0;const char* operation="input";std::string key;
+};
 class Scene {
   remixapi_Interface* api=nullptr;uint64_t next=1;
   std::map<std::string,Record> meshes;
+  Limits limits;
   std::array<remixapi_MaterialHandle,size_t(Material::Count)> materials{};
 public:
   uint64_t bytes=0,peakBytes=0,created=0,reused=0,destroyed=0,submitted=0;
   static constexpr uint64_t maxBytes=256ull*1024*1024,maxFrameBytes=96ull*1024*1024;
-  uint64_t frame=0,frameBytes=0;unsigned frameDraws=0;
-  explicit Scene(remixapi_Interface* table=nullptr):api(table) {}
+  uint64_t frame=0,frameBytes=0,omitted=0;unsigned frameDraws=0,frameOmitted=0;
+  std::array<uint64_t,size_t(Budget::Count)> omissionTotals{};
+  explicit Scene(remixapi_Interface* table=nullptr,Limits policy={}):api(table),limits(policy) {}
+  void frameAt(uint64_t at) { if(at!=frame) { frame=at;frameDraws=0;frameBytes=0;frameOmitted=0; } }
+  Submission defer(Budget reason,uint64_t at) {
+    frameAt(at);Submission result;result.deferred=true;result.budget=reason;result.operation="budget";
+    ++omitted;++frameOmitted;++omissionTotals[size_t(reason)];return result;
+  }
+  uint32_t begin(uint64_t completed,uint64_t at) { frameAt(at);return retire(completed,at); }
+
   size_t entries() const { return meshes.size(); }
   void bind(remixapi_Interface* table) { api=table; }
-  Submission draw(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,Material variant,uint64_t at) {
+  Submission draw(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,Material variant,uint64_t at,size_t pending=0) {
     Submission result;
     if(!api || !api->CreateMaterial||!api->CreateMesh||!api->DrawInstance || unsigned(variant)>=unsigned(Material::Count) ||
        !source.ready || !bulk_static::affine(source.world)) { result.code=ERROR_INVALID_DATA;return result; }
-    if(at!=frame) { frame=at;frameDraws=0;frameBytes=0; }
-    if(frameDraws>=128) { result.code=ERROR_NOT_ENOUGH_MEMORY;return result; }
+    frameAt(at);
+    if(pending>=8) { return defer(Budget::GpuBacklog,at); }
+    if(frameDraws>=limits.draws) { return defer(Budget::Draws,at); }
+    result.operation="hash";
     const auto vh=ldb_rt_file::geometrySha256(source.bytes.data(),source.bytes.size());
     const auto ih=ldb_rt_file::geometrySha256(source.indices.data(),source.indices.size());
     if(vh.empty()||ih.empty()) { result.code=ERROR_INVALID_DATA;return result; }
     result.key=vh+ih+":"+std::to_string(kind)+":"+std::to_string(unsigned(topology))+":"+std::to_string(cull)+":"+std::to_string(unsigned(variant));
     auto found=meshes.find(result.key);
     if(found==meshes.end()) {
-      Geometry geometry;if(!build(source,kind,topology,cull,geometry)) { result.code=ERROR_INVALID_DATA;return result; }
-      if(geometry.bytes()>maxFrameBytes-frameBytes || geometry.bytes()>maxBytes-bytes || meshes.size()>=512) { result.code=ERROR_NOT_ENOUGH_MEMORY;return result; }
+      result.operation="geometry";Geometry geometry;if(!build(source,kind,topology,cull,geometry)) { result.code=ERROR_INVALID_DATA;return result; }
+      if(geometry.bytes()>limits.frameBytes-frameBytes) { return defer(Budget::FrameBytes,at); }
+      if(geometry.bytes()>limits.bytes-bytes) { return defer(Budget::LiveBytes,at); }
+      if(meshes.size()>=limits.entries) { return defer(Budget::Entries,at); }
       auto& material=materials[size_t(variant)];
       if(!material) {
         auto ext=opaque(variant);remixapi_MaterialInfo info{};info.sType=REMIXAPI_STRUCT_TYPE_MATERIAL_INFO;info.pNext=&ext;
         info.hash=0x4c444d4100000001ull+unsigned(variant);
         if(variant==Material::Emissive) { info.emissiveIntensity=3;info.emissiveColorConstant={0.8f,0.2f,0.05f}; }
-        result.code=uint32_t(api->CreateMaterial(&info,&material));if(result.code||!material) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
+        result.operation="create_material";result.code=uint32_t(api->CreateMaterial(&info,&material));if(result.code||!material) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
       }
       remixapi_MeshInfoSurfaceTriangles surface{};surface.vertices_values=geometry.vertices.data();surface.vertices_count=geometry.vertices.size();
       surface.indices_values=geometry.indices.data();surface.indices_count=geometry.indices.size();surface.material=material;
       remixapi_MeshInfo mesh{};mesh.sType=REMIXAPI_STRUCT_TYPE_MESH_INFO;mesh.hash=0x4c444d5300000000ull+next++;
       mesh.surfaces_values=&surface;mesh.surfaces_count=1;remixapi_MeshHandle handle=nullptr;
-      result.code=uint32_t(api->CreateMesh(&mesh,&handle));if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
+      result.operation="create_mesh";result.code=uint32_t(api->CreateMesh(&mesh,&handle));if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
       // The pinned CreateMesh copies CPU arrays before returning and queues
       // Rc-owned buffers. CPU scratch can be dropped here, handles cannot.
       found=meshes.emplace(result.key,Record{handle,at,geometry.bytes()}).first;
@@ -125,7 +148,7 @@ public:
     result.triangles=kind==2?source.drawArgs[4]:source.drawArgs[1];
     remixapi_InstanceInfo instance{};instance.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO;instance.mesh=r.mesh;instance.doubleSided=cull==D3DCULL_NONE;
     for(unsigned row=0;row<3;++row) { for(unsigned col=0;col<4;++col) { instance.transform.matrix[row][col]=source.world[col*4+row]; } }
-    result.code=uint32_t(api->DrawInstance(&instance));if(result.code) { return result; }
+    result.operation="draw_instance";result.code=uint32_t(api->DrawInstance(&instance));if(result.code) { return result; }
     ++submitted;++frameDraws;result.success=true;return result;
   }
   uint32_t retire(uint64_t completed,uint64_t now,bool all=false) {

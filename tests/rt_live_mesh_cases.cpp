@@ -7,9 +7,9 @@
 using namespace ldb_rt;
 void require(bool value,const char* why) { if(!value) { throw std::runtime_error(why); } }
 namespace fixture {
-unsigned fail=0,created=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live;
+unsigned failureCode=1,fail=0,created=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live;
 std::vector<remixapi_HardcodedVertex> received;remixapi_Transform lastTransform{};
-remixapi_ErrorCode result(unsigned at) { return static_cast<remixapi_ErrorCode>(fail==at?1:0); }
+remixapi_ErrorCode result(unsigned at) { return static_cast<remixapi_ErrorCode>(fail==at?failureCode:0); }
 remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remixapi_MaterialHandle* out) {
   if(fail==1) { return result(1); }require(info&&info->pNext,"material extension missing");
   const auto& p=*static_cast<remixapi_MaterialInfoOpaqueEXT*>(info->pNext);
@@ -75,11 +75,41 @@ int main() {
   for(unsigned failure=4;failure<=5;++failure) { live_mesh::Scene broken(&api);auto input=fixture::source();require(broken.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Alpha,30).success,"destruction failure setup");fixture::fail=failure;
    require(broken.retire(100,100,true)!=0,"API destroy failure hidden");fixture::fail=0;require(!broken.retire(100,100,true),"destruction retry failed"); }
   { live_mesh::Scene capped(&api);auto input=fixture::source();
-    for(unsigned i=0;i<128;++i) { require(capped.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,50).success,"draw budget early failure"); }
-    require(!capped.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,50).success,"draw budget not bounded");
+    for(unsigned i=0;i<512;++i) { require(capped.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,50).success,"draw budget early failure"); }
+    auto omitted=capped.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,50);
+    require(omitted.deferred&&!omitted.success&&!omitted.code&&omitted.budget==live_mesh::Budget::Draws&&capped.omitted==1,"draw budget must omit, not fail API");
     require(!capped.retire(49,100,true)&&capped.entries()==1,"recovery destroyed uncompleted resource");
     require(!capped.retire(50,100,true)&&!capped.entries(),"completed recovery failed");
   }
+  { auto input=fixture::source();live_mesh::Geometry g;require(live_mesh::build(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,g),"budget fixture geometry");
+    for(unsigned which=0;which<3;++which) {
+      live_mesh::Limits limits;if(which==0) { limits.bytes=1; }else if(which==1) { limits.frameBytes=1; }else { limits.entries=0; }
+      live_mesh::Scene bounded(&api,limits);const auto before=fixture::created;
+      auto x=bounded.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,60);
+      require(x.deferred&&!x.code&&fixture::created==before&&!bounded.entries(),"geometry budget allocated or failed API");
+      require(x.budget==(which==0?live_mesh::Budget::LiveBytes:which==1?live_mesh::Budget::FrameBytes:live_mesh::Budget::Entries),"wrong geometry budget reason");
+    }
+    live_mesh::Limits limits;limits.bytes=2*g.bytes();live_mesh::Scene early(&api,limits);
+    require(early.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1).success,"first pose");
+    const float b=0.1f,c=0.2f;std::memcpy(input.bytes.data(),&b,4);
+    require(early.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2).success,"second pose");
+    std::memcpy(input.bytes.data(),&c,4);require(!early.begin(0,3),"early retirement query");
+    auto blocked=early.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3);
+    require(blocked.deferred&&early.entries()==2,"incomplete pose freed to make space");
+    require(!early.begin(1,3)&&early.entries()==1,"completed idle pose not retired before allocation");
+    require(early.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3).success&&early.peakBytes==limits.bytes,"early retirement did not prevent transient growth");
+    require(!early.retire(3,5,true),"early retirement cleanup");
+    live_mesh::Scene backlog(&api);const auto before=fixture::created;
+    auto x=backlog.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,10,8);
+    require(x.deferred&&x.budget==live_mesh::Budget::GpuBacklog&&!x.code&&fixture::created==before,"GPU backlog must defer without allocation");
+    require(backlog.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,11,7).success,"backlog did not resume");
+    require(!backlog.retire(11,13,true),"backlog cleanup");
+    fixture::failureCode=8;fixture::fail=2;live_mesh::Scene apiFailure(&api);
+    x=apiFailure.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,20);
+    require(!x.success&&!x.deferred&&x.code==8&&std::string(x.operation)=="create_mesh","API error 8 misclassified as application budget");
+    fixture::fail=0;fixture::failureCode=1;require(!apiFailure.retire(20,22,true),"real API failure cleanup");
+  }
+  std::cout<<"RT live mesh >128 draws/budget omission/early retirement/backlog: PASS\n";
   require(fixture::live.empty(),"fixture left live meshes");
   std::cout<<"RT live mesh CPU pose update/cache/material/fence-gated lifetime/API failures: PASS; actual GPU/game unrun\n";return 0;
  }catch(const std::exception& e) { std::cerr<<e.what()<<'\n';return 1; }

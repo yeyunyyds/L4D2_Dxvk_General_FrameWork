@@ -68,6 +68,17 @@ assert result['execution']=='incomplete'
         (directory/'rt-draw-host-fixture.bin').write_bytes(data)
         return directory
 
+    def test_result_archive_losslessly_retains_trace_and_images_with_lzma(self):
+        import zipfile
+        directory=self.trace();raw=(directory/'rt-draw-host-fixture.bin').read_bytes();(directory/'world-240-1.rgba32f').write_bytes(bytes(range(256))*200)
+        report={'collection':'complete','errors':[]};output=suite.archive_result(directory,report)
+        with zipfile.ZipFile(output) as archive:
+            self.assertIsNone(archive.testzip());self.assertEqual(archive.read('rt-draw-host-fixture.bin'),raw)
+            self.assertEqual(archive.read('world-240-1.rgba32f'),bytes(range(256))*200)
+            self.assertEqual(archive.getinfo('rt-draw-host-fixture.bin').compress_type,zipfile.ZIP_LZMA)
+            self.assertEqual(json.loads(archive.read('omitted-files.json')),[])
+            self.assertEqual(json.loads(archive.read('summary.json'))['collection'],'complete')
+
     def test_module_failure_keeps_completed_draw_analysis_and_partial_scope(self):
         directory=self.trace();report={'errors':[]}
         with patch.object(suite,'collect',side_effect=FileNotFoundError('fixture missing baseline')):

@@ -35,6 +35,7 @@ if __name__ == '__main__':
               'world_original_input_development_execution': 'unrun',
               'world_owned_geometry_development_execution': 'unrun',
               'world_live_mesh_development_execution':'unrun',
+              'world_live_mesh_budget_development_execution':'unrun',
               'system_d3d9_nullref_state': {'x86': 'unrun', 'x64': 'unrun'},
               'artifact_validation': 'unrun'}
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -148,6 +149,9 @@ if __name__ == '__main__':
                   'RT live mesh normalized indices/strip winding/flat normals/finite bounds: PASS',
                   'RT live mesh CPU pose update/cache/material/fence-gated lifetime/API failures: PASS'))):
             status['world_live_mesh_development_execution']='pass'
+        if (status['world_live_mesh_development_execution']=='pass' and queue_log.read_text(errors='replace').count(
+                'RT live mesh >128 draws/budget omission/early retirement/backlog: PASS')==1):
+            status['world_live_mesh_budget_development_execution']='pass'
         if (sdk_receipt.exists() and (source / 'checks-x86/source-queue.exe').exists() and queue_log.exists()
                 and 'RT L4D2 SDK queue/COM/Host: PASS' in queue_log.read_text(errors='replace')):
             status['sdk_queue_development_execution'] = 'pass'

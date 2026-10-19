@@ -46,7 +46,8 @@ def package(source,output,python_package):
             or status.get('world_bulk_static_development_execution')!='pass'
             or status.get('world_original_input_development_execution')!='pass'
             or status.get('world_owned_geometry_development_execution')!='pass'
-            or status.get('world_live_mesh_development_execution')!='pass'):
+            or status.get('world_live_mesh_development_execution')!='pass'
+            or status.get('world_live_mesh_budget_development_execution')!='pass'):
         raise ValueError('Current native paired observer and execution evidence required')
     if output.exists():raise FileExistsError('Preserve previous package directory')
     output.mkdir(parents=True)
@@ -86,7 +87,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':16,
+    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':17,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':3000,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -99,12 +100,15 @@ def package(source,output,python_package):
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
               'model_rebuild':'audited_full_vs_matrix_proof_rigid_or_three_weight_palette_with_complete_morph_position',
               'model_submission':'direct_CreateMesh_and_DrawInstance_each_frame_pose; original_raster_Draw_once_with_Ignore_bit3_and_exact_restore',
-              'model_input_pairs':'canonical_CPU_vertices_and_normalized_indices_at_240_300; original_input_audit_retained_separately',
+              'model_input_pairs':'canonical_CPU_vertices_and_normalized_indices_at_239_240_299_300; original_input_audit_retained_separately',
               'model_stage_readbacks':{240:'api_neko_neutral',300:'api_combined_neutral',360:'api_combined_rough',420:'api_combined_metal',480:'api_combined_alpha',540:'api_combined_emissive',600:'recovery'},
               'preserve_path_default':False,'preserve_path_control_presents':[],
               'model_material':'synthetic_constants_flat_normals_original_UVs_no_original_model_textures',
-              'live_mesh_limits':{'bytes':268435456,'frame_new_bytes':100663296,'draws_per_frame':128,'entries':512,'pending_gpu_fences':8},
-              'live_mesh_retirement':'event_query_completion_and_two_frames_idle; recovery_and_shutdown_completion_gated',
+              'live_mesh_limits':{'bytes':268435456,'frame_new_bytes':100663296,'draws_per_frame':512,'entries':512,'pending_gpu_fences':8},
+              'live_mesh_retirement':'before_first_model_and_after_Present_event_query_completion_and_two_frames_idle; recovery_shutdown_completion_gated',
+              'live_mesh_budget_policy':'omit_only_affected_model_with_explicit_reason_and_totals; no_rt_shutdown_for_application_budget; actual_API_failure_remains_fatal',
+              'previous_pose_presents':[239,299],
+              'model_payload_budget_scope':'16_MiB_shared_per_neutral_stage_including_previous_pose',
               'exposure_changed':False,'model_samples_per_readback_limit':64,
               'model_payload_limits_kib':{'api_neko_neutral':16384,'api_combined_neutral':16384,'api_combined_rough':0,'api_combined_metal':0,'api_combined_alpha':0,'api_combined_emissive':0},
               'model_special_passes':'reject_stencil_user_clip_partial_rgb_and_non_less_depth',
@@ -114,7 +118,7 @@ def package(source,output,python_package):
               'scene_input_ps_float4_constants':224,'scene_input_complete_morph_positions':True,
               'bulk_static_stride_max':128,'scene_input_family_limits':[6,48,96,48],'scene_input_policy':'skinned_materials_v2','scene_input_payload_limits_mib':[2,2,2,12],'scene_input_family_payload_limits_kib':[[128,640,512,768]]*3+[[256,4096,1792,6144]],'scene_input_geometry_window':True,'audit_only_families':[],'custom_audit_max_vertices':32768,'custom_audit_max_indices':131072,
               'sky_category_contract':{'render_state':42,'sky_bit':4,'unused':0xfefefefe},
-              'draw_trace_version':13,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
+              'draw_trace_version':14,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
               'material_samples_per_phase_limit':64,
               'world_ipc_producer_wait_ms':60000,'normal_ipc_producer_wait_ms':2000,
               'startup_raytracing':False,'rt_activation':'after_control_and_successful_world_scope_then_deferred_by_runtime',
@@ -175,6 +179,7 @@ def package(source,output,python_package):
                 'world_original_input_development_execution':'pass',
                 'world_owned_geometry_development_execution':'pass',
                 'world_live_mesh_development_execution':'pass',
+                'world_live_mesh_budget_development_execution':'pass',
                 'pinned_native_loader_api_initialization':'pass',
                 'game_rt':'unrun','actual_game_observation':'unrun'}
     (output/'publish-index.json').write_text(json.dumps(validation,indent=2)+'\n')

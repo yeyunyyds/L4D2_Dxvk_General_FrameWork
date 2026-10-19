@@ -78,6 +78,8 @@ class DrawObservation(unittest.TestCase):
         self.assertTrue(result['pass'],result['errors'])
         self.assertEqual(result['header']['coverage_revision'],16)
         self.assertEqual(result['footer']['presents'],600)
+        events[0]=(0,0,struct.pack('<IQQQII',14,42,7,10000000,600,30))
+        result=self.inspect(events);self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['header']['coverage_revision'],17)
 
     def test_v2_world_control_and_exact_padded_declaration(self):
         r=self.inspect(self.world_fixture())
