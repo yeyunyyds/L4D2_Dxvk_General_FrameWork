@@ -43,8 +43,12 @@
       180
     ],
     "color_nonfinite_rgb": 0,
-    "depth_normals_have_signal": true,
-    "limits": "Packed normal words are decoded according to pinned runtime; float finite count alone is not a normal validity check."
+    "limits": "Packed normal words are decoded according to pinned runtime; float finite count alone is not a normal validity check.",
+    "depth_normals_have_signal_frames": [
+      120,
+      180
+    ],
+    "all_expected_depth_normal_stages_complete": false
   },
   "independent_analysis": {
     "world_errors": [
@@ -88,5 +92,30 @@
   },
   "game_or_host_crash": "not established; runtime caught a C++ exception and requested RT off; uploaded logs are live-process snapshots without exit proof",
   "source_parallel_preparation": "unrun",
-  "performance": "unrun"
+  "performance": "unrun",
+  "local_fix_validation": {
+    "python_unittest": {
+      "tests": 117,
+      "passed": 115,
+      "skipped_windows_only": 2,
+      "failed": 0,
+      "seconds": 295.178
+    },
+    "strict_mingw_x64_compile": [
+      "integration/rt/rt_world_runtime.cpp",
+      "tests/rt_live_mesh_cases.cpp"
+    ],
+    "windows_native_checks": "pass",
+    "test_protocol": "unchanged: one F9, 600 Present"
+  },
+  "fixed_delivery": {
+    "build_commit": "985ed8830b4991c2e18a798e00f5925cc65b4e5d",
+    "build_id": "ldb-rt-observer+e77327d1980ca3d9",
+    "download_ref": "ad457c4a4597fb413be82185b5704587c0ae9d35",
+    "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/ad457c4a4597fb413be82185b5704587c0ae9d35/downloads/rt-world-pilot-dev.zip",
+    "size": 11981218,
+    "sha256": "16666057c7f261b2ed0443800ad63f76f6de26d236acecf03364a33b34314550",
+    "publication_validation": "research/rt-world-pilot-v18-texture-fix-validation.json",
+    "B580_game_texture_acceptance": "unrun"
+  }
 }

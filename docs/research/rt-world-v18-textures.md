@@ -39,3 +39,9 @@
 [独立发布复核](../../research/rt-world-pilot-v18-validation.json)通过ZIP CRC、全部清单成员、两端PE架构/编译身份、Release参数、原生fixture重分析、固定API初始化、源码回执与当前输入哈希、HTTP下载与Git blob一致性检查；下载分支仍仅包含ZIP。
 
 [固定版本文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/46ad79be1a3a5723a9c959ecf99def6417c197c7/downloads/rt-world-pilot-dev.zip)。测试安装包11,980,397字节，SHA256 `199ce71a1bbd0041cf26915cdf7dc9cf90460ce222a06edfca4dda992b775440`。实际v18 B580画面、纹理覆盖、亮白改善与完整退出仍未验收。
+
+## 124445实机结果与纹理哈希修正版
+
+[124445结果](rt-world-124445-result.md)在180 Present后首个NekoToon模型阶段触发通用C++异常，未导出DDS或成功提交API模型。发现允许16 MiB基础级的DDS导出误用4 MiB几何哈希上限；修正版使用16 MiB+148字节的独立DDS边界，加入完整尺寸哈希及系统NULLREF真实导出检查，并保留具体异常上下文。旧日志未记录异常文字和目标纹理尺寸，因此不将此缺陷断言为唯一根因。
+
+修正版源码 `985ed8830b4991c2e18a798e00f5925cc65b4e5d`、编译身份 `ldb-rt-observer+e77327d1980ca3d9`，Windows原生和发布复核通过。[使用修正版文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/ad457c4a4597fb413be82185b5704587c0ae9d35/downloads/rt-world-pilot-dev.zip)，仍一次F9合并测试；B580贴图和低照明外观尚未验收。

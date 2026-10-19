@@ -20,4 +20,12 @@ v18仅记录通用异常码，没有保存异常文字；64项材质审计额度
 
 保持原先一次F9、600 Present的贴图/低照明/材质/恢复合并测试。正确贴图显示、亮白改善和完整游戏退出仍须修正版实机结果验收。原始场景、图像及游戏贴图仅保存在本地分析目录，不提交GitHub。
 
-[结构化复核](../../research/rt-world-124445-review.json)。修正版构建和发布验证结果另行记录。
+[结构化复核](../../research/rt-world-124445-review.json)。
+
+## 已验证交付
+
+修正版源码 `985ed8830b4991c2e18a798e00f5925cc65b4e5d`，编译身份 `ldb-rt-observer+e77327d1980ca3d9`。本地117项Python检查通过115项、跳过2项Windows专用检查，修改的runtime与live-mesh两个C++目标严格MinGW编译通过。Windows原生x86/x64 Release构建、原有检查、完整DDS独立摘要与边界检查、1024/2048系统NULLREF真实Cache导出/磁盘重哈希/复用/解锁/释放检查均通过。新纹理检查已成为打包必需门槛。
+
+[独立发布复核](../../research/rt-world-pilot-v18-texture-fix-validation.json)确认当前源码回执、两端二进制身份、清单全部文件、ZIP CRC、原生fixture重分析、固定API初始化及HTTP文件与Git blob一致。下载分支仅含ZIP。测试包11,981,218字节，SHA256 `16666057c7f261b2ed0443800ad63f76f6de26d236acecf03364a33b34314550`。
+
+[修正版文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/ad457c4a4597fb413be82185b5704587c0ae9d35/downloads/rt-world-pilot-dev.zip)。解压新包，运行run-test.cmd，进原测试地图按F9一次；出现结束提示后正常退出游戏，保持控制台到最终ZIP路径显示，再上传该ZIP。本轮固定600 Present协议不变；真实B580贴图、材质外观和退出验收仍待下一份结果。
