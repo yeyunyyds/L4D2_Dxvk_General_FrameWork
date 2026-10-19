@@ -24,3 +24,13 @@ v19继续一次F9、600 Present，不增加用户操作。两端重新编译，�
 新增系统D3D9 NULLREF四级DXT5源链→DDS→独立SHA256检查，覆盖小于4×4的压缩mip、后续级锁定失败后的解锁与截断拒绝；既有4/16 MiB边界和1024/2048真实导出检查保留。Python检查覆盖三级DDS、错误mip元数据、光照阶段、容量越界、大Infected输入审计、异常/旧PID/后端清理警告分类；兼容既有v18资料。
 
 Trace version16、coverage revision19、snapshot wire v2。Windows构建和最终发布校验结果另行记录，B580本轮实际mip读取、覆盖提升和低照明效果仍待实机验证。
+
+## 已验证交付
+
+源码 `656dc682ee4d4a82595e417f72e64cc3ab766df9`，编译身份 `ldb-rt-observer+268b27835af951af`。121项本地Python检查通过119项、跳过2项Windows专用检查；两个修改的C++目标严格MinGW交叉编译通过。Windows原生x86/x64 Release、系统NULLREF、实际四级DXT5源链导出/独立哈希/后续级失败解锁与全部既有门槛通过；新mip检查成为纹理打包必需门槛。固定GLI的[8组多mip格式解析](../../research/rt-world-v19-dds-loader-check.json)通过。旧v18的37份DDS仍可校验，131549实际退出异常可被新分析器正确单独识别，原始上传保持不变。
+
+[独立发布复核](../../research/rt-world-pilot-v19-validation.json)通过ZIP CRC、清单全部成员、配套PE架构/编译身份、Release编译参数、源码回执、本机输入哈希、原生fixture重分析、固定API初始化（默认头灯30），并确认HTTP下载文件等于Git blob。下载分支仅保留ZIP。
+
+[v19固定文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/dc2bda2874e1b5b77494d489582674c0a3d40569/downloads/rt-world-pilot-dev.zip)。包11,984,355字节，SHA256 `e87a0ad8c7caaa1c159661ddfcb2b420302396741bee806be406e0e99d458f61`。保留旧测试目录及备份，新目录解压后运行run-test.cmd，进入原测试地图按一次F9；恢复ZIP提示后退出游戏，保持控制台至最终ZIP路径显示。大结果可继续分卷上传。
+
+本轮实际B580源mip可读性、贴图回退减少幅度、灯光画面及退出兼容均未实机验收。Infected仅新增审计，退出异常根因尚未修复；不将原生检查或成功打包当作这些结果已通过。

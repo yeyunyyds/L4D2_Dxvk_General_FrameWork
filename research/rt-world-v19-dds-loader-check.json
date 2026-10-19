@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+  "scope": "CPU pinned GLI parser accepts new DDS mip layout; actual game GPU mip appearance unrun",
+  "cases": [
+    {
+      "format": "DXT1",
+      "srgb": false,
+      "levels": 4,
+      "payload_bytes": 40,
+      "sha256": "efc5b084c567fca379ad2de11a63349d9592610249aae15cfac31cba473b8752",
+      "pinned_gli_cpu_parse": "pass"
+    },
+    {
+      "format": "DXT1",
+      "srgb": true,
+      "levels": 4,
+      "payload_bytes": 40,
+      "sha256": "fc0d22ab4839b01088bf4d1c1410cb62e26e5bec5dba206a580edca6328ad1fc",
+      "pinned_gli_cpu_parse": "pass"
+    },
+    {
+      "format": "DXT3",
+      "srgb": false,
+      "levels": 4,
+      "payload_bytes": 80,
+      "sha256": "c1be4e7f021f1e3a95ed24077dbd1f375c9028e15953630d25d3132ab2381d6f",
+      "pinned_gli_cpu_parse": "pass"
+    },
+    {
+      "format": "DXT3",
+      "srgb": true,
+      "levels": 4,
+      "payload_bytes": 80,
+      "sha256": "095e3a5ee85345227e633a3c9e8d5c0047ba47c73edba6ff02ae089c0c07dbfb",
+      "pinned_gli_cpu_parse": "pass"
+    },
+    {
+      "format": "DXT5",
+      "srgb": false,
+      "levels": 4,
+      "payload_bytes": 80,
+      "sha256": "56531d3bce6d5acb57dc758c352db2a7510ccdb8fcb8fbecf253ef5535babaa5",
+      "pinned_gli_cpu_parse": "pass"
+    },
+    {
+      "format": "DXT5",
+      "srgb": true,
+      "levels": 4,
+      "payload_bytes": 80,
+      "sha256": "80fc995ed673b906c9df5fde6439fd94e2c11c70ae151507e3cd8cd99d3a5bde",
+      "pinned_gli_cpu_parse": "pass"
+    },
+    {
+      "format": "BGRA8",
+      "srgb": false,
+      "levels": 4,
+      "payload_bytes": 172,
+      "sha256": "ad526d3e6f954b8cbd8d02ea7038012663d70a194931004b2da2ff22c7356ff9",
+      "pinned_gli_cpu_parse": "pass"
+    },
+    {
+      "format": "BGRA8",
+      "srgb": true,
+      "levels": 4,
+      "payload_bytes": 172,
+      "sha256": "ad513072a8c8c62c11b078ee1d98f6bdb5135f50f706a612952acc5260bb1e7a",
+      "pinned_gli_cpu_parse": "pass"
+    }
+  ],
+  "all_pass": true
+}
