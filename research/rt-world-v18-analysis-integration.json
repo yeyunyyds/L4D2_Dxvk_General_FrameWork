@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "scope": "synthetic v18 complete 600-Present analyzer integration; no GPU/game claim",
+  "world_outputs": "pass",
+  "coverage_revision": 18,
+  "scene_pass": true,
+  "live_mesh_pass": true,
+  "texture_coverage": "exported_for_all_submitted_models",
+  "game_rt": "unrun"
+}

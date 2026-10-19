@@ -79,6 +79,16 @@ assert result['execution']=='incomplete'
             self.assertEqual(json.loads(archive.read('omitted-files.json')),[])
             self.assertEqual(json.loads(archive.read('summary.json'))['collection'],'complete')
 
+    def test_archive_failure_preserves_previous_valid_checkpoint_zip(self):
+        import zipfile
+        directory=self.trace();report={'collection':'incomplete','errors':[]}
+        output=suite.archive_result(directory,report);old=output.read_bytes()
+        with patch.object(suite.zipfile,'ZipFile',side_effect=OSError('fixture compression failure')):
+            with self.assertRaisesRegex(OSError,'compression failure'):suite.archive_result(directory,report)
+        self.assertEqual(output.read_bytes(),old)
+        self.assertFalse(output.with_name(output.name+'.tmp').exists())
+        with zipfile.ZipFile(output) as archive:self.assertIsNone(archive.testzip())
+
     def test_module_failure_keeps_completed_draw_analysis_and_partial_scope(self):
         directory=self.trace();report={'errors':[]}
         with patch.object(suite,'collect',side_effect=FileNotFoundError('fixture missing baseline')):
@@ -126,6 +136,9 @@ assert result['execution']=='incomplete'
             self.assertEqual(saved['collection_phase'],'waiting_for_game_and_host_exit')
             self.assertEqual(saved['pre_exit_game_logs'],'snapshot_collected')
             self.assertEqual(saved['capture_marker']['presents'],33)
+            import zipfile
+            with zipfile.ZipFile(directory.with_suffix('.zip')) as archive:
+                self.assertEqual(json.loads(archive.read('summary.json'))['collection_phase'],'waiting_for_game_and_host_exit')
             inventory=json.loads((directory/'game-log-inventory.json').read_text())
             self.assertEqual(len(inventory['copied']),2)
             self.assertIn('reply-deadline',(directory/'game-logs/0/bridge32.log').read_text())

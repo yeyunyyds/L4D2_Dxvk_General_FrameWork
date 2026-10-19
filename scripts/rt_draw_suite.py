@@ -185,8 +185,8 @@ def wait_stopped(notify,timeout=300):
         diagnostics={};pids=game_pids(diagnostics)
         active=[p for p in diagnostics.get('related_processes',[]) if p['exe'].casefold() in ('left4dead2.exe','l4d2bridge64.exe')]
         if not pids and not active:return
-        if not printed:notify('Please exit L4D2 normally. Waiting before replacing the client/Host pair...');printed=True
-        if time.monotonic()>deadline:raise TimeoutError('Game or Host is still running; no installation performed')
+        if not printed:notify('Please exit L4D2 normally. Waiting for the game and Host to stop; keep this window open...');printed=True
+        if time.monotonic()>deadline:raise TimeoutError('Game or Host is still running; operation stopped and available results retained')
         time.sleep(1)
 
 
@@ -197,14 +197,19 @@ def archive_result(directory,report):
     report['archive_compression']='zip_lzma_lossless'
     save(directory/'summary.json',report)
     output=directory.with_suffix('.zip')
-    with zipfile.ZipFile(output,'w',zipfile.ZIP_LZMA) as z:
-        used=0;omitted=[]
-        for path in sorted(directory.rglob('*')):
-            if not path.is_file():continue
-            if used+path.stat().st_size>512*1024*1024 and path.name!='summary.json':
-                omitted.append(str(path.relative_to(directory)));continue
-            z.write(path,path.relative_to(directory));used+=path.stat().st_size
-        z.writestr('omitted-files.json',json.dumps(omitted))
+    temporary=output.with_name(output.name+'.tmp')
+    try:
+        with zipfile.ZipFile(temporary,'w',zipfile.ZIP_LZMA) as z:
+            used=0;omitted=[]
+            for path in sorted(directory.rglob('*')):
+                if not path.is_file():continue
+                if used+path.stat().st_size>512*1024*1024 and path.name!='summary.json':
+                    omitted.append(str(path.relative_to(directory)));continue
+                z.write(path,path.relative_to(directory));used+=path.stat().st_size
+            z.writestr('omitted-files.json',json.dumps(omitted))
+        os.replace(temporary,output)
+    finally:
+        temporary.unlink(missing_ok=True)
     return output
 
 
@@ -270,10 +275,17 @@ def finish_world_capture(directory,game,since,report,notify):
     notify(('Capture segment and live module probe finished.' if report['collection']=='complete' else
             'INCOMPLETE capture; available trace and live module probe saved.')+
            ' Incomplete summary and available logs saved; final logs will join this ONE ZIP after L4D2 exits.')
+    notify('Saving recovery ZIP beside the result folder; this checkpoint remains INCOMPLETE until final analysis.')
+    recovery=archive_result(directory,checkpoint)
+    notify('Recovery ZIP saved: '+str(recovery)+'. Exit L4D2 normally and keep this window open; the SAME ZIP will be updated after exit and analysis.')
     wait_stopped(notify)
+    notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
     outputs=analyze_world(directory);save(directory/'world-analysis.json',outputs)
     report['world_outputs']=outputs['runtime_outputs']
     live=outputs.get('live_mesh',{})
+    textures=live.get('textures',{})
+    report['model_texture_coverage']=textures.get('coverage','unrun')
+    report['model_texture_fallback_submissions']=textures.get('fallback_submissions',0)
     report['model_budget_omissions']=live.get('budget_omissions',0)
     report['model_budget_coverage']=live.get('model_budget_coverage','unrun')
     if report['model_budget_omissions']:
@@ -360,7 +372,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Live Mesh comparison: press F9 once; slow movement and turning are allowed. World/HUD 31-120; sky 121-180; Neko neutral 181-240; combined neutral 241-300; rough 301-360; metal 361-420; alpha 421-480; emissive 481-540; recovery 541-600. Adjacent pose probes and all stages run automatically.')
+        if world:notify('Textured Mesh v18: press F9 once; slow movement/turning allowed. World/HUD31-120; sky121-180; Neko textures181-240; combined textures241-300; reduced headlamp301-360; metal361-420; alpha421-480; emissive481-540; recovery541-600. DDS/alpha evidence and adjacent poses are automatic.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

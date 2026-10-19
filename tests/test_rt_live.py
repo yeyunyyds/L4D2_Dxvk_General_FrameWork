@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from analyze_rt_live import analyze, FRAMES, STAGES, MATERIALS, CONFIG
+from analyze_rt_live import analyze, FRAMES, STAGES, MATERIALS, CONFIG, STAGES_V18, MATERIALS_V18
 
 class LiveEvidence(unittest.TestCase):
  def fixture(self,root):
@@ -39,6 +39,41 @@ class LiveEvidence(unittest.TestCase):
     old=item['file'];item['file']=old.replace('api-'+str(original['ordinal'])+'-','api-'+str(previous['ordinal'])+'-');(root/item['file']).write_bytes((root/old).read_bytes())
    events.append(previous)
   return events
+ def v18_fixture(self,root):
+  events=self.v17_fixture(root)
+  for e in events:
+   if e['event']=='world_coverage_revision':e['value']='18'
+   if e['event'] in ('api_model_sample','api_model_previous_sample','api_model_path_readback'):
+    index=FRAMES.index(e['frame']+1 if e['event']=='api_model_previous_sample' else e['frame']);e['stage']=STAGES_V18[index];e['material']=MATERIALS_V18[index]
+    if e['event']!='api_model_path_readback':e.update(textured=True,material_handle=42)
+  header=[0]*37;header[0]=0x20534444;header[1]=124;header[2]=0x81007;header[3]=header[4]=4;header[5]=8;header[7]=1;header[19:22]=[32,4,0x30315844];header[27]=0x1000;header[32:37]=[72,3,0,1,0]
+  raw=struct.pack('<37I',*header)+bytes(8);digest=hashlib.sha256(raw).hexdigest();file='model-textures/'+digest+'.dds';(root/'model-textures').mkdir();(root/file).write_bytes(raw)
+  events.append(dict(event='model_texture_policy',code=0))
+  for frame,material in ((181,'neutral'),(361,'metal'),(421,'alpha'),(481,'emissive')):
+   events.append(dict(event='model_texture_binding',frame=frame,material_handle=42,textured=True,srgb=True,reason='sampler0_base_level_dds_dx10',file=file,sha256=digest,width=4,height=4,format=int.from_bytes(b'DXT1','little'),alpha_test=4,alpha_ref=127,filter=1,wrap_u=1,wrap_v=0,material=material))
+  events += [dict(event='model_light_config_requested',after_present=f,value=v,code=0) for f,v in ((300,'30,30,30'),(540,'3000,3000,3000'))]
+  for e in events:
+   if e['event']=='api_mesh_frame':
+    f=e['frame'];e.update(material_updates=sum(f>=at for at in (181,361,421,481)),textured_submissions=e['submitted'],texture_fallback_submissions=0,texture_exports=int(f>180),texture_bytes=len(raw)*int(f>180),texture_held=int(180<f<542),texture_read_failures=0,texture_budget_deferred=0)
+  return events
+ def test_v18_dds_light_material_and_recovery_accounting(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.v18_fixture(root);r=analyze(root,events)
+   self.assertTrue(r['pass'],r['errors']);self.assertEqual(r['textures']['unique_dds_files'],1);self.assertEqual(r['textures']['coverage'],'exported_for_all_submitted_models');self.assertEqual(r['textures']['gpu_texture_acceptance'],'unrun')
+   binding=next(e for e in events if e['event']=='model_texture_binding');binding['srgb']=False
+   self.assertIn('invalid_dds_dx10_color_space',analyze(root,events)['errors']);binding['srgb']=True
+   (root/binding['file']).write_bytes(bytes(156));self.assertIn('texture_file_digest',analyze(root,events)['errors'])
+ def test_v18_fallback_remains_explicit_and_missing_light_or_refs_fail(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);events=self.v18_fixture(root)
+   broken=[e for e in events if e['event']!='model_light_config_requested'];self.assertIn('texture_light_sequence',analyze(root,broken)['errors'])
+   last=next(e for e in events if e['event']=='api_mesh_frame' and e['frame']==600);last['texture_held']=1
+   self.assertIn('texture_refs_not_released',analyze(root,events)['errors']);last['texture_held']=0
+   for e in events:
+    if e['event']=='api_mesh_frame':e['texture_fallback_submissions']=e['textured_submissions'];e['textured_submissions']=0;e.update(texture_exports=0,texture_bytes=0,texture_held=0)
+    if e['event']=='model_texture_binding':e.update(textured=False,file='',sha256='',reason='base_texture_read_unavailable')
+    if e['event'] in ('api_model_sample','api_model_previous_sample'):e['textured']=False
+   result=analyze(root,events);self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['textures']['coverage'],'partial_with_synthetic_fallback')
  def test_v17_budget_omissions_continue_evidence_and_remain_partial_coverage(self):
   with tempfile.TemporaryDirectory() as d:
    root=Path(d);events=self.v17_fixture(root);r=analyze(root,events);self.assertTrue(r['pass'],r['errors']);self.assertEqual(r['previous_pose_samples'],2)

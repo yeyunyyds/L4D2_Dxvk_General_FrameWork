@@ -93,6 +93,18 @@ inline const char* liveName(ModelStage stage) noexcept {
     default:return "off";
   }
 }
+inline const char* texturedName(ModelStage stage) noexcept {
+  switch(stage) {
+    case ModelStage::Neko:return "api_neko_textured";
+    case ModelStage::NekoPreserve:return "api_combined_textured";
+    case ModelStage::NekoRecheck:return "api_combined_textured_low_light";
+    case ModelStage::Combined:return "api_combined_textured_metal";
+    case ModelStage::Matte:return "api_combined_textured_alpha";
+    case ModelStage::Directional:return "api_combined_textured_emissive";
+    case ModelStage::Recovery:return "recovery";
+    default:return "off";
+  }
+}
 inline bool liveInclude(ModelStage stage,bool neko) noexcept {
   return stage==ModelStage::Neko?neko:stage==ModelStage::NekoPreserve || stage==ModelStage::NekoRecheck ||
     stage==ModelStage::Combined || stage==ModelStage::Matte || stage==ModelStage::Directional;

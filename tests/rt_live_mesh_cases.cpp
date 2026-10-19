@@ -7,13 +7,15 @@
 using namespace ldb_rt;
 void require(bool value,const char* why) { if(!value) { throw std::runtime_error(why); } }
 namespace fixture {
-unsigned failureCode=1,fail=0,created=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live;
+unsigned failureCode=1,fail=0,created=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live,materialLive;
+uint8_t lastAlpha=7,lastRef=0;bool lastTextured=false;
 std::vector<remixapi_HardcodedVertex> received;remixapi_Transform lastTransform{};
 remixapi_ErrorCode result(unsigned at) { return static_cast<remixapi_ErrorCode>(fail==at?failureCode:0); }
 remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remixapi_MaterialHandle* out) {
   if(fail==1) { return result(1); }require(info&&info->pNext,"material extension missing");
   const auto& p=*static_cast<remixapi_MaterialInfoOpaqueEXT*>(info->pNext);
-  require(p.alphaTestType==7&&!p.useDrawCallAlphaState&&p.opacityConstant>0,"invalid API material alpha");
+  require(p.alphaTestType<=7&&!p.useDrawCallAlphaState&&p.opacityConstant>0,"invalid API material alpha");
+  require(materialLive.insert(info->hash).second,"repeated registration ignored by pinned runtime; destroy first");lastAlpha=p.alphaTestType;lastRef=p.alphaReferenceValue;lastTextured=info->albedoTexture!=nullptr;
   ++materials;*out=reinterpret_cast<remixapi_MaterialHandle>(info->hash);return static_cast<remixapi_ErrorCode>(0);
 }
 remixapi_ErrorCode REMIXAPI_CALL mesh(const remixapi_MeshInfo* info,remixapi_MeshHandle* out) {
@@ -28,13 +30,18 @@ remixapi_ErrorCode REMIXAPI_CALL draw(const remixapi_InstanceInfo* info) {
 remixapi_ErrorCode REMIXAPI_CALL destroy(remixapi_MeshHandle handle) {
   if(fail==4) { return result(4); }require(live.erase(reinterpret_cast<uint64_t>(handle))==1,"double mesh destruction");++destroyed;return static_cast<remixapi_ErrorCode>(0);
 }
-remixapi_ErrorCode REMIXAPI_CALL destroyMaterial(remixapi_MaterialHandle) { if(fail==5) { return result(5); }++materialDestroyed;return static_cast<remixapi_ErrorCode>(0); }
+remixapi_ErrorCode REMIXAPI_CALL destroyMaterial(remixapi_MaterialHandle handle) { if(fail==5) { return result(5); }require(materialLive.erase(reinterpret_cast<uint64_t>(handle))==1,"double material destroy");++materialDestroyed;return static_cast<remixapi_ErrorCode>(0); }
 remixapi_Interface table() { remixapi_Interface t{};t.CreateMaterial=material;t.CreateMesh=mesh;t.DrawInstance=draw;t.DestroyMesh=destroy;t.DestroyMaterial=destroyMaterial;return t; }
 scene_input::Prepared source() {
   scene_input::Prepared p;p.ready=true;p.ownedDraw=true;p.indexBytes=2;p.drawArgs={0,0,4,0,2,0};
   const float v[4][8]={{0,0,0,0,0,0,0,0},{1,0,0,1,0,0,0,0},{0,1,0,0,1,0,0,0},{1,1,0,1,1,0,0,0}};
   p.bytes.resize(sizeof(v));std::memcpy(p.bytes.data(),v,sizeof(v));p.indices={0,0,1,0,2,0,3,0};return p;
 }
+struct TextureLock {
+  unsigned locks=0,unlocks=0;HRESULT code=S_OK;
+  HRESULT LockRect(UINT,D3DLOCKED_RECT*,const RECT*,DWORD flags) { require(flags==D3DLOCK_READONLY,"texture lock wrote game data");++locks;return code; }
+  HRESULT UnlockRect(UINT) { ++unlocks;return S_OK; }
+};
 struct CategoryDevice {
  DWORD value=live_mesh::kUnused;unsigned reads=0,writes=0,failGet=0,failSet=0;
  HRESULT GetRenderState(D3DRENDERSTATETYPE name,DWORD* out) { require(name==live_mesh::kCategory,"touched other D3D state");if(++reads==failGet) { return E_FAIL; }*out=value;return S_OK; }
@@ -65,10 +72,42 @@ int main() {
   p.world[12]=10;auto b=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);require(b.success&&!b.created&&a.handle==b.handle&&scene.reused==1,"rigid transform recreated mesh");
   require(fixture::lastTransform.matrix[0][3]==10&&fixture::lastTransform.matrix[1][1]==1,"row-world to API transform mapping");
   const float moved=0.2f;std::memcpy(p.bytes.data(),&moved,4);auto c=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3);require(c.success&&c.created&&c.handle!=a.handle,"live pose reused stale geometry");
-  auto d=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Metal,4);require(d.success&&d.created&&d.handle!=c.handle,"material reused wrong surface");
-  require(!scene.retire(0,8)&&scene.entries()==3,"uncompleted mesh destroyed");
-  require(!scene.retire(2,8)&&scene.entries()==2&&fixture::destroyed==1,"completed mesh retirement");
+  auto pendingMaterial=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Metal,4,0,{},2);
+  require(pendingMaterial.deferred&&pendingMaterial.budget==live_mesh::Budget::GpuBacklog,"material replaced while GPU still uses it");
+  auto d=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Metal,4,0,{},3);require(d.success&&!d.created&&d.handle==c.handle&&d.materialUpdated,"material update recreated geometry or lost surface");
+  require(!scene.retire(0,8)&&scene.entries()==2,"uncompleted mesh destroyed");
+  require(!scene.retire(2,8)&&scene.entries()==1&&fixture::destroyed==1,"completed mesh retirement");
   require(!scene.retire(4,8,true)&&scene.entries()==0&&!scene.bytes&&fixture::live.empty()&&fixture::materialDestroyed==2,"mesh/material cleanup ordering");
+  {
+    live_mesh::Scene textures(&api);auto input=fixture::source();model_texture::Source first;first.key="texture-A-alpha-4-100";first.path=L"albedo.dds";first.alphaTest=4;first.alphaRef=100;
+    auto textured=textures.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,10,0,first,9);
+    require(textured.success&&fixture::lastTextured&&fixture::lastAlpha==4&&fixture::lastRef==100,"original texture/cutout state lost");
+    auto second=first;second.key="texture-B-alpha-4-100";second.path=L"different.dds";
+    auto different=textures.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,10,0,second,9);
+    require(different.success&&different.handle!=textured.handle&&different.materialHandle!=textured.materialHandle,"different textures aliased material or geometry");
+    fixture::fail=5;auto failed=textures.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Metal,11,0,first,10);
+    require(!failed.success&&failed.code&&std::string(failed.operation)=="destroy_material_for_update","material update destroy failure hidden");fixture::fail=0;
+    require(!textures.retire(11,13,true),"textured material recovery");
+  }
+  std::cout<<"RT live material completed-use destroy/recreate/stable-geometry/texture identity: PASS\n";
+  {
+    const auto bc=model_texture::layout(5,7,D3DFMT_DXT5,true);require(bc.dxgi==78&&bc.rowBytes==32&&bc.rows==2&&bc.bytes()==64,"DXT5 sRGB block layout");
+    std::array<uint8_t,80> rows{};for(unsigned i=0;i<rows.size();++i) { rows[i]=uint8_t(i); }
+    auto encoded=model_texture::dds(5,7,bc,rows.data(),40);require(encoded.size()==212,"DDS DX10 size");uint32_t header[37]{};std::memcpy(header,encoded.data(),148);
+    require(header[0]==0x20534444&&header[19]==32&&header[21]==0x30315844&&header[32]==78&&header[33]==3&&header[35]==1,"DDS DX10 metadata");
+    require(!std::memcmp(encoded.data()+148,rows.data(),32)&&!std::memcmp(encoded.data()+180,rows.data()+40,32),"texture row padding leaked into DDS");
+    require(model_texture::dds(5,7,bc,rows.data(),31).empty()&&model_texture::dds(5,7,bc,rows.data(),-40).empty(),"invalid texture pitch accepted");
+    require(model_texture::layout(4,4,D3DFMT_A8R8G8B8,false).dxgi==87&&model_texture::layout(4,4,D3DFMT_A8R8G8B8,true).dxgi==91,"BGRA color space lost");
+    require(!model_texture::layout(4097,4,D3DFMT_DXT1,true).dxgi&&!model_texture::layout(0,4,D3DFMT_DXT1,true).dxgi&&!model_texture::layout(4,4,D3DFMT_A16B16G16R16F,true).dxgi,"unsupported texture accepted");
+    uint8_t address=99;require(model_texture::wrap(D3DTADDRESS_CLAMP,address)&&address==0&&model_texture::wrap(D3DTADDRESS_WRAP,address)&&address==1&&!model_texture::wrap(D3DTADDRESS_BORDER,address),"MDL sampler address mismatch");
+  }
+  { fixture::TextureLock texture;
+    try { model_texture::ReadLock<fixture::TextureLock> lock(&texture);throw std::runtime_error("fixture allocation failure"); }catch(const std::runtime_error&) {}
+    require(texture.locks==1&&texture.unlocks==1,"exception left original texture locked");
+    texture.code=E_FAIL;{ model_texture::ReadLock<fixture::TextureLock> lock(&texture); }
+    require(texture.locks==2&&texture.unlocks==1,"failed lock incorrectly unlocked texture");
+  }
+  std::cout<<"RT model DDS DX10 row pitch/sRGB/alpha/bounds: PASS\n";
   for(unsigned failure=1;failure<=3;++failure) { fixture::fail=failure;live_mesh::Scene broken(&api);auto input=fixture::source();
    auto x=broken.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,20+failure);require(!x.success&&x.code,"API create/draw failure ignored");
    fixture::fail=0;require(!broken.retire(100,100,true),"failed submission handles leaked"); }
@@ -110,7 +149,7 @@ int main() {
     fixture::fail=0;fixture::failureCode=1;require(!apiFailure.retire(20,22,true),"real API failure cleanup");
   }
   std::cout<<"RT live mesh >128 draws/budget omission/early retirement/backlog: PASS\n";
-  require(fixture::live.empty(),"fixture left live meshes");
+  require(fixture::live.empty()&&fixture::materialLive.empty(),"fixture left live meshes or materials");
   std::cout<<"RT live mesh CPU pose update/cache/material/fence-gated lifetime/API failures: PASS; actual GPU/game unrun\n";return 0;
  }catch(const std::exception& e) { std::cerr<<e.what()<<'\n';return 1; }
 }

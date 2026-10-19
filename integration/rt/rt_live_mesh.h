@@ -1,6 +1,7 @@
 #pragma once
 // Used only in the x64 runtime TU and its native checks, never the game ABI TU.
 #include "rt_model_input.h"
+#include "rt_model_texture.h"
 #include "rt_world_remix_c.h"
 #include <map>
 #include <sstream>
@@ -77,6 +78,7 @@ inline remixapi_MaterialInfoOpaqueEXT opaque(Material kind) {
   if(kind==Material::Alpha) { p.opacityConstant=0.4f;p.blendType_hasvalue=TRUE;p.blendType_value=0; }
   return p;
 }
+struct MaterialRecord { remixapi_MaterialHandle handle=nullptr;Material variant=Material::Neutral;uint64_t last=0,hash=0; };
 struct Record { remixapi_MeshHandle mesh=nullptr;uint64_t last=0,bytes=0; };
 enum class Budget : unsigned { None,Draws,FrameBytes,LiveBytes,Entries,GpuBacklog,Count };
 inline const char* name(Budget reason) {
@@ -87,15 +89,15 @@ inline const char* name(Budget reason) {
 struct Limits { uint64_t bytes=256ull*1024*1024,frameBytes=96ull*1024*1024;unsigned draws=512,entries=512; };
 struct Submission {
   bool success=false,created=false,deferred=false;Budget budget=Budget::None;
-  uint64_t handle=0,triangles=0;uint32_t code=0;const char* operation="input";std::string key;
+  uint64_t handle=0,triangles=0,materialHandle=0;bool materialUpdated=false,textured=false;uint32_t code=0;const char* operation="input";std::string key;
 };
 class Scene {
-  remixapi_Interface* api=nullptr;uint64_t next=1;
+  remixapi_Interface* api=nullptr;uint64_t next=1,nextMaterial=1;
   std::map<std::string,Record> meshes;
   Limits limits;
-  std::array<remixapi_MaterialHandle,size_t(Material::Count)> materials{};
+  std::map<std::string,MaterialRecord> materials;
 public:
-  uint64_t bytes=0,peakBytes=0,created=0,reused=0,destroyed=0,submitted=0;
+  uint64_t bytes=0,peakBytes=0,created=0,reused=0,destroyed=0,submitted=0,materialUpdates=0;
   static constexpr uint64_t maxBytes=256ull*1024*1024,maxFrameBytes=96ull*1024*1024;
   uint64_t frame=0,frameBytes=0,omitted=0;unsigned frameDraws=0,frameOmitted=0;
   std::array<uint64_t,size_t(Budget::Count)> omissionTotals{};
@@ -109,33 +111,52 @@ public:
 
   size_t entries() const { return meshes.size(); }
   void bind(remixapi_Interface* table) { api=table; }
-  Submission draw(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,Material variant,uint64_t at,size_t pending=0) {
+  Submission draw(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,Material variant,uint64_t at,size_t pending=0,const model_texture::Source& sourceMaterial={},uint64_t completed=0) {
     Submission result;
-    if(!api || !api->CreateMaterial||!api->CreateMesh||!api->DrawInstance || unsigned(variant)>=unsigned(Material::Count) ||
+    if(!api || !api->CreateMaterial||!api->DestroyMaterial||!api->CreateMesh||!api->DrawInstance || unsigned(variant)>=unsigned(Material::Count) ||
        !source.ready || !bulk_static::affine(source.world)) { result.code=ERROR_INVALID_DATA;return result; }
     frameAt(at);
     if(pending>=8) { return defer(Budget::GpuBacklog,at); }
     if(frameDraws>=limits.draws) { return defer(Budget::Draws,at); }
+    const auto materialKey=sourceMaterial.key;
+    auto materialFound=materials.find(materialKey);
+    if(materialFound==materials.end()) {
+      if(materials.size()>=256) { return defer(Budget::Entries,at); }
+      MaterialRecord record;record.hash=0x4c444d4100000000ull+nextMaterial++;
+      materialFound=materials.emplace(materialKey,record).first;
+    }
+    auto& material=materialFound->second;
+    if(material.handle&&material.variant!=variant&&material.last>completed) { return defer(Budget::GpuBacklog,at); }
     result.operation="hash";
     const auto vh=ldb_rt_file::geometrySha256(source.bytes.data(),source.bytes.size());
     const auto ih=ldb_rt_file::geometrySha256(source.indices.data(),source.indices.size());
     if(vh.empty()||ih.empty()) { result.code=ERROR_INVALID_DATA;return result; }
-    result.key=vh+ih+":"+std::to_string(kind)+":"+std::to_string(unsigned(topology))+":"+std::to_string(cull)+":"+std::to_string(unsigned(variant));
+    result.key=vh+ih+":"+std::to_string(kind)+":"+std::to_string(unsigned(topology))+":"+std::to_string(cull)+":"+materialKey;
     auto found=meshes.find(result.key);
+    Geometry geometry;
     if(found==meshes.end()) {
-      result.operation="geometry";Geometry geometry;if(!build(source,kind,topology,cull,geometry)) { result.code=ERROR_INVALID_DATA;return result; }
+      result.operation="geometry";if(!build(source,kind,topology,cull,geometry)) { result.code=ERROR_INVALID_DATA;return result; }
       if(geometry.bytes()>limits.frameBytes-frameBytes) { return defer(Budget::FrameBytes,at); }
       if(geometry.bytes()>limits.bytes-bytes) { return defer(Budget::LiveBytes,at); }
       if(meshes.size()>=limits.entries) { return defer(Budget::Entries,at); }
-      auto& material=materials[size_t(variant)];
-      if(!material) {
-        auto ext=opaque(variant);remixapi_MaterialInfo info{};info.sType=REMIXAPI_STRUCT_TYPE_MATERIAL_INFO;info.pNext=&ext;
-        info.hash=0x4c444d4100000001ull+unsigned(variant);
-        if(variant==Material::Emissive) { info.emissiveIntensity=3;info.emissiveColorConstant={0.8f,0.2f,0.05f}; }
-        result.operation="create_material";result.code=uint32_t(api->CreateMaterial(&info,&material));if(result.code||!material) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
+    }
+    if(!material.handle||material.variant!=variant) {
+      if(material.handle) {
+        result.operation="destroy_material_for_update";result.code=uint32_t(api->DestroyMaterial(material.handle));if(result.code) { return result; }material.handle=nullptr;
       }
+      auto ext=opaque(variant);ext.albedoConstant=sourceMaterial.textured()?remixapi_Float3D{1,1,1}:remixapi_Float3D{0.55f,0.55f,0.55f};
+      ext.alphaTestType=sourceMaterial.alphaTest;ext.alphaReferenceValue=sourceMaterial.alphaRef;
+      remixapi_MaterialInfo info{};info.sType=REMIXAPI_STRUCT_TYPE_MATERIAL_INFO;info.pNext=&ext;info.hash=material.hash;
+      info.albedoTexture=sourceMaterial.textured()?sourceMaterial.path.c_str():nullptr;
+      info.filterMode=sourceMaterial.filter;info.wrapModeU=sourceMaterial.wrapU;info.wrapModeV=sourceMaterial.wrapV;
+      if(variant==Material::Emissive) { info.emissiveIntensity=3;info.emissiveColorConstant={0.8f,0.2f,0.05f}; }
+      result.operation="create_material";result.code=uint32_t(api->CreateMaterial(&info,&material.handle));if(result.code||!material.handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
+      material.variant=variant;++materialUpdates;result.materialUpdated=true;
+    }
+    result.materialHandle=material.hash;result.textured=sourceMaterial.textured();
+    if(found==meshes.end()) {
       remixapi_MeshInfoSurfaceTriangles surface{};surface.vertices_values=geometry.vertices.data();surface.vertices_count=geometry.vertices.size();
-      surface.indices_values=geometry.indices.data();surface.indices_count=geometry.indices.size();surface.material=material;
+      surface.indices_values=geometry.indices.data();surface.indices_count=geometry.indices.size();surface.material=material.handle;
       remixapi_MeshInfo mesh{};mesh.sType=REMIXAPI_STRUCT_TYPE_MESH_INFO;mesh.hash=0x4c444d5300000000ull+next++;
       mesh.surfaces_values=&surface;mesh.surfaces_count=1;remixapi_MeshHandle handle=nullptr;
       result.operation="create_mesh";result.code=uint32_t(api->CreateMesh(&mesh,&handle));if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
@@ -149,7 +170,7 @@ public:
     remixapi_InstanceInfo instance{};instance.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO;instance.mesh=r.mesh;instance.doubleSided=cull==D3DCULL_NONE;
     for(unsigned row=0;row<3;++row) { for(unsigned col=0;col<4;++col) { instance.transform.matrix[row][col]=source.world[col*4+row]; } }
     result.operation="draw_instance";result.code=uint32_t(api->DrawInstance(&instance));if(result.code) { return result; }
-    ++submitted;++frameDraws;result.success=true;return result;
+    material.last=at;++submitted;++frameDraws;result.success=true;return result;
   }
   uint32_t retire(uint64_t completed,uint64_t now,bool all=false) {
     for(auto it=meshes.begin();it!=meshes.end();) {
@@ -159,7 +180,7 @@ public:
         bytes-=r.bytes;it=meshes.erase(it);++destroyed;
       } else { ++it; }
     }
-    if(all&&meshes.empty()) { for(auto& material:materials) { if(material) { const auto code=uint32_t(api->DestroyMaterial(material));if(code) { return code; }material=nullptr; } } }
+    if(all&&meshes.empty()) { for(auto& item:materials) { auto& material=item.second;if(material.handle) { const auto code=uint32_t(api->DestroyMaterial(material.handle));if(code) { return code; }material.handle=nullptr; } }materials.clear(); }
     return 0;
   }
 };

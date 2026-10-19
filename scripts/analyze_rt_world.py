@@ -66,7 +66,8 @@ def analyze(directory,previews=True):
         if len(on)!=1 or not off or off[-1]<=on[0]:errors.append('missing_gated_rt_on_off_sequence')
     comparison=any(e.get('event')=='lighting_comparison_policy' for e in events)
     coverage=any(e.get('event')=='coverage_comparison_policy' for e in events)
-    v17=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='17' for e in events)
+    v18=any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
+    v17=v18 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='17' for e in events)
     v16=v17 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='16' for e in events)
     v15=v16 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='15' for e in events)
     v14=v15 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='14' for e in events)
@@ -186,10 +187,10 @@ def analyze(directory,previews=True):
     if v7 and (not coverage or not all(hud_phases.values()) or any(e.get('phase') not in hud_phases for e in hud)):
         errors.append('missing_baseline_or_expanded_hud_injection')
     model_stages=[e for e in events if e.get('event')=='model_stage_readback']
-    from analyze_rt_live import STAGES, analyze as analyze_live
+    from analyze_rt_live import STAGES, STAGES_V18, analyze as analyze_live
     live=analyze_live(directory,events) if v16 else None
     if live:errors.extend(live['errors'])
-    expected_stages=STAGES if v16 else ('off','off','off','neko','neko_preserve','neko_recheck','combined','combined_matte','combined_directional','recovery') if v15 else ('off','off','off','ordinary','neko','combined','recovery')
+    expected_stages=STAGES_V18 if v18 else STAGES if v16 else ('off','off','off','neko','neko_preserve','neko_recheck','combined','combined_matte','combined_directional','recovery') if v15 else ('off','off','off','ordinary','neko','combined','recovery')
     if v14 and [(e.get('frame'),e.get('model_stage')) for e in model_stages]!=list(zip(frames,expected_stages)):errors.append('incomplete_model_stage_readbacks')
     model_paths=[e for e in events if e.get('event')=='model_path_readback']
     if v15 and not v16:
@@ -210,7 +211,7 @@ def analyze(directory,previews=True):
             'startup_raster_gate':'requested_events_present_not_effective_state_proof' if gated else 'legacy_ungated',
             'rt_activation_requests':sum(e.get('event')=='raytracing_requested_on' and e.get('code')==0 for e in events),
             'nonzero_world_depth_and_normals':nonzero,
-            'coverage_comparison':{'present':coverage,**({'model_stage_readbacks':model_stages} if v14 else {}),**({'model_path_readbacks':model_paths,'model_path_config_scope':'successful queued requests, effective GPU options require image review'} if v15 else {}),'revision':17 if v17 else 16 if v16 else 15 if v15 else 14 if v14 else 13 if v13 else 12 if v12 else 11 if v11 else 10 if v10 else 9 if v9 else 8 if v8 else 7 if v7 else 6 if coverage else None,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'hud_phase_counts':hud_phases,'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; full characters/weapons image acceptance pending'},
+            'coverage_comparison':{'present':coverage,**({'model_stage_readbacks':model_stages} if v14 else {}),**({'model_path_readbacks':model_paths,'model_path_config_scope':'successful queued requests, effective GPU options require image review'} if v15 else {}),'revision':18 if v18 else 17 if v17 else 16 if v16 else 15 if v15 else 14 if v14 else 13 if v13 else 12 if v12 else 11 if v11 else 10 if v10 else 9 if v9 else 8 if v8 else 7 if v7 else 6 if coverage else None,'phases':phase_names if coverage else {},'hud_injection_attempts':len(hud),'hud_post_replacements':sum(e.get('replaced_post') is True for e in hud),'hud_phase_counts':hud_phases,'camera_comparisons':movement,'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),'limits':'native UI trigger and post replacement require actual image review; full characters/weapons image acceptance pending'},
             'lighting_comparison':{'present':comparison,'status':'requests_complete_requires_image_review' if comparison and not errors else 'incomplete' if comparison else 'not_requested',
                 'phases':phase_names if comparison else {},'camera_comparisons':movement,
                 'same_camera_at_readbacks':bool(movement) and all(e['matched_within_1e_4'] for e in movement),

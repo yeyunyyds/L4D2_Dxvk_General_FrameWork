@@ -33,6 +33,8 @@ bool raytracingRequested = false;
 uint64_t physicalDraws = 0;
 world_diagnostics::LiveCoverageComparison comparison;
 live_mesh::Scene apiMeshes(&api);
+model_texture::Cache modelTextures;
+uint64_t texturedSubmissions=0,textureFallbackSubmissions=0;
 struct MeshFence { static_draw::Ref<IDirect3DQuery9> query;uint64_t frame=0; };
 std::deque<std::unique_ptr<MeshFence>> meshFences;
 uint64_t completedMeshFrame=0,apiCameraFrame=0,apiMaintenanceFrame=0;
@@ -269,7 +271,7 @@ void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
   if (modelStateCounts[stage]>=world_diagnostics::kModelSampleLimit) { return; }++modelStateCounts[stage];
   const unsigned names[]={7,14,15,23,24,25,27,28,22,42,52,137,149,150,152,168,169,174,175,177,195,196,197,206,210,211,212,213,214,215,216,217,218,219,220};
   events << "{\"event\":\"model_state_sample\",\"ordinal\":" << s.ordinal << ",\"material\":" << s.material
-    << ",\"frame\":" << state().presents+1 << ",\"model_stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data() << "\",\"states\":[";
+    << ",\"frame\":" << state().presents+1 << ",\"model_stage\":\"" << world_diagnostics::texturedName(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data() << "\",\"states\":[";
   for (unsigned i=0;i<sizeof(names)/sizeof(names[0]);++i) {
     DWORD value=0;const auto hr=device->GetRenderState(D3DRENDERSTATETYPE(names[i]),&value);
     if (i) { events << ','; }events << "{\"state\":" << names[i] << ",\"value\":" << value << ",\"hresult\":" << uint32_t(hr) << '}';
@@ -278,7 +280,7 @@ void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
 }
 live_mesh::Material liveMaterial(world_diagnostics::ModelStage stage) {
   switch(stage) {
-    case world_diagnostics::ModelStage::NekoRecheck:return live_mesh::Material::Rough;
+    case world_diagnostics::ModelStage::NekoRecheck:return live_mesh::Material::Neutral;
     case world_diagnostics::ModelStage::Combined:return live_mesh::Material::Metal;
     case world_diagnostics::ModelStage::Matte:return live_mesh::Material::Alpha;
     case world_diagnostics::ModelStage::Directional:return live_mesh::Material::Emissive;
@@ -294,10 +296,10 @@ void apiPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& p,u
   ++count;const auto vh=ldb_rt_file::geometrySha256(p.bytes.data(),p.bytes.size()),ih=ldb_rt_file::geometrySha256(p.indices.data(),p.indices.size());
   const bool save=(previous||frame==240||frame==300) && p.bytes.size()+p.indices.size()<=(previous?8ull:16ull)*1024*1024-apiPayloadBytes[stage];
   events << "{\"event\":\"" << (previous?"api_model_previous_sample":"api_model_sample") << "\",\"frame\":" << frame << ",\"ordinal\":" << s.ordinal
-    << ",\"stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data()
+    << ",\"stage\":\"" << world_diagnostics::texturedName(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data()
     << "\",\"material\":\"" << live_mesh::name(liveMaterial(comparison.models())) << "\",\"kind\":" << kind << ",\"topology\":" << uint32_t(topology)
     << ",\"source_material\":" << s.material << ",\"source_vs_reason\":\"" << p.reason << "\",\"vertices\":" << p.bytes.size()/32 << ",\"triangles\":" << submission.triangles << ",\"index_bytes\":" << p.indexBytes
-    << ",\"mesh\":" << submission.handle << ",\"created\":" << (submission.created?"true":"false") << ",\"cull\":" << cull
+    << ",\"mesh\":" << submission.handle << ",\"created\":" << (submission.created?"true":"false") << ",\"textured\":" << (submission.textured?"true":"false") << ",\"material_handle\":" << submission.materialHandle << ",\"cull\":" << cull
     << ",\"ignored_category_at_original_draw\":" << ignored << ",\"vertices_sha256\":\"" << vh << "\",\"indices_sha256\":\"" << ih
     << "\",\"gpu_upload\":\"pinned_CreateMesh_synchronous_copy_queued_owned_buffers\",\"world\":[";
   for(unsigned i=0;i<16;++i) { if(i) { events<<','; }events<<p.world[i]; }events<<"],\"view\":[";
@@ -311,6 +313,16 @@ void apiPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& p,u
     if(comma) { events<<','; }comma=true;events<<"{\"file\":\""<<name<<"\",\"size\":"<<bytes.size()<<",\"sha256\":\""<<digest<<"\"}";
   };
   write("-vertices.bin",p.bytes,vh);write("-indices.bin",p.indices,ih);events<<"],\"payload_saved\":"<<(save?"true":"false")<<"}\n"<<std::flush;
+}
+void textureBinding(const model_texture::Source& source,const live_mesh::Submission& submission,uint64_t frame) {
+  if(!submission.materialUpdated) { return; }
+  events << "{\"event\":\"model_texture_binding\",\"frame\":" << frame << ",\"material_handle\":" << submission.materialHandle
+    << ",\"textured\":" << (source.textured()?"true":"false") << ",\"reason\":\"" << source.reason
+    << "\",\"file\":\"" << source.file << "\",\"sha256\":\"" << source.digest << "\",\"width\":" << source.width
+    << ",\"height\":" << source.height << ",\"format\":" << source.format << ",\"srgb\":" << (source.srgb?"true":"false")
+    << ",\"alpha_test\":" << unsigned(source.alphaTest) << ",\"alpha_ref\":" << unsigned(source.alphaRef)
+    << ",\"filter\":" << unsigned(source.filter) << ",\"wrap_u\":" << unsigned(source.wrapU) << ",\"wrap_v\":" << unsigned(source.wrapV)
+    << ",\"material\":\"" << live_mesh::name(liveMaterial(comparison.models())) << "\"}\n" << std::flush;
 }
 bool pollMeshCompletion() {
     while(!meshFences.empty()) {
@@ -341,9 +353,11 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
       if(FAILED(hr)) { event("api_mesh_fence_failed",uint32_t(hr));(void)raytracing(false);state().active=false;return; }
       meshFences.push_back(std::move(fence));
     }
-    events << "{\"event\":\"api_mesh_frame\",\"frame\":" << frame << ",\"stage\":\"" << world_diagnostics::liveName(comparison.models())
+    if(comparison.models()==world_diagnostics::ModelStage::Recovery&&!apiMeshes.entries()) { modelTextures.clear(); }
+    events << "{\"event\":\"api_mesh_frame\",\"frame\":" << frame << ",\"stage\":\"" << world_diagnostics::texturedName(comparison.models())
       << "\",\"submitted\":" << apiMeshes.submitted << ",\"created\":" << apiMeshes.created << ",\"reused\":" << apiMeshes.reused
       << ",\"destroyed\":" << apiMeshes.destroyed << ",\"entries\":" << apiMeshes.entries() << ",\"bytes\":" << apiMeshes.bytes
+      << ",\"material_updates\":" << apiMeshes.materialUpdates << ",\"textured_submissions\":" << texturedSubmissions << ",\"texture_fallback_submissions\":" << textureFallbackSubmissions << ",\"texture_exports\":" << modelTextures.exported << ",\"texture_bytes\":" << modelTextures.bytes << ",\"texture_held\":" << modelTextures.held() << ",\"texture_read_failures\":" << modelTextures.failed << ",\"texture_budget_deferred\":" << modelTextures.deferred
       << ",\"peak_bytes\":" << apiMeshes.peakBytes << ",\"completed_through\":" << completedMeshFrame << ",\"pending_fences\":" << meshFences.size()
       << ",\"frame_draws\":" << (apiMeshes.frame==frame?apiMeshes.frameDraws:0)
       << ",\"frame_new_bytes\":" << (apiMeshes.frame==frame?apiMeshes.frameBytes:0)
@@ -385,7 +399,12 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
         else { apiCameraFrame=frame;apiView=s.view;apiProjection=s.projection; }
       }
       bool sameCamera=true;for(unsigned i=0;i<16;++i) { sameCamera=sameCamera&&std::abs(apiView[i]-s.view[i])<=1e-4f&&std::abs(apiProjection[i]-s.projection[i])<=1e-4f; }
-      if(SUCCEEDED(hr)&&sameCamera) { submitted=apiMeshes.draw(prepared,kind,type,cull,liveMaterial(comparison.models()),frame,meshFences.size()); }
+      if(SUCCEEDED(hr)&&sameCamera) {
+        const auto source=modelTextures.acquire(device,launch.output,frame,s.material);
+        submitted=apiMeshes.draw(prepared,kind,type,cull,liveMaterial(comparison.models()),frame,meshFences.size(),source,completedMeshFrame);
+        textureBinding(source,submitted,frame);
+        if(submitted.success) { if(source.textured()) { ++texturedSubmissions; }else { ++textureFallbackSubmissions; } }
+      }
       else { submitted.code=ERROR_INVALID_DATA;submitted.operation="camera_or_cull"; }
       if(submitted.deferred) { if(apiMeshes.frameOmitted<=8) { submissionEvent(s,submitted,frame); } }
       else if(!submitted.success) { submissionEvent(s,submitted,frame);(void)raytracing(false);state().active=false; }
@@ -417,7 +436,7 @@ void sceneSummary(uint64_t frame) {
   }
   const auto phase=comparison.phase();const auto& m=modelCounts[size_t(phase)];
   events << "{\"event\":\"model_rebuild_counts\",\"frame\":" << frame << ",\"phase\":\"" << world_diagnostics::name(phase)
-    << "\",\"model_stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\",\"attempts\":" << m.attempts << ",\"ready\":" << m.ready << ",\"reconstructed\":" << m.reconstructed << ",\"fallback\":" << m.fallback << ",\"reasons\":{";
+    << "\",\"model_stage\":\"" << world_diagnostics::texturedName(comparison.models()) << "\",\"attempts\":" << m.attempts << ",\"ready\":" << m.ready << ",\"reconstructed\":" << m.reconstructed << ",\"fallback\":" << m.fallback << ",\"reasons\":{";
   bool modelComma=false;for (const auto& pair:m.reasons) { if (modelComma) { events << ','; }modelComma=true;events << '"' << pair.first << "\":" << pair.second; }events << "}}\n" << std::flush;
   if (frame>180 && frame!=world_diagnostics::kCoveragePresents) { return; }
   const auto& c=sceneCounts[size_t(phase)];
@@ -479,20 +498,27 @@ void capture(IDirect3DDevice9* device, uint64_t frame) noexcept {
     events << "],\"projection\":[";
     for (size_t i = 0; i < lastProjection.size(); ++i) { if (i) { events << ','; } events << lastProjection[i]; }
     events << "]}\n" << std::flush;
-    events << "{\"event\":\"model_stage_readback\",\"frame\":" << frame << ",\"model_stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\"}\n" << std::flush;
+    events << "{\"event\":\"model_stage_readback\",\"frame\":" << frame << ",\"model_stage\":\"" << world_diagnostics::texturedName(comparison.models()) << "\"}\n" << std::flush;
     events << "{\"event\":\"api_model_path_readback\",\"frame\":" << frame
-      << ",\"stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\",\"material\":\"" << live_mesh::name(liveMaterial(comparison.models()))
+      << ",\"stage\":\"" << world_diagnostics::texturedName(comparison.models()) << "\",\"material\":\"" << live_mesh::name(liveMaterial(comparison.models()))
       << "\",\"submission_samples\":" << modelSampleCounts[unsigned(comparison.models())]
       << ",\"submission_sample_omitted\":" << modelSampleOmitted[unsigned(comparison.models())]
       << ",\"previous_samples\":" << modelPreviousSampleCounts[unsigned(comparison.models())]
       << ",\"previous_sample_omitted\":" << modelPreviousSampleOmitted[unsigned(comparison.models())]
       << ",\"omitted_total\":" << apiMeshes.omitted << ",\"submitted_total\":" << apiMeshes.submitted << ",\"live_entries\":" << apiMeshes.entries() << "}\n" << std::flush;
-    const bool advanced = comparison.afterCapture(frame,[&](const char* key,const char* value) {
+    bool advanced = comparison.afterCapture(frame,[&](const char* key,const char* value) {
       const auto code=api.SetConfigVariable(key,value);
       events << "{\"event\":\"model_path_config_requested\",\"after_present\":" << frame << ",\"key\":\"" << key
         << "\",\"value\":\"" << value << "\",\"code\":" << uint32_t(code) << "}\n" << std::flush;
       return code==REMIXAPI_ERROR_CODE_SUCCESS;
     });
+    if(advanced&&(frame==300||frame==540)) {
+      const char* value=frame==300?"30,30,30":"3000,3000,3000";
+      const auto code=api.SetConfigVariable("rtx.fallbackLightRadiance",value);
+      events << "{\"event\":\"model_light_config_requested\",\"after_present\":" << frame
+        << ",\"value\":\"" << value << "\",\"code\":" << uint32_t(code) << "}\n" << std::flush;
+      advanced=code==REMIXAPI_ERROR_CODE_SUCCESS;
+    }
     events << "{\"event\":\"coverage_phase_requested\",\"code\":" << (advanced ? 0 : uint32_t(E_FAIL))
       << ",\"after_present\":" << frame << ",\"phase\":\"" << world_diagnostics::name(comparison.phase()) << "\"}\n" << std::flush;
     if (!advanced) { (void)raytracing(false); state().active = false; }
@@ -539,9 +565,10 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy",0,"v17_live_mesh_early_retirement_soft_budget_neko_combined_materials_recovery");
-    event("world_coverage_revision",0,"17");
+    event("coverage_comparison_policy",0,"v18_sampler0_DDS_alpha_material_rebind_low_light_recovery");
+    event("world_coverage_revision",0,"18");
     event("api_mesh_policy",0,"per_frame_pose_direct_mesh_early_fence_retirement_soft_budget_original_draw_ignored_no_source_thread_changes");
+    event("model_texture_policy",0,"sampler0_static_base_level_DDS_DX10_sRGB_original_alpha_64MiB_128_refs_4_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw};
@@ -569,7 +596,7 @@ void shutdown() noexcept {
       else if(FAILED(hr)) { break; }else { SwitchToThread(); }
     }
     const auto code=apiMeshes.retire(completedMeshFrame,state().presents,true);event("api_mesh_shutdown_retire",code);
-    event("api_mesh_shutdown_remaining",0,std::to_string(apiMeshes.entries()).c_str());meshFences.clear();
+    event("api_mesh_shutdown_remaining",0,std::to_string(apiMeshes.entries()).c_str());meshFences.clear();modelTextures.clear();event("model_texture_shutdown_held",0,std::to_string(modelTextures.held()).c_str());
   }
   state() = {}; registered = nullptr; initialized = false;
   if (events) { event("host_draw_request_count", 0, std::to_string(physicalDraws).c_str()); }

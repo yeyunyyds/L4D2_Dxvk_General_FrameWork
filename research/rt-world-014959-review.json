@@ -1,0 +1,386 @@
+{
+  "schema": 1,
+  "scope": "v17 B580 complete 600-Present segment in manually archived pre-finalization directory; not full project acceptance",
+  "input": {
+    "filename": "rt-world-20261019-014959-271102be.7z",
+    "size": 19286009,
+    "sha256": "c59f125d41c68415aca0418078c1c2cafb1bd8d8a493a7cc4f81bfb020972b0e",
+    "members": 3705,
+    "files": 3703,
+    "expanded_bytes": 372528220,
+    "integrity": "libarchive complete entry decode without errors",
+    "unsafe_or_duplicate_paths": false
+  },
+  "build_commit": "dbade95c1ff4c2a9374103360d2dca741a51876a",
+  "build_id": "ldb-rt-observer+ca3ffc7609056293",
+  "installation_receipt_matches_published_pair": true,
+  "capture_marker": {
+    "session": 3329747810350522839,
+    "reason": 0,
+    "draws": 309537,
+    "valid": 309537,
+    "presents": 600,
+    "game_rt": "attempted_requires_review",
+    "source_queue": "unrun"
+  },
+  "native_trace_footer": {
+    "draws": 309537,
+    "valid": 309537,
+    "presents": 600,
+    "resets": 0,
+    "failures": 0,
+    "unobserved": 0,
+    "reason": 0
+  },
+  "collector_checkpoint": {
+    "schema": 1,
+    "scope": "selected_static_world_runtime_pilot",
+    "build_commit": "dbade95c1ff4c2a9374103360d2dca741a51876a",
+    "collection": "incomplete",
+    "errors": [],
+    "game_rt": "attempted_requires_review",
+    "source_queue_execution": "unrun",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun",
+    "capture_marker": {
+      "session": 3329747810350522839,
+      "reason": 0,
+      "draws": 309537,
+      "valid": 309537,
+      "presents": 600,
+      "game_rt": "attempted_requires_review",
+      "source_queue": "unrun"
+    },
+    "draw_observation": "pass",
+    "module_evidence": "snapshot_collected",
+    "result_scope": "consumer state / RPC ordering only; no Source producer queue or RT image acceptance",
+    "pre_exit_game_logs": "snapshot_collected",
+    "collection_phase": "waiting_for_game_and_host_exit"
+  },
+  "archive_status": {
+    "uploaded_format": "7z_manual_directory_copy",
+    "collector_phase_at_saved_checkpoint": "waiting_for_game_and_host_exit",
+    "final_collector_zip_proven": false,
+    "expected_zip_location": "results/rt-world-20261019-014959-271102be.zip, beside the session directory",
+    "full_process_exit_logs_available": false,
+    "limits": "Last progress is wait for game/Host exit; actual collector termination or later archive creation cannot be determined from this copy."
+  },
+  "independent_analysis": {
+    "draw_pass": true,
+    "draw_errors": [],
+    "world_outputs": "pass",
+    "world_errors": [],
+    "scene_pass": true,
+    "scene_errors": [],
+    "world_normalization": "pass",
+    "runtime_nonzero_codes": [],
+    "readbacks": 30,
+    "original_scene_samples": 301,
+    "original_scene_verified_bytes": 15490182,
+    "live_geometry_verified_bytes": 22849378,
+    "prior_pose_samples": 81
+  },
+  "conversion": {
+    "reports": 309537,
+    "converted": 61251,
+    "hud_replaced": 570,
+    "sky_converted": 2880,
+    "bulk_static_converted": 28759
+  },
+  "shader_inventory": {
+    "ShadowBuild_DX9": 37851,
+    "NekoSky": 3600,
+    "LightmappedGeneric": 36570,
+    "UnlitGeneric": 126279,
+    "VertexLitGeneric": 61611,
+    "Infected": 14481,
+    "NekoToon": 12600,
+    "Shadow": 1200,
+    "Spritecard": 35,
+    "Occlusion_DX9": 910,
+    "MotionBlur_dx9": 600,
+    "Neko_Downsample_nohdr": 1200,
+    "BlurFilterX": 1200,
+    "BlurFilterY": 1200,
+    "NekoBloom": 7800,
+    "Neko_Engine_Post": 600,
+    "NekoGlowColor": 1200,
+    "neko_screenspace_general": 600
+  },
+  "live_model_resources": {
+    "last": {
+      "event": "api_mesh_frame",
+      "frame": 600,
+      "stage": "recovery",
+      "submitted": 27281,
+      "created": 15873,
+      "reused": 11408,
+      "destroyed": 15873,
+      "entries": 0,
+      "bytes": 0,
+      "peak_bytes": 256683612,
+      "completed_through": 540,
+      "pending_fences": 0,
+      "frame_draws": 0,
+      "frame_new_bytes": 0,
+      "frame_omitted": 0,
+      "omitted_total": 56,
+      "omission_reasons": {
+        "draw_limit": 0,
+        "frame_geometry_bytes": 56,
+        "live_geometry_bytes": 0,
+        "mesh_entries": 0,
+        "gpu_backlog": 0
+      }
+    },
+    "max_pending_fences": 1,
+    "max_entries": 250,
+    "max_frame_draws": 185,
+    "max_frame_new_bytes": 100663188,
+    "budget_omissions": 56,
+    "coverage": "partial_due_to_budget",
+    "omission_frames": [
+      {
+        "frame": 421,
+        "omitted": 34
+      },
+      {
+        "frame": 422,
+        "omitted": 12
+      },
+      {
+        "frame": 423,
+        "omitted": 5
+      },
+      {
+        "frame": 424,
+        "omitted": 3
+      },
+      {
+        "frame": 428,
+        "omitted": 1
+      },
+      {
+        "frame": 538,
+        "omitted": 1
+      }
+    ],
+    "shutdown_events": [
+      {
+        "event": "api_mesh_shutdown_retire",
+        "code": 0
+      },
+      {
+        "event": "api_mesh_shutdown_remaining",
+        "code": 0,
+        "value": "0"
+      },
+      {
+        "event": "host_cleanup",
+        "code": 0
+      }
+    ],
+    "runtime_exit_warning": "[40] common device objects were not disposed of."
+  },
+  "adjacent_geometry_groups": {
+    "239": {
+      "summary_samples": 21,
+      "saved_geometry_samples": 21,
+      "geometry_payload_bytes": 3050466,
+      "saved_vertices": 74742,
+      "saved_triangles": 109787,
+      "saved_shaders": {
+        "NekoToon": 21
+      }
+    },
+    "240": {
+      "summary_samples": 21,
+      "saved_geometry_samples": 21,
+      "geometry_payload_bytes": 3050466,
+      "saved_vertices": 74742,
+      "saved_triangles": 109787,
+      "saved_shaders": {
+        "NekoToon": 21
+      }
+    },
+    "299": {
+      "summary_samples": 60,
+      "saved_geometry_samples": 54,
+      "geometry_payload_bytes": 8376342,
+      "saved_vertices": 207612,
+      "saved_triangles": 288793,
+      "saved_shaders": {
+        "VertexLitGeneric": 33,
+        "NekoToon": 21
+      }
+    },
+    "300": {
+      "summary_samples": 61,
+      "saved_geometry_samples": 55,
+      "geometry_payload_bytes": 8372104,
+      "saved_vertices": 207503,
+      "saved_triangles": 288668,
+      "saved_shaders": {
+        "VertexLitGeneric": 34,
+        "NekoToon": 21
+      }
+    }
+  },
+  "independent_cpu_projection": {
+    "240": {
+      "geom-240-cam-240": {
+        "samples": 21,
+        "vertices": 74742,
+        "triangles": 109787,
+        "projection": "triangles=109787 vertices_behind=0 hits=7843",
+        "model_projection_pixels": 7843,
+        "gpu_depth_match_1e_4": 6221,
+        "gpu_depth_shallower_possible_occlusion": 880,
+        "gpu_depth_further_or_missing": 740,
+        "interior_pixels": 6323,
+        "interior_gpu_depth_further_or_missing": 423,
+        "median_depth_error": 3.5643577575683594e-05
+      },
+      "geom-239-cam-240": {
+        "samples": 21,
+        "vertices": 74742,
+        "triangles": 109787,
+        "projection": "triangles=109787 vertices_behind=0 hits=7855",
+        "model_projection_pixels": 7855,
+        "gpu_depth_match_1e_4": 3405,
+        "gpu_depth_shallower_possible_occlusion": 641,
+        "gpu_depth_further_or_missing": 3807,
+        "interior_pixels": 6325,
+        "interior_gpu_depth_further_or_missing": 3051,
+        "median_depth_error": 0.00012367963790893555
+      },
+      "geom-240-cam-239": {
+        "samples": 21,
+        "vertices": 74742,
+        "triangles": 109787,
+        "projection": "triangles=109787 vertices_behind=0 hits=7792",
+        "model_projection_pixels": 7792,
+        "gpu_depth_match_1e_4": 2769,
+        "gpu_depth_shallower_possible_occlusion": 3432,
+        "gpu_depth_further_or_missing": 1590,
+        "interior_pixels": 6261,
+        "interior_gpu_depth_further_or_missing": 1023,
+        "median_depth_error": 0.00017005205154418945
+      },
+      "geom-239-cam-239": {
+        "samples": 21,
+        "vertices": 74742,
+        "triangles": 109787,
+        "projection": "triangles=109787 vertices_behind=0 hits=7800",
+        "model_projection_pixels": 7800,
+        "gpu_depth_match_1e_4": 2902,
+        "gpu_depth_shallower_possible_occlusion": 2103,
+        "gpu_depth_further_or_missing": 2794,
+        "interior_pixels": 6293,
+        "interior_gpu_depth_further_or_missing": 2142,
+        "median_depth_error": 0.00016322731971740723
+      }
+    },
+    "300": {
+      "geom-300-cam-300": {
+        "samples": 55,
+        "vertices": 207503,
+        "triangles": 288668,
+        "projection": "triangles=288668 vertices_behind=0 hits=9103",
+        "model_projection_pixels": 9103,
+        "gpu_depth_match_1e_4": 5687,
+        "gpu_depth_shallower_possible_occlusion": 1937,
+        "gpu_depth_further_or_missing": 1476,
+        "interior_pixels": 6156,
+        "interior_gpu_depth_further_or_missing": 925,
+        "median_depth_error": 6.937980651855469e-05
+      },
+      "geom-299-cam-300": {
+        "samples": 54,
+        "vertices": 207612,
+        "triangles": 288793,
+        "projection": "triangles=288793 vertices_behind=0 hits=8981",
+        "model_projection_pixels": 8981,
+        "gpu_depth_match_1e_4": 5293,
+        "gpu_depth_shallower_possible_occlusion": 1984,
+        "gpu_depth_further_or_missing": 1701,
+        "interior_pixels": 6125,
+        "interior_gpu_depth_further_or_missing": 1002,
+        "median_depth_error": 7.641315460205078e-05
+      },
+      "geom-300-cam-299": {
+        "samples": 55,
+        "vertices": 207503,
+        "triangles": 288668,
+        "projection": "triangles=288668 vertices_behind=0 hits=9034",
+        "model_projection_pixels": 9034,
+        "gpu_depth_match_1e_4": 1285,
+        "gpu_depth_shallower_possible_occlusion": 3625,
+        "gpu_depth_further_or_missing": 4124,
+        "interior_pixels": 6232,
+        "interior_gpu_depth_further_or_missing": 2902,
+        "median_depth_error": 0.0005166232585906982
+      },
+      "geom-299-cam-299": {
+        "samples": 54,
+        "vertices": 207612,
+        "triangles": 288793,
+        "projection": "triangles=288793 vertices_behind=0 hits=9118",
+        "model_projection_pixels": 9118,
+        "gpu_depth_match_1e_4": 1337,
+        "gpu_depth_shallower_possible_occlusion": 3630,
+        "gpu_depth_further_or_missing": 4151,
+        "interior_pixels": 6246,
+        "interior_gpu_depth_further_or_missing": 2875,
+        "median_depth_error": 0.0005009770393371582
+      }
+    },
+    "limits": "Opaque double-sided CPU projected triangle depth omits world occlusion, RT sampling/jitter and alpha. Saved geometry is partial at299/300 (54/60 and55/61 samples); these diagnostic comparisons cannot alone establish current/history correctness or complete GPU geometry acceptance."
+  },
+  "visual_review": {
+    "readback_frames": [
+      30,
+      120,
+      180,
+      240,
+      300,
+      360,
+      420,
+      480,
+      540,
+      600
+    ],
+    "world_sky_hud": "coherent in inspected outputs",
+    "models": "coherent sampled character silhouette; metal response visible; most nonmetal synthetic materials very bright",
+    "exact_cyan_pixels_in_all_color_outputs": 0,
+    "nonfinite_color_values": 0,
+    "alpha_and_emissive": "stages executed; images do not independently establish full physical/material correctness",
+    "same_camera_across_stages": false,
+    "geometry": "current-pose/current-camera projection fits better than previous camera; no support for uniform one-frame lag, but depth discrepancies remain",
+    "recovery": "explicit API character disappears and Mesh counters reach zero; full backend object disposal still warns"
+  },
+  "environment_comparison": {
+    "user_reported_component_replacement_before_failed_startup": true,
+    "user_reported_reversion_for_this_run": true,
+    "studiorender_mapped_image_size_failed": 4534272,
+    "studiorender_mapped_image_size_previous_success": 6631424,
+    "studiorender_mapped_image_size_current_success": 6631424,
+    "disk_hashes_for_studiorender_versions": "not_available",
+    "prior_startup_exception_reproduced_in_this_capture": false,
+    "causality": "supports investigating replaced component compatibility; exact culprit and permanent resolution not established"
+  },
+  "limits": [
+    "Manual checkpoint remains INCOMPLETE; successful independent trace/world/scene analysis does not rewrite it as a finalized collector success.",
+    "56 model submissions omitted by 96 MiB new-geometry budget across6 frames; no whole-scene coverage claim.",
+    "299/300 geometry saving is bounded:54/60 and55/61 summaries retain full payload. Other-stage sample caps are separate from runtime omissions.",
+    "Original model textures, smooth/original normals, full Toon/lighting, all shaders and special channels remain incomplete.",
+    "Source producer threading, long-session stability and performance were not accepted.",
+    "Game Bridge logs are pre-exit snapshots; runtime shutdown events and its backend leak warning are present, but a complete final process-exit archive is absent."
+  ],
+  "next_priorities": [
+    "No repeated capture required for this upload; retain complete trace and all30 readbacks.",
+    "Original model albedo/alpha and material mapping; diagnose bright clipping while preserving known-good geometry.",
+    "Reduce geometry rebuild pressure at material transitions while preserving correct material identity; validate runtime API contracts before changing caching.",
+    "Improve collector exit instructions and make capture/checkpoint/archive phases and final ZIP location explicit."
+  ]
+}

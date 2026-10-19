@@ -8,12 +8,16 @@ import struct
 FRAMES=(30,120,180,240,300,360,420,480,540,600)
 STAGES=('off','off','off','api_neko_neutral','api_combined_neutral','api_combined_rough','api_combined_metal','api_combined_alpha','api_combined_emissive','recovery')
 MATERIALS=('neutral',)*5+('rough','metal','alpha','emissive','neutral')
+STAGES_V18=('off','off','off','api_neko_textured','api_combined_textured','api_combined_textured_low_light','api_combined_textured_metal','api_combined_textured_alpha','api_combined_textured_emissive','recovery')
+MATERIALS_V18=('neutral',)*6+('metal','alpha','emissive','neutral')
 CONFIG=('rtx.enablePreservePath','rtx.useBuffersDirectly','rtx.bloom.enable','rtx.postfx.enable')
 
 
 def analyze(directory,events):
     errors=[];directory=Path(directory);samples=[];payload_bytes=0
-    v17=any(e.get('event')=='world_coverage_revision' and e.get('value')=='17' and e.get('code')==0 for e in events)
+    v18=any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
+    v17=v18 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='17' and e.get('code')==0 for e in events)
+    stages=STAGES_V18 if v18 else STAGES;materials=MATERIALS_V18 if v18 else MATERIALS
     reasons=('draw_limit','frame_geometry_bytes','live_geometry_bytes','mesh_entries','gpu_backlog')
     def check(value,why):
         if not value:raise ValueError(why)
@@ -51,12 +55,12 @@ def analyze(directory,events):
             previous=e
         except (KeyError,TypeError,ValueError) as exc:errors.append(str(exc))
     readbacks=[e for e in events if e.get('event')=='api_model_path_readback']
-    if [(e.get('frame'),e.get('stage'),e.get('material')) for e in readbacks]!=list(zip(FRAMES,STAGES,MATERIALS)):errors.append('live_readback_sequence')
+    if [(e.get('frame'),e.get('stage'),e.get('material')) for e in readbacks]!=list(zip(FRAMES,stages,materials)):errors.append('live_readback_sequence')
     rows=[e for e in events if e.get('event') in (('api_model_sample','api_model_previous_sample') if v17 else ('api_model_sample',))];ordinals=set();files=set();counts=Counter();stage_bytes=Counter()
     for e in rows:
         try:
             frame=e['frame'];previous_sample=e['event']=='api_model_previous_sample';check(frame in ((239,299) if previous_sample else FRAMES[3:-1]),'invalid_live_sample_frame');index=FRAMES.index(frame+1 if previous_sample else frame)
-            check(e['stage']==STAGES[index] and e['material']==MATERIALS[index],'live_sample_material_stage')
+            check(e['stage']==stages[index] and e['material']==materials[index],'live_sample_material_stage')
             counts[frame]+=1;check(counts[frame]<=64,'live_sample_budget')
             check(type(e['ordinal']) is int and e['ordinal']>0 and e['ordinal'] not in ordinals,'live_sample_identity');ordinals.add(e['ordinal'])
             check(e['ignored_category_at_original_draw']&8 and e['cull'] in (1,2,3),'original_model_not_isolated')
@@ -98,8 +102,12 @@ def analyze(directory,events):
                 check(e['omitted_total']==account.get('omitted_total'),'live_readback_omission_mismatch')
         except (KeyError,ValueError,TypeError) as exc:errors.append(str(exc))
     if not stage_bytes[240] or not stage_bytes[300]:errors.append('live_missing_neutral_geometry_pairs')
+    textures=None
+    if v18:
+        from analyze_rt_textures import analyze as analyze_textures
+        textures=analyze_textures(directory,events);errors.extend(textures['errors'])
     omissions=frames[-1].get('omitted_total',0) if v17 and frames else 0
-    return {'schema':1,'budget_omissions':omissions,'model_budget_coverage':'partial_due_to_budget' if omissions else 'no_recorded_budget_omissions','previous_pose_samples':sum(e.get('event')=='api_model_previous_sample' for e in samples),'pass':not errors,'status':'valid_evidence_requires_image_review' if not errors else 'incomplete',
+    return {'schema':1,**({'textures':textures} if v18 else {}),'budget_omissions':omissions,'model_budget_coverage':'partial_due_to_budget' if omissions else 'no_recorded_budget_omissions','previous_pose_samples':sum(e.get('event')=='api_model_previous_sample' for e in samples),'pass':not errors,'status':'valid_evidence_requires_image_review' if not errors else 'incomplete',
             'errors':sorted(set(errors)),'readbacks':readbacks,'payload_bytes':payload_bytes,'samples':samples,
             'final_counters':frames[-1] if frames else {},'gpu_image_acceptance':'unrun',
             'limits':'API success, CPU hashes and event completion do not establish correct BLAS, materials, original textures or game performance'}
