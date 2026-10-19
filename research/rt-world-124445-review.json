@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "upload": "rt-world-20261019-124445-5e373336.zip",
+  "upload_sha256": "ecc87c3a6396a740c230ad6f355bf076667918ac006ca58a3b8f6390fe170d63",
+  "archive": {
+    "size": 11121920,
+    "members": 3271,
+    "uncompressed_bytes": 222861000,
+    "crc": "pass",
+    "omitted_files": []
+  },
+  "source_commit": "d6d9428f879f045678d4b77863cd782b0b560a37",
+  "build_id": "ldb-rt-observer+973d8b35492f9f0d",
+  "paired_installed_hashes_match_shipped_v18": true,
+  "uploaded_collection": "incomplete",
+  "uploaded_collection_phase": "finalized",
+  "observed_error": {
+    "event": "api_model_exception",
+    "code": 2147500037,
+    "hresult": "0x80004005",
+    "last_completed_present": 180,
+    "inferred_failure_present": 181,
+    "last_sampled_model_ordinal": 77740,
+    "last_sampled_model_shader": "NekoToon",
+    "original_exception_message": "not recorded by v18",
+    "exact_failed_texture_dimensions": "unavailable; 64-entry material-audit quota filled before first NekoToon"
+  },
+  "models": {
+    "submitted": 0,
+    "created": 0,
+    "texture_bindings": 0,
+    "dds_files": 0,
+    "low_light": "unrun",
+    "synthetic_variants": "unrun",
+    "recovery": "unrun",
+    "gpu_texture_acceptance": "unrun"
+  },
+  "readbacks": {
+    "count": 9,
+    "frames": [
+      30,
+      120,
+      180
+    ],
+    "color_nonfinite_rgb": 0,
+    "depth_normals_have_signal": true,
+    "limits": "Packed normal words are decoded according to pinned runtime; float finite count alone is not a normal validity check."
+  },
+  "independent_analysis": {
+    "world_errors": [
+      "incomplete_or_failed_coverage_phase_requests",
+      "incomplete_control_and_world_output_set",
+      "missing_baseline_or_expanded_hud_injection",
+      "api_model_exception",
+      "live_configuration_sequence",
+      "live_missing_neutral_geometry_pairs",
+      "live_readback_sequence",
+      "missing_live_present_accounting",
+      "texture_light_sequence",
+      "incomplete_model_stage_readbacks"
+    ],
+    "scene_errors": [
+      "api_model_exception",
+      "live_configuration_sequence",
+      "live_missing_neutral_geometry_pairs",
+      "live_readback_sequence",
+      "missing_live_present_accounting",
+      "missing_model_rebuild_summaries",
+      "missing_scene_rebuild_summaries",
+      "missing_wide_capture_summaries",
+      "texture_light_sequence"
+    ],
+    "verified_scene_samples": 291,
+    "verified_scene_payload_bytes": 12260782,
+    "complete": "fail",
+    "draw_trace": "not included in finalized error snapshot; full capture analyzer unrun"
+  },
+  "confirmed_source_defect": {
+    "location": "integration/rt/rt_model_texture.h Cache::acquire",
+    "old_hash": "geometrySha256",
+    "old_hash_limit_bytes": 4194304,
+    "supported_texture_payload_bytes": 16777216,
+    "dds_header_bytes": 148,
+    "example_rgba1024_file_bytes": 4194452,
+    "old_behavior": "supported DDS above 4 MiB returns empty hash and throws before any DDS write",
+    "fix": "Dedicated DDS hash bound of 16 MiB plus 148 bytes; geometry/shader hash limits unchanged",
+    "causality": "Deterministic defect consistent with failure before first texture/material/mesh; v18 did not preserve exception text or target texture dimensions, so this archive alone cannot establish it was the unique cause."
+  },
+  "game_or_host_crash": "not established; runtime caught a C++ exception and requested RT off; uploaded logs are live-process snapshots without exit proof",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun"
+}

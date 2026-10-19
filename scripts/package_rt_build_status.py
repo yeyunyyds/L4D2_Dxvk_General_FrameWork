@@ -156,7 +156,10 @@ if __name__ == '__main__':
             status['world_live_mesh_budget_development_execution']='pass'
         if status['world_live_mesh_budget_development_execution']=='pass' and queue_log.exists():
             native=queue_log.read_text(errors='replace')
-            if native.count('RT model DDS DX10 row pitch/sRGB/alpha/bounds: PASS')==1:
+            texture_checks=('RT model DDS DX10 row pitch/sRGB/alpha/bounds: PASS',
+                            'RT model texture full DDS SHA256 4MiB/16MiB plus header/bounds: PASS',
+                            'RT model texture system NULLREF 1024/2048 cache export/rehash/reuse/unlock/clear: PASS')
+            if all(native.count(marker)==1 for marker in texture_checks):
                 status['world_model_texture_development_execution']='pass'
             if native.count('RT live material completed-use destroy/recreate/stable-geometry/texture identity: PASS')==1:
                 status['world_live_material_rebind_development_execution']='pass'

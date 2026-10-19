@@ -7,6 +7,12 @@
 #include <memory>
 
 namespace ldb_rt::model_texture {
+constexpr size_t kMaxPayloadBytes=16u*1024*1024,kDdsHeaderBytes=148,kMaxDdsBytes=kMaxPayloadBytes+kDdsHeaderBytes;
+inline std::string ddsSha256(const std::vector<uint8_t>& encoded) {
+  // Geometry's 4 MiB hash bound is smaller than supported textures, even a
+  // 1024x1024 BGRA8 base level once the DDS header is included.
+  return ldb_rt_file::bytesSha256(encoded.data(),encoded.size(),kMaxDdsBytes);
+}
 struct Layout { uint32_t dxgi=0,rowBytes=0,rows=0;bool compressed=false,opaqueAlpha=false;uint64_t bytes() const { return uint64_t(rowBytes)*rows; } };
 inline Layout layout(UINT width,UINT height,D3DFORMAT format,bool srgb) {
   Layout out;if(!width||!height||width>4096||height>4096) { return out; }
@@ -20,7 +26,7 @@ inline Layout layout(UINT width,UINT height,D3DFORMAT format,bool srgb) {
     default:return out;
   }
   out.compressed=block!=0;out.rowBytes=block?((width+3)/4)*block:width*4;out.rows=block?(height+3)/4:height;
-  if(out.bytes()>16ull*1024*1024) { return {}; }return out;
+  if(out.bytes()>kMaxPayloadBytes) { return {}; }return out;
 }
 inline std::vector<uint8_t> dds(UINT width,UINT height,const Layout& l,const void* data,int pitch) {
   if(!l.dxgi||!data||pitch<0||pitch>1024*1024||uint32_t(pitch)<l.rowBytes) { return {}; }
@@ -93,7 +99,7 @@ public:
     auto entry=std::make_unique<Entry>();texture->AddRef();entry->texture=texture;
     if(encoded.empty()) { s.reason="base_texture_read_unavailable";++failed; }
     else {
-      s.digest=ldb_rt_file::geometrySha256(encoded.data(),encoded.size());
+      s.digest=ddsSha256(encoded);
       if(s.digest.empty()) { throw std::runtime_error("texture hash failed"); }
       std::filesystem::create_directories(directory/"model-textures");s.file="model-textures/"+s.digest+".dds";s.path=directory/s.file;
       if(!std::filesystem::exists(s.path)) { std::ofstream output(s.path,std::ios::binary);output.write(reinterpret_cast<const char*>(encoded.data()),std::streamsize(encoded.size()));output.close();if(!output) { throw std::runtime_error("write model texture"); } }

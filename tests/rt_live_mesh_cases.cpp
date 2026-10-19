@@ -48,8 +48,10 @@ struct CategoryDevice {
  HRESULT SetRenderState(D3DRENDERSTATETYPE name,DWORD v) { require(name==live_mesh::kCategory,"touched other D3D state");if(++writes==failSet) { return E_FAIL; }value=v;return S_OK; }
 };
 }
+#include "rt_model_texture_cases.h"
 int main() {
  try {
+  textureHashCases();systemTextureExport();
   for(DWORD category:std::array<DWORD,4>{{0,live_mesh::kUnused,4,0x100}}) {
    fixture::CategoryDevice d;d.value=category;
    { live_mesh::IgnoreScope<fixture::CategoryDevice> scope(&d);require(scope.ready()&&d.value==((category==live_mesh::kUnused?0:category)|live_mesh::kIgnore),"ignore flag not applied");scope.finish();require(SUCCEEDED(scope.restore),"ignore restoration"); }

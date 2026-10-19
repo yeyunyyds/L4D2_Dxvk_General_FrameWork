@@ -370,6 +370,24 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
 }
 bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,
     static_draw::Report& report,bool& called,HRESULT& physical,HRESULT& result) noexcept {
+  const char* operation="target_and_retirement";
+  const auto failed=[&](const char* message) {
+    if(events) {
+      events << "{\"event\":\"api_model_exception_context\",\"frame\":" << state().presents+1 << ",\"ordinal\":" << s.ordinal
+        << ",\"source_material\":" << s.material << ",\"operation\":\"" << operation << "\",\"message\":\"";
+      static const char hex[]="0123456789abcdef";
+      for(size_t i=0;message[i]&&i<512;++i) {
+        const auto c=static_cast<unsigned char>(message[i]);
+        if(c=='"'||c=='\\') { events << '\\' << char(c); }
+        else if(c<32) { events << "\\u00" << hex[c>>4] << hex[c&15]; }
+        else { events << char(c); }
+      }
+      events << "\"}\n" << std::flush;
+    }
+    event("api_model_exception",uint32_t(E_FAIL));(void)raytracing(false);state().active=false;
+    if(!called) { called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]); }
+    result=physical;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true;
+  };
   try {
     if(device!=registered||!raytracingRequested) { return false; }
     Ref<IDirect3DSurface9> target;D3DSURFACE_DESC desc{};D3DVIEWPORT9 vp{};
@@ -385,6 +403,7 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
       apiMaintenanceFrame=frame;
     }
     if(world_diagnostics::readback(frame)) { modelState(device,s); }
+    operation="prepare_model";
     auto prepared=[&] { if(included) { return model_input::prepare(device,s,kind,type,args,nullptr,true); }
       scene_input::Prepared disabled;disabled.reason="api_model_stage_excluded";return disabled; }();
     ++counts.reasons[prepared.reason];if(prepared.ready) { ++counts.ready; }
@@ -400,7 +419,9 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
       }
       bool sameCamera=true;for(unsigned i=0;i<16;++i) { sameCamera=sameCamera&&std::abs(apiView[i]-s.view[i])<=1e-4f&&std::abs(apiProjection[i]-s.projection[i])<=1e-4f; }
       if(SUCCEEDED(hr)&&sameCamera) {
+        operation="acquire_model_texture";
         const auto source=modelTextures.acquire(device,launch.output,frame,s.material);
+        operation="submit_api_mesh";
         submitted=apiMeshes.draw(prepared,kind,type,cull,liveMaterial(comparison.models()),frame,meshFences.size(),source,completedMeshFrame);
         textureBinding(source,submitted,frame);
         if(submitted.success) { if(source.textured()) { ++texturedSubmissions; }else { ++textureFallbackSubmissions; } }
@@ -411,6 +432,7 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
     } else if(!scope.ready()) { event("api_model_ignore_failed",uint32_t(FAILED(scope.capture)?scope.capture:scope.apply));(void)raytracing(false);state().active=false; }
     DWORD ignored=0;if(scope.ready()) { const auto q=device->GetRenderState(live_mesh::kCategory,&ignored);
       if(FAILED(q)||!(ignored&live_mesh::kIgnore)) { event("api_model_ignore_binding_failed",uint32_t(E_FAIL));(void)raytracing(false);state().active=false;report.apply=E_FAIL; } }
+    operation="original_draw_and_restore";
     called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]);
     scope.finish();report.restore=scope.restore;
     if(FAILED(scope.restore)) { event("api_model_ignore_restore_failed",uint32_t(scope.restore));(void)raytracing(false);state().active=false; }
@@ -418,11 +440,11 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
     report.code=FAILED(report.capture)?static_draw::Code::CaptureFailed:FAILED(report.apply)?static_draw::Code::ApplyFailed:
       FAILED(report.restore)?static_draw::Code::RestoreFailed:submitted.success?static_draw::Code::Applied:static_draw::Code::Layout;
     result=FAILED(report.restore)?report.restore:physical;
+    operation="save_model_evidence";
     if(report.converted&&SUCCEEDED(result)) { ++counts.reconstructed;apiPayload(s,prepared,kind,type,cull,submitted,ignored); }
     else { ++counts.fallback; }return true;
-  } catch(...) { event("api_model_exception",uint32_t(E_FAIL));(void)raytracing(false);state().active=false;
-    if(!called) { called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]); }
-    result=physical;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true; }
+  } catch(const std::exception& error) { return failed(error.what()); }
+    catch(...) { return failed("non_standard_exception"); }
 }
 void sceneSummary(uint64_t frame) {
   const auto index=size_t(comparison.phase());
