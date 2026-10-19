@@ -31,6 +31,17 @@ def checked_download(url,expected,limit):
     return data
 
 
+def checked_git_file(ref,name,expected,limit):
+    # Actions checkout already supplies scoped HTTPS Git authentication. Raw
+    # URLs may return 404 for a private repository; reuse Git, never ask for PATs.
+    if len(ref)!=40 or any(c not in '0123456789abcdef' for c in ref):raise ValueError('Invalid immutable Git ref')
+    if subprocess.run(['git','cat-file','-e',ref],cwd=ROOT,stderr=subprocess.DEVNULL).returncode:
+        subprocess.run(['git','fetch','--no-tags','--depth=1','origin',ref],cwd=ROOT,check=True)
+    data=subprocess.check_output(['git','show',ref+':downloads/'+name],cwd=ROOT)
+    if len(data)>limit or sha(data)!=expected:raise ValueError('Pinned Git artifact differs: '+name)
+    return data
+
+
 def prepare_header():
     path=BASE/'include/remix/remix_c.h';path.parent.mkdir(parents=True,exist_ok=True)
     data=checked_download(f'https://raw.githubusercontent.com/xoxor4d/dxvk-remix/{API_REF}/public/include/remix/remix_c.h',API_SHA,128*1024)
@@ -50,7 +61,7 @@ def package():
             or identity.encode() not in exe or sha(exe)!=native['exe_sha256']):raise ValueError('Wrong native executable/identity')
     prior=BASE/'prior-product.zip'
     if not prior.is_file() or sha(prior.read_bytes())!=PRIOR_SHA:
-        prior.write_bytes(checked_download(f'https://raw.githubusercontent.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/{PRIOR_REF}/downloads/rt-world-pilot-dev.zip',PRIOR_SHA,20*1024*1024))
+        prior.write_bytes(checked_git_file(PRIOR_REF,'rt-world-pilot-dev.zip',PRIOR_SHA,20*1024*1024))
     entries={}
     with zipfile.ZipFile(prior) as archive:
         if archive.testzip():raise ValueError('Prior product CRC failed')
@@ -85,6 +96,11 @@ def package():
         from rt_preflight import ensure_runtime
         catalog=json.loads(entries['integration/rt/world-runtime.json'])
         cache=ROOT/'.research/world-payload-cache';cache.mkdir(parents=True,exist_ok=True)
+        from rt_preflight import check_file
+        for part in catalog['payloads']:
+            path=cache/part['name']
+            if not check_file(path,part):
+                path.write_bytes(checked_git_file(part['ref'],part['name'],part['sha256'],95*1024*1024))
         runtime=ensure_runtime(root,catalog,payload_cache=cache)
         positive=BASE/'positive'
         checked=subprocess.run([str(root/'bin/rt-replay.exe'),'--probe',str(runtime/'d3d9.dll'),str(positive.resolve())],capture_output=True,text=True,timeout=60)
