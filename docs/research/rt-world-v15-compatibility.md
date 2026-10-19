@@ -37,4 +37,4 @@ v15阶段顺序与v14不同，跨版本单张画面改善不能单独确认根�
 
 用户操作仍只有：解压新包、运行`run-test.cmd`、进同图按一次F9并保持镜头不动，完成后正常退出，上传脚本生成的最终ZIP。无需F8、trigger文件或环境变量。
 
-已发布 [v15 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/521f8725c4e7c9b00e5cce1e23a251d270cb108c/downloads/rt-world-pilot-dev.zip)。构建 `3a29404fcb8c9d5e5386d9926eecf5aa07d5278e`，身份 `ldb-rt-observer+c71012573905d521`；[独立交付核验](../../research/rt-world-pilot-v15-validation.json) 已检查双架构原生执行、新增故障回滚标记、固定runtime/API、源码收据、全部成员、ZIP-only发布树及HTTP文件与Git blob一致。实际B580画面仍为unrun。
+已发布 [v15 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/521f8725c4e7c9b00e5cce1e23a251d270cb108c/downloads/rt-world-pilot-dev.zip)。构建 `3a29404fcb8c9d5e5386d9926eecf5aa07d5278e`，身份 `ldb-rt-observer+c71012573905d521`；[独立交付核验](../../research/rt-world-pilot-v15-validation.json) 已检查双架构原生执行、新增故障回滚标记、固定runtime/API、源码收据、全部成员、ZIP-only发布树及HTTP文件与Git blob一致。发行核验自身不含B580图像；随后的[v15实机复核](rt-world-155210-result.md)已确认采集完整，但六组模型画面均失败。105份完整同帧配对及341,038顶点通过原VS/提交字节核验，后续转向实际GPU资源交接与最小重放，不能宣称本版已修复白屏/异常几何。

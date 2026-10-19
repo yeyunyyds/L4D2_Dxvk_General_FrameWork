@@ -2,9 +2,9 @@
 
 本版沿用 [首轮实际 Draw](rt-draw-232229-result.md) 的消费端关联证据，开始尝试把实际世界候选交给 Remix。它不移植参考 mod 的全局 prim context，不写 `mat_queue_mode` 或其他 Source 线程 CVar，也不调用未确认的 GetCallQueue。Source producer Hook、准备线程并行和完整游戏光追仍未验收。
 
-已发布 [v15 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/521f8725c4e7c9b00e5cce1e23a251d270cb108c/downloads/rt-world-pilot-dev.zip)，方案见 [模型缓存兼容与材质灯光合并验证](rt-world-v15-compatibility.md)。构建 `3a29404fcb8c9d5e5386d9926eecf5aa07d5278e`，身份 `ldb-rt-observer+c71012573905d521`，包大小 11,957,595 字节，SHA256 `f0819f95e8c809bf4c35167b5b252bd2452d3ebe057675c0d446219d699f9ef8`。[交付核验](../../research/rt-world-pilot-v15-validation.json) 已验证配套二进制、源码收据、Windows原生检查、全部包成员及固定ZIP发布树。B580本版画面仍待实测。
+已发布 [v15 ZIP 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/521f8725c4e7c9b00e5cce1e23a251d270cb108c/downloads/rt-world-pilot-dev.zip)，方案见 [模型缓存兼容与材质灯光合并验证](rt-world-v15-compatibility.md)。构建 `3a29404fcb8c9d5e5386d9926eecf5aa07d5278e`，身份 `ldb-rt-observer+c71012573905d521`，包大小 11,957,595 字节，SHA256 `f0819f95e8c809bf4c35167b5b252bd2452d3ebe057675c0d446219d699f9ef8`。[交付核验](../../research/rt-world-pilot-v15-validation.json) 已验证配套二进制、源码收据、Windows原生检查、全部包成员及固定ZIP发布树。[本版B580实机](rt-world-155210-result.md)已复核，模型图像验收失败。
 
-最近的 [v14 B580 实机结果](rt-world-145737-result.md) 已完整结束420 Present、142,550 Draw。普通模型与 Neko 合并时，完整人物、武器和可辨的世界/天空同时出现；撤去模型后背景恢复。**Neko 单独阶段仍白屏并有异常长条几何，模型路径整体尚未验收**。33份完整配对、46,023顶点的提交字节和原VS位置/UV独立核验通过，后续重点转向后端缓存/实例及材质照明交互，现有数据足够继续定位，无需原样重采。
+最近的 [v15 B580 实机结果](rt-world-155210-result.md) 已完整结束600 Present、246,783 Draw，**六组模型条件均未通过画面验收**：复用OFF/ON/OFF、中性灰及定向灯均有青色噪点和异常几何，合并阶段也未稳定保留人物；撤去模型后背景恢复可辨。105份完整同帧配对覆盖四个关键取图帧的全部转换模型Draw，341,038顶点提交字节、原VS位置/UV及索引对应通过独立核验；完整模型三角形投影与实际左侧长条不符。后续转向真实数据的GPU最小重放、资源生命周期和后端实际消费，现有数据足够，无需原样重采。v14的局部合并成功不能视为稳定人物功能已通过。
 
 本版保留独立可读的紧凑VB/IB及上传/绑定核验，默认关闭后端preserve转换复用并保留staging复制。曝光参数不变；单独模型中性色与定向诊断灯阶段用于区分材质、照明和几何问题，不代表完整Toon或原地图灯光。Source线程设置保留。
 
