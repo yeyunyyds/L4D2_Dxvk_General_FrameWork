@@ -1,0 +1,77 @@
+name: Build frozen GPU replay and material controls
+on:
+  push:
+    branches: [ldb-host-capture]
+    paths:
+      - tools/rt_replay/**
+      - tests/test_gpu_replay.py
+      - .github/workflows/rt-replay.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rt-replay
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - name: Preserve source line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify capture transport and result collection
+        id: python
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force .research/rt-replay | Out-Null
+          & cmd.exe /d /c 'python -m unittest discover -s tests -p test_gpu_replay.py -v > .research/rt-replay/python.log 2>&1'
+          $code = $LASTEXITCODE
+          Get-Content .research/rt-replay/python.log
+          if ($code -ne 0) { throw 'Replay Python checks failed' }
+      - name: Compile and execute native geometry and NULLREF checks
+        id: native
+        shell: powershell
+        run: |
+          & powershell.exe -NoProfile -File tools/rt_replay/build.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Replay native build/checks failed' }
+      - name: Package and check pinned runtime and isolated entry
+        id: package
+        shell: powershell
+        run: |
+          & cmd.exe /d /c 'python tools/rt_replay/package.py > .research/rt-replay/package.log 2>&1'
+          $code = $LASTEXITCODE
+          Get-Content .research/rt-replay/package.log
+          if ($code -ne 0) { throw 'Replay package verification failed' }
+      - name: Package and publish evidence
+        if: always()
+        shell: python
+        env:
+          REPLAY_PYTHON_OUTCOME: ${{ steps.python.outcome }}
+          REPLAY_NATIVE_OUTCOME: ${{ steps.native.outcome }}
+          REPLAY_PACKAGE_OUTCOME: ${{ steps.package.outcome }}
+        run: |
+          import json, os, pathlib, subprocess, sys, zipfile
+          base=pathlib.Path('.research/rt-replay')
+          output=pathlib.Path('.research/dist/rt-replay-build-status.zip')
+          output.parent.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as z:
+              z.writestr('status.json',json.dumps({'commit':os.environ['GITHUB_SHA'],'python':os.environ['REPLAY_PYTHON_OUTCOME'],'native':os.environ['REPLAY_NATIVE_OUTCOME'],'package':os.environ['REPLAY_PACKAGE_OUTCOME'],'actual_b580_execution':'unrun'}))
+              for f in sorted(base.rglob('*')):
+                  if f.is_file() and f.suffix in ('.json','.jsonl','.log','.h'):
+                      z.write(f,str(f.relative_to(base)))
+              index=pathlib.Path('.research/dist/rt-replay/publish-index.json')
+              if index.is_file():z.write(index,'publish-index.json')
+          subprocess.run([sys.executable,'scripts/publish_rt_build_status.py','--package',str(output)],check=True)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rt-replay-${{ github.sha }}
+          path: .research/dist/rt-replay-build-status.zip
+          if-no-files-found: error
+      - name: Publish verified replay ZIP
+        if: success()
+        run: python scripts/publish_rt_build_status.py --packages-directory .research/dist/rt-replay

@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "source_capture": "rt-world-20261018-155210-0442d5c8",
+  "source_archive_sha256": "f25b18049628b32081da0604cc3ee0659985253c2634ef0d79bf14ebbfb2a0e9",
+  "gpu_execution": "unrun",
+  "portable_cpp_input_execution": "pass",
+  "python_cases": 8,
+  "python_result": "pass",
+  "scenes": {
+    "neko": {
+      "frame": 240,
+      "parts": 21,
+      "vertices": 74742,
+      "triangles": 109787,
+      "bytes": 3711020,
+      "sha256": "0af1033f6dff54f7d4855580bbece083c80922fc5d514e16dda29be5a35ebe69"
+    },
+    "combined": {
+      "frame": 420,
+      "parts": 42,
+      "vertices": 116812,
+      "triangles": 146419,
+      "bytes": 5498524,
+      "sha256": "37e82de4925e4d99f6640ad56890bd25c18c7dd0bdc8d2bf250fee3602fdfdab"
+    }
+  }
+}
