@@ -20,7 +20,7 @@ def sha(data):return hashlib.sha256(data).hexdigest()
 
 
 def observer_files():
-    names=['scripts/'+name for name in ['rt_draw_suite.py','analyze_rt_draw.py','analyze_rt_scene.py','analyze_rt_world.py','rt_game_probe.py',
+    names=['scripts/'+name for name in ['rt_draw_suite.py','analyze_rt_draw.py','analyze_rt_scene.py','analyze_rt_world.py','analyze_rt_live.py','rt_game_probe.py',
                                        'rt_preflight.py','rt_visual.py','rt_suite.py']]
     names+=list(SUPPORT_FILES)
     entries={name:(ROOT/name).read_bytes() for name in names}
@@ -45,7 +45,8 @@ def package(source,output,python_package):
             or status.get('world_sky_reconstruction_development_execution')!='pass'
             or status.get('world_bulk_static_development_execution')!='pass'
             or status.get('world_original_input_development_execution')!='pass'
-            or status.get('world_owned_geometry_development_execution')!='pass'):
+            or status.get('world_owned_geometry_development_execution')!='pass'
+            or status.get('world_live_mesh_development_execution')!='pass'):
         raise ValueError('Current native paired observer and execution evidence required')
     if output.exists():raise FileExistsError('Preserve previous package directory')
     output.mkdir(parents=True)
@@ -85,7 +86,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_static_world_runtime_pilot','profile':'world_pilot','pilot_revision':15,
+    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':16,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':3000,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -97,21 +98,23 @@ def package(source,output,python_package):
               'bulk_static_after_present':180,'bulk_static_families':['LightmappedGeneric','LightmappedGeneric_DX9','UnlitGeneric','VertexLitGeneric','WorldVertexTransition','WorldVertexTransition_DX9','WorldTwoTextureBlend','NekoToon'],
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
               'model_rebuild':'audited_full_vs_matrix_proof_rigid_or_three_weight_palette_with_complete_morph_position',
-              'model_submission':'compact_owned_readable_default_vb_ib_readback_and_binding_verified; remix_staging_copy',
-              'model_input_pairs':'readback_present_draw_original_geometry_vs_ps_constants_declaration_morph_and_owned_payload',
-              'model_stage_readbacks':{240:'neko',300:'neko_preserve',360:'neko_recheck',420:'combined',480:'combined_matte',540:'combined_directional',600:'recovery'},
-              'preserve_path_default':False,'preserve_path_control_presents':[241,300],
-              'model_neutral_color_present_range':[421,480],'model_directional_light_present_range':[481,540],
+              'model_submission':'direct_CreateMesh_and_DrawInstance_each_frame_pose; original_raster_Draw_once_with_Ignore_bit3_and_exact_restore',
+              'model_input_pairs':'canonical_CPU_vertices_and_normalized_indices_at_240_300; original_input_audit_retained_separately',
+              'model_stage_readbacks':{240:'api_neko_neutral',300:'api_combined_neutral',360:'api_combined_rough',420:'api_combined_metal',480:'api_combined_alpha',540:'api_combined_emissive',600:'recovery'},
+              'preserve_path_default':False,'preserve_path_control_presents':[],
+              'model_material':'synthetic_constants_flat_normals_original_UVs_no_original_model_textures',
+              'live_mesh_limits':{'bytes':268435456,'frame_new_bytes':100663296,'draws_per_frame':128,'entries':512,'pending_gpu_fences':8},
+              'live_mesh_retirement':'event_query_completion_and_two_frames_idle; recovery_and_shutdown_completion_gated',
               'exposure_changed':False,'model_samples_per_readback_limit':64,
-              'model_payload_limits_kib':{'neko':12288,'neko_preserve':12288,'neko_recheck':12288,'combined':16384,'combined_matte':0,'combined_directional':0},
+              'model_payload_limits_kib':{'api_neko_neutral':16384,'api_combined_neutral':16384,'api_combined_rough':0,'api_combined_metal':0,'api_combined_alpha':0,'api_combined_emissive':0},
               'model_special_passes':'reject_stencil_user_clip_partial_rgb_and_non_less_depth',
               'sky_rebuilt_stride':140,'model_geometry_max_vertices':32768,'model_geometry_max_indices':131072,
-              'neko_material':'audited_full_vs_and_ps_sha256_first_diffuse_layer_original_alpha_test_no_full_toon',
+              'neko_material':'audited_full_vs_and_ps_sha256_synthetic_API_material_no_original_textures_or_full_toon',
               'model_morph':'complete_referenced_stream2_position1_float4_before_skinning_readonly',
               'scene_input_ps_float4_constants':224,'scene_input_complete_morph_positions':True,
               'bulk_static_stride_max':128,'scene_input_family_limits':[6,48,96,48],'scene_input_policy':'skinned_materials_v2','scene_input_payload_limits_mib':[2,2,2,12],'scene_input_family_payload_limits_kib':[[128,640,512,768]]*3+[[256,4096,1792,6144]],'scene_input_geometry_window':True,'audit_only_families':[],'custom_audit_max_vertices':32768,'custom_audit_max_indices':131072,
               'sky_category_contract':{'render_state':42,'sky_bit':4,'unused':0xfefefefe},
-              'draw_trace_version':12,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
+              'draw_trace_version':13,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
               'material_samples_per_phase_limit':64,
               'world_ipc_producer_wait_ms':60000,'normal_ipc_producer_wait_ms':2000,
               'startup_raytracing':False,'rt_activation':'after_control_and_successful_world_scope_then_deferred_by_runtime',
@@ -171,6 +174,7 @@ def package(source,output,python_package):
                 'world_bulk_static_development_execution':'pass',
                 'world_original_input_development_execution':'pass',
                 'world_owned_geometry_development_execution':'pass',
+                'world_live_mesh_development_execution':'pass',
                 'pinned_native_loader_api_initialization':'pass',
                 'game_rt':'unrun','actual_game_observation':'unrun'}
     (output/'publish-index.json').write_text(json.dumps(validation,indent=2)+'\n')

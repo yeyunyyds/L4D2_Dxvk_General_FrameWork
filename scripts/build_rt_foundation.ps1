@@ -37,6 +37,8 @@ try {
       $worldRuntime = Join-Path $repo 'integration/rt/rt_world_runtime.cpp'
       $worldApiDir = Join-Path $sourcePath 'bridge/src/server'
       $worldLoaderCommand = "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$worldApiDir`" `"$worldCases`" `"$worldRuntime`" /Fe:`"$dir/world-loader.exe`" /Fo:`"$dir/`" /link bcrypt.lib user32.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; "
+      $liveCases = Join-Path $repo 'tests/rt_live_mesh_cases.cpp'
+      $worldLoaderCommand += "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" /I`"$worldApiDir`" `"$liveCases`" /Fe:`"$dir/live-mesh.exe`" /Fo:`"$dir/live-mesh.obj`" /link bcrypt.lib; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `"$dir/live-mesh.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; "
     }
     if ($arch -eq 'x86') {
       # The game SDK is x86. Host is x64; do not invent an x64 game ABI.

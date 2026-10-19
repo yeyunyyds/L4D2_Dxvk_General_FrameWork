@@ -35,6 +35,23 @@ int main() {
       }
     }
     std::cout << "RT model preserve OFF/ON/OFF/material/light/recovery/partial-failure: PASS\n";
+    LiveCoverageComparison live;
+    const char* stages[]={"off","off","off","api_neko_neutral","api_combined_neutral","api_combined_rough","api_combined_metal","api_combined_alpha","api_combined_emissive","recovery"};
+    unsigned stageIndex=0;
+    for(uint64_t frame:{30u,120u,180u,240u,300u,360u,420u,480u,540u,600u}) {
+      require(std::string(liveName(live.models()))==stages[stageIndex++],"live material stage mislabeled");
+      if(frame==240) { require(liveInclude(live.models(),true)&&!liveInclude(live.models(),false),"first API stage must isolate Neko"); }
+      if(frame>=300&&frame<=540) { require(liveInclude(live.models(),true)&&liveInclude(live.models(),false),"combined API stage omitted a model family"); }
+      if(frame==600) { require(!liveInclude(live.models(),true)&&!liveInclude(live.models(),false),"recovery retains API models"); }
+      unsigned writes=0;
+      require(live.afterCapture(frame,[&](const char*,const char* value) { ++writes;return std::string(value)=="False"; }),"live compatibility setters failed");
+      require(writes==(frame==600?0u:4u),"live compatibility setter count");
+    }
+    for(unsigned failure=0;failure<4;++failure) {
+      LiveCoverageComparison broken;unsigned at=0;
+      require(!broken.afterCapture(30,[&](const char*,const char*) { return at++!=failure; })&&broken.phase()==CoveragePhase::Raster,"partial live configuration advanced label");
+    }
+    std::cout<<"RT live mesh stage ordering/material controls/partial-failure: PASS\n";
     Comparison comparison;
     std::map<std::string, std::string> values;
     auto setter = [&](const char* key, const char* value) { values[key] = value; return true; };

@@ -80,7 +80,7 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.world ? 12 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    Writer header; header.u32(request.world ? 13 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
     if (request.world) { header.u32(uint32_t(world_diagnostics::kCoveragePresents)); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
@@ -134,6 +134,9 @@ public:
     if (finished) { return; } Writer w; w.u32(uint32_t(result)); record(3, uid, w.data);
     if (SUCCEEDED(result)) { ++presents; } else { ++failures; }
     if (request.world) { world_runtime::state().presents=presents; }
+    if (request.world && SUCCEEDED(result) && world_runtime::state().active && nativeDevice && world_runtime::state().presented) {
+      world_runtime::state().presented(nativeDevice,presents);
+    }
     if (request.world && world_runtime::state().active && world_runtime::state().capture && nativeDevice &&
         world_diagnostics::readback(presents)) { world_runtime::state().capture(nativeDevice, presents); }
     trace.flush(); if (presents >= (request.world ? world_diagnostics::kCoveragePresents : 120u)) { finish(0); }

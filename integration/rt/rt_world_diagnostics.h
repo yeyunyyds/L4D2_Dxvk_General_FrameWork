@@ -78,6 +78,40 @@ public:
   }
 
 };
+
+// Keep the old comparison available for archived traces and regression checks.
+// v16 uses the same bounded 600-Present collection with live API material stages.
+inline const char* liveName(ModelStage stage) noexcept {
+  switch(stage) {
+    case ModelStage::Neko:return "api_neko_neutral";
+    case ModelStage::NekoPreserve:return "api_combined_neutral";
+    case ModelStage::NekoRecheck:return "api_combined_rough";
+    case ModelStage::Combined:return "api_combined_metal";
+    case ModelStage::Matte:return "api_combined_alpha";
+    case ModelStage::Directional:return "api_combined_emissive";
+    case ModelStage::Recovery:return "recovery";
+    default:return "off";
+  }
+}
+inline bool liveInclude(ModelStage stage,bool neko) noexcept {
+  return stage==ModelStage::Neko?neko:stage==ModelStage::NekoPreserve || stage==ModelStage::NekoRecheck ||
+    stage==ModelStage::Combined || stage==ModelStage::Matte || stage==ModelStage::Directional;
+}
+class LiveCoverageComparison {
+  CoverageComparison gate;
+public:
+  ModelStage models() const noexcept { return gate.models(); }
+  CoveragePhase phase() const noexcept { return gate.phase(); }
+  template<class Setter> bool afterCapture(uint64_t frame,Setter&& set) {
+    auto next=gate;if(!next.afterCapture(frame)) { return false; }
+    if(frame<kCoveragePresents) {
+      const Option options[]={{"rtx.enablePreservePath","False"},{"rtx.useBuffersDirectly","False"},
+        {"rtx.bloom.enable","False"},{"rtx.postfx.enable","False"}};
+      for(const auto& option:options) { if(!set(option.name,option.value)) { return false; } }
+    }
+    gate=next;return true;
+  }
+};
 // Apply AFTER the old phase's readback. Remix defers changes to a frame
 // boundary, leaving 59+ subsequent frames before the next diagnostic readback.
 class Comparison {

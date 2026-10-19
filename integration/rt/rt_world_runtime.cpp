@@ -14,6 +14,9 @@
 // A separate TU prevents mixing the Bridge's old API with the pinned 0.6.4 ABI.
 #define REMIX_WINAPI_NO_LIBRARY_LOADER
 #include "rt_world_remix_c.h"
+#include "rt_live_mesh.h"
+#include <deque>
+#include <memory>
 #include <cmath>
 #include <cstring>
 #include <iomanip>
@@ -28,7 +31,13 @@ IDirect3DDevice9* registered = nullptr;
 bool initialized = false;
 bool raytracingRequested = false;
 uint64_t physicalDraws = 0;
-world_diagnostics::CoverageComparison comparison;
+world_diagnostics::LiveCoverageComparison comparison;
+live_mesh::Scene apiMeshes(&api);
+struct MeshFence { static_draw::Ref<IDirect3DQuery9> query;uint64_t frame=0; };
+std::deque<std::unique_ptr<MeshFence>> meshFences;
+uint64_t completedMeshFrame=0,apiCameraFrame=0;
+std::array<float,16> apiView{},apiProjection{};
+std::array<uint64_t,world_diagnostics::kModelStages> apiPayloadBytes{};
 std::set<std::array<uint64_t, 4>> audited;
 std::array<unsigned, 4> auditCounts{};
 std::array<float, 16> lastView{}, lastProjection{};
@@ -69,7 +78,10 @@ void bind(IDirect3DDevice9* device) noexcept {
     if (!initialized || registered == device || registered) { return; }
     const auto result = api.dxvk_RegisterD3D9Device(static_cast<IDirect3DDevice9Ex*>(device));
     event("register_game_device", uint32_t(result));
-    if (result == REMIXAPI_ERROR_CODE_SUCCESS) { registered = device; }
+    if (result == REMIXAPI_ERROR_CODE_SUCCESS) { registered = device;
+      if (!configure()) { state().active=false;return; }
+      raytracingRequested=false;event("post_device_configuration_requested",0,"startup_RT_off_after_layers_and_device");
+    }
   } catch (...) { }
 }
 bool raytracing(bool enabled) noexcept {
@@ -250,102 +262,120 @@ bool scene(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
   } catch (...) { event("sky_rebuild_exception",uint32_t(E_FAIL));physical=E_FAIL;result=E_FAIL;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true; }
 }
 std::array<SceneCounts,4> modelCounts{};
-std::array<uint64_t,world_diagnostics::kModelStages> modelPayloadBytes{};
 std::array<unsigned,world_diagnostics::kModelStages> modelSampleCounts{},modelStateCounts{},modelSampleOmitted{};
 void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
   const auto stage=unsigned(comparison.models());
   if (modelStateCounts[stage]>=world_diagnostics::kModelSampleLimit) { return; }++modelStateCounts[stage];
   const unsigned names[]={7,14,15,23,24,25,27,28,22,42,52,137,149,150,152,168,169,174,175,177,195,196,197,206,210,211,212,213,214,215,216,217,218,219,220};
   events << "{\"event\":\"model_state_sample\",\"ordinal\":" << s.ordinal << ",\"material\":" << s.material
-    << ",\"frame\":" << state().presents+1 << ",\"model_stage\":\"" << world_diagnostics::name(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data() << "\",\"states\":[";
+    << ",\"frame\":" << state().presents+1 << ",\"model_stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data() << "\",\"states\":[";
   for (unsigned i=0;i<sizeof(names)/sizeof(names[0]);++i) {
     DWORD value=0;const auto hr=device->GetRenderState(D3DRENDERSTATETYPE(names[i]),&value);
     if (i) { events << ','; }events << "{\"state\":" << names[i] << ",\"value\":" << value << ",\"hresult\":" << uint32_t(hr) << '}';
   }
   events << "]}\n" << std::flush;
 }
-void modelPayload(IDirect3DDevice9* device,const draw_observe::Snapshot& s,const scene_input::Prepared& prepared,const scene_input::Data& input,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) {
-  const auto stage=unsigned(comparison.models());
-  const auto frame=state().presents+1;
-  if (frame<240 || frame>=world_diagnostics::kCoveragePresents || !world_diagnostics::readback(frame)) { return; }
-  if (modelSampleCounts[stage]>=world_diagnostics::kModelSampleLimit) { ++modelSampleOmitted[stage];return; }++modelSampleCounts[stage];
-  std::ostringstream log;log << std::setprecision(9);
-  log << "{\"event\":\"model_rebuild_sample\",\"phase\":\"" << world_diagnostics::name(comparison.phase()) << "\",\"model_stage\":\""
-    << world_diagnostics::name(comparison.models()) << "\",\"ordinal\":" << s.ordinal
-    << ",\"frame\":" << frame << ",\"material\":" << s.material << ",\"reason\":\"" << prepared.reason << "\",\"rebuilt_stride\":" << prepared.stride
-    << ",\"rebuilt_vertex_bytes\":" << prepared.bytes.size() << ",\"upload_verified\":" << (prepared.uploadVerified?"true":"false")
-    << ",\"binding_verified\":true,\"owned_draw\":true,\"index_bytes\":" << prepared.indexBytes << ",\"draw_args\":[";
-  for (unsigned i=0;i<6;++i) { if (i) { log << ','; }log << prepared.drawArgs[i]; }
-  log << "],\"applied_world\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << prepared.world[i]; }
-  const uint64_t limit=world_diagnostics::modelPayloadLimit(comparison.models());
-  const size_t sourceBytes=input.vertices.size()+input.indices.size()+(input.vs.size()+input.ps.size())*4+sizeof(input.constants)+input.declaration.size()*sizeof(D3DVERTEXELEMENT9)+input.morph.positions.size()*sizeof(sky_shader::Vec);
-  const bool save=prepared.bytes.size()+prepared.indices.size()+sourceBytes<=limit-modelPayloadBytes[stage];
-  log << "],\"kind\":" << kind << ",\"topology\":" << uint32_t(type) << ",\"source_first\":" << input.first
-    << ",\"source_count\":" << input.count << ",\"source_stride\":" << input.stride << ",\"original_args\":[";
-  for (unsigned i=0;i<6;++i) { if (i) { log << ','; }log << args[i]; }
-  log << "],\"view\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << s.view[i]; }
-  log << "],\"projection\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << s.projection[i]; }
-  log << "],\"vertices_sha256\":\"" << ldb_rt_file::geometrySha256(prepared.bytes.data(),prepared.bytes.size())
-    << "\",\"indices_sha256\":\"" << ldb_rt_file::geometrySha256(prepared.indices.data(),prepared.indices.size())
-    << "\",\"preserve_requested\":" << (world_diagnostics::preserve(comparison.models())?"true":"false")
-    << ",\"neutral_material\":" << (world_diagnostics::matte(comparison.models())?"true":"false")
-    << ",\"payload_omitted\":" << (save?"false":"true");
-  DWORD factor=0,srgb=0;uint32_t queryFailures=0;
-  if (FAILED(device->GetRenderState(D3DRS_TEXTUREFACTOR,&factor))) { queryFailures|=1; }
-  if (FAILED(device->GetSamplerState(0,D3DSAMP_SRGBTEXTURE,&srgb))) { queryFailures|=2; }
-  log << ",\"material_texture_factor\":" << factor << ",\"material_srgb\":" << srgb << ",\"material_stage0\":[";
-  const D3DTEXTURESTAGESTATETYPE materialNames[]={D3DTSS_COLOROP,D3DTSS_COLORARG1,D3DTSS_ALPHAOP,D3DTSS_ALPHAARG1};
-  for (unsigned i=0;i<4;++i) {
-    DWORD value=0;if (FAILED(device->GetTextureStageState(0,materialNames[i],&value))) { queryFailures|=4u<<i; }
-    if (i) { log << ','; }log << value;
+live_mesh::Material liveMaterial(world_diagnostics::ModelStage stage) {
+  switch(stage) {
+    case world_diagnostics::ModelStage::NekoRecheck:return live_mesh::Material::Rough;
+    case world_diagnostics::ModelStage::Combined:return live_mesh::Material::Metal;
+    case world_diagnostics::ModelStage::Matte:return live_mesh::Material::Alpha;
+    case world_diagnostics::ModelStage::Directional:return live_mesh::Material::Emissive;
+    default:return live_mesh::Material::Neutral;
   }
-  log << "],\"material_query_failure_bits\":" << queryFailures << ",\"files\":[";
+}
+void apiPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& p,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,
+                const live_mesh::Submission& submission,DWORD ignored) {
+  const uint64_t frame=state().presents+1;if(!world_diagnostics::readback(frame)) { return; }
+  const auto stage=size_t(comparison.models());if(modelSampleCounts[stage]>=world_diagnostics::kModelSampleLimit) { ++modelSampleOmitted[stage];return; }
+  ++modelSampleCounts[stage];const auto vh=ldb_rt_file::geometrySha256(p.bytes.data(),p.bytes.size()),ih=ldb_rt_file::geometrySha256(p.indices.data(),p.indices.size());
+  const bool save=(frame==240||frame==300) && p.bytes.size()+p.indices.size()<=16ull*1024*1024-apiPayloadBytes[stage];
+  events << "{\"event\":\"api_model_sample\",\"frame\":" << frame << ",\"ordinal\":" << s.ordinal
+    << ",\"stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\",\"shader\":\"" << s.materialInfo.shader.data()
+    << "\",\"material\":\"" << live_mesh::name(liveMaterial(comparison.models())) << "\",\"kind\":" << kind << ",\"topology\":" << uint32_t(topology)
+    << ",\"source_material\":" << s.material << ",\"source_vs_reason\":\"" << p.reason << "\",\"vertices\":" << p.bytes.size()/32 << ",\"triangles\":" << submission.triangles << ",\"index_bytes\":" << p.indexBytes
+    << ",\"mesh\":" << submission.handle << ",\"created\":" << (submission.created?"true":"false") << ",\"cull\":" << cull
+    << ",\"ignored_category_at_original_draw\":" << ignored << ",\"vertices_sha256\":\"" << vh << "\",\"indices_sha256\":\"" << ih
+    << "\",\"gpu_upload\":\"pinned_CreateMesh_synchronous_copy_queued_owned_buffers\",\"world\":[";
+  for(unsigned i=0;i<16;++i) { if(i) { events<<','; }events<<p.world[i]; }events<<"],\"view\":[";
+  for(unsigned i=0;i<16;++i) { if(i) { events<<','; }events<<s.view[i]; }events<<"],\"projection\":[";
+  for(unsigned i=0;i<16;++i) { if(i) { events<<','; }events<<s.projection[i]; }events<<"],\"files\":[";
   bool comma=false;
-  const auto write=[&](const char* suffix,const void* bytes,size_t size) {
-    if (!save || !size) { return; }
-    const auto name="model-"+std::to_string(s.ordinal)+suffix;
-    std::ofstream file(launch.output/name,std::ios::binary);file.write(static_cast<const char*>(bytes),std::streamsize(size));file.close();
-    if (!file) { event("model_payload_write_failed",uint32_t(E_FAIL));return; }
-    modelPayloadBytes[stage]+=size;if (comma) { log << ','; }comma=true;
-    log << "{\"file\":\"" << name << "\",\"size\":" << size << ",\"sha256\":\"" << ldb_rt_file::fileSha256(launch.output/name) << "\"}";
+  const auto write=[&](const char* suffix,const std::vector<uint8_t>& bytes,const std::string& digest) {
+    if(!save||bytes.empty()) { return; }const auto name="api-"+std::to_string(s.ordinal)+suffix;
+    std::ofstream output(launch.output/name,std::ios::binary);output.write(reinterpret_cast<const char*>(bytes.data()),std::streamsize(bytes.size()));output.close();
+    if(!output) { throw std::runtime_error("write API model payload"); }apiPayloadBytes[stage]+=bytes.size();
+    if(comma) { events<<','; }comma=true;events<<"{\"file\":\""<<name<<"\",\"size\":"<<bytes.size()<<",\"sha256\":\""<<digest<<"\"}";
   };
-  write("-vertices.bin",prepared.bytes.data(),prepared.bytes.size());write("-indices.bin",prepared.indices.data(),prepared.indices.size());
-  write("-source-vertices.bin",input.vertices.data(),input.vertices.size());write("-source-indices.bin",input.indices.data(),input.indices.size());
-  write("-vs.bin",input.vs.data(),input.vs.size()*4);write("-ps.bin",input.ps.data(),input.ps.size()*4);
-  write("-constants.bin",input.constants.data(),sizeof(input.constants));write("-declaration.bin",input.declaration.data(),input.declaration.size()*sizeof(D3DVERTEXELEMENT9));
-  write("-morph-positions.bin",input.morph.positions.data(),input.morph.positions.size()*sizeof(sky_shader::Vec));
-  log << "]}\n";events << log.str() << std::flush;
+  write("-vertices.bin",p.bytes,vh);write("-indices.bin",p.indices,ih);events<<"],\"payload_saved\":"<<(save?"true":"false")<<"}\n"<<std::flush;
+}
+void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
+  try {
+    if(device!=registered) { return; }
+    while(!meshFences.empty()) {
+      const auto hr=meshFences.front()->query.value->GetData(nullptr,0,D3DGETDATA_FLUSH);
+      if(hr==S_FALSE) { break; }if(FAILED(hr)) { event("api_mesh_fence_failed",uint32_t(hr));(void)raytracing(false);state().active=false;return; }
+      completedMeshFrame=meshFences.front()->frame;meshFences.pop_front();
+    }
+    const auto retired=apiMeshes.retire(completedMeshFrame,frame,comparison.models()==world_diagnostics::ModelStage::Recovery);
+    if(retired) { event("api_mesh_retire_failed",retired);(void)raytracing(false);state().active=false;return; }
+    if(apiMeshes.frame==frame) {
+      if(meshFences.size()>=8) { event("api_mesh_fence_budget",ERROR_TIMEOUT);(void)raytracing(false);state().active=false;return; }
+      auto fence=std::make_unique<MeshFence>();fence->frame=frame;
+      auto hr=device->CreateQuery(D3DQUERYTYPE_EVENT,&fence->query.value);
+      if(SUCCEEDED(hr)&&fence->query.value) { hr=fence->query.value->Issue(D3DISSUE_END); }else if(SUCCEEDED(hr)) { hr=E_FAIL; }
+      if(FAILED(hr)) { event("api_mesh_fence_failed",uint32_t(hr));(void)raytracing(false);state().active=false;return; }
+      meshFences.push_back(std::move(fence));
+    }
+    events << "{\"event\":\"api_mesh_frame\",\"frame\":" << frame << ",\"stage\":\"" << world_diagnostics::liveName(comparison.models())
+      << "\",\"submitted\":" << apiMeshes.submitted << ",\"created\":" << apiMeshes.created << ",\"reused\":" << apiMeshes.reused
+      << ",\"destroyed\":" << apiMeshes.destroyed << ",\"entries\":" << apiMeshes.entries() << ",\"bytes\":" << apiMeshes.bytes
+      << ",\"peak_bytes\":" << apiMeshes.peakBytes << ",\"completed_through\":" << completedMeshFrame << ",\"pending_fences\":" << meshFences.size() << "}\n" << std::flush;
+  } catch(...) { event("api_mesh_present_exception",uint32_t(E_FAIL));(void)raytracing(false);state().active=false; }
 }
 bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,
     static_draw::Report& report,bool& called,HRESULT& physical,HRESULT& result) noexcept {
   try {
-    if (device!=registered || !raytracingRequested) { return false; }
+    if(device!=registered||!raytracingRequested) { return false; }
+    Ref<IDirect3DSurface9> target;D3DSURFACE_DESC desc{};D3DVIEWPORT9 vp{};
+    if(FAILED(device->GetRenderTarget(0,&target.value))||!target.value||FAILED(target.value->GetDesc(&desc))||
+       FAILED(device->GetViewport(&vp))||desc.Format!=D3DFMT_A16B16G16R16F||desc.Width!=s.viewport[2]||desc.Height!=s.viewport[3]||
+       vp.X||vp.Y||vp.Width!=desc.Width||vp.Height!=desc.Height||vp.MinZ!=0||vp.MaxZ!=1) { return false; }
     auto& counts=modelCounts[size_t(comparison.phase())];++counts.attempts;
-    const bool included=world_diagnostics::includeModel(comparison.models(),bulk_static::customModel(s));
-    const auto frame=state().presents+1;
-    const bool imageFrame=frame>=240 && frame<world_diagnostics::kCoveragePresents && world_diagnostics::readback(frame);
-    if ((imageFrame && included) || frame==world_diagnostics::kCoveragePresents) { modelState(device,s); }
-    scene_input::Data sourceEvidence;
-    const auto stage=unsigned(comparison.models());
-    const bool paired=imageFrame && modelSampleCounts[stage]<world_diagnostics::kModelSampleLimit;
-    auto prepared=[&] { if (included) { return model_input::prepare(device,s,kind,type,args,paired?&sourceEvidence:nullptr); }
-      scene_input::Prepared disabled;disabled.reason="model_stage_excluded";return disabled; }();
-    ++counts.reasons[prepared.reason];if (prepared.ready) { ++counts.ready; }
-    const auto original=[&] { called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]);return physical; };
-    if (prepared.ready) { result=bulk_static::execute(device,s,type,false,[&](bool converted) {
-      if (!converted) { return original(); }
-      modelPayload(device,s,prepared,sourceEvidence,kind,type,args);called=true;const auto& a=prepared.drawArgs;
-      physical=kind==1?device->DrawPrimitive(type,a[0],a[1]):device->DrawIndexedPrimitive(type,INT(int32_t(a[0])),a[1],a[2],a[3],a[4]);return physical;
-    },report,&prepared,world_diagnostics::matte(comparison.models())); }
-    else {
-      report.code=FAILED(prepared.result)?static_draw::Code::CaptureFailed:
-        !std::strncmp(prepared.reason,"model_pipeline",14)?static_draw::Code::Pipeline:static_draw::Code::Layout;
-      report.capture=prepared.result;result=original();
-    }
-    if (prepared.ready && report.converted && SUCCEEDED(report.restore) && SUCCEEDED(result)) {
-      ++counts.reconstructed;
-    } else { ++counts.fallback; }return true;
-  } catch (...) { event("model_rebuild_exception",uint32_t(E_FAIL));result=E_FAIL;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true; }
+    const uint64_t frame=state().presents+1;const bool included=world_diagnostics::liveInclude(comparison.models(),bulk_static::customModel(s));
+    if(world_diagnostics::readback(frame)) { modelState(device,s); }
+    auto prepared=[&] { if(included) { return model_input::prepare(device,s,kind,type,args,nullptr,true); }
+      scene_input::Prepared disabled;disabled.reason="api_model_stage_excluded";return disabled; }();
+    ++counts.reasons[prepared.reason];if(prepared.ready) { ++counts.ready; }
+    live_mesh::IgnoreScope<IDirect3DDevice9> scope(device);live_mesh::Submission submitted;DWORD cull=0;
+    report.capture=scope.capture;report.apply=scope.apply;
+    if(scope.ready()&&prepared.ready) {
+      auto hr=device->GetRenderState(D3DRS_CULLMODE,&cull);
+      if(SUCCEEDED(hr)&&apiCameraFrame!=frame) {
+        remixapi_CameraInfo camera{};camera.sType=REMIXAPI_STRUCT_TYPE_CAMERA_INFO;camera.type=REMIXAPI_CAMERA_TYPE_WORLD;
+        std::memcpy(camera.view,s.view.data(),64);std::memcpy(camera.projection,s.projection.data(),64);
+        const auto code=api.SetupCamera(&camera);if(code!=REMIXAPI_ERROR_CODE_SUCCESS) { hr=E_FAIL; }
+        else { apiCameraFrame=frame;apiView=s.view;apiProjection=s.projection; }
+      }
+      bool sameCamera=true;for(unsigned i=0;i<16;++i) { sameCamera=sameCamera&&std::abs(apiView[i]-s.view[i])<=1e-4f&&std::abs(apiProjection[i]-s.projection[i])<=1e-4f; }
+      if(SUCCEEDED(hr)&&sameCamera) { submitted=apiMeshes.draw(prepared,kind,type,cull,liveMaterial(comparison.models()),frame); }
+      else { submitted.code=ERROR_INVALID_DATA; }
+      if(!submitted.success) { event("api_model_submit_failed",submitted.code);(void)raytracing(false);state().active=false; }
+    } else if(!scope.ready()) { event("api_model_ignore_failed",uint32_t(FAILED(scope.capture)?scope.capture:scope.apply));(void)raytracing(false);state().active=false; }
+    DWORD ignored=0;if(scope.ready()) { const auto q=device->GetRenderState(live_mesh::kCategory,&ignored);
+      if(FAILED(q)||!(ignored&live_mesh::kIgnore)) { event("api_model_ignore_binding_failed",uint32_t(E_FAIL));(void)raytracing(false);state().active=false;report.apply=E_FAIL; } }
+    called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]);
+    scope.finish();report.restore=scope.restore;
+    if(FAILED(scope.restore)) { event("api_model_ignore_restore_failed",uint32_t(scope.restore));(void)raytracing(false);state().active=false; }
+    report.converted=submitted.success&&SUCCEEDED(report.restore)&&SUCCEEDED(report.apply);
+    report.code=FAILED(report.capture)?static_draw::Code::CaptureFailed:FAILED(report.apply)?static_draw::Code::ApplyFailed:
+      FAILED(report.restore)?static_draw::Code::RestoreFailed:submitted.success?static_draw::Code::Applied:static_draw::Code::Layout;
+    result=FAILED(report.restore)?report.restore:physical;
+    if(report.converted&&SUCCEEDED(result)) { ++counts.reconstructed;apiPayload(s,prepared,kind,type,cull,submitted,ignored); }
+    else { ++counts.fallback; }return true;
+  } catch(...) { event("api_model_exception",uint32_t(E_FAIL));(void)raytracing(false);state().active=false;
+    if(!called) { called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]); }
+    result=physical;report.capture=E_FAIL;report.code=static_draw::Code::CaptureFailed;return true; }
 }
 void sceneSummary(uint64_t frame) {
   const auto index=size_t(comparison.phase());
@@ -359,7 +389,7 @@ void sceneSummary(uint64_t frame) {
   }
   const auto phase=comparison.phase();const auto& m=modelCounts[size_t(phase)];
   events << "{\"event\":\"model_rebuild_counts\",\"frame\":" << frame << ",\"phase\":\"" << world_diagnostics::name(phase)
-    << "\",\"model_stage\":\"" << world_diagnostics::name(comparison.models()) << "\",\"attempts\":" << m.attempts << ",\"ready\":" << m.ready << ",\"reconstructed\":" << m.reconstructed << ",\"fallback\":" << m.fallback << ",\"reasons\":{";
+    << "\",\"model_stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\",\"attempts\":" << m.attempts << ",\"ready\":" << m.ready << ",\"reconstructed\":" << m.reconstructed << ",\"fallback\":" << m.fallback << ",\"reasons\":{";
   bool modelComma=false;for (const auto& pair:m.reasons) { if (modelComma) { events << ','; }modelComma=true;events << '"' << pair.first << "\":" << pair.second; }events << "}}\n" << std::flush;
   if (frame>180 && frame!=world_diagnostics::kCoveragePresents) { return; }
   const auto& c=sceneCounts[size_t(phase)];
@@ -421,13 +451,12 @@ void capture(IDirect3DDevice9* device, uint64_t frame) noexcept {
     events << "],\"projection\":[";
     for (size_t i = 0; i < lastProjection.size(); ++i) { if (i) { events << ','; } events << lastProjection[i]; }
     events << "]}\n" << std::flush;
-    events << "{\"event\":\"model_stage_readback\",\"frame\":" << frame << ",\"model_stage\":\"" << world_diagnostics::name(comparison.models()) << "\"}\n" << std::flush;
-    events << "{\"event\":\"model_path_readback\",\"frame\":" << frame
-      << ",\"preserve_requested\":" << (world_diagnostics::preserve(comparison.models())?"true":"false")
-      << ",\"neutral_material\":" << (world_diagnostics::matte(comparison.models())?"true":"false")
-      << ",\"directional_light_requested\":" << (world_diagnostics::directional(comparison.models())?"true":"false")
-      << ",\"submission_samples\":" << modelSampleCounts[unsigned(comparison.models())]
-      << ",\"submission_sample_omitted\":" << modelSampleOmitted[unsigned(comparison.models())] << "}\n" << std::flush;
+    events << "{\"event\":\"model_stage_readback\",\"frame\":" << frame << ",\"model_stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\"}\n" << std::flush;
+    events << "{\"event\":\"api_model_path_readback\",\"frame\":" << frame
+      << ",\"stage\":\"" << world_diagnostics::liveName(comparison.models()) << "\",\"material\":\"" << live_mesh::name(liveMaterial(comparison.models()))
+      << "\",\"submission_samples\":" << modelSampleCounts[unsigned(comparison.models())]
+      << ",\"submission_sample_omitted\":" << modelSampleOmitted[unsigned(comparison.models())]
+      << ",\"submitted_total\":" << apiMeshes.submitted << ",\"live_entries\":" << apiMeshes.entries() << "}\n" << std::flush;
     const bool advanced = comparison.afterCapture(frame,[&](const char* key,const char* value) {
       const auto code=api.SetConfigVariable(key,value);
       events << "{\"event\":\"model_path_config_requested\",\"after_present\":" << frame << ",\"key\":\"" << key
@@ -446,7 +475,7 @@ HMODULE load(const draw_observe::Request& request) noexcept {
   try {
     state() = {};
     initialized = false; registered = nullptr; raytracingRequested = false; physicalDraws = 0;
-    comparison = {}; audited.clear(); auditCounts = {}; modelCounts={};modelPayloadBytes={};modelSampleCounts={};modelStateCounts={};modelSampleOmitted={}; haveWorldCamera = false; lastView = {}; lastProjection = {};
+    comparison = {}; audited.clear(); auditCounts = {}; modelCounts={};apiPayloadBytes={};modelSampleCounts={};modelStateCounts={};modelSampleOmitted={}; haveWorldCamera = false; lastView = {}; lastProjection = {};
     launch = request;
     events.open(request.output / "world-runtime.jsonl", std::ios::binary);
     if (!events || !request.world || sizeof(void*) != 8) { return nullptr; }
@@ -456,6 +485,7 @@ HMODULE load(const draw_observe::Request& request) noexcept {
       event("runtime_sha_mismatch", ERROR_INVALID_DATA); return nullptr;
     }
     for (const auto* name : {L"DXVK_LOG_PATH", L"DXVK_METRICS_PATH"}) { SetEnvironmentVariableW(name, request.output.c_str()); }
+    SetEnvironmentVariableW(L"DXVK_ENABLE_RAYTRACING",nullptr);
     SetEnvironmentVariableW(L"DXVK_CONFIG_FILE", (request.output / "world.conf").c_str());
     SetEnvironmentVariableW(L"DXVK_RTX_CONFIG_FILE", (request.output / "world.conf").c_str());
     HMODULE module = LoadLibraryExW(path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -474,15 +504,18 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     info.version = REMIXAPI_VERSION_MAKE(0, 6, 4);
     const auto result = initialize(&info, &api); event("initialize_api_0_6_4", uint32_t(result));
     if (result != REMIXAPI_ERROR_CODE_SUCCESS || !api.SetConfigVariable || !api.Shutdown ||
-        !api.dxvk_RegisterD3D9Device || !api.dxvk_CopyRenderingOutput) { return nullptr; }
+        !api.dxvk_RegisterD3D9Device || !api.dxvk_CopyRenderingOutput || !api.CreateMaterial || !api.DestroyMaterial ||
+        !api.CreateMesh || !api.DestroyMesh || !api.DrawInstance || !api.SetupCamera) { return nullptr; }
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy", 0, "v15_preserve_off_on_off_combined_matte_light_recovery");
-    event("world_coverage_revision", 0, "15");
+    event("coverage_comparison_policy",0,"v16_live_mesh_neko_combined_rough_metal_alpha_emissive_recovery");
+    event("world_coverage_revision",0,"16");
+    event("api_mesh_policy",0,"per_frame_pose_direct_mesh_original_draw_ignored_fence_retirement_no_source_thread_changes");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
-    state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw}; return module;
+    state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw};
+    state().presented=&presented;return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }
 }
 bool configureRaster() noexcept {
@@ -498,6 +531,16 @@ void shutdown() noexcept {
   // The game owns its device. Do not call the standalone API Shutdown path:
   // it force-releases the device and D3D9 object to zero. The Bridge owns both.
   (void)raytracing(false);
+  if(registered) {
+    const ULONGLONG deadline=GetTickCount64()+1500;
+    while(!meshFences.empty()&&GetTickCount64()<deadline) {
+      const auto hr=meshFences.front()->query.value->GetData(nullptr,0,D3DGETDATA_FLUSH);
+      if(hr==S_OK) { completedMeshFrame=meshFences.front()->frame;meshFences.pop_front(); }
+      else if(FAILED(hr)) { break; }else { SwitchToThread(); }
+    }
+    const auto code=apiMeshes.retire(completedMeshFrame,state().presents,true);event("api_mesh_shutdown_retire",code);
+    event("api_mesh_shutdown_remaining",0,std::to_string(apiMeshes.entries()).c_str());meshFences.clear();
+  }
   state() = {}; registered = nullptr; initialized = false;
   if (events) { event("host_draw_request_count", 0, std::to_string(physicalDraws).c_str()); }
   if (events) { event("host_cleanup", 0); events.close(); }

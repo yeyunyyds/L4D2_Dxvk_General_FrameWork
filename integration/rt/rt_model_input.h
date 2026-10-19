@@ -72,7 +72,7 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
   out.elements={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
   out.bytes.resize(size_t(input.first+input.count)*32);std::memcpy(out.bytes.data()+size_t(input.first)*32,transformed.vertices.data(),transformed.vertices.size());return out;
 }
-inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr) {
+inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false) {
   DWORD values[7]{};scene_input::Prepared rejected;
   const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
   for (unsigned i=0;i<7;++i) {
@@ -83,7 +83,7 @@ inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Sna
   auto input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
   const auto digest=ldb_rt_file::bytesSha256(input.vs.data(),input.vs.size()*4);
   if (model_shader::profile(digest)!=model_shader::Profile::Unknown && SUCCEEDED(input.result) && input.constants[13][0]!=0) { scene_input::morphPositions(d,input); }
-  auto out=reconstruct(s,input,digest);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && scene_input::upload(d,out)) { out.ready=true; }
+  auto out=reconstruct(s,input,digest);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && (cpuOnly || scene_input::upload(d,out))) { out.ready=true; }
   if (evidence && out.ready) { *evidence=std::move(input); }return out;
 }
 } // namespace ldb_rt::model_input

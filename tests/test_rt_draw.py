@@ -62,6 +62,23 @@ class DrawObservation(unittest.TestCase):
         self.assertEqual(report['header']['coverage_revision'],15)
         self.assertEqual(report['footer']['presents'],600)
 
+    def test_v16_trace_uses_new_stage_semantics_without_changing_snapshot_wire(self):
+        events=self.scene_fixture()
+        events[0]=(0,0,struct.pack('<IQQQII',13,42,7,10000000,600,30))
+        for i in range(240,600):
+            original=events[1+239*4:1+240*4]
+            extra=[]
+            for kind,uid,payload in original:
+                data=bytearray(payload)
+                if kind==1:struct.pack_into('<Q',data,16,i+1)
+                extra.append((kind,i*2+(2 if kind==3 else 1),bytes(data)))
+            events[-1:-1]=extra
+        events[-1]=(8,0,struct.pack('<6QI',600,600,600,0,0,0,0))
+        result=self.inspect(events)
+        self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['header']['coverage_revision'],16)
+        self.assertEqual(result['footer']['presents'],600)
+
     def test_v2_world_control_and_exact_padded_declaration(self):
         r=self.inspect(self.world_fixture())
         self.assertTrue(r['pass'],r['errors'])

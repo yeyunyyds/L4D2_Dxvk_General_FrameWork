@@ -44,7 +44,8 @@ def analyze(directory):
     if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
     if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
     events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-    v15=any(e.get('event')=='world_coverage_revision' and e.get('value')=='15' for e in events)
+    v16=any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='16' for e in events)
+    v15=v16 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='15' for e in events)
     v14=v15 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='14' for e in events)
     v13=v14 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='13' for e in events)
     v12=v13 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='12' for e in events)
@@ -150,12 +151,15 @@ def analyze(directory):
             if e.get('phase')!='expanded_models' or e.get('reason') not in (('original_vs_model_matrix','original_vs_rigid_bone_zero','original_vs_three_weight','original_vs_neko_three_weight') if v13 else ('original_vs_model_matrix','original_vs_rigid_bone_zero')) or e.get('rebuilt_stride')!=32 or not 0<e.get('rebuilt_vertex_bytes',0)<=(32768 if v13 else 16384 if v12 else 4096)*32:errors.append('invalid_model_rebuild_sample')
             matrix=e.get('applied_world',[])
             if len(matrix)!=16 or not all(isinstance(v,(float,int)) and math.isfinite(v) for v in matrix):errors.append('invalid_model_rebuild_world')
-        if models and models[-1].get('reconstructed',0)>0 and not model_samples:errors.append('missing_model_rebuild_samples')
-    model_payload_bytes=verify_model_payloads(directory,model_samples,errors,revision=15 if v15 else 14) if v14 else 0
+        if not v16 and models and models[-1].get('reconstructed',0)>0 and not model_samples:errors.append('missing_model_rebuild_samples')
+    model_payload_bytes=verify_model_payloads(directory,model_samples,errors,revision=15 if v15 else 14) if v14 and not v16 else 0
+    from analyze_rt_live import analyze as analyze_live
+    live=analyze_live(directory,events) if v16 else None
+    if live:errors.extend(live["errors"])
     final=summaries[-1] if summaries else {}
     rebuilt=final.get('reconstructed',0);attempts=final.get('attempts',0)
     return {'schema':1,'status':'valid_evidence_requires_review' if requested and not errors else 'incomplete' if requested else 'not_requested',
-            'pass':not errors,'errors':sorted(set(errors)),'capture_policy':'skinned_materials_v2' if skinned else 'wide_materials_v1' if wide else 'legacy','capture_summaries':capture_counts,'sample_counts':dict(phases),'payload_bytes':used,'samples':reviews,'sky_rebuild_summaries':summaries,
+            **({'live_mesh':live} if v16 else {}),'pass':not errors,'errors':sorted(set(errors)),'capture_policy':'skinned_materials_v2' if skinned else 'wide_materials_v1' if wide else 'legacy','capture_summaries':capture_counts,'sample_counts':dict(phases),'payload_bytes':used,'samples':reviews,'sky_rebuild_summaries':summaries,
             **({'model_payload_bytes':model_payload_bytes} if v14 else {}),'model_rebuild_summaries':models,'model_rebuild_samples':model_samples,
             'model_rebuild_result':'applied_requires_image_review' if models and models[-1].get('reconstructed',0)>0 else 'no_model_reconstruction' if v11 else 'not_requested',
             'sky_rebuild_result':'applied_requires_image_review' if attempts and rebuilt==attempts else 'fallback_preserved_v8' if attempts and not rebuilt else 'partial_or_unrun',
