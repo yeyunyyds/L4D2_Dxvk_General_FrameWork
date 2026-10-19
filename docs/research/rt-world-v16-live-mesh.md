@@ -15,3 +15,11 @@ CreateMesh 在固定后端内同步复制 CPU 数组，排队命令持有底层�
 日志 revision16；二进制 trace version13 表示新阶段语义，snapshot wire v2 保持不变。分析器同时支持旧 trace，检查逐帧资源计数、GPU 完成进度、合并阶段、原 Draw Ignore 证据、紧凑几何范围/哈希和恢复释放。开发测试覆盖状态恢复故障、API 创建/提交/销毁错误、刚体复用、姿态更新、材质切换、预算和未完成资源不得回收。Windows 原生开发检查与实际 B580 游戏验收分别记录；成功 API 调用、非零深度和测试通过均不等同于画面验收。
 
 本轮通过条件：同一场景世界/天空仍正常；人物随动画连续更新且无旧长条；合成材质至少有可解释的响应；恢复阶段背景恢复且资源归零。原贴图、完整人物/武器、第一人称特殊投影、所有透明通道、原照明、长时间稳定性和生产性能仍未验收。下一步由这轮游戏结果决定修复混合提交边界还是接入原纹理和更完整模型覆盖，避免继续重复收集相同静态输入。
+
+## 构建与交付
+
+源码构建 `91e81fd5f6589d0ea1a310227d772b6019489967`，构建身份 `ldb-rt-observer+4dcb9eeb84ea6c09`。Windows x86/x64 原生检查、系统 NULLREF、实时 Mesh 故障/预算/回收检查、配套 Release 编译、内嵌 Python 入口和固定 Remix 0.6.4 加载均通过。独立核验了 ZIP CRC、全部清单成员、源码输入回执、两端 PE 架构/身份、Release 编译参数以及 HTTP 下载与 Git blob 一致；下载分支该提交仅含 ZIP。
+
+本地 108 项回归通过 106 项、跳过 2 项 Windows 专用检查；新增实时证据校验 2 项、最终 trace 回归 17 项、场景回归 12 项均通过，各组有交集。合成完整 600 Present 的世界/场景/实时 Mesh 分析器联检通过，仅证明分析流程。实际 B580 游戏画面和性能仍未执行。
+
+[固定版本文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/47a63183acb93a52e2398296bac2149a55fcbae7/downloads/rt-world-pilot-dev.zip)，ZIP 11967397 字节，SHA-256 `4222910139fa2272647e527bc61fe091b37bd53d597f4d356ee729446febb67c`。完整交付核验见 `research/rt-world-pilot-v16-validation.json`，分析器联检见 `research/rt-world-v16-analysis-integration.json`。
