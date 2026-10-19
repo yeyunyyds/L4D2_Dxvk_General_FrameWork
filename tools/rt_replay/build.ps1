@@ -14,7 +14,7 @@ try {
   $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
   if (!$vs) { throw 'MSVC installation missing' }
   $vcvars = Join-Path $vs 'VC/Auxiliary/Build/vcvarsall.bat'
-  $prefix = 'call "' + $vcvars + '" x64 -vcvars_ver=14.29 && cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /external:I.research/rt-replay/include /external:W0 /FI.research/rt-replay/build-id.h '
+  $prefix = 'call "' + $vcvars + '" x64 -vcvars_ver=14.29 && cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I. /external:I.research/rt-replay/include /external:W0 /FI.research/rt-replay/build-id.h '
   Run-ReplayCheck ($prefix + 'tools/rt_replay/runner.cpp /Fe:.research/rt-replay/rt-replay.exe /Fo:.research/rt-replay/runner.obj /link user32.lib dbghelp.lib') 'compile-runner'
   Run-ReplayCheck ($prefix + 'tools/rt_replay/geometry_cases.cpp /Fe:.research/rt-replay/geometry-cases.exe /Fo:.research/rt-replay/geometry.obj') 'compile-geometry'
   Run-ReplayCheck ($prefix + 'tools/rt_replay/native_cases.cpp /Fe:.research/rt-replay/native-cases.exe /Fo:.research/rt-replay/native.obj /link user32.lib dbghelp.lib') 'compile-native'
