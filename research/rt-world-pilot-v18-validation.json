@@ -1,0 +1,432 @@
+{
+  "schema": 1,
+  "scope": "verified v18 publication; actual live game/B580 GPU acceptance unrun",
+  "build_commit": "d6d9428f879f045678d4b77863cd782b0b560a37",
+  "download_ref": "46ad79be1a3a5723a9c959ecf99def6417c197c7",
+  "filename": "rt-world-pilot-dev.zip",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/46ad79be1a3a5723a9c959ecf99def6417c197c7/downloads/rt-world-pilot-dev.zip",
+  "size": 11980397,
+  "sha256": "199ce71a1bbd0041cf26915cdf7dc9cf90460ce222a06edfca4dda992b775440",
+  "zip_crc": "pass",
+  "publication_tree_zip_only": true,
+  "publication_tree_entries": 31,
+  "http_zip_matches_git_blob": true,
+  "git_blob": "8b3b127046a87e30c9feb58d6f6020ab840fe7d4",
+  "all_manifest_members_verified": true,
+  "shipped_scripts_cmd_configuration_readme_exact_match": true,
+  "source_inputs_match_native_receipt": true,
+  "build_id": "ldb-rt-observer+973d8b35492f9f0d",
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "architecture": "x86",
+      "sha256": "dd6b04fbdb7ddba7a300d28e61586aea52bde55a052d97632ad0a387ab707c72",
+      "size": 1409024,
+      "compiled_identity_match": true
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "architecture": "x64",
+      "sha256": "0752b8aa1877ac21bd5060ef8a3bc21bf1590725792a65588cd19e155fe138d0",
+      "size": 1550848,
+      "compiled_identity_match": true
+    }
+  },
+  "foundation_status": {
+    "schema": 1,
+    "commit": "d6d9428f879f045678d4b77863cd782b0b560a37",
+    "native_outcome": "success",
+    "scope": "Bridge + COM/protocol/Host + scoped static D3D9 diagnostic, not game hooks or GPU RT",
+    "game_queue_execution": "unrun",
+    "b580_rt": "unrun",
+    "binaries": {
+      "development/x64/L4D2Bridge64.exe": "0752b8aa1877ac21bd5060ef8a3bc21bf1590725792a65588cd19e155fe138d0",
+      "development/x86/d3d9.dll": "dd6b04fbdb7ddba7a300d28e61586aea52bde55a052d97632ad0a387ab707c72"
+    },
+    "sdk_queue_development_execution": "pass",
+    "game_binding_probe_native_execution": "pass",
+    "static_draw_development_execution": "pass",
+    "consumer_draw_development_execution": "pass",
+    "consumer_world_development_execution": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "world_tangent_layout_development_execution": "pass",
+    "world_scene_scope_development_execution": "pass",
+    "world_sky_reconstruction_development_execution": "pass",
+    "world_bulk_static_development_execution": "pass",
+    "world_original_input_development_execution": "pass",
+    "world_owned_geometry_development_execution": "pass",
+    "world_live_mesh_development_execution": "pass",
+    "world_live_mesh_budget_development_execution": "pass",
+    "world_model_texture_development_execution": "pass",
+    "world_live_material_rebind_development_execution": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "artifact_validation": "pass",
+    "source_queue_sha256": "6d8e486bb4936258479544249b35dd8f2a1567d56d6054bb0f313817535ab19a"
+  },
+  "native_status": {
+    "commit": "d6d9428f879f045678d4b77863cd782b0b560a37",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "package_validation": {
+    "schema": 1,
+    "commit": "d6d9428f879f045678d4b77863cd782b0b560a37",
+    "package_validation": "pass",
+    "launcher": "rt-world-pilot-dev.zip",
+    "payloads": [],
+    "primary_sha256": "199ce71a1bbd0041cf26915cdf7dc9cf90460ce222a06edfca4dda992b775440",
+    "primary_size": 11980397,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "material_global_name_decoder_development_execution": "pass",
+    "world_transport_backpressure_development_execution": "pass",
+    "world_lighting_comparison_development_execution": "pass",
+    "world_coverage_overlay_development_execution": "pass",
+    "world_tangent_layout_development_execution": "pass",
+    "world_scene_scope_development_execution": "pass",
+    "world_sky_reconstruction_development_execution": "pass",
+    "world_bulk_static_development_execution": "pass",
+    "world_original_input_development_execution": "pass",
+    "world_owned_geometry_development_execution": "pass",
+    "world_live_mesh_development_execution": "pass",
+    "world_live_mesh_budget_development_execution": "pass",
+    "world_model_texture_development_execution": "pass",
+    "world_live_material_rebind_development_execution": "pass",
+    "pinned_native_loader_api_initialization": "pass",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "native_fixture_independent_reviews": {
+    "x86": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 600,
+          "control_presents": 30,
+          "coverage_revision": 18
+        },
+        "footer": {
+          "draws": 1803,
+          "valid": 1803,
+          "presents": 600,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 570,
+          "3": 570,
+          "5": 570,
+          "10": 1,
+          "11": 2
+        },
+        "world_conversion": {
+          "reports": 1803,
+          "converted": 573,
+          "sky_converted": 1,
+          "rigid_converted": 2
+        },
+        "world_normalization": "pass"
+      }
+    },
+    "x64": {
+      "observer": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 42,
+          "device": 7,
+          "frequency": 10000000
+        },
+        "footer": {
+          "draws": 120,
+          "valid": 120,
+          "presents": 120,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {},
+        "world_conversion": {},
+        "world_normalization": "unrun_or_incomplete"
+      },
+      "world_pilot": {
+        "pass": true,
+        "errors": [],
+        "header": {
+          "session": 43,
+          "device": 8,
+          "frequency": 10000000,
+          "profile": "world_pilot",
+          "target_presents": 600,
+          "control_presents": 30,
+          "coverage_revision": 18
+        },
+        "footer": {
+          "draws": 1803,
+          "valid": 1803,
+          "presents": 600,
+          "resets": 0,
+          "failures": 0,
+          "unobserved": 0,
+          "reason": 0
+        },
+        "world_decisions": {
+          "1": 90,
+          "8": 570,
+          "3": 570,
+          "5": 570,
+          "10": 1,
+          "11": 2
+        },
+        "world_conversion": {
+          "reports": 1803,
+          "converted": 573,
+          "sky_converted": 1,
+          "rigid_converted": 2
+        },
+        "world_normalization": "pass"
+      }
+    }
+  },
+  "new_native_gate_markers": {
+    "RT live mesh original Draw category isolation/capture/apply/restore faults: PASS": 1,
+    "RT live mesh normalized indices/strip winding/flat normals/finite bounds: PASS": 1,
+    "RT live mesh CPU pose update/cache/material/fence-gated lifetime/API failures: PASS": 1,
+    "RT live mesh >128 draws/budget omission/early retirement/backlog: PASS": 1,
+    "RT model DDS DX10 row pitch/sRGB/alpha/bounds: PASS": 1,
+    "RT live material completed-use destroy/recreate/stable-geometry/texture identity: PASS": 1
+  },
+  "pinned_loader_positive_events": [
+    {
+      "event": "loaded_pinned_runtime",
+      "code": 0
+    },
+    {
+      "event": "initialize_api_0_6_4",
+      "code": 0
+    },
+    {
+      "event": "rtx.enableRaytracing",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.useVertexCapture",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.useBuffersDirectly",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.enablePreservePath",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.upscalerType",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "rtx.enableRayReconstruction",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.sceneScale",
+      "code": 0,
+      "value": "0.3937007874"
+    },
+    {
+      "event": "rtx.fallbackLightMode",
+      "code": 0,
+      "value": "2"
+    },
+    {
+      "event": "rtx.fallbackLightType",
+      "code": 0,
+      "value": "1"
+    },
+    {
+      "event": "rtx.fallbackLightRadiance",
+      "code": 0,
+      "value": "3000,3000,3000"
+    },
+    {
+      "event": "rtx.fallbackLightRadius",
+      "code": 0,
+      "value": "5"
+    },
+    {
+      "event": "rtx.fallbackLightPositionOffset",
+      "code": 0,
+      "value": "0,0,0"
+    },
+    {
+      "event": "rtx.enableFallbackLightShaping",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.fallbackLightDirection",
+      "code": 0,
+      "value": "0,0,-1"
+    },
+    {
+      "event": "rtx.autoExposure.enabled",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.autoExposure.evMinValue",
+      "code": 0,
+      "value": "-2"
+    },
+    {
+      "event": "rtx.autoExposure.evMaxValue",
+      "code": 0,
+      "value": "5"
+    },
+    {
+      "event": "rtx.tonemappingMode",
+      "code": 0,
+      "value": "1"
+    },
+    {
+      "event": "rtx.localtonemap.exposure",
+      "code": 0,
+      "value": "0.75"
+    },
+    {
+      "event": "rtx.orthographicIsUI",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.skipDrawCallsPostRTXInjection",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.enableAlphaBlend",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.enableAlphaTest",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.fogIgnoreSky",
+      "code": 0,
+      "value": "True"
+    },
+    {
+      "event": "rtx.bloom.enable",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "rtx.postfx.enable",
+      "code": 0,
+      "value": "False"
+    },
+    {
+      "event": "startup_raster_policy",
+      "code": 0,
+      "value": "RT_off_until_valid_converted_draw_after_control"
+    },
+    {
+      "event": "coverage_comparison_policy",
+      "code": 0,
+      "value": "v18_sampler0_DDS_alpha_material_rebind_low_light_recovery"
+    },
+    {
+      "event": "world_coverage_revision",
+      "code": 0,
+      "value": "18"
+    },
+    {
+      "event": "api_mesh_policy",
+      "code": 0,
+      "value": "per_frame_pose_direct_mesh_early_fence_retirement_soft_budget_original_draw_ignored_no_source_thread_changes"
+    },
+    {
+      "event": "model_texture_policy",
+      "code": 0,
+      "value": "sampler0_static_base_level_DDS_DX10_sRGB_original_alpha_64MiB_128_refs_4_reads_per_frame"
+    },
+    {
+      "event": "scene_input_policy",
+      "code": 0,
+      "value": "skinned_materials_v2"
+    },
+    {
+      "event": "material_audit_policy",
+      "code": 0,
+      "value": "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG"
+    },
+    {
+      "event": "host_draw_request_count",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "host_cleanup",
+      "code": 0
+    }
+  ],
+  "local_strict_mingw_x64_compile": [
+    "rt_world_runtime.cpp",
+    "rt_overlay_cases.cpp",
+    "rt_draw_native_cases.cpp",
+    "rt_live_mesh_cases.cpp"
+  ],
+  "game_rt": "unrun",
+  "source_parallel_preparation": "unrun",
+  "performance": "unrun"
+}

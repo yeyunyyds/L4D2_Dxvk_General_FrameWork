@@ -27,3 +27,15 @@
 捕获和活进程探针完成后，先保存标为INCOMPLETE的恢复ZIP，再等待游戏/Host退出，后处理结束后更新同一份ZIP。ZIP与结果文件夹并列，控制台明确提示退出游戏、保持窗口开启和最终上传路径。写入临时文件后原子替换，失败时保留已有有效ZIP；最终COMPLETE与图像、覆盖、完整退出和性能验收仍是不同结论。
 
 本轮不修改Source线程CVar或物理引擎，不声称解决已知的后端退出对象清理警告。实际B580贴图加载、亮白改善、完整材质外观和本轮完整游戏流程仍待新包实机验证。
+
+## 交付验证
+
+修正版源码 `d6d9428f879f045678d4b77863cd782b0b560a37`，编译身份 `ldb-rt-observer+973d8b35492f9f0d`。Windows首轮在新增测试的alpha类型转换警告C4244处停止；修正测试类型及X8格式映射后，x86/x64配套Release、系统NULLREF、材质完成标记/销毁重建/纹理身份、DDS行距/sRGB/alpha/异常恢复及既有原生检查全部通过。保持原有/W4 /WX。固定0.6.4运行库初始化和内嵌Python入口、LZMA导入也通过。
+
+本地117项检查通过115项、跳过2项Windows专用检查；四个关键C++目标严格MinGW交叉编译通过。合成600帧的Draw/世界/场景/纹理分析联检通过。[固定GLI解析器的10组格式检查](../../research/rt-world-v18-dds-loader-check.json)验证DXT1/3/5、BGRA8、转换后X8在linear/sRGB下均映射到预期Vulkan格式；此项为CPU文件解码，不是GPU验收。
+
+[实际目录归档复核](../../research/rt-world-v18-archive-check.json)对用户上一轮本地结果目录重新打包：除summary外的3,703个文件逐项哈希匹配，CRC通过，无遗漏；保留INCOMPLETE退出等待状态，不改写原始上传摘要。ZIP 24,749,950字节，生成及完整复核约145秒，因此大包压缩期间需要保持窗口开启。
+
+[独立发布复核](../../research/rt-world-pilot-v18-validation.json)通过ZIP CRC、全部清单成员、两端PE架构/编译身份、Release参数、原生fixture重分析、固定API初始化、源码回执与当前输入哈希、HTTP下载与Git blob一致性检查；下载分支仍仅包含ZIP。
+
+[固定版本文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/46ad79be1a3a5723a9c959ecf99def6417c197c7/downloads/rt-world-pilot-dev.zip)。测试安装包11,980,397字节，SHA256 `199ce71a1bbd0041cf26915cdf7dc9cf90460ce222a06edfca4dda992b775440`。实际v18 B580画面、纹理覆盖、亮白改善与完整退出仍未验收。

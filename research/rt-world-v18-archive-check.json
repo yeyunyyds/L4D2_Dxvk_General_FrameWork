@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "scope": "local archive reliability replay of complete manually uploaded v17 directory; no game or GPU claim",
+  "source_result": "rt-world-20261019-014959-271102be.7z",
+  "archive_compression": "zip_lzma_lossless",
+  "zip_crc": "pass",
+  "payload_files_independently_matched": 3703,
+  "payload_bytes_matched": 372527705,
+  "result_zip_size": 24749950,
+  "result_zip_sha256": "3c9578b5703365e4e0cd2a1fe473d5499416af64a2eb4019913b76649f6bcda3",
+  "checkpoint_remains_incomplete": true,
+  "checkpoint_phase": "waiting_for_game_and_host_exit",
+  "zip_beside_result_folder": true,
+  "atomic_write_temp_absent": true,
+  "original_uploaded_summary_unchanged": true,
+  "elapsed_seconds": 144.8
+}

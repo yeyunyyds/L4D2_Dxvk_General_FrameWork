@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "scope": "independent CPU DDS decode through exact pinned Remix GLI; no GPU texture-loading or game claim",
+  "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+  "gli_tree": "195031787991ccee60f962f03dc0bc01037cb19c",
+  "glm_tree": "2f590d2f2d539685243237acf6e43b56dc9fcf3b",
+  "helper_sha256": "06286710252d31f1152da7fa8877c5b33698814e1785d2b392a163e3f34d9bce",
+  "cases": [
+    {
+      "source": "DXT1",
+      "srgb": false,
+      "dxgi": 71,
+      "vk_format": 133,
+      "payload_bytes": 8,
+      "dds_sha256": "2540c0d24b839d474cc61489379f0132e9e858dcccdb07f3f4044a30f216310b",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "DXT1",
+      "srgb": true,
+      "dxgi": 72,
+      "vk_format": 134,
+      "payload_bytes": 8,
+      "dds_sha256": "970de6d58e0757e25196dbe4413d0675fa78d93bc69218dd07d559415744d16d",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "DXT3",
+      "srgb": false,
+      "dxgi": 74,
+      "vk_format": 135,
+      "payload_bytes": 16,
+      "dds_sha256": "f4c5e60385df6a2260e7d8290471c755b6700bd9396c554611caecb75e385ed3",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "DXT3",
+      "srgb": true,
+      "dxgi": 75,
+      "vk_format": 136,
+      "payload_bytes": 16,
+      "dds_sha256": "d342a5a880f67bc2ec591b43616a9ce64686d59407451f0161fce2cb705cf618",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "DXT5",
+      "srgb": false,
+      "dxgi": 77,
+      "vk_format": 137,
+      "payload_bytes": 16,
+      "dds_sha256": "23411d32b2d8cfb2d94037d7cf466d1821d49211a828f9a8a350055de59d49b5",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "DXT5",
+      "srgb": true,
+      "dxgi": 78,
+      "vk_format": 138,
+      "payload_bytes": 16,
+      "dds_sha256": "a4b9de54f1474aa844ecd722f03e60820750eafdb2ab7bf0b80d7f48a6e7ffcb",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "A8R8G8B8",
+      "srgb": false,
+      "dxgi": 87,
+      "vk_format": 44,
+      "payload_bytes": 64,
+      "dds_sha256": "b3b78c355b4b5a4e9bb8dc19f1e3ceaf0a10b624295e54b1cd3e187497f24d77",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "A8R8G8B8",
+      "srgb": true,
+      "dxgi": 91,
+      "vk_format": 50,
+      "payload_bytes": 64,
+      "dds_sha256": "e382fa5b6f73ffb8aba1ee34f7e32dac126bb9d1c9aede2fe4373440510dd01a",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "X8R8G8B8_to_BGRA8",
+      "srgb": false,
+      "dxgi": 87,
+      "vk_format": 44,
+      "payload_bytes": 64,
+      "dds_sha256": "b3b78c355b4b5a4e9bb8dc19f1e3ceaf0a10b624295e54b1cd3e187497f24d77",
+      "pinned_gli_parse": "pass"
+    },
+    {
+      "source": "X8R8G8B8_to_BGRA8",
+      "srgb": true,
+      "dxgi": 91,
+      "vk_format": 50,
+      "payload_bytes": 64,
+      "dds_sha256": "e382fa5b6f73ffb8aba1ee34f7e32dac126bb9d1c9aede2fe4373440510dd01a",
+      "pinned_gli_parse": "pass"
+    }
+  ],
+  "all_pass": true,
+  "raw_x8_dxgi_88_93_observed_gli_formats": [
+    207,
+    208
+  ],
+  "correction": "X8 RGB preserved, unused alpha set255, export BGRA8 DXGI87/91 -> Vulkan44/50",
+  "gpu_texture_acceptance": "unrun"
+}
