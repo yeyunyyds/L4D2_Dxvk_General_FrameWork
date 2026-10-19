@@ -15,3 +15,5 @@ v15 的 105 份配对输入通过 CPU 原 VS、上传字节和绑定核验，但
 开发门禁分开记录：Python 损坏输入/归档/分包检查；便携 C++ 二进制边界、三角形法线与 UV 检查；Windows x64 生产上传函数的真实系统 NULLREF 读回/绑定/清理；标准 D3D9 的 API 负例；固定 runtime 的 0.6.4 初始化正例；自带 Python 的隔离入口和包成员摘要。无 B580 的构建环境不提供 Vulkan RT 图像验收或性能结论。
 
 实机结果决定下一步接回游戏的方式：若持续持有显著优于短寿命，修正缓冲交接；若直接 Mesh API 正常而 Legacy 异常，优先复用直接接口；若只有退化 UV 修复有效，继续检验切线生成；若全部异常，保留光栅对照并继续定位相机/后端输入。已验证的材质常量与透明规则再接入实时材质转换，避免同时扩展一批未知行为。
+
+已发布 [GPU 重放 v1 文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/d1082b0f734d8cd13752df79ba1f089bdd9ddbd2/downloads/rt-gpu-replay-dev.zip)，构建源码 `a8190d7ccb2d9483ba815d5eef1b6ad28d17d998`。Windows 原生几何/NULLREF、八类材质输入、系统 API 负例、固定 runtime 0.6.4 初始化正例、自带 Python 隔离入口均通过；实际 B580 图像及实时游戏材质覆盖仍未验收。[独立交付核验](../../research/rt-gpu-replay-v1-validation.json) 包含源码收据、737 个成员、726 个原依赖成员、原生程序身份、HTTP 与 Git blob 字节一致以及 ZIP-only 分支核对。此包不会替换 v15 游戏 client/Host，不预先宣称修好了花屏。

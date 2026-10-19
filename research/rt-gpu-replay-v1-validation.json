@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "source_commit": "a8190d7ccb2d9483ba815d5eef1b6ad28d17d998",
+  "published_ref": "d1082b0f734d8cd13752df79ba1f089bdd9ddbd2",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/d1082b0f734d8cd13752df79ba1f089bdd9ddbd2/downloads/rt-gpu-replay-dev.zip",
+  "product_bytes": 10996375,
+  "product_sha256": "36537a71f2b5a2031f31b4b5944e05ab92b8064b6c7e77359d1e5a992be6dddc",
+  "exe_sha256": "c8805ea4e4fa6a67de5435ce9e6bd5d035a3e345c20a0a93a510f08fc777dd5b",
+  "identity": "ldb-rt-replay+a8190d7ccb2d9483ba815d5eef1b6ad28d17d998",
+  "zip_only_branch_entries": 31,
+  "source_receipt_inputs_verified": 12,
+  "manifest_members_verified": 737,
+  "checks": {
+    "crc": "pass",
+    "http_bytes_equal_git_blob": "pass",
+    "all_member_hashes": "pass",
+    "compiled_x64_identity": "pass",
+    "source_receipt_matches_commit": "pass",
+    "python_8_tests": "pass",
+    "portable_real_capture_inputs": "pass",
+    "windows_geometry": "pass",
+    "windows_nullref_upload_readonly_binding_cleanup": "pass",
+    "windows_api_material_inputs": "pass",
+    "system_d3d9_negative_127": "pass",
+    "pinned_api_0_6_4_positive": "pass",
+    "packaged_isolated_python_entry": "pass"
+  },
+  "actual_b580_gpu_images": "unrun",
+  "real_time_game_material_coverage": "not_integrated",
+  "performance": "unrun",
+  "unchanged_pinned_prerequisite_members_verified": 726,
+  "support_scripts_and_catalog_match_commit": "pass"
+}
