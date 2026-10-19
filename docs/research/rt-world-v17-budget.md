@@ -15,3 +15,11 @@ v16 实机在游戏中显示了连贯的人物、武器、世界与天空；第3
 开发检查涵盖超过128次的同帧提交、512额度/几何/缓存/查询预算仅遗漏不失败、资源未完成不得回收、开始新帧回收避免瞬时超限、额度恢复后继续，以及真实API错误码8不得伪装为预算遗漏。分析器测试检查前一帧数据与预算统计一致，并保留对旧v16/更早结果的支持。Trace version14标识revision17，snapshot wire v2不变。
 
 模型继续使用合成材质、原UV和面法线。原贴图、完整Toon、原照明、第一人称特殊投影、完整透明通道、全地图/全模型和长期性能未验收。本轮B580画面与全部后续阶段需由新版结果确认。
+
+## 交付验证
+
+源码构建 `dbade95c1ff4c2a9374103360d2dca741a51876a`，身份 `ldb-rt-observer+ca3ffc7609056293`。首轮在新增测试的变量重名警告C4456处停止；修正测试局部变量名后，Windows x86/x64配套Release构建、NULLREF、所有实时Mesh检查与新增预算/提前回收/积压恢复/真实API错误检查均通过，保留原有/W4 /WX规则。内嵌Python入口、LZMA模块导入和固定Remix 0.6.4初始化通过。
+
+本地114项回归通过112项、跳过2项Windows专用检查；完整600帧的合成分析器联检通过。独立核对ZIP CRC、全部清单成员、两端PE架构/身份、Release参数、原生fixture再分析、源码回执和HTTP下载与Git blob一致；对应下载分支只含ZIP。完整证据见 `research/rt-world-pilot-v17-validation.json`。
+
+[固定版本文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/fcd94c117634549c8cebf3b16f868ac51964bf69/downloads/rt-world-pilot-dev.zip)。ZIP 11969987 字节，SHA256 `c6063f4e4ba6cd161f9b23ae86ad8f1e52ec015ee10d73fe031e6ff43ab9b60e`。这是待B580新一轮验收的v17；没有把旧v16的局部成功写成新版全部600帧或完整材质通过。
