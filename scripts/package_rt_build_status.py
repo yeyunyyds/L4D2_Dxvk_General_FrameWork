@@ -158,6 +158,7 @@ if __name__ == '__main__':
             native=queue_log.read_text(errors='replace')
             texture_checks=('RT model DDS DX10 row pitch/sRGB/alpha/bounds: PASS',
                             'RT model texture full DDS SHA256 4MiB/16MiB plus header/bounds: PASS',
+                            'RT model source mip chain NULLREF/hash/sRGB/small BC levels/partial failure unlock: PASS',
                             'RT model texture system NULLREF 1024/2048 cache export/rehash/reuse/unlock/clear: PASS')
             if all(native.count(marker)==1 for marker in texture_checks):
                 status['world_model_texture_development_execution']='pass'

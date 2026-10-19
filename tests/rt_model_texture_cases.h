@@ -66,6 +66,31 @@ inline void systemTextureExport() {
     check(texture.value->LockRect(0,&locked,nullptr,0));check(texture.value->UnlockRect(0));
     check(d->SetTexture(0,nullptr));++at;
   }
-  require(cache.held()==2,"texture source ownership lost");cache.clear();require(!cache.held(),"texture references not cleared");
+  require(cache.held()==2,"texture source ownership lost");
+  static_draw::Ref<IDirect3DTexture9> chain;
+  check(d->CreateTexture(8,4,0,0,D3DFMT_DXT5,D3DPOOL_MANAGED,&chain.value,nullptr));
+  require(chain.value->GetLevelCount()==4,"source mip count lost");
+  for(UINT level=0;level<4;++level) {
+    D3DSURFACE_DESC desc{};check(chain.value->GetLevelDesc(level,&desc));
+    const auto layout=model_texture::layout(desc.Width,desc.Height,desc.Format,true);
+    D3DLOCKED_RECT lock{};check(chain.value->LockRect(level,&lock,nullptr,0));
+    for(UINT y=0;y<layout.rows;++y) { std::memset(static_cast<uint8_t*>(lock.pBits)+size_t(y)*size_t(lock.Pitch),int(42+level),layout.rowBytes); }
+    check(chain.value->UnlockRect(level));
+  }
+  check(d->SetSamplerState(0,D3DSAMP_SRGBTEXTURE,TRUE));check(d->SetTexture(0,chain.value));
+  const auto mipped=cache.acquire(d,directory.path,at,1);
+  require(mipped.textured()&&mipped.levels==4&&mipped.fullMipLevels==4&&mipped.digest=="80fc995ed673b906c9df5fde6439fd94e2c11c70ae151507e3cd8cd99d3a5bde","source mip chain differs from independent digest");
+  require(ldb_rt_file::fileSha256(mipped.path)==mipped.digest&&std::filesystem::file_size(mipped.path)==228,"source mip disk payload differs");
+  struct FailedMip {
+    IDirect3DTexture9* inner;unsigned locks=0,unlocks=0;
+    HRESULT GetLevelDesc(UINT level,D3DSURFACE_DESC* desc) { return inner->GetLevelDesc(level,desc); }
+    HRESULT LockRect(UINT level,D3DLOCKED_RECT* rect,const RECT* area,DWORD flags) { ++locks;return level==1?E_FAIL:inner->LockRect(level,rect,area,flags); }
+    HRESULT UnlockRect(UINT level) { ++unlocks;return inner->UnlockRect(level); }
+  } failed{chain.value};
+  D3DSURFACE_DESC base{};check(chain.value->GetLevelDesc(0,&base));
+  require(model_texture::mipDds(&failed,base,true,4).empty()&&failed.locks==2&&failed.unlocks==1,"partial mip failure leaked lock or accepted truncated chain");
+  require(model_texture::mipBytes(4096,4096,D3DFMT_DXT5,true,13)>16u*1024*1024&&!model_texture::mipBytes(8,4,D3DFMT_DXT5,true,5),"full chain size or overlong count accepted");
+  check(d->SetTexture(0,nullptr));cache.clear();require(!cache.held(),"texture references not cleared");
+  std::cout<<"RT model source mip chain NULLREF/hash/sRGB/small BC levels/partial failure unlock: PASS\n";
   std::cout<<"RT model texture system NULLREF 1024/2048 cache export/rehash/reuse/unlock/clear: PASS; GPU RT unrun\n";
 }

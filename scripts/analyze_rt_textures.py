@@ -5,12 +5,14 @@ import struct
 
 
 def analyze(directory,events):
-    directory=Path(directory);errors=[];files={};bindings=[]
+    directory=Path(directory);errors=[];files={};bindings=[];mip_counts={}
+    v19=any(e.get("event")=="world_coverage_revision" and e.get("value")=="19" and e.get("code")==0 for e in events)
+    max_bytes=(128 if v19 else 64)*1024*1024;max_refs=256 if v19 else 128;max_file=(24 if v19 else 16)*1024*1024+148
     def check(value,why):
         if not value:raise ValueError(why)
     if not any(e.get('event')=='model_texture_policy' and e.get('code')==0 for e in events):errors.append('missing_model_texture_policy')
     lights=[(e.get('after_present'),e.get('value'),e.get('code')) for e in events if e.get('event')=='model_light_config_requested']
-    if lights!=[(300,'30,30,30',0),(540,'3000,3000,3000',0)]:errors.append('texture_light_sequence')
+    if lights!=([(300,'3,3,3',0),(360,'30,30,30',0),(540,'30,30,30',0)] if v19 else [(300,'30,30,30',0),(540,'3000,3000,3000',0)]):errors.append('texture_light_sequence')
     for e in events:
         if e.get('event')!='model_texture_binding':continue
         bindings.append(e)
@@ -19,23 +21,32 @@ def analyze(directory,events):
             check(type(e.get('textured')) is bool and type(e.get('srgb')) is bool,'invalid_texture_binding_flags')
             check(e.get('alpha_test') in range(8) and e.get('alpha_ref') in range(256) and e.get('filter') in (0,1) and e.get('wrap_u') in (0,1,2) and e.get('wrap_v') in (0,1,2),'invalid_texture_alpha_sampler')
             if not e['textured']:
-                check(not e.get('file') and not e.get('sha256') and e.get('reason')!='sampler0_base_level_dds_dx10','invalid_texture_fallback')
+                check(not e.get('file') and not e.get('sha256') and e.get('reason') not in ('sampler0_base_level_dds_dx10','sampler0_source_mips_dds_dx10'),'invalid_texture_fallback')
                 continue
             digest=e['sha256'];check(isinstance(digest,str) and len(digest)==64 and all(x in '0123456789abcdef' for x in digest),'invalid_texture_digest')
             name=e['file'];check(name=='model-textures/'+digest+'.dds','unsafe_texture_path')
             check(0<e['width']<=4096 and 0<e['height']<=4096,'invalid_texture_dimensions')
             formats={int.from_bytes(b'DXT1','little'):(71,72,8),int.from_bytes(b'DXT3','little'):(74,75,16),int.from_bytes(b'DXT5','little'):(77,78,16),21:(87,91,0),22:(87,91,0)}
             check(e['format'] in formats,'unsupported_exported_texture_format');linear,srgb,block=formats[e['format']]
-            path=directory/name;check(path.is_file() and 148<path.stat().st_size<=16*1024*1024+148,'missing_or_oversized_texture')
+            path=directory/name;check(path.is_file() and 148<path.stat().st_size<=max_file,'missing_or_oversized_texture')
             if name not in files:
                 raw=path.read_bytes();check(hashlib.sha256(raw).hexdigest()==digest,'texture_file_digest');files[name]=len(raw)
-                check(len(files)<=128 and sum(files.values())<=64*1024*1024,'texture_export_budget')
+                check(len(files)<=max_refs and sum(files.values())<=max_bytes,'texture_export_budget')
             else:raw=path.read_bytes()[:148]
             h=struct.unpack_from('<37I',raw)
             row=((e['width']+3)//4)*block if block else e['width']*4;rows=(e['height']+3)//4 if block else e['height']
-            check(h[0]==0x20534444 and h[1]==124 and h[2]==(0x1007|(0x80000 if block else 8)) and h[3:5]==(e['height'],e['width']) and h[5]==(row*rows if block else row) and h[7]==1,'invalid_dds_dimensions_pitch')
-            check(h[19:22]==(32,4,0x30315844) and h[27]==0x1000 and h[32:37]==(srgb if e['srgb'] else linear,3,0,1,0),'invalid_dds_dx10_color_space')
-            check(files[name]==148+row*rows,'texture_payload_size')
+            levels=h[7];full=max(e['width'],e['height']).bit_length()
+            check(1<=levels<=full and (v19 or levels==1),'invalid_dds_mip_count')
+            if v19:check(e.get('mip_levels')==levels and e.get('full_mip_levels')==full,'texture_mip_metadata')
+            flags=0x1007|(0x80000 if block else 8)|(0x20000 if levels>1 else 0)
+            check(h[0]==0x20534444 and h[1]==124 and h[2]==flags and h[3:5]==(e['height'],e['width']) and h[5]==(row*rows if block else row),'invalid_dds_dimensions_pitch')
+            mip_counts[name]=(levels,full)
+            check(h[19:22]==(32,4,0x30315844) and h[27]==(0x1000|(0x400008 if levels>1 else 0)) and h[32:37]==(srgb if e['srgb'] else linear,3,0,1,0),'invalid_dds_dx10_color_space')
+            payload=0;width=e['width'];height=e['height']
+            for level in range(levels):
+                payload+=((width+3)//4)*((height+3)//4)*block if block else width*height*4
+                width=max(1,width//2);height=max(1,height//2)
+            check(files[name]==148+payload,'texture_payload_size')
         except (ValueError,KeyError,TypeError,OSError,struct.error) as exc:errors.append(str(exc))
     frames=[e for e in events if e.get('event')=='api_mesh_frame'];previous={}
     for e in frames:
@@ -44,7 +55,7 @@ def analyze(directory,events):
                 check(type(e.get(k)) is int and e[k]>=0,'invalid_texture_counter')
                 if k!='texture_held':check(e[k]>=previous.get(k,0),'regressing_texture_counter')
             check(e['textured_submissions']+e['texture_fallback_submissions']==e['submitted'],'texture_submission_accounting')
-            check(e['texture_exports']<=128 and e['texture_held']<=128 and e['texture_bytes']<=64*1024*1024,'texture_runtime_budget')
+            check(e['texture_exports']<=max_refs and e['texture_held']<=max_refs and e['texture_bytes']<=max_bytes,'texture_runtime_budget')
             if e['frame']==600:check(e['texture_held']==0,'texture_refs_not_released')
             previous=e
         except (ValueError,KeyError,TypeError) as exc:errors.append(str(exc))
@@ -57,4 +68,4 @@ def analyze(directory,events):
         if type(e.get('textured')) is not bool or e.get('material_handle') not in handles:errors.append('model_sample_texture_binding')
     last=frames[-1] if frames else {};fallback=last.get('texture_fallback_submissions',0)
     coverage='partial_with_synthetic_fallback' if fallback else 'exported_for_all_submitted_models' if last.get('textured_submissions',0) else 'unrun'
-    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'coverage':coverage,'bindings':len(bindings),'unique_dds_files':len(files),'verified_dds_bytes':sum(files.values()),'textured_submissions':last.get('textured_submissions',0),'fallback_submissions':fallback,'gpu_texture_acceptance':'unrun','limits':'Validated static sampler0 base-level DDS and API intent; original PS/Toon/tints, animated textures, mips and actual GPU preload/appearance remain separate.'}
+    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'coverage':coverage,'complete_mip_files':sum(n==f for n,f in mip_counts.values()),'partial_source_mip_files':sum(n<f for n,f in mip_counts.values()),'bindings':len(bindings),'unique_dds_files':len(files),'verified_dds_bytes':sum(files.values()),'textured_submissions':last.get('textured_submissions',0),'fallback_submissions':fallback,'gpu_texture_acceptance':'unrun','limits':'Validated static sampler0 source-mip DDS and API intent; original PS/Toon/tints, animated textures, mips and actual GPU preload/appearance remain separate.'}

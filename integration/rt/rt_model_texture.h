@@ -7,7 +7,7 @@
 #include <memory>
 
 namespace ldb_rt::model_texture {
-constexpr size_t kMaxPayloadBytes=16u*1024*1024,kDdsHeaderBytes=148,kMaxDdsBytes=kMaxPayloadBytes+kDdsHeaderBytes;
+constexpr size_t kMaxPayloadBytes=16u*1024*1024,kMaxMipPayloadBytes=24u*1024*1024,kDdsHeaderBytes=148,kMaxDdsBytes=kMaxMipPayloadBytes+kDdsHeaderBytes;
 inline std::string ddsSha256(const std::vector<uint8_t>& encoded) {
   // Geometry's 4 MiB hash bound is smaller than supported textures, even a
   // 1024x1024 BGRA8 base level once the DDS header is included.
@@ -42,15 +42,38 @@ inline std::vector<uint8_t> dds(UINT width,UINT height,const Layout& l,const voi
   }
   return out;
 }
+inline UINT fullLevels(UINT width,UINT height) {
+  UINT levels=1;while(width>1||height>1) { width=std::max(1u,width/2);height=std::max(1u,height/2);++levels; }return levels;
+}
+inline uint64_t mipBytes(UINT width,UINT height,D3DFORMAT format,bool srgb,UINT levels) {
+  if(!levels||levels>fullLevels(width,height)) { return 0; }uint64_t bytes=0;
+  for(UINT level=0;level<levels;++level) { const auto l=layout(width,height,format,srgb);if(!l.dxgi) { return 0; }
+    bytes+=l.bytes();width=std::max(1u,width/2);height=std::max(1u,height/2); }
+  return bytes<=kMaxMipPayloadBytes?bytes:0;
+}
 template<class Texture> struct ReadLock {
-  Texture* texture;D3DLOCKED_RECT rect{};HRESULT result;bool active;
-  explicit ReadLock(Texture* value):texture(value),result(value->LockRect(0,&rect,nullptr,D3DLOCK_READONLY)),active(SUCCEEDED(result)) {}
-  HRESULT finish() { if(active) { active=false;return texture->UnlockRect(0); }return result; }
+  Texture* texture;UINT level;D3DLOCKED_RECT rect{};HRESULT result;bool active;
+  explicit ReadLock(Texture* value,UINT at=0):texture(value),level(at),result(value->LockRect(at,&rect,nullptr,D3DLOCK_READONLY)),active(SUCCEEDED(result)) {}
+  HRESULT finish() { if(active) { active=false;return texture->UnlockRect(level); }return result; }
   ~ReadLock() { (void)finish(); }
 };
+template<class Texture> std::vector<uint8_t> mipDds(Texture* texture,const D3DSURFACE_DESC& base,bool srgb,UINT levels) {
+  const auto bytes=mipBytes(base.Width,base.Height,base.Format,srgb,levels);if(!bytes) { return {}; }
+  std::vector<uint8_t> out;out.reserve(size_t(bytes)+kDdsHeaderBytes);UINT width=base.Width,height=base.Height;
+  for(UINT level=0;level<levels;++level) {
+    D3DSURFACE_DESC desc{};
+    if(FAILED(texture->GetLevelDesc(level,&desc))||desc.Width!=width||desc.Height!=height||desc.Format!=base.Format||desc.Usage!=base.Usage) { return {}; }
+    ReadLock<Texture> lock(texture,level);if(FAILED(lock.result)) { return {}; }
+    auto encoded=dds(width,height,layout(width,height,base.Format,srgb),lock.rect.pBits,lock.rect.Pitch);
+    if(FAILED(lock.finish())||encoded.empty()) { return {}; }
+    out.insert(out.end(),encoded.begin()+(level?kDdsHeaderBytes:0),encoded.end());width=std::max(1u,width/2);height=std::max(1u,height/2);
+  }
+  uint32_t header[37]{};std::memcpy(header,out.data(),sizeof(header));header[7]=levels;
+  if(levels>1) { header[2]|=0x20000;header[27]|=0x400008; }std::memcpy(out.data(),header,sizeof(header));return out;
+}
 struct Source {
   std::string key="synthetic",digest,file,reason="unavailable";std::filesystem::path path;
-  uint32_t width=0,height=0,format=0;bool srgb=false;uint8_t alphaTest=7,alphaRef=0,wrapU=1,wrapV=1,filter=1;
+  uint32_t width=0,height=0,format=0,levels=0,fullMipLevels=0;bool srgb=false;uint8_t alphaTest=7,alphaRef=0,wrapU=1,wrapV=1,filter=1;
   bool textured() const { return !path.empty(); }
 };
 inline bool wrap(DWORD value,uint8_t& out) {
@@ -63,7 +86,7 @@ class Cache {
   uint64_t frame=0,frameBytes=0;unsigned frameReads=0;
 public:
   uint64_t bytes=0,exported=0,failed=0,deferred=0;
-  static constexpr uint64_t maxBytes=64ull*1024*1024;
+  static constexpr uint64_t maxBytes=128ull*1024*1024;
   void clear() { entries.clear(); }
   size_t held() const { return entries.size(); }
   Source acquire(IDirect3DDevice9* d,const std::filesystem::path& directory,uint64_t at,uint32_t material) {
@@ -83,19 +106,19 @@ public:
     auto* texture=static_cast<IDirect3DTexture9*>(base.value);const auto id=std::make_pair(reinterpret_cast<uintptr_t>(texture),s.srgb);
     const auto found=entries.find(id);
     if(found!=entries.end()) {
-      const auto& cached=found->second->source;s.path=cached.path;s.file=cached.file;s.digest=cached.digest;s.width=cached.width;s.height=cached.height;s.format=cached.format;s.reason=cached.reason;
+      const auto& cached=found->second->source;s.path=cached.path;s.file=cached.file;s.digest=cached.digest;s.width=cached.width;s.height=cached.height;s.format=cached.format;s.reason=cached.reason;s.levels=cached.levels;s.fullMipLevels=cached.fullMipLevels;
       s.key=(s.textured()?s.digest:s.key)+suffix;return s;
     }
     if(frame!=at) { frame=at;frameBytes=0;frameReads=0; }
     D3DSURFACE_DESC desc{};const auto described=texture->GetLevelDesc(0,&desc);
     const auto l=layout(desc.Width,desc.Height,desc.Format,s.srgb);
     if(FAILED(described)||!l.dxgi||(desc.Usage&(D3DUSAGE_DYNAMIC|D3DUSAGE_RENDERTARGET|D3DUSAGE_DEPTHSTENCIL))) { s.reason="base_texture_format_or_usage_unsupported";s.key+=suffix;++failed;return s; }
-    s.width=desc.Width;s.height=desc.Height;s.format=uint32_t(desc.Format);
-    if(entries.size()>=128||l.bytes()+148>maxBytes-bytes) { s.reason="texture_cache_budget";s.key+=suffix;++deferred;return s; }
-    if(frameReads>=4||l.bytes()+148>(16ull*1024*1024+4*148)-frameBytes) { s.reason="texture_frame_budget";s.key+=suffix;++deferred;return s; }
-    ++frameReads;ReadLock<IDirect3DTexture9> lock(texture);
-    std::vector<uint8_t> encoded;
-    if(SUCCEEDED(lock.result)) { encoded=dds(desc.Width,desc.Height,l,lock.rect.pBits,lock.rect.Pitch);if(FAILED(lock.finish())) { encoded.clear(); } }
+    s.width=desc.Width;s.height=desc.Height;s.format=uint32_t(desc.Format);s.levels=texture->GetLevelCount();s.fullMipLevels=fullLevels(desc.Width,desc.Height);
+    const auto payload=mipBytes(desc.Width,desc.Height,desc.Format,s.srgb,s.levels);
+    if(!payload) { s.reason="base_texture_mip_layout_unsupported";s.key+=suffix;++failed;return s; }
+    if(entries.size()>=256||payload+148>maxBytes-bytes) { s.reason="texture_cache_budget";s.key+=suffix;++deferred;return s; }
+    if(frameReads>=4||payload+148>(kMaxMipPayloadBytes+4*148)-frameBytes) { s.reason="texture_frame_budget";s.key+=suffix;++deferred;return s; }
+    ++frameReads;auto encoded=mipDds(texture,desc,s.srgb,s.levels);
     auto entry=std::make_unique<Entry>();texture->AddRef();entry->texture=texture;
     if(encoded.empty()) { s.reason="base_texture_read_unavailable";++failed; }
     else {
@@ -104,7 +127,7 @@ public:
       std::filesystem::create_directories(directory/"model-textures");s.file="model-textures/"+s.digest+".dds";s.path=directory/s.file;
       if(!std::filesystem::exists(s.path)) { std::ofstream output(s.path,std::ios::binary);output.write(reinterpret_cast<const char*>(encoded.data()),std::streamsize(encoded.size()));output.close();if(!output) { throw std::runtime_error("write model texture"); } }
       else if(ldb_rt_file::fileSha256(s.path)!=s.digest) { throw std::runtime_error("existing model texture differs"); }
-      s.reason="sampler0_base_level_dds_dx10";bytes+=encoded.size();frameBytes+=encoded.size();++exported;
+      s.reason="sampler0_source_mips_dds_dx10";bytes+=encoded.size();frameBytes+=encoded.size();++exported;
     }
     entry->source=s;entries.emplace(id,std::move(entry));s.key=(s.textured()?s.digest:s.key)+suffix;return s;
   }

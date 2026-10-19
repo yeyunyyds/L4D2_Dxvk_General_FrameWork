@@ -50,7 +50,7 @@ const std::pair<const char*, const char*> options[] = {
   {"rtx.upscalerType", "0"}, {"rtx.enableRayReconstruction", "False"},
   {"rtx.sceneScale", "0.3937007874"},
   {"rtx.fallbackLightMode", "2"}, {"rtx.fallbackLightType", "1"},
-  {"rtx.fallbackLightRadiance", "3000,3000,3000"}, {"rtx.fallbackLightRadius", "5"},
+  {"rtx.fallbackLightRadiance", "30,30,30"}, {"rtx.fallbackLightRadius", "5"},
   {"rtx.fallbackLightPositionOffset", "0,0,0"}, {"rtx.enableFallbackLightShaping", "False"},
   {"rtx.fallbackLightDirection", "0,0,-1"},
   {"rtx.autoExposure.enabled", "True"}, {"rtx.autoExposure.evMinValue", "-2"},
@@ -165,23 +165,24 @@ void audit(IDirect3DDevice9* device, const draw_observe::Snapshot& snapshot) noe
 struct SceneCounts { uint64_t attempts=0,ready=0,reconstructed=0,fallback=0;std::map<std::string,uint64_t> reasons; };
 std::array<SceneCounts,4> sceneCounts{};
 std::array<unsigned,4> sceneSampleCounts{};
-std::array<std::array<unsigned,4>,4> sceneFamilyCounts{};
+std::array<std::array<unsigned,5>,4> sceneFamilyCounts{};
 std::set<std::array<uint64_t,16>> sceneSampled;
-constexpr unsigned sceneLimits[]={6,48,96,48};
-constexpr uint64_t sceneByteLimits[]={2u*1024*1024,2u*1024*1024,2u*1024*1024,12u*1024*1024};
+constexpr unsigned sceneLimits[]={6,48,96,48,24};
+constexpr uint64_t sceneByteLimits[]={3u*1024*1024,3u*1024*1024,3u*1024*1024,16u*1024*1024};
 std::array<uint64_t,4> sceneBytes{};
-constexpr uint64_t sceneFamilyByteLimits[][4]={{128u*1024,640u*1024,512u*1024,768u*1024},{128u*1024,640u*1024,512u*1024,768u*1024},{128u*1024,640u*1024,512u*1024,768u*1024},{256u*1024,4096u*1024,1792u*1024,6144u*1024}};
-std::array<std::array<uint64_t,4>,4> sceneFamilyBytes{};
-std::array<std::array<unsigned,4>,4> sceneQuotaOmitted{},scenePayloadOmitted{};
+constexpr uint64_t sceneFamilyByteLimits[][5]={{128u*1024,640u*1024,512u*1024,768u*1024,512u*1024},{128u*1024,640u*1024,512u*1024,768u*1024,512u*1024},{128u*1024,640u*1024,512u*1024,768u*1024,512u*1024},{256u*1024,4096u*1024,1792u*1024,6144u*1024,4096u*1024}};
+std::array<std::array<uint64_t,5>,4> sceneFamilyBytes{};
+std::array<std::array<unsigned,5>,4> sceneQuotaOmitted{},scenePayloadOmitted{};
 std::array<unsigned,4> sceneIdentityFailures{};
 std::map<uint32_t,bool> skyReadiness;
 void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args) noexcept {
   try {
     if (!events || device!=registered) { return; }
     const bool sky=scene_draw::candidate(s,true,false)==scene_draw::Mode::Sky;
-    if (!sky && !bulk_static::candidate(s)) { return; }
+    const bool infected=!std::strcmp(s.materialInfo.shader.data(),"Infected");
+    if (!sky && !infected && !bulk_static::candidate(s)) { return; }
     const auto phase=comparison.phase();const auto index=size_t(phase);
-    const unsigned group=sky?0u:bulk_static::customModel(s)?3u:bulk_static::family(s.materialInfo.shader.data())==1?1u:2u;
+    const unsigned group=infected?4u:sky?0u:bulk_static::customModel(s)?3u:bulk_static::family(s.materialInfo.shader.data())==1?1u:2u;
     static_draw::Ref<IDirect3DVertexShader9> identityShader;static_draw::Ref<IDirect3DVertexBuffer9> identityBuffer;UINT identityOffset=0,identityStride=0;
     const auto shaderIdentity=device->GetVertexShader(&identityShader.value),bufferIdentity=device->GetStreamSource(0,&identityBuffer.value,&identityOffset,&identityStride);
     if (FAILED(shaderIdentity) || FAILED(bufferIdentity)) {
@@ -192,8 +193,8 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     for (unsigned i=0;i<6;++i) { key[10+i]=args[i]; }
     if (!sceneSampled.insert(key).second) { return; }
     if (sceneFamilyCounts[index][group]>=sceneLimits[group]) { ++sceneQuotaOmitted[index][group];return; }
-    auto input=scene_input::capture(device,kind,type,args,true,group==1?scene_input::kModelLimits:group==3?scene_input::kAuditLimits:scene_input::Limits{},true);
-    const char* replay=group==3?"model_input_audit":"not_sky";
+    auto input=scene_input::capture(device,kind,type,args,true,group==1?scene_input::kModelLimits:group>=3?scene_input::kAuditLimits:scene_input::Limits{},true);
+    const char* replay=group>=3?"model_input_audit":"not_sky";
     if (sky) {
       auto warmed=scene_input::prepare(device,s,input);replay=warmed.reason;
       if (phase==world_diagnostics::CoveragePhase::BaselineWorld) { skyReadiness[s.material]=warmed.ready; }
@@ -320,6 +321,7 @@ void textureBinding(const model_texture::Source& source,const live_mesh::Submiss
     << ",\"textured\":" << (source.textured()?"true":"false") << ",\"reason\":\"" << source.reason
     << "\",\"file\":\"" << source.file << "\",\"sha256\":\"" << source.digest << "\",\"width\":" << source.width
     << ",\"height\":" << source.height << ",\"format\":" << source.format << ",\"srgb\":" << (source.srgb?"true":"false")
+    << ",\"mip_levels\":" << source.levels << ",\"full_mip_levels\":" << source.fullMipLevels
     << ",\"alpha_test\":" << unsigned(source.alphaTest) << ",\"alpha_ref\":" << unsigned(source.alphaRef)
     << ",\"filter\":" << unsigned(source.filter) << ",\"wrap_u\":" << unsigned(source.wrapU) << ",\"wrap_v\":" << unsigned(source.wrapV)
     << ",\"material\":\"" << live_mesh::name(liveMaterial(comparison.models())) << "\"}\n" << std::flush;
@@ -452,7 +454,7 @@ void sceneSummary(uint64_t frame) {
   events << "{\"event\":\"scene_input_counts\",\"frame\":" << frame << ",\"phase\":\"" << world_diagnostics::name(comparison.phase())
     << "\",\"payload_bytes\":" << sceneBytes[index] << ",\"captured\":" << sceneSampleCounts[index] << ",\"identity_failures\":" << sceneIdentityFailures[index];
   const auto counts=[&](const char* name,const auto& values) {
-    events << ",\"" << name << "\":[";for (unsigned i=0;i<4;++i) { if (i) { events << ','; }events << values[i]; }events << ']';
+    events << ",\"" << name << "\":[";for (unsigned i=0;i<values.size();++i) { if (i) { events << ','; }events << values[i]; }events << ']';
   };
   counts("family_payload_bytes",sceneFamilyBytes[index]);counts("family_captured",sceneFamilyCounts[index]);counts("family_quota_omitted",sceneQuotaOmitted[index]);counts("family_payload_omitted",scenePayloadOmitted[index]);events << "}\n" << std::flush;
   }
@@ -534,8 +536,8 @@ void capture(IDirect3DDevice9* device, uint64_t frame) noexcept {
         << "\",\"value\":\"" << value << "\",\"code\":" << uint32_t(code) << "}\n" << std::flush;
       return code==REMIXAPI_ERROR_CODE_SUCCESS;
     });
-    if(advanced&&(frame==300||frame==540)) {
-      const char* value=frame==300?"30,30,30":"3000,3000,3000";
+    if(advanced&&(frame==300||frame==360||frame==540)) {
+      const char* value=frame==300?"3,3,3":"30,30,30";
       const auto code=api.SetConfigVariable("rtx.fallbackLightRadiance",value);
       events << "{\"event\":\"model_light_config_requested\",\"after_present\":" << frame
         << ",\"value\":\"" << value << "\",\"code\":" << uint32_t(code) << "}\n" << std::flush;
@@ -587,10 +589,10 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy",0,"v18_sampler0_DDS_alpha_material_rebind_low_light_recovery");
-    event("world_coverage_revision",0,"18");
+    event("coverage_comparison_policy",0,"v19_source_mips_128MiB_low_light_pending_shader_exit_review");
+    event("world_coverage_revision",0,"19");
     event("api_mesh_policy",0,"per_frame_pose_direct_mesh_early_fence_retirement_soft_budget_original_draw_ignored_no_source_thread_changes");
-    event("model_texture_policy",0,"sampler0_static_base_level_DDS_DX10_sRGB_original_alpha_64MiB_128_refs_4_reads_per_frame");
+    event("model_texture_policy",0,"sampler0_all_source_mips_DDS_DX10_sRGB_original_alpha_128MiB_256_refs_4_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw};

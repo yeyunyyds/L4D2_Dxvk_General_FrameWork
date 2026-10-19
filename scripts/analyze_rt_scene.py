@@ -44,7 +44,8 @@ def analyze(directory):
     if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
     if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
     events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-    v18=any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
+    v19=any(e.get('event')=='world_coverage_revision' and e.get('value')=='19' and e.get('code')==0 for e in events)
+    v18=v19 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
     v17=v18 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='17' for e in events)
     v16=v17 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='16' for e in events)
     v15=v16 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='15' for e in events)
@@ -56,7 +57,7 @@ def analyze(directory):
     requested=v10 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='9' for e in events)
     skinned=v13 and any(e.get('event')=='scene_input_policy' and e.get('code')==0 and e.get('value')=='skinned_materials_v2' for e in events)
     wide=skinned or v12 and any(e.get('event')=='scene_input_policy' and e.get('code')==0 and e.get('value')=='wide_materials_v1' for e in events)
-    sample_limit=198 if wide else 34 if v12 else 24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
+    sample_limit=222 if v19 else 198 if wide else 34 if v12 else 24 if v10 else 12;stride_limit=128 if v10 else 64;payload_limit=(80 if v10 else 24)*1024*1024
     samples=[e for e in events if e.get('event')=='scene_input_sample'];summaries=[e for e in events if e.get('event')=='sky_rebuild_counts']
     errors=[e['event'] for e in events if e.get('event') in ('scene_input_exception','sky_rebuild_exception','model_rebuild_exception','scene_input_identity_failed','model_payload_write_failed')];reviews=[];ordinals=set();phases=Counter();family_counts=Counter();files=set();used=0
     for sample in samples:
@@ -64,9 +65,9 @@ def analyze(directory):
             phase=sample['phase'];ordinal=sample['ordinal'];phases[phase]+=1
             if phase not in PHASES or phases[phase]>sample_limit or ordinal in ordinals or not isinstance(ordinal,int) or ordinal<=0:raise ValueError('invalid_scene_sample_identity_or_budget')
             if v10:
-                group=0 if sample['shader']=='NekoSky' else 1 if sample['shader']=='VertexLitGeneric' else 3 if v12 and sample['shader']=='NekoToon' else 2
+                group=4 if v19 and sample['shader']=='Infected' else 0 if sample['shader']=='NekoSky' else 1 if sample['shader']=='VertexLitGeneric' else 3 if v12 and sample['shader']=='NekoToon' else 2
                 family_counts[(phase,group)]+=1
-                if family_counts[(phase,group)]>((6,48,96,48) if wide else (6,12,10,6) if v12 else (6,8,10))[group]:raise ValueError('scene_family_quota_exceeded')
+                if family_counts[(phase,group)]>((6,48,96,48,24) if v19 else (6,48,96,48) if wide else (6,12,10,6) if v12 else (6,8,10))[group]:raise ValueError('scene_family_quota_exceeded')
             ordinals.add(ordinal);payload={}
             for item in sample['files']:
                 name=item['file'];file=directory/name
@@ -96,14 +97,14 @@ def analyze(directory):
             review['shader_bytecode']={k:instructions(v) for k,v in payload.items() if k in ('vs.bin','ps.bin')}
             if sample['geometry_hresult']==0:
                 count=sample['vertex_count'];first=sample['first_absolute_vertex'];stride=sample['stride'];kind=sample['kind'];args=sample['args']
-                max_vertices=32768 if v13 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 16384 if v12 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 4096
+                max_vertices=32768 if v13 and sample['shader'] in (('VertexLitGeneric','NekoToon','Infected') if v19 else ('VertexLitGeneric','NekoToon')) else 16384 if v12 and sample['shader'] in (('VertexLitGeneric','NekoToon','Infected') if v19 else ('VertexLitGeneric','NekoToon')) else 4096
                 window=wide and sample.get('geometry_window') is True
                 if not 0<count<=max_vertices or not 0<=first or (not window and first+count>max_vertices) or not 1<=stride<=stride_limit or len(payload.get('vertices.bin',b''))!=count*stride:raise ValueError('scene_vertex_range_or_payload')
                 decl=payload.get('declaration.bin',b'')
                 if len(decl)%8 or len(decl)>520 or decl[-8:]!=bytes.fromhex('ff00000011000000'):raise ValueError('invalid_scene_declaration')
                 if kind==2:
                     width=sample['index_bytes'];n=args[4]*3 if sample['topology']==4 else args[4]+2
-                    if width not in (2,4) or n>(131072 if v13 and sample['shader'] in ('VertexLitGeneric','NekoToon') else 131072 if v12 and sample['shader']=='NekoToon' else 65536 if v12 and sample['shader']=='VertexLitGeneric' else 16384) or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
+                    if width not in (2,4) or n>(131072 if v13 and sample['shader'] in (('VertexLitGeneric','NekoToon','Infected') if v19 else ('VertexLitGeneric','NekoToon')) else 131072 if v12 and sample['shader']=='NekoToon' else 65536 if v12 and sample['shader']=='VertexLitGeneric' else 16384) or len(payload.get('indices.bin',b''))!=n*width:raise ValueError('invalid_scene_index_payload')
                     indices=struct.unpack('<'+('H' if width==2 else 'I')*n,payload['indices.bin'])
                     signed=args[0] if args[0]<2**31 else args[0]-2**32
                     if (first!=signed+min(indices) or count!=max(indices)-min(indices)+1 if window else first!=signed+args[1] or count!=args[2]) or any(not args[1]<=i<args[1]+args[2] for i in indices):raise ValueError('scene_index_outside_vertices')
@@ -132,11 +133,11 @@ def analyze(directory):
             phase=e.get('phase');position=PHASES.index(phase) if phase in PHASES else 0
             rows=[s for s in samples if s.get('phase')==phase];saved=sum(i['size'] for s in rows for i in s.get('files',[]))
             counts=e.get('family_captured',[]);quota=e.get('family_quota_omitted',[]);payload=e.get('family_payload_omitted',[])
-            if any(len(v)!=4 or any(not isinstance(x,int) or x<0 for x in v) for v in (counts,quota,payload)) or counts!=[family_counts[(phase,i)] for i in range(4)] or e.get('captured')!=len(rows) or e.get('payload_bytes')!=saved or saved>((12 if skinned else 8) if position==3 else 2)*1024*1024:errors.append('inconsistent_wide_capture_counts')
+            if any(len(v)!=(5 if v19 else 4) or any(not isinstance(x,int) or x<0 for x in v) for v in (counts,quota,payload)) or counts!=[family_counts[(phase,i)] for i in range(5 if v19 else 4)] or e.get('captured')!=len(rows) or e.get('payload_bytes')!=saved or saved>((16 if v19 else 12 if skinned else 8) if position==3 else 3 if v19 else 2)*1024*1024:errors.append('inconsistent_wide_capture_counts')
             family_bytes=e.get('family_payload_bytes',[])
-            group=lambda s:0 if s['shader']=='NekoSky' else 1 if s['shader']=='VertexLitGeneric' else 3 if s['shader']=='NekoToon' else 2
-            saved_by_family=[sum(f['size'] for s in rows if group(s)==i for f in s.get('files',[])) for i in range(4)]
-            family_limits=((256,4096,1792,6144) if skinned else (256,3072,1792,3072)) if position==3 else (128,640,512,768)
+            group=lambda s:4 if v19 and s['shader']=='Infected' else 0 if s['shader']=='NekoSky' else 1 if s['shader']=='VertexLitGeneric' else 3 if s['shader']=='NekoToon' else 2
+            saved_by_family=[sum(f['size'] for s in rows if group(s)==i for f in s.get('files',[])) for i in range(5 if v19 else 4)]
+            family_limits=((256,4096,1792,6144,4096) if v19 else (256,4096,1792,6144) if skinned else (256,3072,1792,3072)) if position==3 else (128,640,512,768,512) if v19 else (128,640,512,768)
             if family_bytes!=saved_by_family or any(n>limit*1024 for n,limit in zip(saved_by_family,family_limits)):errors.append('inconsistent_wide_family_payload')
             if e.get('identity_failures',0):errors.append('scene_input_identity_failed')
     models=[e for e in events if e.get('event')=='model_rebuild_counts']

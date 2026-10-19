@@ -15,7 +15,8 @@ CONFIG=('rtx.enablePreservePath','rtx.useBuffersDirectly','rtx.bloom.enable','rt
 
 def analyze(directory,events):
     errors=[];directory=Path(directory);samples=[];payload_bytes=0
-    v18=any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
+    v19=any(e.get('event')=='world_coverage_revision' and e.get('value')=='19' and e.get('code')==0 for e in events)
+    v18=v19 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
     v17=v18 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='17' and e.get('code')==0 for e in events)
     stages=STAGES_V18 if v18 else STAGES;materials=MATERIALS_V18 if v18 else MATERIALS
     reasons=('draw_limit','frame_geometry_bytes','live_geometry_bytes','mesh_entries','gpu_backlog')

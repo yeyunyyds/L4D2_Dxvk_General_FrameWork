@@ -4,6 +4,7 @@ import hashlib
 import json
 import lzma  # Required by lossless result ZIP compression; checked in packaged Python.
 import os
+import re
 from pathlib import Path
 import secrets
 import shutil
@@ -231,6 +232,38 @@ def collect_game_logs(game,directory,since):
     save(directory/'game-log-inventory.json',inventory)
 
 
+def review_exit_logs(directory,game_pid=None):
+    """Keep completed data separate from crashes during later process teardown."""
+    directory=Path(directory);faults=[];cleanup=set();unbound=[];remaining=0
+    inventory=directory/'game-log-inventory.json'
+    entries=json.loads(inventory.read_text(encoding='utf-8')).get('copied',[]) if inventory.is_file() else []
+    for item in entries:
+        name=item['file'].replace('\\','/');relative=Path(name)
+        if relative.is_absolute() or '..' in relative.parts:raise ValueError('Unsafe exit log path')
+        path=directory/relative
+        if path.suffix.lower()!='.log':continue
+        if path.stat().st_size>16*1024*1024 or digest(path)!=item['sha256']:raise ValueError('Exit log hash/size mismatch')
+        text=path.read_text(encoding='utf-8',errors='replace')
+        if 'Shutdown cleanup successful' in text and path.name in ('bridge32.log','bridge64.log'):cleanup.add(path.name)
+        for block in text.split('===== L4D2_BRIDGE_EXCEPTION_BEGIN =====')[1:17]:
+            block=block.split('===== L4D2_BRIDGE_EXCEPTION_END =====')[0]
+            identity=re.search(r'side=(client|host) pid=(\d+)',block);code=re.search(r'exception_code=(0x[0-9a-fA-F]+)',block)
+            if not identity or not code:unbound.append(name);continue
+            side,pid=identity.group(1),int(identity.group(2))
+            if side=='client' and game_pid is not None and pid!=game_pid:unbound.append(name);continue
+            target=re.search(r'target_address=(0x[0-9a-fA-F]+)',block)
+            modules=re.findall(r'frame\d+ address=\S+ module=([^\s]+).*?module_offset=(0x[0-9a-fA-F]+)',block)
+            faults.append({'file':name,'side':side,'pid':pid,'code':code.group(1),'target':target.group(1) if target else None,
+                           'named_frames':[{'module':m,'offset':o} for m,o in modules[:8]],
+                           'pid_bound':side=='client' and game_pid==pid,'phase':'exit_logs_requires_timing_review'})
+    runtime=directory/'remix-dxvk.log'
+    if runtime.is_file() and runtime.stat().st_size<=16*1024*1024:
+        numbers=re.findall(r'\[(\d+)\] common device objects were not disposed of',runtime.read_text(errors='replace'));remaining=max(map(int,numbers),default=0)
+    status='abnormal' if faults else 'unverified' if unbound or len(cleanup)!=2 else 'cleanup_warning' if remaining else 'clean_reported'
+    return {'schema':1,'status':status,'exceptions':faults,'unbound_exception_logs':unbound,'cleanup_logs':sorted(cleanup),
+            'backend_objects_remaining':remaining,'limits':'Log evidence only. Cleanup messages alone do not prove a clean process exit; named stack frames do not establish the unique culprit.'}
+
+
 def finish_capture(directory,root,pid,report,notify):
     # The completed Draw evidence is independent of the subsequent live probe.
     # Always persist its analysis, including when the process exits meanwhile.
@@ -326,6 +359,17 @@ def startup_modules(directory,pid,notify):
         try:
             with WindowsProcess(process_id) as process:
                 entry['identity']=process.identity();entry['modules']=process.modules()[:1024]
+            if role=='game':
+                entry['component_files']=[]
+                for module in entry['modules']:
+                    if module.get('name','').casefold() not in ('necola.dll','studiorender.dll'):continue
+                    file=Path(module['path']);metadata={'module':module['name'],'mapped_size':module['size']}
+                    try:
+                        size=file.stat().st_size
+                        if size>64*1024*1024:raise ValueError('Component file exceeds metadata hash budget')
+                        metadata.update(size=size,sha256=digest(file))
+                    except (OSError,ValueError) as error:metadata['error']=str(error)
+                    entry['component_files'].append(metadata)
         except (OSError,ValueError) as error:entry['error']=str(error)
     save(directory/'startup-modules.json',result)
     notify('Startup module inventory saved. This does not mean the F9 capture is complete.')
@@ -361,7 +405,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if world:
             config='\n'.join(['rtx.enableRaytracing = False','rtx.useVertexCapture = False','rtx.upscalerType = 0',
                 'rtx.enableRayReconstruction = False','rtx.sceneScale = 0.3937007874',
-                'rtx.fallbackLightMode = 2','rtx.fallbackLightType = 1','rtx.fallbackLightRadiance = 3000,3000,3000','rtx.fallbackLightRadius = 5',
+                'rtx.fallbackLightMode = 2','rtx.fallbackLightType = 1','rtx.fallbackLightRadiance = 30,30,30','rtx.fallbackLightRadius = 5',
                 'rtx.fallbackLightPositionOffset = 0,0,0','rtx.enableFallbackLightShaping = False','rtx.fallbackLightDirection = 0,0,-1',
                 'rtx.autoExposure.enabled = True','rtx.autoExposure.evMinValue = -2','rtx.autoExposure.evMaxValue = 5',
                 'rtx.tonemappingMode = 1','rtx.localtonemap.exposure = 0.75',
@@ -372,7 +416,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Textured Mesh v18: press F9 once; slow movement/turning allowed. World/HUD31-120; sky121-180; Neko textures181-240; combined textures241-300; reduced headlamp301-360; metal361-420; alpha421-480; emissive481-540; recovery541-600. DDS/alpha evidence and adjacent poses are automatic.')
+        if world:notify('Textured Mesh v19: press F9 once; slow movement/turning allowed. World/HUD31-120; sky121-180; Neko textures181-240; combined textures241-300; headlamp30 by default; headlamp3 at301-360; metal361-420; alpha421-480; emissive481-540; recovery541-600. All source mip levels, bounded Infected audit, alpha evidence and adjacent poses are automatic.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None
@@ -381,6 +425,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
             if len(candidates)>1:raise ValueError('Multiple L4D2 processes found')
             if candidates:
                 pid=candidates[0];last_alive=time.monotonic()
+                report['game_pid']=pid
                 if first_alive is None:first_alive=last_alive
                 if world and not startup_saved and last_alive-first_alive>=5:
                     startup_saved=True
@@ -419,6 +464,13 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
             try:collect_game_logs(location,directory,started_at)
             except OSError as error:
                 report['collection']='incomplete';report['errors'].append('Game log collection: '+str(error))
+            try:
+                exit_review=review_exit_logs(directory,report.get('game_pid'));save(directory/'exit-analysis.json',exit_review)
+                report['exit_status']=exit_review['status'];report['exit_exception_count']=len(exit_review['exceptions'])
+                report['backend_objects_remaining']=exit_review['backend_objects_remaining']
+                notify('Exit status: '+report['exit_status'].upper()+'. Capture completeness and process-exit acceptance are separate; see exit-analysis.json.')
+            except (OSError,ValueError,KeyError) as error:
+                report['exit_status']='unverified';report['exit_review_error']=str(error)
         report['collection_phase']='finalized'
         output=archive_result(directory,report)
         print('Collection: '+report['collection'].upper()+('. RT images still require review.' if report['collection']=='complete' else
@@ -433,4 +485,4 @@ if __name__=='__main__':
     a=p.parse_args();output=run(game=a.game,restore_only=a.restore,verify_only=a.verify_only)
     if output:
         summary=json.loads((output.with_suffix('')/'summary.json').read_text(encoding='utf-8'))
-        raise SystemExit(0 if summary['collection']=='complete' else 2)
+        raise SystemExit(3 if summary.get('exit_status')=='abnormal' else 0 if summary['collection']=='complete' else 2)
