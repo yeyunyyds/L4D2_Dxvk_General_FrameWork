@@ -91,9 +91,9 @@ int main() {
     }
     live_mesh::Limits limits;limits.bytes=2*g.bytes();live_mesh::Scene early(&api,limits);
     require(early.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1).success,"first pose");
-    const float b=0.1f,c=0.2f;std::memcpy(input.bytes.data(),&b,4);
+    const float secondPose=0.1f,thirdPose=0.2f;std::memcpy(input.bytes.data(),&secondPose,4);
     require(early.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2).success,"second pose");
-    std::memcpy(input.bytes.data(),&c,4);require(!early.begin(0,3),"early retirement query");
+    std::memcpy(input.bytes.data(),&thirdPose,4);require(!early.begin(0,3),"early retirement query");
     auto blocked=early.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3);
     require(blocked.deferred&&early.entries()==2,"incomplete pose freed to make space");
     require(!early.begin(1,3)&&early.entries()==1,"completed idle pose not retired before allocation");
