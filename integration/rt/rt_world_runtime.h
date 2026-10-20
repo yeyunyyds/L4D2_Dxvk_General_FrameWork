@@ -18,6 +18,9 @@ struct State {
   bool (*overlay)(IDirect3DDevice9*, const draw_observe::Snapshot&, D3DPRIMITIVETYPE, bool, static_draw::Report&, HRESULT&) noexcept = nullptr;
   uint64_t presents = 0;
   void (*presented)(IDirect3DDevice9*,uint64_t) noexcept = nullptr;
+  bool preview=false;
+  void (*startPreview)(IDirect3DDevice9*) noexcept = nullptr;
+  void (*previewStep)(IDirect3DDevice9*,bool) noexcept = nullptr;
 };
 inline State& state() { static State value; return value; }
 HMODULE load(const draw_observe::Request& request) noexcept;

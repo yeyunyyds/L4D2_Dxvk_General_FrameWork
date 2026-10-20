@@ -153,7 +153,7 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
           if (consumer->second->models() && ldb_rt::bulk_static::candidate(current) &&
               !(ldb_rt::consumer_world::classify(current,true)==ldb_rt::consumer_world::Decision::Selected &&
                 ldb_rt::consumer_world::target(graphics,current)==ldb_rt::consumer_world::Decision::Selected)) {
-            if (ldb_rt::bulk_static::family(current.materialInfo.shader.data())==1 || ldb_rt::bulk_static::customModel(current)) {
+            if (ldb_rt::bulk_static::family(current.materialInfo.shader.data())==1 || ldb_rt::bulk_static::family(current.materialInfo.shader.data())>=6) {
               auto& runtime=ldb_rt::world_runtime::state();HRESULT result=E_ABORT;
               if (runtime.model && !userMemory && runtime.model(graphics,current,consumer->second->kind(),type,consumer->second->args(),report,called,physical,result)) {
                 consumer->second->conversion(uid,ldb_rt::consumer_world::Decision::BulkStatic,report,called,physical);return result;

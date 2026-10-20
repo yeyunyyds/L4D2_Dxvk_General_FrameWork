@@ -106,10 +106,10 @@ def analyze(path):
                 if header or counts.total() != 1 or len(payload) not in (28,36):
                     raise ValueError('invalid_header')
                 version, session, device, frequency = struct.unpack_from('<IQQQ', payload)
-                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36),(5,36),(6,36),(7,36),(8,36),(9,36),(10,36),(11,36),(12,36),(13,36),(14,36),(15,36),(16,36)) or not all((session, device, frequency)):
+                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36),(5,36),(6,36),(7,36),(8,36),(9,36),(10,36),(11,36),(12,36),(13,36),(14,36),(15,36),(16,36),(17,36)) or not all((session, device, frequency)):
                     raise ValueError('invalid_identity')
                 header = {'session':session,'device':device,'frequency':frequency}
-                if version in (2,3,4,5,6,7,8,9,10,11,12,13,14,15,16):
+                if version in (2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17):
                     target,control=struct.unpack_from('<2I',payload,28)
                     if (target,control)!=((600 if version>=12 else 420 if version==11 else 240),30):raise ValueError('invalid_world_profile_boundaries')
                     header.update(profile='world_pilot',target_presents=target,control_presents=control)
@@ -127,6 +127,7 @@ def analyze(path):
                     if version==14:header['coverage_revision']=17
                     if version==15:header['coverage_revision']=18
                     if version==16:header['coverage_revision']=19
+                    if version==17:header['coverage_revision']=20
             elif event == 1:
                 if not header or pending is not None or len(payload) < SNAPSHOT.size + 32 + PIPELINE.size:
                     raise ValueError('unpaired_or_short_draw')
@@ -157,8 +158,8 @@ def analyze(path):
                     raise ValueError('invalid_draw_arguments')
                 kinds[kind] += 1
                 state_at = snapshot_size + 32
-                v8=header.get('coverage_revision') in (8,9,10,11,12,13,14,15,16,17,18,19)
-                v7=header.get('coverage_revision') in (7,8,9,10,11,12,13,14,15,16,17,18,19)
+                v8=header.get('coverage_revision') in (8,9,10,11,12,13,14,15,16,17,18,19,20)
+                v7=header.get('coverage_revision') in (7,8,9,10,11,12,13,14,15,16,17,18,19,20)
                 pipeline=PIPELINE_V8 if v8 else PIPELINE_V7 if v7 else PIPELINE
                 state = pipeline.unpack_from(payload, state_at)
                 failures, stream_offset, stride, stream_frequency = state[:4]
@@ -215,13 +216,17 @@ def analyze(path):
                 model_phase_safe=(header.get('coverage_revision')!=14 or shader not in ('VertexLitGeneric','NekoToon') or (240<=counts[3]<360 if shader=='NekoToon' else 180<=counts[3]<240 or 300<=counts[3]<360))
                 if header.get('coverage_revision')==15 and shader in ('VertexLitGeneric','NekoToon'):
                     model_phase_safe=(180<=counts[3]<540 if shader=='NekoToon' else 360<=counts[3]<540)
-                if header.get('coverage_revision') in (16,17,18,19) and shader in ('VertexLitGeneric','NekoToon'):
+                if header.get('coverage_revision') in (16,17,18,19,20) and shader in ('VertexLitGeneric','NekoToon'):
                     model_phase_safe=(180<=counts[3]<540 if shader=='NekoToon' else 240<=counts[3]<540)
-                pending_bulk_safe=(model_phase_safe and header.get('coverage_revision') in (10,11,12,13,14,15,16,17,18,19) and counts[3]>=180 and status==1 and fields[55] and fields[56] and flags==3
-                    and (shader in STATIC_SHADERS or header.get('coverage_revision') in (13,14,15,16,17,18,19) and shader=='NekoToon') and static_affine(matrices[:16]) and affine_rigid(matrices[16:32]) and camera
+                pending_bulk_safe=(model_phase_safe and header.get('coverage_revision') in (10,11,12,13,14,15,16,17,18,19,20) and counts[3]>=180 and status==1 and fields[55] and fields[56] and flags==3
+                    and (shader in STATIC_SHADERS or header.get('coverage_revision') in (13,14,15,16,17,18,19,20) and shader=='NekoToon') and static_affine(matrices[:16]) and affine_rigid(matrices[16:32]) and camera
                     and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==113 and (width,height)==fields[59:61]
                     and not failures and kind in (1,2) and topology in (4,5) and not alpha and depth==depth_write==1
-                    and stream_frequency==1 and stream_offset%4==0 and static_layout(declaration,stride,header.get('coverage_revision') in (11,12,13,14,15,16,17,18,19) and shader=='VertexLitGeneric' or header.get('coverage_revision') in (13,14,15,16,17,18,19) and shader=='NekoToon'))
+                    and stream_frequency==1 and stream_offset%4==0 and static_layout(declaration,stride,header.get('coverage_revision') in (11,12,13,14,15,16,17,18,19,20) and shader=='VertexLitGeneric' or header.get('coverage_revision') in (13,14,15,16,17,18,19,20) and shader=='NekoToon'))
+                if header.get('coverage_revision')==20 and shader=='Infected':
+                    infected_decl=bytes.fromhex('000000000200000000000c0002000300000018000100050000002000030006000100000004000a0102000000030000010200100002000301ff00000011000000')
+                    pending_bulk_safe=(240<=counts[3]<540 and scene_common and static_affine(matrices[:16]) and stride==48
+                        and declaration==infected_decl and vertex_format==0x80103 and depth==depth_write==1)
                 pending_hud_safe=(unlit_hud_enabled and status==1 and fields[55] and fields[56] and flags==3 and shader=='Neko_Engine_Post' and vertex_format==0x80001
                     and kind in (1,2) and topology==4 and stride==32 and stream_frequency==1 and stream_offset%4==0 and declaration==post_decl
                     and all_identity and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==21
@@ -234,7 +239,7 @@ def analyze(path):
                 layout['opaque_depth_draws'] += int(not alpha and not test and depth == 1 and depth_write == 1)
                 layout['query_failure_draws'] += int(bool(failures))
                 pending_static=None
-                if status==1 and flags==3 and fields[55] and fields[56] and (shader in STATIC_SHADERS or header.get('coverage_revision') in (12,13,14,15,16,17,18,19) and shader=='NekoToon') and camera and fmt==113:
+                if status==1 and flags==3 and fields[55] and fields[56] and (shader in STATIC_SHADERS or header.get('coverage_revision') in (12,13,14,15,16,17,18,19,20) and shader=='NekoToon') and camera and fmt==113:
                     phase='raster' if counts[3]<30 else 'baseline_world' if counts[3]<120 else 'expanded_sky' if v8 and counts[3]<180 else 'expanded_models' if v8 else 'expanded_world'
                     bones=any(declaration[i+6] in (1,2) for i in range(0,max(0,len(declaration)-8),8))
                     key=(phase,shader,vertex_format,layout_key,alpha,test,depth,depth_write,static_affine(matrices[:16]))
@@ -282,7 +287,7 @@ def analyze(path):
                 if pending!=uid or pending_conversion or len(payload)!=32 or not header.get('profile'):
                     raise ValueError('conversion_uid_or_scope_mismatch')
                 decision,code,capture,apply,restore,converted,called,physical=struct.unpack('<8I',payload)
-                if decision>(12 if header.get('coverage_revision') in (10,11,12,13,14,15,16,17,18,19) else 11 if header.get('coverage_revision') in (8,9) else 9) or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
+                if decision>(12 if header.get('coverage_revision') in (10,11,12,13,14,15,16,17,18,19,20) else 11 if header.get('coverage_revision') in (8,9) else 9) or code>10 or converted not in (0,1) or called not in (0,1):raise ValueError('invalid_conversion_report')
                 decisions[decision]+=1;conversions['reports']+=1;pending_conversion=True
                 if pending_attribution is not None:
                     pending_attribution['converted']+=converted

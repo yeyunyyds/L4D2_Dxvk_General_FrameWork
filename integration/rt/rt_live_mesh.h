@@ -4,6 +4,7 @@
 #include "rt_model_texture.h"
 #include "rt_world_remix_c.h"
 #include <map>
+#include <set>
 #include <sstream>
 #include <limits>
 
@@ -40,6 +41,9 @@ inline bool build(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVE
   out.vertices.clear();out.indices.clear();
   if(source.stride!=32 || !source.ownedDraw || source.bytes.empty() || source.bytes.size()%32 ||
      source.bytes.size()/32>32768 || (cull!=D3DCULL_NONE&&cull!=D3DCULL_CW&&cull!=D3DCULL_CCW)) { return false; }
+  const bool smooth=std::any_of(source.elements.begin(),source.elements.end(),[](const D3DVERTEXELEMENT9& e) {
+    return e.Stream==0&&e.Offset==20&&e.Type==D3DDECLTYPE_FLOAT3&&e.Usage==D3DDECLUSAGE_NORMAL&&e.UsageIndex==0;
+  });
   const size_t count=source.bytes.size()/32;std::vector<uint32_t> indices;
   if(kind==2) {
     if((source.indexBytes!=2&&source.indexBytes!=4)||source.indices.empty()||source.indices.size()%source.indexBytes ||
@@ -66,6 +70,11 @@ inline bool build(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVE
     if(length<1e-12) { n[0]=0;n[1]=0;n[2]=1; }else { for(double& x:n) { x/=length; } }
     for(unsigned j=0;j<3;++j) { const size_t i=size_t(t)*3+j;auto& a=out.vertices[i];a={};
       std::memcpy(a.position,p[j],12);std::memcpy(a.texcoord,p[j]+3,8);for(unsigned k=0;k<3;++k) { a.normal[k]=float(n[k]); }
+      if(smooth) {
+        float normal[3]{};std::memcpy(normal,source.bytes.data()+size_t(ix[j])*32+20,12);
+        const double norm=std::sqrt(double(normal[0])*normal[0]+double(normal[1])*normal[1]+double(normal[2])*normal[2]);
+        if(std::isfinite(norm)&&norm>1e-8) { for(unsigned k=0;k<3;++k) { a.normal[k]=float(normal[k]/norm); } }
+      }
       a.color=0xffffffff;out.indices[i]=uint32_t(i); }
   }
   return true;
@@ -79,7 +88,7 @@ inline remixapi_MaterialInfoOpaqueEXT opaque(Material kind) {
   return p;
 }
 struct MaterialRecord { remixapi_MaterialHandle handle=nullptr;Material variant=Material::Neutral;uint64_t last=0,hash=0; };
-struct Record { remixapi_MeshHandle mesh=nullptr;uint64_t last=0,bytes=0; };
+struct Record { remixapi_MeshHandle mesh=nullptr;uint64_t last=0,bytes=0;std::string materialKey; };
 enum class Budget : unsigned { None,Draws,FrameBytes,LiveBytes,Entries,GpuBacklog,Count };
 inline const char* name(Budget reason) {
   switch(reason) { case Budget::Draws:return "draw_limit";case Budget::FrameBytes:return "frame_geometry_bytes";
@@ -162,7 +171,7 @@ public:
       result.operation="create_mesh";result.code=uint32_t(api->CreateMesh(&mesh,&handle));if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
       // The pinned CreateMesh copies CPU arrays before returning and queues
       // Rc-owned buffers. CPU scratch can be dropped here, handles cannot.
-      found=meshes.emplace(result.key,Record{handle,at,geometry.bytes()}).first;
+      found=meshes.emplace(result.key,Record{handle,at,geometry.bytes(),materialKey}).first;
       bytes+=geometry.bytes();peakBytes=(std::max)(peakBytes,bytes);frameBytes+=geometry.bytes();++created;result.created=true;
     } else { ++reused; }
     auto& r=found->second;r.last=at;result.handle=reinterpret_cast<uint64_t>(r.mesh);
@@ -180,7 +189,15 @@ public:
         bytes-=r.bytes;it=meshes.erase(it);++destroyed;
       } else { ++it; }
     }
-    if(all&&meshes.empty()) { for(auto& item:materials) { auto& material=item.second;if(material.handle) { const auto code=uint32_t(api->DestroyMaterial(material.handle));if(code) { return code; }material.handle=nullptr; } }materials.clear(); }
+    std::set<std::string> referenced;for(const auto& mesh:meshes) { referenced.insert(mesh.second.materialKey); }
+    for(auto it=materials.begin();it!=materials.end();) {
+      auto& material=it->second;
+      const bool used=referenced.count(it->first)!=0;
+      if(!used&&material.last<=completed&&(all||(now>=material.last&&now-material.last>=2))) {
+        if(material.handle) { const auto code=uint32_t(api->DestroyMaterial(material.handle));if(code) { return code; } }
+        it=materials.erase(it);
+      } else { ++it; }
+    }
     return 0;
   }
 };

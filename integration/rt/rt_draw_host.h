@@ -80,13 +80,13 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.world ? 16 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    Writer header; header.u32(request.world ? 17 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
     if (request.world) { header.u32(uint32_t(world_diagnostics::kCoveragePresents)); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
-  bool expanded() const noexcept { return request.world && presents >= 120 && !finished; }
-  bool models() const noexcept { return request.world && presents >= 180 && !finished; }
-  bool sceneReady() const noexcept { return request.world && haveConvertedWorld && !finished; }
+  bool expanded() const noexcept { return request.world && presents >= 120 && (!finished||world_runtime::state().preview); }
+  bool models() const noexcept { return request.world && presents >= 180 && (!finished||world_runtime::state().preview); }
+  bool sceneReady() const noexcept { return request.world && haveConvertedWorld && (!finished||world_runtime::state().preview); }
   template<class Device> void draw(Device* device, uint32_t uid, const Snapshot& snapshot, uint32_t kind,
       D3DPRIMITIVETYPE type, const std::array<uint32_t, 6>& args) {
     if (snapshot.session != request.session) { ++failures; return; }
@@ -131,7 +131,12 @@ public:
     if (FAILED(result)) { ++failures; }
   }
   void present(uint32_t uid, HRESULT result) {
-    if (finished) { return; } Writer w; w.u32(uint32_t(result)); record(3, uid, w.data);
+    if(finished) {
+      if(request.world&&world_runtime::state().preview&&nativeDevice) {
+        if(SUCCEEDED(result)) { ++presents;world_runtime::state().presents=presents; }
+        if(world_runtime::state().previewStep) { world_runtime::state().previewStep(nativeDevice,SUCCEEDED(result)); }
+      }return;
+    } Writer w; w.u32(uint32_t(result)); record(3, uid, w.data);
     if (SUCCEEDED(result)) { ++presents; } else { ++failures; }
     if (request.world) { world_runtime::state().presents=presents; }
     if (request.world && SUCCEEDED(result) && world_runtime::state().active && nativeDevice && world_runtime::state().presented) {
@@ -142,6 +147,7 @@ public:
     trace.flush(); if (presents >= (request.world ? world_diagnostics::kCoveragePresents : 120u)) { finish(0); }
   }
   void reset(uint32_t uid, HRESULT result) {
+    if(finished&&request.world&&world_runtime::state().previewStep&&world_runtime::state().preview) { world_runtime::state().previewStep(nativeDevice,false); }
     if (finished) { return; } Writer w; w.u32(uint32_t(result)); record(4, uid, w.data); ++resets;
     // This batch is an observation segment. Do not silently join generations.
     finish(4);
@@ -157,6 +163,10 @@ public:
       if (pending) { ++failures; }
       Writer footer; footer.u64(draws); footer.u64(valid); footer.u64(presents); footer.u64(resets); footer.u64(failures); footer.u64(unobserved); footer.u32(reason);
       record(8, 0, footer.data); trace.close(); finished = true;
+      // The immutable 600-Present trace ends before the independent bounded
+      // preview starts. Publish its running marker before done to avoid a
+      // client polling race which would stop snapshots at600.
+      if(reason==0&&request.world&&nativeDevice&&world_runtime::state().startPreview) { world_runtime::state().startPreview(nativeDevice); }
       if (request.session && !fs::exists(doneFile(request))) {
         const auto temporary = fs::path(doneFile(request).wstring() + L".tmp");
         std::ofstream output(temporary, std::ios::binary);

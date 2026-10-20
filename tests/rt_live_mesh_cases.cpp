@@ -69,6 +69,14 @@ int main() {
   p.indices[0]=9;require(!live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry),"out-of-range index accepted");p.indices[0]=0;
   const float nan=std::numeric_limits<float>::quiet_NaN();std::memcpy(p.bytes.data(),&nan,4);require(!live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry),"NaN position accepted");const float zero=0;std::memcpy(p.bytes.data(),&zero,4);
   std::cout<<"RT live mesh normalized indices/strip winding/flat normals/finite bounds: PASS\n";
+  {
+    auto smooth=fixture::source();smooth.elements={{0,20,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,0},D3DDECL_END()};
+    const float normal[]={0,1,0};for(unsigned i=0;i<4;++i) { std::memcpy(smooth.bytes.data()+i*32+20,normal,12); }
+    require(live_mesh::build(smooth,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry)&&geometry.vertices[0].normal[1]==1,"source smooth normal lost");
+    std::memset(smooth.bytes.data()+20,0,12);
+    require(live_mesh::build(smooth,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry)&&geometry.vertices[0].normal[2]==1&&geometry.vertices[1].normal[1]==1,"invalid normal failed per-vertex geometric fallback");
+    std::cout<<"RT audited smooth normal import/per-vertex geometric fallback: PASS\n";
+  }
   auto api=fixture::table();live_mesh::Scene scene(&api);
   auto a=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1);require(a.success&&a.created&&fixture::created==1,"first API mesh not created");
   p.world[12]=10;auto b=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);require(b.success&&!b.created&&a.handle==b.handle&&scene.reused==1,"rigid transform recreated mesh");

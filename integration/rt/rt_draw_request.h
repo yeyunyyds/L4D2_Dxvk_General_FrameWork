@@ -42,4 +42,6 @@ inline bool readRequest(Request& output) noexcept {
   } catch (...) { return false; }
 }
 inline fs::path doneFile(const Request& r) { return r.output / ("rt-draw-done-" + std::to_string(r.session) + ".json"); }
+inline fs::path previewRunningFile(const Request& r) { return r.output/("rt-preview-running-"+std::to_string(r.session)+".json"); }
+inline fs::path previewDoneFile(const Request& r) { return r.output/("rt-preview-done-"+std::to_string(r.session)+".json"); }
 } // namespace ldb_rt::draw_observe

@@ -1,0 +1,289 @@
+{
+  "schema": 1,
+  "scope": "Actual production C++ Infected transform and camera gate over40uploaded samples, compiled on Linux with unchanged standard-only math; Windows/D3D dependencies stubbed, no GPU or full shader claim",
+  "source_header_sha256": "50102f34341d5bb3d376d76405255fec6407b88115011cb952cb93e0826f4ba2",
+  "samples": [
+    {
+      "ordinal": 512,
+      "vertices": 2188,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 519,
+      "vertices": 582,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 668,
+      "vertices": 682,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 669,
+      "vertices": 1117,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 670,
+      "vertices": 1159,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 671,
+      "vertices": 480,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 674,
+      "vertices": 420,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 679,
+      "vertices": 480,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 23771,
+      "vertices": 2188,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 23779,
+      "vertices": 582,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 23868,
+      "vertices": 682,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 23869,
+      "vertices": 1117,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 23870,
+      "vertices": 1159,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 23871,
+      "vertices": 480,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 23874,
+      "vertices": 420,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 23879,
+      "vertices": 480,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 92028,
+      "vertices": 2188,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 92029,
+      "vertices": 582,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104087,
+      "vertices": 420,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104088,
+      "vertices": 1143,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104089,
+      "vertices": 604,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 1,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104090,
+      "vertices": 1061,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104091,
+      "vertices": 1148,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104092,
+      "vertices": 480,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104093,
+      "vertices": 1155,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104094,
+      "vertices": 438,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104095,
+      "vertices": 2281,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104096,
+      "vertices": 1065,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104097,
+      "vertices": 426,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104098,
+      "vertices": 1143,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104099,
+      "vertices": 360,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104100,
+      "vertices": 1061,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104101,
+      "vertices": 1155,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104102,
+      "vertices": 480,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104103,
+      "vertices": 2312,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104104,
+      "vertices": 480,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104105,
+      "vertices": 604,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104106,
+      "vertices": 604,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 1,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104107,
+      "vertices": 1234,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    },
+    {
+      "ordinal": 104108,
+      "vertices": 1152,
+      "max_world_position_absolute_delta": 0.0,
+      "zero_normal_fallback_vertices": 0,
+      "camera_proof": "pass"
+    }
+  ],
+  "pass": true,
+  "limits": "Input layouts/program digests checked independently. Exact sampled VS position/baseUV/source-normal dependency only; no original PS/lighting, RT instance, or all-variant acceptance."
+}

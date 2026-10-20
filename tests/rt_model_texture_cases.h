@@ -91,6 +91,25 @@ inline void systemTextureExport() {
   require(model_texture::mipDds(&failed,base,true,4).empty()&&failed.locks==2&&failed.unlocks==1,"partial mip failure leaked lock or accepted truncated chain");
   require(model_texture::mipBytes(4096,4096,D3DFMT_DXT5,true,13)>16u*1024*1024&&!model_texture::mipBytes(8,4,D3DFMT_DXT5,true,5),"full chain size or overlong count accepted");
   check(d->SetTexture(0,nullptr));cache.clear();require(!cache.held(),"texture references not cleared");
+  {
+    model_texture::Cache::Limits policy;policy.resident=300;policy.spoolBytes=1024;policy.evidence=212;policy.refs=2;
+    model_texture::Cache working(policy);static_draw::Ref<IDirect3DTexture9> a,b;
+    check(d->SetSamplerState(0,D3DSAMP_SRGBTEXTURE,FALSE));
+    check(d->CreateTexture(4,4,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&a.value,nullptr));
+    check(d->CreateTexture(8,4,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&b.value,nullptr));
+    for(auto* texture:{a.value,b.value}) { D3DLOCKED_RECT lock{};D3DSURFACE_DESC desc{};check(texture->GetLevelDesc(0,&desc));check(texture->LockRect(0,&lock,nullptr,0));for(UINT y=0;y<desc.Height;++y) { std::memset(static_cast<uint8_t*>(lock.pBits)+size_t(y)*size_t(lock.Pitch),73,desc.Width*4); }check(texture->UnlockRect(0)); }
+    check(d->SetTexture(0,a.value));auto first=working.acquire(d,directory.path,181,1);
+    require(first.textured()&&first.evidenceSaved&&working.residentBytes==212,"working cache first export/evidence");
+    check(d->SetTexture(0,b.value));working.completedThrough(180);auto pending=working.acquire(d,directory.path,184,1);
+    require(!pending.textured()&&working.held()==1&&!working.evicted,"working cache evicted uncompleted source");
+    working.completedThrough(181);auto second=working.acquire(d,directory.path,184,1);
+    require(second.textured()&&!second.evidenceSaved&&working.evicted==1&&working.held()==1&&working.residentBytes==276&&working.bytes==488,"working eviction or independent evidence budget");
+    require(std::filesystem::is_regular_file(first.path)&&std::filesystem::is_regular_file(second.path),"async runtime backing file deleted");
+    check(d->SetTexture(0,a.value));working.completedThrough(184);auto reused=working.acquire(d,directory.path,186,1);
+    require(reused.textured()&&reused.digest==first.digest&&reused.evidenceSaved&&working.exported==2&&working.bytes==488&&working.evicted==2,"working cache repeated content charged twice");
+    check(d->SetTexture(0,nullptr));working.clear();require(working.residentBytes==0&&!working.held(),"working cache source release");
+    std::cout<<"RT texture working-set completed idle eviction/spool dedup/bounded evidence/backing lifetime: PASS\n";
+  }
   std::cout<<"RT model source mip chain NULLREF/hash/sRGB/small BC levels/partial failure unlock: PASS\n";
   std::cout<<"RT model texture system NULLREF 1024/2048 cache export/rehash/reuse/unlock/clear: PASS; GPU RT unrun\n";
 }

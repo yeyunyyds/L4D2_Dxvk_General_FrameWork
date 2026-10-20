@@ -16,7 +16,7 @@ inline const char* name(Phase phase) noexcept {
 }
 constexpr uint64_t kCoveragePresents=600;
 inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 && frame<=kCoveragePresents && frame%60==0); }
-enum class ModelStage : uint32_t { Off, Ordinary, Neko, Combined, Recovery, NekoPreserve, NekoRecheck, Matte, Directional, Count };
+enum class ModelStage : uint32_t { Off, Ordinary, Neko, Combined, Recovery, NekoPreserve, NekoRecheck, Matte, Directional, Preview, Count };
 constexpr size_t kModelStages=size_t(ModelStage::Count);
 constexpr unsigned kModelSampleLimit=64;
 inline ModelStage modelStage(uint64_t last) noexcept {
@@ -27,7 +27,8 @@ inline ModelStage modelStage(uint64_t last) noexcept {
 inline const char* name(ModelStage stage) noexcept {
   switch(stage) {
     case ModelStage::Ordinary:return "ordinary";case ModelStage::Neko:return "neko";
-    case ModelStage::Combined:return "combined";case ModelStage::Recovery:return "recovery";
+    case ModelStage::Combined:return "combined";case ModelStage::Preview:return "api_continuous_preview";
+    case ModelStage::Recovery:return "recovery";
     case ModelStage::NekoPreserve:return "neko_preserve";case ModelStage::NekoRecheck:return "neko_recheck";
     case ModelStage::Matte:return "combined_matte";case ModelStage::Directional:return "combined_directional";
     default:return "off";
@@ -89,6 +90,7 @@ inline const char* liveName(ModelStage stage) noexcept {
     case ModelStage::Combined:return "api_combined_metal";
     case ModelStage::Matte:return "api_combined_alpha";
     case ModelStage::Directional:return "api_combined_emissive";
+    case ModelStage::Preview:return "api_continuous_preview";
     case ModelStage::Recovery:return "recovery";
     default:return "off";
   }
@@ -101,12 +103,13 @@ inline const char* texturedName(ModelStage stage) noexcept {
     case ModelStage::Combined:return "api_combined_textured_metal";
     case ModelStage::Matte:return "api_combined_textured_alpha";
     case ModelStage::Directional:return "api_combined_textured_emissive";
+    case ModelStage::Preview:return "api_continuous_preview";
     case ModelStage::Recovery:return "recovery";
     default:return "off";
   }
 }
 inline bool liveInclude(ModelStage stage,bool neko) noexcept {
-  return stage==ModelStage::Neko?neko:stage==ModelStage::NekoPreserve || stage==ModelStage::NekoRecheck ||
+  return stage==ModelStage::Neko?neko:stage==ModelStage::Preview ||stage==ModelStage::NekoPreserve || stage==ModelStage::NekoRecheck ||
     stage==ModelStage::Combined || stage==ModelStage::Matte || stage==ModelStage::Directional;
 }
 class LiveCoverageComparison {

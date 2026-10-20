@@ -15,7 +15,8 @@ CONFIG=('rtx.enablePreservePath','rtx.useBuffersDirectly','rtx.bloom.enable','rt
 
 def analyze(directory,events):
     errors=[];directory=Path(directory);samples=[];payload_bytes=0
-    v19=any(e.get('event')=='world_coverage_revision' and e.get('value')=='19' and e.get('code')==0 for e in events)
+    v20=any(e.get('event')=='world_coverage_revision' and e.get('value')=='20' and e.get('code')==0 for e in events)
+    v19=v20 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='19' and e.get('code')==0 for e in events)
     v18=v19 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
     v17=v18 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='17' and e.get('code')==0 for e in events)
     stages=STAGES_V18 if v18 else STAGES;materials=MATERIALS_V18 if v18 else MATERIALS
@@ -66,7 +67,7 @@ def analyze(directory,events):
             check(type(e['ordinal']) is int and e['ordinal']>0 and e['ordinal'] not in ordinals,'live_sample_identity');ordinals.add(e['ordinal'])
             check(e['ignored_category_at_original_draw']&8 and e['cull'] in (1,2,3),'original_model_not_isolated')
             check(e['gpu_upload']=='pinned_CreateMesh_synchronous_copy_queued_owned_buffers','unknown_live_upload_contract')
-            check(e['shader'] in ('NekoToon','VertexLitGeneric') and (frame not in (239,240) or e['shader']=='NekoToon'),'unapproved_live_shader')
+            check(e['shader'] in (('NekoToon','VertexLitGeneric','Infected') if v20 else ('NekoToon','VertexLitGeneric')) and (frame not in (239,240) or e['shader']=='NekoToon'),'unapproved_live_shader')
             check(e['kind'] in (1,2) and e['topology'] in (4,5) and 0<e['vertices']<=32768 and 0<e['triangles']<=131072,'live_geometry_range')
             for key in ('world','view','projection'):
                 check(len(e[key])==16 and all(type(x) in (float,int) and math.isfinite(x) for x in e[key]),'live_invalid_matrix')

@@ -1,13 +1,15 @@
 #pragma once
 #include "rt_sky_shader.h"
+#include "rt_scene_draw.h"
 #include <string>
 
 namespace ldb_rt::model_shader {
 constexpr unsigned kMaxVertices=32768;
 // Complete SM3 programs audited in the 191200, 204924 and 004208 captures. A material name or
 // stride does not establish their position/UV contract. Unknown code falls back.
-enum class Profile { Unknown, Rigid, Bone0, Skin3, Neko3 };
+enum class Profile { Unknown, Rigid, Bone0, Skin3, Neko3, InfectedRigid };
 inline Profile profile(const std::string& sha) {
+  if(sha=="e9f1650bedd1575e46c486f522d3d0bb8a40e1abb8d78eb0d281daf93a267d72") { return Profile::InfectedRigid; }
   if (sha=="3a9ebc14b4895b0614690472b2500c46c505ff282e6868472849900975493e41" ||
       sha=="3566b4c8bed75da732f7c8cdb1bce1bb1b5025c932916b2d739ec748f9b8526b" ||
       sha=="dbb52fd1bc05cfef85a1ddf3a4e1943b3e9001182934ee4df94289cd7e27b91e") { return Profile::Rigid; }
@@ -90,6 +92,28 @@ inline Result reconstruct(Profile p,const sky_shader::Constants& c,const std::ve
   }
   out.valid=true;out.reason=p==Profile::Neko3?"original_vs_neko_three_weight":p==Profile::Skin3?"original_vs_three_weight":
     p==Profile::Bone0?"original_vs_rigid_bone_zero":"original_vs_model_matrix";return out;
+}
+// Exact v19 Infected VS reads FLOAT3 position/normal and FLOAT2 UV, no
+// palette or morph input. Use shader c58..60, never stale D3DTS_WORLD.
+inline Result infected(const sky_shader::Constants& c,const std::vector<uint8_t>& bytes) {
+  Result out;out.reason="infected_layout_or_control";
+  if(bytes.empty()||bytes.size()%48||bytes.size()/48>kMaxVertices||c[0][1]!=1) { return out; }
+  out.world[15]=1;
+  for(unsigned j=0;j<3;++j) { for(unsigned i=0;i<4;++i) { out.world[i*4+j]=c[58+j][i]; } }
+  // Audited captures are rigid. Normal vectors can be imported without an
+  // inverse-transpose only for this stricter contract; unknown transforms fall back.
+  if(!scene_draw::rigid(out.world)) { out.reason="infected_nonrigid_matrix";return out; }
+  out.vertices.resize(bytes.size()/48*32);
+  for(size_t n=0;n<bytes.size()/48;++n) {
+    float v[12]{};std::memcpy(v,bytes.data()+n*48,48);
+    for(unsigned j=0;j<8;++j) { if(!std::isfinite(v[j])||std::abs(v[j])>1e7f) { out.reason="infected_nonfinite_input";out.vertices.clear();return out; } }
+    auto* dst=out.vertices.data()+n*32;std::memcpy(dst,v,12);std::memcpy(dst+12,v+6,8);
+    // Canonical bytes20..31 hold local smooth normals. Zero remains explicit
+    // and the API builder falls back to that triangle's geometric normal.
+    const double length=std::sqrt(double(v[3])*v[3]+double(v[4])*v[4]+double(v[5])*v[5]);
+    if(length>1e-8) { float normal[3]{};for(unsigned j=0;j<3;++j) { normal[j]=float(v[3+j]/length); }std::memcpy(dst+20,normal,12); }
+  }
+  out.valid=true;out.reason="original_vs_infected_rigid48";return out;
 }
 inline bool cameraCompatible(const Result& result,const sky_shader::Constants& c,const std::array<float,16>& view,const std::array<float,16>& projection) {
   if (!result.valid) { return false; }

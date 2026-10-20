@@ -5,6 +5,19 @@ using namespace ldb_rt;
 void check(bool value,const char* why) { if (!value) { throw std::runtime_error(why); } }
 int main() {
   try {
+    {
+      sky_shader::Constants c{};c[0][1]=1;c[58]={0,1,0,123};c[59]={-1,0,0,-25};c[60]={0,0,1,8};
+      c[48]={7,3,0,9}; // Infected baseUV must not use the older model UV transform.
+      std::vector<uint8_t> input(2*48);const float v[]={1,2,3,0,3,4,.2f,.7f,1,0,0,1};
+      std::memcpy(input.data(),v,48);std::memcpy(input.data()+48,v,48);std::memset(input.data()+48+12,0,12);
+      auto r=model_shader::infected(c,input);check(r.valid&&r.vertices.size()==64&&r.world[12]==123&&r.world[1]==-1,"infected c58 world transform/canonical stride");
+      float out[8]{};std::memcpy(out,r.vertices.data(),32);check(out[0]==1&&std::abs(out[3]-.2f)<1e-6&&std::abs(out[4]-.7f)<1e-6&&std::abs(out[6]-.6f)<1e-6&&std::abs(out[7]-.8f)<1e-6,"infected position/baseUV/smooth normal");
+      std::memcpy(out,r.vertices.data()+32,32);check(out[5]==0&&out[6]==0&&out[7]==0,"invalid source normal not marked for fallback");
+      check(model_shader::profile("e9f1650bedd1575e46c486f522d3d0bb8a40e1abb8d78eb0d281daf93a267d72")==model_shader::Profile::InfectedRigid,"infected full-program gate missing");
+      c[58][1]=2;check(!model_shader::infected(c,input).valid,"infected nonrigid normal transform admitted");c[58][1]=1;
+      const float bad=NAN;std::memcpy(input.data()+12,&bad,4);check(!model_shader::infected(c,input).valid,"infected nonfinite normal admitted");
+      std::cout<<"RT Infected rigid48 exact program/c58/baseUV/source normals/invalid fallback: PASS\n";
+    }
     sky_shader::Constants c{};c[0][1]=1;c[58]={0,2,0,123};c[59]={-3,0,0,10};c[60]={0,0,.5f,-20};c[48]={2,-1,0,.25f};c[49]={1,3,0,-.5f};
     std::vector<uint8_t> bytes(3*32);
     for (unsigned i=0;i<3;++i) {

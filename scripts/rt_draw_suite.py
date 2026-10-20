@@ -1,4 +1,6 @@
 """Install the paired observer, collect one F9 burst, and retain one result ZIP."""
+from array import array
+import math
 import argparse
 import hashlib
 import json
@@ -192,7 +194,7 @@ def wait_stopped(notify,timeout=300):
 
 
 def archive_result(directory,report):
-    files=[p for p in directory.rglob('*') if p.is_file()]
+    files=[p for p in directory.rglob('*') if p.is_file() and 'runtime-textures' not in p.relative_to(directory).parts]
     if sum(p.stat().st_size for p in files)>512*1024*1024:
         report['collection']='incomplete';report['errors'].append('result_budget_exceeded')
     report['archive_compression']='zip_lzma_lossless'
@@ -203,7 +205,7 @@ def archive_result(directory,report):
         with zipfile.ZipFile(temporary,'w',zipfile.ZIP_LZMA) as z:
             used=0;omitted=[]
             for path in sorted(directory.rglob('*')):
-                if not path.is_file():continue
+                if not path.is_file() or 'runtime-textures' in path.relative_to(directory).parts:continue
                 if used+path.stat().st_size>512*1024*1024 and path.name!='summary.json':
                     omitted.append(str(path.relative_to(directory)));continue
                 z.write(path,path.relative_to(directory));used+=path.stat().st_size
@@ -313,6 +315,10 @@ def finish_world_capture(directory,game,since,report,notify):
     notify('Recovery ZIP saved: '+str(recovery)+'. Exit L4D2 normally and keep this window open; the SAME ZIP will be updated after exit and analysis.')
     wait_stopped(notify)
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
+    if report.get('preview'):
+        preview=review_preview(directory);save(directory/'preview-analysis.json',preview)
+        report['preview']='completed_requires_image_review' if preview['pass'] else 'incomplete'
+        if not preview['pass']:report['errors'].extend(preview['errors']);report['collection']='incomplete'
     outputs=analyze_world(directory);save(directory/'world-analysis.json',outputs)
     report['world_outputs']=outputs['runtime_outputs']
     live=outputs.get('live_mesh',{})
@@ -345,6 +351,29 @@ def finish_world_capture(directory,game,since,report,notify):
     if (outputs['runtime_outputs']!='pass' or report['world_normalization']!='pass'
             or report['world_geometry_buffers']=='incomplete'):report['collection']='incomplete'
 
+
+def review_preview(directory):
+    directory=Path(directory);errors=[];path=directory/'preview-runtime.jsonl'
+    if not path.is_file() or path.stat().st_size>8*1024*1024:return {'pass':False,'errors':['missing_or_oversized_preview_log']}
+    events=[json.loads(s) for s in path.read_text(encoding='utf-8').splitlines() if s.strip()]
+    ends=[e for e in events if e.get('event')=='preview_end'];reads=[e for e in events if e.get('event')=='preview_readback']
+    if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('elapsed_ms',0)<60000 or ends[0].get('submitted',0)<=0 or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('preview_duration_or_completion')
+    if len(reads)!=3:errors.append('preview_readback_count')
+    read_files=set();metrics=[]
+    for e in reads:
+        name=e.get('file','');file=directory/name
+        if name not in ('preview-0.rgba32f','preview-1.rgba32f','preview-2.rgba32f') or name in read_files or e.get('copy_code')!=0 or e.get('hresult',0)&0x80000000 or not e.get('written') or not file.is_file() or file.stat().st_size!=640*400*16:errors.append('preview_readback_payload')
+        read_files.add(name)
+        if file.is_file() and file.stat().st_size==640*400*16 and name in ('preview-0.rgba32f','preview-1.rgba32f','preview-2.rgba32f'):
+            raw=file.read_bytes();values=array('f');values.frombytes(raw)
+            if sys.byteorder!='little':values.byteswap()
+            invalid=sum(not math.isfinite(v) for i,v in enumerate(values) if i%4!=3)
+            metrics.append({'file':name,'sha256':hashlib.sha256(raw).hexdigest(),'nonfinite_rgb':invalid})
+            if invalid:errors.append('preview_nonfinite_rgb')
+    for e in events:
+        if e.get('code',0):errors.append('preview_runtime_failure:'+e.get('event','unknown'))
+        if e.get('event')=='api_mesh_frame' and (e.get('bytes',0)>256*1024*1024 or e.get('texture_resident_bytes',0)>128*1024*1024 or e.get('texture_bytes',0)>512*1024*1024 or e.get('pending_fences',0)>8):errors.append('preview_budget')
+    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'end':ends[-1] if ends else None,'color_metrics':metrics,'readbacks':reads,'gpu_image_acceptance':'unrun','limits':'Bounded neutral realtime preview, independent of600-Present diagnostic; no sustained performance or full coverage acceptance.'}
 
 def startup_modules(directory,pid,notify):
     """Retain bounded module lists even if no F9 trace ever starts."""
@@ -416,7 +445,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Textured Mesh v19: press F9 once; slow movement/turning allowed. World/HUD31-120; sky121-180; Neko textures181-240; combined textures241-300; headlamp30 by default; headlamp3 at301-360; metal361-420; alpha421-480; emissive481-540; recovery541-600. All source mip levels, bounded Infected audit, alpha evidence and adjacent poses are automatic.')
+        if world:notify('Textured Mesh v20: press F9 once; slow movement/turning allowed. World/HUD31-120; sky121-180; Neko textures181-240; combined textures241-300; headlamp30 by default; headlamp3 at301-360; metal361-420; alpha421-480; emissive481-540; recovery541-600. Audited Infected rendering, bounded texture evidence and adjacent poses are automatic. After600:60-second neutral live preview then automatic recovery; keep playing until this window asks you to exit.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None
@@ -450,6 +479,16 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         marker_ok=marker.get('session')==session and marker.get('reason')==0 and marker.get('presents')==expected
         if not marker_ok:
             notify('INCOMPLETE: capture stopped before the required '+str(expected)+' Presents. Collecting available evidence.')
+        preview_running=directory/f'rt-preview-running-{session}.json'
+        if world and manifest.get('pilot_revision',0)>=20:report['preview']='incomplete'
+        if world and preview_running.is_file():
+            notify('600-Present diagnostic saved. Neutral live preview runs for60 seconds; move/turn normally, then wait for automatic recovery. No second keypress.')
+            preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+90
+            while not preview_done.is_file() and time.monotonic()<preview_deadline:
+                if pid not in game_pids():break
+                time.sleep(.5)
+            report['preview']='collected_requires_review' if preview_done.is_file() else 'incomplete'
+            if preview_done.is_file():notify('Preview segment finished. Collecting final evidence; exit only when requested below.')
         finish_capture(directory,root,pid,report,notify)
         if not marker_ok:
             report['collection']='incomplete';report['errors'].append('Capture completion marker identity/count/reason mismatch')

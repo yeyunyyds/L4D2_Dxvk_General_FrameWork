@@ -9,6 +9,7 @@ inline unsigned family(const char* shader) noexcept {
   if (!std::strcmp(shader,"WorldVertexTransition") || !std::strcmp(shader,"WorldVertexTransition_DX9")) { return 4; }
   if (!std::strcmp(shader,"WorldTwoTextureBlend")) { return 5; }
   if (!std::strcmp(shader,"NekoToon")) { return 6; }
+  if (!std::strcmp(shader,"Infected")) { return 7; }
   return 0;
 }
 inline bool affine(const std::array<float,16>& m) noexcept {
@@ -99,7 +100,7 @@ public:
     if (!get(decl.value->GetDeclaration(e,&n)) || !get(d->GetStreamSource(0,&vb.value,&offset,&stride)) || !get(d->GetStreamSourceFreq(0,&frequency))) { return; }
     std::vector<D3DVERTEXELEMENT9> simple;
     if (!vb.value || offset%4 || frequency!=1) { result.code=static_draw::Code::Layout;return; }
-    if (customModel(s) && !rebuilt) { result.code=static_draw::Code::Layout;return; }
+    if ((customModel(s) || family(s.materialInfo.shader.data())==7) && !rebuilt) { result.code=static_draw::Code::Layout;return; }
     if (rebuilt) {
       if (!rebuilt->ready || !rebuilt->buffer.value || !affine(rebuilt->world) || stride!=32 || n!=rebuilt->sourceDeclaration.size() ||
           std::memcmp(e,rebuilt->sourceDeclaration.data(),n*sizeof(*e))) { result.code=static_draw::Code::Layout;return; }

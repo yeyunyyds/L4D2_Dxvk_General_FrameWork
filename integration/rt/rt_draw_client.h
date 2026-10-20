@@ -162,7 +162,7 @@ public:
           }
           down = pressed;
         }
-        if (active && (now - startedAt > (request.world ? 300000u : 60000u) || fs::exists(doneFile(request)))) {
+        if (active && (now - startedAt > (request.world ? 420000u : 60000u) || (fs::exists(doneFile(request)) && (!request.world || !fs::exists(previewRunningFile(request)) || fs::exists(previewDoneFile(request)))))) {
           control("capture_stopped", ordinal); active = false; finished = true;
         }
       }

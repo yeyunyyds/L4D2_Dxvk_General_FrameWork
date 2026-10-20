@@ -40,6 +40,25 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
     if (ps!="f2da6f64daa0d3bad8b1ac86309ac191371a51e44733c7ec927dd0a9729ae8e9" &&
         ps!="23e61215dfa5c78e579fd1d8996a63035377ca479dca2c553991cd4736090d1a") { out.reason="unknown_neko_pixel_program";return out; }
   }
+  const bool infected=!std::strcmp(s.materialInfo.shader.data(),"Infected");
+  if(infected!=(profile==model_shader::Profile::InfectedRigid)) { out.reason="infected_material_program_mismatch";return out; }
+  if(infected) {
+    const D3DVERTEXELEMENT9 exact[]={
+      {0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,0},
+      {0,24,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},{0,32,D3DDECLTYPE_FLOAT4,0,D3DDECLUSAGE_TANGENT,0},
+      {1,0,D3DDECLTYPE_D3DCOLOR,0,D3DDECLUSAGE_COLOR,1},{2,0,D3DDECLTYPE_FLOAT4,0,D3DDECLUSAGE_POSITION,1},
+      {2,16,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,1},D3DDECL_END()};
+    if(input.stride!=48||input.declaration.size()!=8||std::memcmp(input.declaration.data(),exact,sizeof(exact))||
+       ldb_rt_file::bytesSha256(input.ps.data(),input.ps.size()*4)!="3bac21dc89466c265f1c1411bd54bcdfeec8c0a9fafceab1b1891739384e7de7") { out.reason="infected_layout_or_pixel_program";return out; }
+    const auto rebuilt=model_shader::infected(input.constants,input.vertices);out.reason=rebuilt.reason;
+    if(!rebuilt.valid) { return out; }
+    if(!model_shader::cameraCompatible(rebuilt,input.constants,s.view,s.projection)) { out.reason="model_clip_camera_mismatch";return out; }
+    if(!input.count||input.vertices.size()!=size_t(input.count)*48||uint64_t(input.first)+input.count>model_shader::kMaxVertices) { out.reason="model_vertex_range";return out; }
+    out.stride=32;out.world=rebuilt.world;out.sourceDeclaration=input.declaration;
+    out.elements={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},
+      {0,20,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,0},D3DDECL_END()};
+    out.bytes.resize(size_t(input.first+input.count)*32);std::memcpy(out.bytes.data()+size_t(input.first)*32,rebuilt.vertices.data(),rebuilt.vertices.size());return out;
+  }
   int position=-1,uv=-1,weight=-1,indices=-1;std::vector<D3DVERTEXELEMENT9> plain;
   std::vector<D3DVERTEXELEMENT9> elements;
   const D3DVERTEXELEMENT9 end=D3DDECL_END();
@@ -82,7 +101,7 @@ inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Sna
   if (values[3] || values[4] || (values[5]&7)!=7 || (values[5]&~15u) || (values[6]!=D3DCMP_LESS && values[6]!=D3DCMP_LESSEQUAL)) { rejected.reason="model_pipeline_special_pass";return rejected; }
   auto input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
   const auto digest=ldb_rt_file::bytesSha256(input.vs.data(),input.vs.size()*4);
-  if (model_shader::profile(digest)!=model_shader::Profile::Unknown && SUCCEEDED(input.result) && input.constants[13][0]!=0) { scene_input::morphPositions(d,input); }
+  if (model_shader::profile(digest)!=model_shader::Profile::Unknown && model_shader::profile(digest)!=model_shader::Profile::InfectedRigid && SUCCEEDED(input.result) && input.constants[13][0]!=0) { scene_input::morphPositions(d,input); }
   auto out=reconstruct(s,input,digest);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && (cpuOnly || scene_input::upload(d,out))) { out.ready=true; }
   if (evidence && out.ready) { *evidence=std::move(input); }return out;
 }
