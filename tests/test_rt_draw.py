@@ -87,6 +87,29 @@ class DrawObservation(unittest.TestCase):
         events[0]=(0,0,struct.pack('<IQQQII',17,42,7,10000000,600,30))
         result=self.inspect(events);self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['header']['coverage_revision'],20)
 
+    def test_v20_infected48_accepts_exact_layout_without_relaxing_other_scopes(self):
+        events=self.scene_fixture();events[0]=(0,0,struct.pack('<IQQQII',17,42,7,10000000,600,30))
+        for i in range(240,600):
+            for kind,uid,payload in events[1+239*4:1+240*4]:
+                data=bytearray(payload)
+                if kind==1:struct.pack_into('<Q',data,16,i+1)
+                events.insert(len(events)-1,(kind,i*2+(2 if kind==3 else 1),bytes(data)))
+        events[-1]=(8,0,struct.pack('<6QI',600,600,600,0,0,0,0))
+        index=1+240*4;event,uid,original=events[index];at=check.SNAPSHOT.size+check.MATERIAL.size+32
+        declaration=bytes.fromhex('000000000200000000000c0002000300000018000100050000002000030006000100000004000a0102000000030000010200100002000301ff00000011000000')
+        state=list(check.PIPELINE_V8.unpack_from(original,at));state[2]=48;state[4:8]=[0,1,1,1];state[17]=8
+        prefix=original[:check.SNAPSHOT.size]+check.MATERIAL.pack(0x80103,3,0,b'Infected')+original[check.SNAPSHOT.size+check.MATERIAL.size:at]
+        good=prefix+check.PIPELINE_V8.pack(*state)+declaration
+        events[index]=(event,uid,good);events[index+1]=(6,uid,struct.pack('<8I',12,10,0,0,0,1,1,0))
+        result=self.inspect(events);self.assertTrue(result['pass'],result['errors'])
+        for field,bad in [(2,32),(3,2),(4,1),(6,0),(7,0),(16,21)]:
+            wrong=state.copy();wrong[field]=bad;events[index]=(event,uid,prefix+check.PIPELINE_V8.pack(*wrong)+declaration)
+            self.assertIn('unsafe_world_conversion_or_control_modified',self.inspect(events)['errors'])
+        wrong=bytearray(declaration);wrong[4]=3;events[index]=(event,uid,prefix+check.PIPELINE_V8.pack(*state)+wrong)
+        self.assertFalse(self.inspect(events)['pass'])
+        # A48-byte input still cannot enter the old sky scope.
+        events[index]=(event,uid,good);events[index+1]=(6,uid,struct.pack('<8I',10,10,0,0,0,1,1,0));self.assertFalse(self.inspect(events)['pass'])
+
     def test_v2_world_control_and_exact_padded_declaration(self):
         r=self.inspect(self.world_fixture())
         self.assertTrue(r['pass'],r['errors'])

@@ -1,0 +1,2218 @@
+{
+  "schema": 1,
+  "scope": "v20 complete diagnostic and bounded preview; uploaded checker false rejection corrected locally; user confirms summoned common infected invisible; material route incomplete and exit abnormal",
+  "input": {
+    "volumes": [
+      {
+        "name": "rt-world-20261020-141352-99bf8aaf.z01",
+        "size": 20971520,
+        "sha256": "0d5877306dcb446765af4fe0a0e61c1b2df831e7efee5f771d32a5f9da0bfba7"
+      },
+      {
+        "name": "rt-world-20261020-141352-99bf8aaf.z02",
+        "size": 20971520,
+        "sha256": "b7e6daeab0c19bb48885e28635c80f2be6a773293999db59987550b3f4c15242"
+      },
+      {
+        "name": "rt-world-20261020-141352-99bf8aaf.zip",
+        "size": 8085165,
+        "sha256": "882e459fa181e3c62ca336e521497314d85c0d773c364e2a3c707252df9a3797"
+      }
+    ],
+    "restored_crc": "pass",
+    "outer_single_member": true,
+    "result_crc": "pass",
+    "result_size": 50468971,
+    "result_sha256": "b81fd34313a5afc27d433ea52becad1595010aa18d7e3381f762c8cfb091db7d",
+    "members": 4118,
+    "uncompressed_bytes": 430996655,
+    "payload_preserved": true
+  },
+  "build_commit": "7706e0d34adad41aded4a0bbab425a80e8b45f5f",
+  "build_id": "ldb-rt-observer+d89e71a2d31eb2bb",
+  "installed_pair_hashes_match_published_binaries": true,
+  "uploaded_summary": {
+    "schema": 1,
+    "scope": "selected_static_world_runtime_pilot",
+    "build_commit": "7706e0d34adad41aded4a0bbab425a80e8b45f5f",
+    "collection": "incomplete",
+    "errors": [],
+    "game_rt": "attempted_requires_review",
+    "source_queue_execution": "unrun",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun",
+    "game_pid": 9984,
+    "capture_marker": {
+      "session": 4781865499224236487,
+      "reason": 0,
+      "draws": 310317,
+      "valid": 310317,
+      "presents": 600,
+      "game_rt": "attempted_requires_review",
+      "source_queue": "unrun"
+    },
+    "preview": "completed_requires_image_review",
+    "draw_observation": "fail_or_partial",
+    "module_evidence": "snapshot_collected",
+    "result_scope": "consumer state / RPC ordering only; no Source producer queue or RT image acceptance",
+    "pre_exit_game_logs": "snapshot_collected",
+    "world_outputs": "pass",
+    "model_texture_coverage": "partial_with_synthetic_fallback",
+    "model_texture_fallback_submissions": 17,
+    "model_budget_omissions": 0,
+    "model_budget_coverage": "no_recorded_budget_omissions",
+    "world_geometry_buffers": "nonzero_requires_review",
+    "world_converted_draws": 41536,
+    "sky_converted_draws": 2880,
+    "rigid_converted_draws": 0,
+    "bulk_static_converted_draws": 8787,
+    "static_inventory_omitted_draws": 0,
+    "model_rebuild_result": "applied_requires_image_review",
+    "scene_input_evidence": "valid_evidence_requires_review",
+    "sky_rebuild_result": "applied_requires_image_review",
+    "rt_activation_requests": 1,
+    "world_normalization": "incomplete",
+    "exit_status": "abnormal",
+    "exit_exception_count": 1,
+    "backend_objects_remaining": 40,
+    "collection_phase": "finalized",
+    "archive_compression": "zip_lzma_lossless"
+  },
+  "uploaded_draw_errors": [
+    "unsafe_world_conversion_or_control_modified"
+  ],
+  "analyzer_correction": {
+    "file": "scripts/analyze_rt_draw.py",
+    "cause": "Infected stride48 gate reused scene_common which additionally required stride32; contradiction rejected every otherwise approved Infected conversion.",
+    "change": "Separate shared pipeline checks from old32-byte sky/rigid layout; exact Infected declaration/stride48, stage, camera, target, alpha/depth, frequency and offset checks retained.",
+    "regression_checks": "18 Draw tests passed, including positive48-byte Infected and rejection of wrong stride/frequency/blend/depth/target/declaration/sky scope;3 v20 tests passed.",
+    "additional_valid_conversions": 6292,
+    "game_binaries_changed": false,
+    "uploaded_evidence_modified": false,
+    "existing_capture_reusable": true
+  },
+  "independent_checks": {
+    "draw_pass": true,
+    "draw_errors": [],
+    "trace_footer": {
+      "draws": 310317,
+      "valid": 310317,
+      "presents": 600,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "world_outputs": "pass",
+    "world_errors": [],
+    "scene_pass": true,
+    "scene_errors": [],
+    "preview_analysis_matches_uploaded": true,
+    "exit_analysis_matches_uploaded": true,
+    "archive_omissions": [],
+    "readbacks": 30,
+    "scene_samples": 345,
+    "scene_payload_bytes": 17874636,
+    "api_geometry_payload_bytes": 12430216,
+    "pinned_gli_decode_files": 16,
+    "pinned_gli_decode_exit_code": 0
+  },
+  "conversion_after_checker_correction": {
+    "reports": 310317,
+    "converted": 47828,
+    "hud_replaced": 570,
+    "sky_converted": 2880,
+    "bulk_static_converted": 15079
+  },
+  "shader_inventory": {
+    "ShadowBuild_DX9": 48052,
+    "NekoSky": 3600,
+    "LightmappedGeneric": 33986,
+    "UnlitGeneric": 124891,
+    "VertexLitGeneric": 63338,
+    "NekoToon": 12600,
+    "Shadow": 1061,
+    "NekoBloom": 7800,
+    "Neko_Engine_Post": 600,
+    "Infected": 13001,
+    "Occlusion_DX9": 788,
+    "Spritecard": 1
+  },
+  "model_resources": {
+    "last_diagnostic": {
+      "event": "api_mesh_frame",
+      "frame": 600,
+      "stage": "recovery",
+      "submitted": 13852,
+      "created": 7696,
+      "reused": 6156,
+      "destroyed": 7696,
+      "entries": 0,
+      "bytes": 0,
+      "material_updates": 69,
+      "textured_submissions": 13835,
+      "texture_fallback_submissions": 17,
+      "texture_exports": 16,
+      "texture_bytes": 47882560,
+      "texture_held": 0,
+      "texture_read_failures": 0,
+      "texture_budget_deferred": 17,
+      "texture_resident_bytes": 0,
+      "texture_evidence_bytes": 47882560,
+      "texture_evidence_files": 16,
+      "texture_evicted": 0,
+      "peak_bytes": 65251032,
+      "completed_through": 540,
+      "pending_fences": 0,
+      "frame_draws": 0,
+      "frame_new_bytes": 0,
+      "frame_omitted": 0,
+      "omitted_total": 0,
+      "omission_reasons": {
+        "draw_limit": 0,
+        "frame_geometry_bytes": 0,
+        "live_geometry_bytes": 0,
+        "mesh_entries": 0,
+        "gpu_backlog": 0
+      }
+    },
+    "max_pending_fences": 1,
+    "max_frame_draws": 99,
+    "max_entries": 117,
+    "geometry_accounting_peak_bytes": 65251032,
+    "final_model_rebuild": {
+      "event": "model_rebuild_counts",
+      "frame": 600,
+      "phase": "expanded_models",
+      "model_stage": "recovery",
+      "attempts": 60719,
+      "ready": 13852,
+      "reconstructed": 13852,
+      "fallback": 46867,
+      "reasons": {
+        "api_model_stage_excluded": 15027,
+        "model_pipeline_unsupported": 4194,
+        "original_vs_infected_rigid48": 6292,
+        "original_vs_neko_three_weight": 7560,
+        "unknown_model_program": 27646
+      }
+    },
+    "limits": "Geometry accounting is not total GPU VRAM; final diagnostic counters exclude later preview."
+  },
+  "textures": {
+    "analyzer": {
+      "schema": 1,
+      "pass": true,
+      "errors": [],
+      "coverage": "partial_with_synthetic_fallback",
+      "complete_mip_files": 0,
+      "partial_source_mip_files": 16,
+      "bindings": 69,
+      "evidence_omitted_files": 0,
+      "evidence_scope": "bounded_file_samples_runtime_bindings_are_not_complete_file_validation",
+      "unique_dds_files": 16,
+      "verified_dds_bytes": 47882560,
+      "textured_submissions": 13835,
+      "fallback_submissions": 17,
+      "gpu_texture_acceptance": "unrun",
+      "limits": "Validated static sampler0 source-mip DDS and API intent; original PS/Toon/tints, animated textures, mips and actual GPU preload/appearance remain separate."
+    },
+    "diagnostic_fallback_fraction": 0.0012272596015015882,
+    "cache_evictions": 0,
+    "cache_pressure_execution": "not_exercised;45.66MiB source cache remained below128MiB limit",
+    "evidence_omissions": 0,
+    "runtime_budget_rejections_recorded": 0,
+    "limits": "Low fallback fraction does not include entirely unsupported model programs and is not a controlled comparison with prior scenes.16 DDS files all contain partial source mip chains, despite no missing-mip warning lines."
+  },
+  "preview": {
+    "analysis": {
+      "schema": 1,
+      "pass": true,
+      "errors": [],
+      "end": {
+        "event": "preview_end",
+        "complete": true,
+        "reason": "duration_complete",
+        "elapsed_ms": 60094,
+        "frames": 1215,
+        "submitted": 41730,
+        "entries": 0,
+        "pending_fences": 0,
+        "binding_rows_omitted": 0,
+        "held": 0,
+        "readbacks": 3
+      },
+      "color_metrics": [
+        {
+          "file": "preview-0.rgba32f",
+          "sha256": "e79c9e053f667759e8eb33fb0e0aeb69384a185addedf4b3153713693a163f6b",
+          "nonfinite_rgb": 0
+        },
+        {
+          "file": "preview-1.rgba32f",
+          "sha256": "ab7c10534194dca52a629c0c28d58d1f484c6bdbd4c0e2e9799740cac1c09e87",
+          "nonfinite_rgb": 0
+        },
+        {
+          "file": "preview-2.rgba32f",
+          "sha256": "510143ac3147c15624578ff18afe255971bd6ebc0617ff41f4dc36a88590016d",
+          "nonfinite_rgb": 0
+        }
+      ],
+      "readbacks": [
+        {
+          "event": "preview_readback",
+          "frame": 660,
+          "elapsed_ms": 3297,
+          "file": "preview-0.rgba32f",
+          "width": 640,
+          "height": 400,
+          "copy_code": 0,
+          "hresult": 0,
+          "written": true
+        },
+        {
+          "event": "preview_readback",
+          "frame": 1163,
+          "elapsed_ms": 30016,
+          "file": "preview-1.rgba32f",
+          "width": 640,
+          "height": 400,
+          "copy_code": 0,
+          "hresult": 0,
+          "written": true
+        },
+        {
+          "event": "preview_readback",
+          "frame": 1814,
+          "elapsed_ms": 60047,
+          "file": "preview-2.rgba32f",
+          "width": 640,
+          "height": 400,
+          "copy_code": 0,
+          "hresult": 0,
+          "written": true
+        }
+      ],
+      "gpu_image_acceptance": "unrun",
+      "limits": "Bounded neutral realtime preview, independent of600-Present diagnostic; no sustained performance or full coverage acceptance."
+    },
+    "observed_present_rate": 20.21832462475455,
+    "sampled_last_counters": {
+      "event": "api_mesh_frame",
+      "frame": 1800,
+      "stage": "api_continuous_preview",
+      "submitted": 55232,
+      "created": 33363,
+      "reused": 21869,
+      "destroyed": 33319,
+      "entries": 44,
+      "bytes": 45661320,
+      "material_updates": 215,
+      "textured_submissions": 55092,
+      "texture_fallback_submissions": 140,
+      "texture_exports": 16,
+      "texture_bytes": 47882560,
+      "texture_held": 16,
+      "texture_read_failures": 0,
+      "texture_budget_deferred": 140,
+      "texture_resident_bytes": 47882560,
+      "texture_evidence_bytes": 47882560,
+      "texture_evidence_files": 16,
+      "texture_evicted": 0,
+      "peak_bytes": 65251032,
+      "completed_through": 1799,
+      "pending_fences": 1,
+      "frame_draws": 25,
+      "frame_new_bytes": 22396548,
+      "frame_omitted": 0,
+      "omitted_total": 0,
+      "omission_reasons": {
+        "draw_limit": 0,
+        "frame_geometry_bytes": 0,
+        "live_geometry_bytes": 0,
+        "mesh_entries": 0,
+        "gpu_backlog": 0
+      }
+    },
+    "counter_limits": "Detailed runtime counters sampled every60 Presents; last sample1800 precedes final1815 by15 Presents. End marker confirms resource cleanup but does not carry all final texture/shader counters.",
+    "performance_acceptance": "unrun; approximately20.2 Presents/s in this instrumented preview is an observed limitation, not a clean final benchmark or a60FPS acceptance."
+  },
+  "user_visual_report": {
+    "summoned": "common infected",
+    "after_F9": "infected entity invisible while attacks continued",
+    "attacks_later_stopped": true,
+    "entity_natural_removal": "user interpretation; deletion cause not established by current evidence",
+    "common_infected_visibility_acceptance": "failed_by_user_observation"
+  },
+  "infected_trace_layouts": {
+    "scope": "All actual Infected-labelled trace Draws grouped by stream declaration, target and alpha/depth state; VS identity absent from trace",
+    "groups": [
+      {
+        "stride": 48,
+        "vertex_format": "0x80103",
+        "target_format": 113,
+        "blend": 0,
+        "alpha_test": 0,
+        "depth": 1,
+        "depth_write": 1,
+        "declaration_hex": "000000000200000000000c0002000300000018000100050000002000030006000100000004000a0102000000030000010200100002000301ff00000011000000",
+        "declaration_sha256": "c2aa0ed404917fd06f307d3bb9bc7133e89747bea5d67531b9e6f5f4db70cd93",
+        "draws": 13001,
+        "converted": 6292,
+        "first_frame": 47,
+        "last_frame": 600,
+        "phase_draws": {
+          "1": 253,
+          "61": 3919,
+          "121": 38,
+          "181": 4,
+          "241": 3080,
+          "301": 4,
+          "361": 1399,
+          "421": 1809,
+          "541": 2495
+        },
+        "phase_converted": {
+          "1": 0,
+          "61": 0,
+          "121": 0,
+          "181": 0,
+          "241": 3080,
+          "301": 4,
+          "361": 1399,
+          "421": 1809,
+          "541": 0
+        }
+      }
+    ],
+    "draws": 13001,
+    "converted": 6292
+  },
+  "infected_cpu_replay": {
+    "schema": 1,
+    "scope": "Actual production C++ Infected transform and camera gate over40uploaded samples, compiled on Linux with unchanged standard-only math; Windows/D3D dependencies stubbed, no GPU or full shader claim",
+    "source_header_sha256": "50102f34341d5bb3d376d76405255fec6407b88115011cb952cb93e0826f4ba2",
+    "samples": [
+      {
+        "ordinal": 17890,
+        "vertices": 2188,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 17891,
+        "vertices": 582,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 22929,
+        "vertices": 420,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 22930,
+        "vertices": 1143,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 22931,
+        "vertices": 604,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 1,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 22932,
+        "vertices": 1061,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 22933,
+        "vertices": 1148,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 67211,
+        "vertices": 2188,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 67213,
+        "vertices": 582,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 118636,
+        "vertices": 2188,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 118638,
+        "vertices": 582,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121431,
+        "vertices": 682,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121432,
+        "vertices": 1117,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121433,
+        "vertices": 1159,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121434,
+        "vertices": 480,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121435,
+        "vertices": 420,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121436,
+        "vertices": 1143,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121437,
+        "vertices": 604,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 1,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121438,
+        "vertices": 1061,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121439,
+        "vertices": 1148,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121440,
+        "vertices": 480,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121441,
+        "vertices": 1155,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121442,
+        "vertices": 438,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121443,
+        "vertices": 2281,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121444,
+        "vertices": 1065,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121445,
+        "vertices": 426,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121446,
+        "vertices": 1143,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121447,
+        "vertices": 360,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121448,
+        "vertices": 1061,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121449,
+        "vertices": 1155,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121450,
+        "vertices": 480,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121451,
+        "vertices": 2312,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      },
+      {
+        "ordinal": 121452,
+        "vertices": 480,
+        "max_world_position_absolute_delta": 0.0,
+        "zero_normal_fallback_vertices": 0,
+        "camera_proof": "pass"
+      }
+    ],
+    "pass": true,
+    "limits": "Input layouts/program digests checked independently. Exact sampled VS position/baseUV/source-normal dependency only; no original PS/lighting, RT instance, or all-variant acceptance."
+  },
+  "infected_visibility_probe": {
+    "scope": "API sample projection and conservative bounding-box depth comparison, not full GPU pixel identity or original shader execution",
+    "samples": [
+      {
+        "frame": 300,
+        "ordinal": 159503,
+        "geometry": "direct_saved",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            556,
+            138
+          ],
+          [
+            559,
+            143
+          ]
+        ],
+        "projected_depth": [
+          0.9984173478222468,
+          0.9984300339492217
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9833084344863892,
+          0.9834829568862915
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 300,
+        "ordinal": 159504,
+        "geometry": "direct_saved",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            557,
+            138
+          ],
+          [
+            558,
+            140
+          ]
+        ],
+        "projected_depth": [
+          0.9984177875328734,
+          0.998422647667098
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9833623766899109,
+          0.9834043383598328
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212353,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            135,
+            138
+          ],
+          [
+            138,
+            141
+          ]
+        ],
+        "projected_depth": [
+          0.9987793746696692,
+          0.9987876861742273
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.989919126033783,
+          0.9900122284889221
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212354,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            55,
+            136
+          ],
+          [
+            59,
+            141
+          ]
+        ],
+        "projected_depth": [
+          0.9983416502685195,
+          0.9983527959603393
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9823057055473328,
+          0.9825089573860168
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212355,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            276,
+            137
+          ],
+          [
+            278,
+            142
+          ]
+        ],
+        "projected_depth": [
+          0.9985870275179264,
+          0.9985951398867062
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9975836277008057,
+          0.9976159930229187
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212356,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            329,
+            138
+          ],
+          [
+            332,
+            143
+          ]
+        ],
+        "projected_depth": [
+          0.9984160995533509,
+          0.9984262754646855
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9978732466697693,
+          0.998460590839386
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212357,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            285,
+            95
+          ],
+          [
+            291,
+            110
+          ]
+        ],
+        "projected_depth": [
+          0.9945571960325404,
+          0.9947172612496844
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9938930869102478,
+          1.0
+        ],
+        "bounding_box_all_depth_valid": false,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212358,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            331,
+            138
+          ],
+          [
+            333,
+            143
+          ]
+        ],
+        "projected_depth": [
+          0.9983973574112378,
+          0.9984124441384877
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9978732466697693,
+          0.9984549880027771
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212359,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            274,
+            92
+          ],
+          [
+            282,
+            108
+          ]
+        ],
+        "projected_depth": [
+          0.99410343415104,
+          0.9942774690213453
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9940170645713806,
+          1.0
+        ],
+        "bounding_box_all_depth_valid": false,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212360,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            265,
+            93
+          ],
+          [
+            273,
+            108
+          ]
+        ],
+        "projected_depth": [
+          0.9942782787391781,
+          0.9944423008168021
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9942049980163574,
+          1.0
+        ],
+        "bounding_box_all_depth_valid": false,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212361,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2188,
+        "pixel_bounds": [
+          [
+            334,
+            139
+          ],
+          [
+            337,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9974299334224473,
+          0.9974662887566798
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970472455024719,
+          0.9984436631202698
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212362,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            276,
+            137
+          ],
+          [
+            278,
+            139
+          ]
+        ],
+        "projected_depth": [
+          0.9985874842237841,
+          0.9985900708280881
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9975836277008057,
+          0.9976106286048889
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212363,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            55,
+            136
+          ],
+          [
+            57,
+            138
+          ]
+        ],
+        "projected_depth": [
+          0.9983421674846538,
+          0.9983465680958081
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9823057055473328,
+          0.9824026823043823
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212364,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            136,
+            138
+          ],
+          [
+            137,
+            139
+          ]
+        ],
+        "projected_depth": [
+          0.9987805908525561,
+          0.9987828737480693
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9899382591247559,
+          0.9899832010269165
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212365,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            286,
+            95
+          ],
+          [
+            289,
+            100
+          ]
+        ],
+        "projected_depth": [
+          0.9945810815888897,
+          0.9946254819049112
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9938930869102478,
+          1.0
+        ],
+        "bounding_box_all_depth_valid": false,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212366,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            277,
+            92
+          ],
+          [
+            280,
+            96
+          ]
+        ],
+        "projected_depth": [
+          0.9941089425958951,
+          0.9941759265202795
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9941018223762512,
+          1.0
+        ],
+        "bounding_box_all_depth_valid": false,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212367,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            268,
+            93
+          ],
+          [
+            271,
+            97
+          ]
+        ],
+        "projected_depth": [
+          0.9942834658759798,
+          0.9943465655700673
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9942795634269714,
+          1.0
+        ],
+        "bounding_box_all_depth_valid": false,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212368,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            334,
+            139
+          ],
+          [
+            336,
+            141
+          ]
+        ],
+        "projected_depth": [
+          0.9974352868842699,
+          0.9974453044766551
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.998431921005249,
+          0.9984436631202698
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212369,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            332,
+            138
+          ],
+          [
+            333,
+            140
+          ]
+        ],
+        "projected_depth": [
+          0.9983986647166191,
+          0.9984037261649126
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9983989596366882,
+          0.9984468221664429
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212370,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 582,
+        "pixel_bounds": [
+          [
+            329,
+            138
+          ],
+          [
+            331,
+            140
+          ]
+        ],
+        "projected_depth": [
+          0.998416672803199,
+          0.9984199186299767
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9984021186828613,
+          0.998455286026001
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212455,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 682,
+        "pixel_bounds": [
+          [
+            261,
+            141
+          ],
+          [
+            263,
+            144
+          ]
+        ],
+        "projected_depth": [
+          0.9975601530497636,
+          0.9975699975581086
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9972878694534302,
+          0.9975687265396118
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212456,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1117,
+        "pixel_bounds": [
+          [
+            260,
+            142
+          ],
+          [
+            264,
+            145
+          ]
+        ],
+        "projected_depth": [
+          0.9975367053433107,
+          0.9975724409010077
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9972528219223022,
+          0.9975652694702148
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212457,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1159,
+        "pixel_bounds": [
+          [
+            259,
+            143
+          ],
+          [
+            264,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9975038278891794,
+          0.9975406059210571
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9975583553314209
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212458,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 480,
+        "pixel_bounds": [
+          [
+            263,
+            143
+          ],
+          [
+            265,
+            145
+          ]
+        ],
+        "projected_depth": [
+          0.9974999679229645,
+          0.9975110919628576
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9972528219223022,
+          0.9975583553314209
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212461,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 420,
+        "pixel_bounds": [
+          [
+            263,
+            144
+          ],
+          [
+            266,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972997406839436,
+          0.9973110013803808
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970462322235107,
+          0.9973030686378479
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212462,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1143,
+        "pixel_bounds": [
+          [
+            260,
+            144
+          ],
+          [
+            266,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972802408925459,
+          0.9973503140904895
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9973184466362
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212463,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 604,
+        "pixel_bounds": [
+          [
+            253,
+            144
+          ],
+          [
+            255,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972668890407965,
+          0.997284913550895
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970461130142212,
+          0.997308075428009
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212464,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1061,
+        "pixel_bounds": [
+          [
+            252,
+            144
+          ],
+          [
+            259,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972694736704811,
+          0.9973388267025055
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970461130142212,
+          0.9973175525665283
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212465,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1148,
+        "pixel_bounds": [
+          [
+            257,
+            143
+          ],
+          [
+            263,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972678404350201,
+          0.9973307877291339
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9975583553314209
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212466,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 480,
+        "pixel_bounds": [
+          [
+            260,
+            143
+          ],
+          [
+            262,
+            145
+          ]
+        ],
+        "projected_depth": [
+          0.9973015625630447,
+          0.9973170846064923
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9972528219223022,
+          0.9973184466362
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212467,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1155,
+        "pixel_bounds": [
+          [
+            254,
+            143
+          ],
+          [
+            261,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972724606408458,
+          0.9973210183269617
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970461130142212,
+          0.997379720211029
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212468,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 438,
+        "pixel_bounds": [
+          [
+            258,
+            143
+          ],
+          [
+            260,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9973148056787735,
+          0.9973319024110278
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9973382949829102
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212469,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2281,
+        "pixel_bounds": [
+          [
+            254,
+            143
+          ],
+          [
+            261,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972687598595545,
+          0.9973530630906338
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970461130142212,
+          0.997379720211029
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212470,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1065,
+        "pixel_bounds": [
+          [
+            254,
+            144
+          ],
+          [
+            260,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.997296695919237,
+          0.9973299341521534
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970461130142212,
+          0.9973175525665283
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212471,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 426,
+        "pixel_bounds": [
+          [
+            266,
+            144
+          ],
+          [
+            268,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9973139813285294,
+          0.9973302995924368
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970462322235107,
+          0.9975273013114929
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212472,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1143,
+        "pixel_bounds": [
+          [
+            262,
+            144
+          ],
+          [
+            268,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972725416958118,
+          0.9973328363690568
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9975273013114929
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212473,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 360,
+        "pixel_bounds": [
+          [
+            262,
+            144
+          ],
+          [
+            264,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9973273968012111,
+          0.9973439557658725
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9972974061965942
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212474,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1061,
+        "pixel_bounds": [
+          [
+            258,
+            144
+          ],
+          [
+            264,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9973245589161046,
+          0.997375174910145
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9973184466362
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212475,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 1155,
+        "pixel_bounds": [
+          [
+            258,
+            143
+          ],
+          [
+            263,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9973180275887629,
+          0.9973797917808056
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9975583553314209
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212476,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 480,
+        "pixel_bounds": [
+          [
+            260,
+            144
+          ],
+          [
+            262,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9973727834972399,
+          0.9973886859620075
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.997046172618866,
+          0.9973184466362
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212477,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 2312,
+        "pixel_bounds": [
+          [
+            255,
+            143
+          ],
+          [
+            265,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9972828936225558,
+          0.9973878790629628
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970461130142212,
+          0.9975583553314209
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": false
+      },
+      {
+        "frame": 420,
+        "ordinal": 212478,
+        "geometry": "sha256_exact_match_to_canonical_source_audit",
+        "front_vertices": 480,
+        "pixel_bounds": [
+          [
+            263,
+            144
+          ],
+          [
+            265,
+            146
+          ]
+        ],
+        "projected_depth": [
+          0.9973176020272565,
+          0.9973352373819622
+        ],
+        "all_vertices_outside_view": false,
+        "readback_depth_range": [
+          0.9970462322235107,
+          0.9972974061965942
+        ],
+        "bounding_box_all_depth_valid": true,
+        "bounding_box_entirely_nearer": true
+      },
+      {
+        "frame": 420,
+        "ordinal": 212479,
+        "geometry": "not_available"
+      },
+      {
+        "frame": 420,
+        "ordinal": 212480,
+        "geometry": "not_available"
+      },
+      {
+        "frame": 420,
+        "ordinal": 212481,
+        "geometry": "not_available"
+      }
+    ],
+    "saved_or_hash_matched": 42,
+    "unavailable": 3,
+    "fully_nearer_depth_boxes": 11,
+    "outside_view_boxes": 0,
+    "limits": "Bounds omit triangle rasterization/clipping and full material effects; unavailable current-pose geometry cannot be inferred from a different pose."
+  },
+  "infected_material_review": {
+    "ps_sha256": "3bac21dc89466c265f1c1411bd54bcdfeec8c0a9fafceab1b1891739384e7de7",
+    "pixel_program": {
+      "version": "0xffff0300",
+      "opcodes": {
+        "81": 1,
+        "31": 9,
+        "2": 6,
+        "5": 11,
+        "1": 7,
+        "66": 6,
+        "4": 12,
+        "18": 1,
+        "6": 1
+      },
+      "ended": true
+    },
+    "sampled_s0_textures": [
+      {
+        "file": "model-textures/073f466958246e933900a4c94bd50b7adc25906a587813c99fa8ef586614c72d.dds",
+        "width": 1024,
+        "height": 1024,
+        "dxgi": 77,
+        "rgb_mean": [
+          112,
+          136,
+          251
+        ],
+        "alpha_extrema": [
+          0,
+          231
+        ]
+      },
+      {
+        "file": "model-textures/1c06b4fa08c2438fc86e539928253e8715b650e7a1e069ff0f5c3e27d5bfaed0.dds",
+        "width": 2048,
+        "height": 2048,
+        "dxgi": 77,
+        "rgb_mean": [
+          127,
+          132,
+          38
+        ],
+        "alpha_extrema": [
+          0,
+          255
+        ]
+      },
+      {
+        "file": "model-textures/42b757e19993b6f413f871c702628c7731fa32f0500049886ee7e1beaff022ab.dds",
+        "width": 1024,
+        "height": 1024,
+        "dxgi": 77,
+        "rgb_mean": [
+          114,
+          138,
+          252
+        ],
+        "alpha_extrema": [
+          0,
+          255
+        ]
+      },
+      {
+        "file": "model-textures/4f698588cad1aee403d3d62e2ebdcfa2efa1c6162f67ac6cf9c34a250c19160e.dds",
+        "width": 2048,
+        "height": 2048,
+        "dxgi": 77,
+        "rgb_mean": [
+          130,
+          131,
+          119
+        ],
+        "alpha_extrema": [
+          0,
+          255
+        ]
+      },
+      {
+        "file": "model-textures/7b6326829c95b6d15d07e8f42b1849b7c15240338ada288315d1989f45180448.dds",
+        "width": 2048,
+        "height": 2048,
+        "dxgi": 77,
+        "rgb_mean": [
+          146,
+          132,
+          83
+        ],
+        "alpha_extrema": [
+          4,
+          255
+        ]
+      },
+      {
+        "file": "model-textures/c50ce758c492e375a3345f9b9060fbf9dc42a94e9754e86dccfe767bacc179be.dds",
+        "width": 512,
+        "height": 512,
+        "dxgi": 77,
+        "rgb_mean": [
+          104,
+          128,
+          255
+        ],
+        "alpha_extrema": [
+          0,
+          255
+        ]
+      },
+      {
+        "file": "model-textures/daf1d8b85ea0a95354202be4c16e1ccef7050d897c6d4be6ea3fed54b6aadff6.dds",
+        "width": 1024,
+        "height": 1024,
+        "dxgi": 77,
+        "rgb_mean": [
+          104,
+          136,
+          254
+        ],
+        "alpha_extrema": [
+          0,
+          255
+        ]
+      },
+      {
+        "file": "model-textures/dde5bbcee7651852383c4df545acfe9e4205caae959faaa7e4e68d41a5965451.dds",
+        "width": 2048,
+        "height": 2048,
+        "dxgi": 77,
+        "rgb_mean": [
+          149,
+          135,
+          150
+        ],
+        "alpha_extrema": [
+          0,
+          255
+        ]
+      },
+      {
+        "file": "model-textures/e71fa772e40fdd65fa10032ebb462d3e7b255222b059eeb869d50b67a7a0a61a.dds",
+        "width": 1024,
+        "height": 1024,
+        "dxgi": 77,
+        "rgb_mean": [
+          108,
+          139,
+          254
+        ],
+        "alpha_extrema": [
+          0,
+          255
+        ]
+      }
+    ],
+    "ps_samplers": [
+      0,
+      4,
+      5,
+      7
+    ],
+    "current_path": "single sampler0 DDS directly assigned to RT albedo",
+    "confirmed_gap": "Exact PS reads s0 alpha to address two s5 lookup rows selected by c10, combines encoded s0 channels with s4 input, then applies vertex lighting/screen-space factor/fog. Single raw s0 is not the final diffuse color.",
+    "interpretation_limit": "Blue/green or normal-like appearance alone does not prove that s0 is solely a tangent-space normal map; do not label all such data as a normal map.",
+    "missing_payload": "Sampler4/5 DDS inputs absent from current result; PS and VS constants available. Stage7 is sampled using screen-position-derived coordinates and should not blindly be baked into RT albedo.",
+    "gpu_material_acceptance": "failed/incomplete; no original common infected color reconstruction",
+    "invisibility_causation": "Wrong color route is confirmed, but cannot uniquely explain the user-reported complete invisibility. Nearby summoned instance was not individually identified in the retained readbacks."
+  },
+  "vertexlitgeneric_programs": [
+    {
+      "vs_sha256": "b9081b1aa48487b133f168edcf34a302ad06d9963e1bedab8d9dd62d98fbc606",
+      "samples": 4,
+      "stride": 32,
+      "vertex_program": {
+        "version": "0xfffe0300",
+        "opcodes": {
+          "81": 3,
+          "31": 12,
+          "9": 11,
+          "1": 21,
+          "4": 32,
+          "2": 19,
+          "5": 23,
+          "7": 5,
+          "6": 5,
+          "10": 5,
+          "12": 3,
+          "36": 2,
+          "8": 19,
+          "41": 4,
+          "11": 8,
+          "32": 4,
+          "42": 1,
+          "43": 4,
+          "46": 1
+        },
+        "ended": true
+      },
+      "declaration_sha256": "dfb4698890e08201b62ad82df9f0682f87517c36843b748c5fb2288b98d55495",
+      "admission": "not_in_current_exact_program_profiles",
+      "limits": "Capture samples only; unlabelled unknown_model_program totals cannot all be attributed uniquely to these programs."
+    },
+    {
+      "vs_sha256": "d7f9daf0698882776cffeb478a6bfdf2a480ade55a7bc659bd76b36c589d5174",
+      "samples": 21,
+      "stride": 32,
+      "vertex_program": {
+        "version": "0xfffe0300",
+        "opcodes": {
+          "81": 3,
+          "31": 14,
+          "2": 22,
+          "12": 3,
+          "4": 38,
+          "5": 28,
+          "36": 2,
+          "46": 2,
+          "8": 19,
+          "1": 20,
+          "9": 11,
+          "7": 5,
+          "6": 5,
+          "10": 5,
+          "41": 4,
+          "11": 8,
+          "32": 4,
+          "42": 1,
+          "43": 4
+        },
+        "ended": true
+      },
+      "declaration_sha256": "677b94ccf3e25d3110d76489db293c9fff87df22847f71f9de6495c970e45deb",
+      "admission": "not_in_current_exact_program_profiles",
+      "limits": "Capture samples only; unlabelled unknown_model_program totals cannot all be attributed uniquely to these programs."
+    },
+    {
+      "vs_sha256": "3c653c42a2ce6a7b2201a5b26af6cee4b501625b2d32f1063caafa78d9261d2b",
+      "samples": 38,
+      "stride": 32,
+      "vertex_program": {
+        "version": "0xfffe0300",
+        "opcodes": {
+          "81": 2,
+          "31": 16,
+          "9": 11,
+          "2": 21,
+          "12": 2,
+          "4": 27,
+          "5": 25,
+          "1": 26,
+          "36": 2,
+          "46": 1,
+          "8": 20,
+          "7": 7,
+          "40": 4,
+          "6": 5,
+          "11": 4,
+          "32": 4,
+          "10": 5,
+          "42": 4,
+          "43": 4
+        },
+        "ended": true
+      },
+      "declaration_sha256": "677b94ccf3e25d3110d76489db293c9fff87df22847f71f9de6495c970e45deb",
+      "admission": "not_in_current_exact_program_profiles",
+      "limits": "Capture samples only; unlabelled unknown_model_program totals cannot all be attributed uniquely to these programs."
+    },
+    {
+      "vs_sha256": "803be4995dac57ebc289dbcc97004a6b1f4c8ad616c7db8dc39f41c200663706",
+      "samples": 4,
+      "stride": 32,
+      "vertex_program": {
+        "version": "0xfffe0300",
+        "opcodes": {
+          "81": 3,
+          "31": 13,
+          "2": 20,
+          "12": 3,
+          "4": 33,
+          "5": 23,
+          "36": 2,
+          "8": 19,
+          "1": 19,
+          "9": 11,
+          "7": 5,
+          "6": 5,
+          "10": 5,
+          "15": 3,
+          "14": 3,
+          "41": 4,
+          "11": 8,
+          "32": 4,
+          "43": 4,
+          "46": 1
+        },
+        "ended": true
+      },
+      "declaration_sha256": "dfb4698890e08201b62ad82df9f0682f87517c36843b748c5fb2288b98d55495",
+      "admission": "not_in_current_exact_program_profiles",
+      "limits": "Capture samples only; unlabelled unknown_model_program totals cannot all be attributed uniquely to these programs."
+    },
+    {
+      "vs_sha256": "1028c5ef031a8f9763c878ac9514dba6e628f87d3746ec373f4fc3b3e4486775",
+      "samples": 1,
+      "stride": 32,
+      "vertex_program": {
+        "version": "0xfffe0300",
+        "opcodes": {
+          "81": 3,
+          "31": 12,
+          "9": 11,
+          "1": 21,
+          "4": 36,
+          "2": 19,
+          "5": 27,
+          "7": 5,
+          "6": 5,
+          "10": 5,
+          "12": 3,
+          "36": 2,
+          "8": 19,
+          "41": 4,
+          "11": 4,
+          "32": 4,
+          "42": 1,
+          "43": 4,
+          "46": 1
+        },
+        "ended": true
+      },
+      "declaration_sha256": "dfb4698890e08201b62ad82df9f0682f87517c36843b748c5fb2288b98d55495",
+      "admission": "not_in_current_exact_program_profiles",
+      "limits": "Capture samples only; unlabelled unknown_model_program totals cannot all be attributed uniquely to these programs."
+    }
+  ],
+  "shader_coverage_limits": {
+    "unapproved_vertexlitgeneric_programs": 5,
+    "unknown_model_program_total": 27646,
+    "source_program_samples": 68,
+    "new_profile_admission": "unrun",
+    "note": "All13001 Infected-labelled diagnostic Draws use the audited48-byte declaration, and all6292 during enabled241..540 stages convert. Five unapproved VertexLitGeneric programs do not by themselves establish the cause of summoned common-infected invisibility, especially in preview where individual Draw traces were deliberately omitted."
+  },
+  "component_files": [
+    {
+      "module": "studiorender.dll",
+      "mapped_size": 6631424,
+      "size": 634672,
+      "sha256": "03964dedcf8b7f4ebde24cd3d0738873d37c075a7a9b313dad001bb937f9d1b6"
+    },
+    {
+      "module": "necola.dll",
+      "mapped_size": 2166784,
+      "size": 2117120,
+      "sha256": "742c17622e03a363cc0e2629049e8112c94557e46c6656b03bff2844c099ec1e"
+    }
+  ],
+  "exit_analysis": {
+    "schema": 1,
+    "status": "abnormal",
+    "exceptions": [
+      {
+        "file": "game-logs/0/bridge32.log",
+        "side": "client",
+        "pid": 9984,
+        "code": "0xc0000005",
+        "target": "0x104b0",
+        "named_frames": [
+          {
+            "module": "necola.dll",
+            "offset": "0x1447fc"
+          },
+          {
+            "module": "necola.dll",
+            "offset": "0x1448de"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x766b6"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x46f1e"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x5e66d"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x5e2d5"
+          },
+          {
+            "module": "kernel32.dll",
+            "offset": "0x27493"
+          },
+          {
+            "module": "left4dead2.exe",
+            "offset": "0xb3c3"
+          }
+        ],
+        "pid_bound": true,
+        "phase": "exit_logs_requires_timing_review"
+      }
+    ],
+    "unbound_exception_logs": [],
+    "cleanup_logs": [
+      "bridge32.log",
+      "bridge64.log"
+    ],
+    "backend_objects_remaining": 40,
+    "limits": "Log evidence only. Cleanup messages alone do not prove a clean process exit; named stack frames do not establish the unique culprit."
+  },
+  "manual_image_review": {
+    "hero_and_static_world": "Basic hero albedo, world/sky and HUD visible during preview; camera and pose vary.",
+    "infected_frame300": "Two available meshes project to only a few pixels behind a nearer depth surface; not a near-field visibility acceptance.",
+    "infected_frame420": "Small distant colored silhouettes exist; encoded texture route is incomplete.42of45 API samples recoverable by saved geometry or exact canonical hash;11 bounding boxes have entirely nearer scene depth,3 samples lack current-pose geometry. Other boxes are not a positive visibility proof.",
+    "common_infected_close_visibility": "failed_by_user_observation",
+    "limits": "No full original PS, complete scene coverage, smooth normals for all characters, producer parallel preparation or long-running performance acceptance."
+  },
+  "next_steps": [
+    "Keep corrected checker; do not request a recapture solely for the false INCOMPLETE.",
+    "Prioritize common infected visibility: near-field submission/input/readback evidence and a bright opaque geometry comparison, in the same test as material reconstruction, rather than equating API counts with visible entities.",
+    "Implement the audited Infected diffuse-color dependency using bounded sampler4/5 inputs and relevant constants; separate original lighting/screen-space/fog terms from RT albedo.",
+    "Audit five existing VertexLitGeneric programs for exact rigid/skinned/morph position and UV semantics using already retained data.",
+    "Retain exit fault as separate unresolved compatibility issue; identical component hashes and named frames do not establish unique fault ownership."
+  ],
+  "raw_user_assets_committed": false
+}

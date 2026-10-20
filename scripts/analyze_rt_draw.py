@@ -205,9 +205,10 @@ def analyze(path):
                 post_decl=bytes.fromhex('000000000200000000000c000100050002000000030000010200100002000301ff00000011000000')
                 rigid_decl=bytes.fromhex('000000000200000000000c0005000300000010000100050000000c00050006000100000004000a01020000000300000102001000050003010300000000000002ff00000011000000')
                 rigid_alt=bytes.fromhex('000000000200000000000c0005000300000010000100050000000c0005000600020000000300000102001000050003010300000000000002ff00000011000000')
-                scene_common=(v8 and status==1 and fields[55] and fields[56] and flags==3 and not failures and camera and affine_rigid(matrices[16:32])
+                scene_state_safe=(v8 and status==1 and fields[55] and fields[56] and flags==3 and not failures and camera and affine_rigid(matrices[16:32])
                     and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==113 and (width,height)==fields[59:61]
-                    and kind in (1,2) and topology in (4,5) and stride==32 and stream_frequency==1 and stream_offset%4==0 and not alpha and not test)
+                    and kind in (1,2) and topology in (4,5) and stream_frequency==1 and stream_offset%4==0 and not alpha)
+                scene_common=scene_state_safe and stride==32 and not test
                 pending_sky_safe=(scene_common and counts[3]>=120 and world_identity and shader=='NekoSky' and vertex_format==0x80001
                     and not depth and not depth_write and declaration==post_decl)
                 pending_rigid_safe=(scene_common and counts[3]>=180 and affine_rigid(matrices[:16]) and shader=='VertexLitGeneric' and depth==depth_write==1
@@ -225,7 +226,7 @@ def analyze(path):
                     and stream_frequency==1 and stream_offset%4==0 and static_layout(declaration,stride,header.get('coverage_revision') in (11,12,13,14,15,16,17,18,19,20) and shader=='VertexLitGeneric' or header.get('coverage_revision') in (13,14,15,16,17,18,19,20) and shader=='NekoToon'))
                 if header.get('coverage_revision')==20 and shader=='Infected':
                     infected_decl=bytes.fromhex('000000000200000000000c0002000300000018000100050000002000030006000100000004000a0102000000030000010200100002000301ff00000011000000')
-                    pending_bulk_safe=(240<=counts[3]<540 and scene_common and static_affine(matrices[:16]) and stride==48
+                    pending_bulk_safe=(240<=counts[3]<540 and scene_state_safe and test in (0,1) and static_affine(matrices[:16]) and stride==48
                         and declaration==infected_decl and vertex_format==0x80103 and depth==depth_write==1)
                 pending_hud_safe=(unlit_hud_enabled and status==1 and fields[55] and fields[56] and flags==3 and shader=='Neko_Engine_Post' and vertex_format==0x80001
                     and kind in (1,2) and topology==4 and stride==32 and stream_frequency==1 and stream_offset%4==0 and declaration==post_decl
