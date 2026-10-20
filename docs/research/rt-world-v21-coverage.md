@@ -21,3 +21,14 @@ v20 的 API 提交与 60 秒预览运行成功，用户仍看不见近身普通�
 ## 验收边界
 
 当前扩大的是已审计程序与底色依赖覆盖，不是“所有材质/实体均已接入”。未知程序、完整Toon/PBR、透明材质、全地图、长期稳定性、性能和Source生产端并行准备仍未验收。基础级低分辨率烘焙不复现原片元导数/各向异性LOD；排除原顶点光照、屏幕AO和雾，避免重复烘焙光照。下一份B580实机画面必须确认普通感染者在亮色对照和正常底色阶段分别是否可见；数值回放不能代替这个结论。不改物理组件或Source线程设置。
+
+## 已核验发布
+
+- 源码：`3748cc19deb243759f3d15829b26fd59add97e45`。
+- Windows原生检查、x86客户端/x64 Host Release构建、系统NULLREF、打包与固定API加载均通过；新增5套VS身份测试x86/x64均通过，感染者颜色/BC解码/sRGB/地址模式/不透明mip测试通过。
+- 本地128项Python检查：126通过、2项Windows专属跳过，另由Windows CI执行；生产数据回放及严格MinGW编译通过。
+- Build ID：`ldb-rt-observer+bd6829acc4a2c550`；核对31项输入收据、全部ZIP成员及双端PE架构/版本/哈希。
+- 成品发布：`ff07b4b8db8c611b871aa0f6f2bc7c150f17b185`，12017416字节；SHA256 `94ed387317719c4c6bad6f92a8702ec9096c3baa283bd1f1895ba451b84c21d9`。
+- [固定成品文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/ff07b4b8db8c611b871aa0f6f2bc7c150f17b185/downloads/rt-world-pilot-dev.zip)。下载分支经检查仅含ZIP，HTTP文件与Git blob一致。完整元数据见`research/rt-world-pilot-v21-validation.json`。
+
+B580实机可见性、完整材质与性能验收仍未运行，不把上述构建检查视为画面通过。
