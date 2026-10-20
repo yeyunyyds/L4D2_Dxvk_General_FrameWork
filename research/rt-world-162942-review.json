@@ -1,0 +1,2078 @@
+{
+  "schema": 1,
+  "scope": "v19 complete 600-Present B580 capture; sampled albedo and source mip export positive, remaining texture fallback, Infected audit only, repeated abnormal client exit",
+  "input": {
+    "volumes": [
+      {
+        "name": "rt-world-20261019-162942-e7bfb4dd.zip.z01",
+        "bytes": 20971520,
+        "sha256": "ecc4c2e4a338ba954a511bff7cbf4e3ef430e0966f2e152f69c07d59f1095c97"
+      },
+      {
+        "name": "rt-world-20261019-162942-e7bfb4dd.zip.z02",
+        "bytes": 20971520,
+        "sha256": "812b26b1ef875688626743236a35fc4f4e40553aca9c805bcb376e5c1e6d2bf7"
+      },
+      {
+        "name": "rt-world-20261019-162942-e7bfb4dd.zip.zip",
+        "bytes": 10945084,
+        "sha256": "97af8d2aceb945870f37c932e299c045ccc92563e80519e0c4032ad6c99a8ecd"
+      }
+    ],
+    "outer_zip_crc": "pass",
+    "inner_zip_crc": "pass",
+    "inner_size": 52879477,
+    "inner_sha256": "865097faf851a4beb5b95031dcc377d19dd4d59778b262ce35fc6b9ecf8123a4",
+    "inner_members": 4287,
+    "inner_uncompressed_bytes": 515754709,
+    "original_payload_preserved": true
+  },
+  "build_commit": "656dc682ee4d4a82595e417f72e64cc3ab766df9",
+  "build_id": "ldb-rt-observer+268b27835af951af",
+  "published_file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/dc2bda2874e1b5b77494d489582674c0a3d40569/downloads/rt-world-pilot-dev.zip",
+  "installed_pair_hashes_match_published_binaries": true,
+  "trace_header": {
+    "session": 4811010937612596840,
+    "device": 2,
+    "frequency": 10000000,
+    "profile": "world_pilot",
+    "target_presents": 600,
+    "control_presents": 30,
+    "coverage_revision": 19
+  },
+  "trace_footer": {
+    "draws": 314028,
+    "valid": 314028,
+    "presents": 600,
+    "resets": 0,
+    "failures": 0,
+    "unobserved": 0,
+    "reason": 0
+  },
+  "uploaded_summary": {
+    "schema": 1,
+    "scope": "selected_static_world_runtime_pilot",
+    "build_commit": "656dc682ee4d4a82595e417f72e64cc3ab766df9",
+    "collection": "complete",
+    "errors": [],
+    "game_rt": "attempted_requires_review",
+    "source_queue_execution": "unrun",
+    "source_parallel_preparation": "unrun",
+    "performance": "unrun",
+    "game_pid": 10488,
+    "capture_marker": {
+      "session": 4811010937612596840,
+      "reason": 0,
+      "draws": 314028,
+      "valid": 314028,
+      "presents": 600,
+      "game_rt": "attempted_requires_review",
+      "source_queue": "unrun"
+    },
+    "draw_observation": "pass",
+    "module_evidence": "snapshot_collected",
+    "result_scope": "consumer state / RPC ordering only; no Source producer queue or RT image acceptance",
+    "pre_exit_game_logs": "snapshot_collected",
+    "world_outputs": "pass",
+    "model_texture_coverage": "partial_with_synthetic_fallback",
+    "model_texture_fallback_submissions": 5017,
+    "model_budget_omissions": 0,
+    "model_budget_coverage": "no_recorded_budget_omissions",
+    "world_geometry_buffers": "nonzero_requires_review",
+    "world_converted_draws": 61309,
+    "sky_converted_draws": 2880,
+    "rigid_converted_draws": 0,
+    "bulk_static_converted_draws": 29884,
+    "static_inventory_omitted_draws": 0,
+    "model_rebuild_result": "applied_requires_image_review",
+    "scene_input_evidence": "valid_evidence_requires_review",
+    "sky_rebuild_result": "applied_requires_image_review",
+    "rt_activation_requests": 1,
+    "world_normalization": "pass",
+    "exit_status": "abnormal",
+    "exit_exception_count": 1,
+    "backend_objects_remaining": 40,
+    "collection_phase": "finalized",
+    "archive_compression": "zip_lzma_lossless"
+  },
+  "independent_checks": {
+    "draw_pass": true,
+    "world_outputs": "pass",
+    "scene_pass": true,
+    "errors": [],
+    "texture_file_accounting_pass": true,
+    "runtime_nonzero_codes": [],
+    "readbacks": 30,
+    "scene_samples": 343,
+    "scene_payload_bytes": 18234382,
+    "api_geometry_payload_bytes": 18846984,
+    "pinned_gli_decode_files": 74,
+    "pinned_gli_decode_exit_code": 0,
+    "independent_exit_matches_uploaded": true,
+    "archive_omissions": []
+  },
+  "conversion": {
+    "reports": 314028,
+    "converted": 61309,
+    "hud_replaced": 570,
+    "sky_converted": 2880,
+    "bulk_static_converted": 29884
+  },
+  "shader_inventory": {
+    "VertexLitGeneric": 63335,
+    "Occlusion_DX9": 710,
+    "MotionBlur_dx9": 600,
+    "Neko_Downsample_nohdr": 1182,
+    "BlurFilterX": 1182,
+    "BlurFilterY": 1182,
+    "NekoBloom": 7800,
+    "Neko_Engine_Post": 600,
+    "NekoGlowColor": 4638,
+    "neko_screenspace_general": 582,
+    "UnlitGeneric": 119388,
+    "ShadowBuild_DX9": 47516,
+    "NekoSky": 3594,
+    "LightmappedGeneric": 35806,
+    "Infected": 11508,
+    "NekoToon": 12579,
+    "Shadow": 1198,
+    "Spritecard": 29
+  },
+  "live_model_resources": {
+    "last": {
+      "event": "api_mesh_frame",
+      "frame": 600,
+      "stage": "recovery",
+      "submitted": 28266,
+      "created": 18979,
+      "reused": 9287,
+      "destroyed": 18979,
+      "entries": 0,
+      "bytes": 0,
+      "material_updates": 405,
+      "textured_submissions": 23249,
+      "texture_fallback_submissions": 5017,
+      "texture_exports": 74,
+      "texture_bytes": 134178520,
+      "texture_held": 0,
+      "texture_read_failures": 0,
+      "texture_budget_deferred": 5017,
+      "peak_bytes": 233155680,
+      "completed_through": 540,
+      "pending_fences": 0,
+      "frame_draws": 0,
+      "frame_new_bytes": 0,
+      "frame_omitted": 0,
+      "omitted_total": 0,
+      "omission_reasons": {
+        "draw_limit": 0,
+        "frame_geometry_bytes": 0,
+        "live_geometry_bytes": 0,
+        "mesh_entries": 0,
+        "gpu_backlog": 0
+      }
+    },
+    "max_pending_fences": 1,
+    "max_frame_draws": 190,
+    "max_entries": 269,
+    "geometry_budget_omissions": 0,
+    "notes": "Geometry bytes measure owned API buffers, not total GPU VRAM. Submission counts vary by camera/scene; no controlled performance comparison."
+  },
+  "textures": {
+    "analyzer": {
+      "schema": 1,
+      "pass": true,
+      "errors": [],
+      "coverage": "partial_with_synthetic_fallback",
+      "complete_mip_files": 10,
+      "partial_source_mip_files": 64,
+      "bindings": 405,
+      "unique_dds_files": 74,
+      "verified_dds_bytes": 134178520,
+      "textured_submissions": 23249,
+      "fallback_submissions": 5017,
+      "gpu_texture_acceptance": "unrun",
+      "limits": "Validated static sampler0 source-mip DDS and API intent; original PS/Toon/tints, animated textures, mips and actual GPU preload/appearance remain separate."
+    },
+    "cache_limit_bytes": 134217728,
+    "cache_remaining_bytes": 39208,
+    "first_cache_budget_binding_frame": 306,
+    "binding_reasons": {
+      "sampler0_source_mips_dds_dx10": 246,
+      "texture_frame_budget": 49,
+      "texture_cache_budget": 110
+    },
+    "fallback_submission_fraction": 0.1774923936885304,
+    "source_levels_histogram": {
+      "5": 13,
+      "6": 15,
+      "4": 6,
+      "11": 9,
+      "7": 13,
+      "1": 15,
+      "3": 3
+    },
+    "source_single_level_files": 15,
+    "source_multi_level_files": 59,
+    "missing_mip_warning_lines": 9,
+    "files": [
+      {
+        "file": "0a9bb684910951ae9a92ac04226589d3708d058e2c246241d21f41e54aa3ee1e.dds",
+        "bytes": 349332,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "0d2c149c43c1ee798b794b5bf0534be0aad41ca40687a1b9e2eccbdbeb569630.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "0d4f463a5473c022c35fd5ff3b39d0b06935ad96feb839bfccae57060b5c9b62.dds",
+        "bytes": 349332,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "0ddee6e42125588b306f5f4c985a565326b5729be505b37adbdf5dcde5e2c672.dds",
+        "bytes": 43668,
+        "width": 256,
+        "height": 256,
+        "levels": 4,
+        "full_levels": 9,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "0f649a2e737df1674c61d96215e44f4f1f3e5cff075bd171d252feabb1fef475.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "0fa6b517cf6cae0a27875309c667ae7ec3ce80ee9bb79b17f95a4eafd75767f4.dds",
+        "bytes": 174740,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "1974f496f831b54e054340d0c7674e4753b43fde0bb36daf4b266af2fd21c2b3.dds",
+        "bytes": 2796180,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "1ed70bc360a02c899528568027bb496158166ffcb8a2ca99dfb381f1cf3b412c.dds",
+        "bytes": 174228,
+        "width": 1024,
+        "height": 256,
+        "levels": 4,
+        "full_levels": 11,
+        "last_width": 128,
+        "last_height": 32
+      },
+      {
+        "file": "23242de246c44225e4b7c0801b78059a35dfc07a3cbeb2b829f280c62d026f64.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "261670979cb45293c8ae34da1e1fa0a7fb6f5e0bc8e81de604922fcd4867da3d.dds",
+        "bytes": 349332,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "2ed6bd169ae06a310d186fbfb351244d16fed7eb5a538da03cb849f950e2363d.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "312aa90d3e593d92c00d5833fd39008b60ae5fe5f02aab983b8475386f86b984.dds",
+        "bytes": 87188,
+        "width": 256,
+        "height": 256,
+        "levels": 4,
+        "full_levels": 9,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "32121ae8657b21cb9da76d60ba7a5d65b2d560555681f3677b3207f32ef089b3.dds",
+        "bytes": 65684,
+        "width": 256,
+        "height": 256,
+        "levels": 1,
+        "full_levels": 9,
+        "last_width": 256,
+        "last_height": 256
+      },
+      {
+        "file": "358d52b152f86ef2ec46405d911f1b67addeb4bb2e27fd02e64e24df059eac64.dds",
+        "bytes": 10900,
+        "width": 128,
+        "height": 128,
+        "levels": 3,
+        "full_levels": 8,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "40c516409fcfbce518ece0143810dcc7696493a1874740d1b07404e140d94b11.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "431054f5e7c6d40f68904918293bb15a2bd7aa105011837a3656350fbcf6b4b5.dds",
+        "bytes": 32916,
+        "width": 128,
+        "height": 256,
+        "levels": 1,
+        "full_levels": 9,
+        "last_width": 128,
+        "last_height": 256
+      },
+      {
+        "file": "44af1520e91a020934bc87af895e619c24b451b11d90ead0134896eb4994c559.dds",
+        "bytes": 349332,
+        "width": 1024,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 11,
+        "last_width": 64,
+        "last_height": 32
+      },
+      {
+        "file": "4844a7fc0297a46ecc7df9c80c5211472c1b05edf143b2fc1d4da5ff9d3faf42.dds",
+        "bytes": 2796180,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "4a7210b368368033e2b693a81e0ab8616ef6ff2bb9f813c56107130ea132cee1.dds",
+        "bytes": 4194452,
+        "width": 2048,
+        "height": 2048,
+        "levels": 1,
+        "full_levels": 12,
+        "last_width": 2048,
+        "last_height": 2048
+      },
+      {
+        "file": "4bbebe98574f923cfe1f4886458d1c39773e020c6987e16a14dafaacdc99fe51.dds",
+        "bytes": 4194452,
+        "width": 2048,
+        "height": 2048,
+        "levels": 1,
+        "full_levels": 12,
+        "last_width": 2048,
+        "last_height": 2048
+      },
+      {
+        "file": "4bbf365c99171851a3ccc4984b33339f80c976ba71a5cb0f29104f60c4ba4c88.dds",
+        "bytes": 4194452,
+        "width": 2048,
+        "height": 2048,
+        "levels": 1,
+        "full_levels": 12,
+        "last_width": 2048,
+        "last_height": 2048
+      },
+      {
+        "file": "4e08a9abb22a150b3b3b13bf009703548569e04d1a3807ec7fa44a5396f1671a.dds",
+        "bytes": 172180,
+        "width": 2048,
+        "height": 128,
+        "levels": 3,
+        "full_levels": 12,
+        "last_width": 512,
+        "last_height": 32
+      },
+      {
+        "file": "4f859d8e70cfb912ddaaa4fc38cdb5d4cb134acd5d0807a3da039cc004d0fe96.dds",
+        "bytes": 349332,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "50092a24d9b073c6ec92d8fcda154ec1ab4ca1ee77737b712d7ea7ca1c313190.dds",
+        "bytes": 2796180,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "59d0d5b2b61474cb6c19d3bddb56a2d2aa199dc09cde7e0fd4285ef75aaa3c2c.dds",
+        "bytes": 65684,
+        "width": 256,
+        "height": 256,
+        "levels": 1,
+        "full_levels": 9,
+        "last_width": 256,
+        "last_height": 256
+      },
+      {
+        "file": "5f80819f0cf46b1da44efa8d624eb2c144bc72c196909f9d2cb67ca592d6e7ff.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "5f8f270f6d119496903075644da3adba33b05d83495acef34d9d711baf1aecef.dds",
+        "bytes": 349332,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "682dc1e578b2fbcf60a370133eb091415c6f7125a197a495457ac696f7516e1f.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "6c04f6a7c66b251cdc58dab4a6dcf0b4a3bfc6317aa073cd8786030d0f44bbd6.dds",
+        "bytes": 262292,
+        "width": 512,
+        "height": 512,
+        "levels": 1,
+        "full_levels": 10,
+        "last_width": 512,
+        "last_height": 512
+      },
+      {
+        "file": "6c4d5931eedd27338e21497a7d441034a36a72cc1dfe648354b229681ad93187.dds",
+        "bytes": 8388756,
+        "width": 4096,
+        "height": 2048,
+        "levels": 1,
+        "full_levels": 13,
+        "last_width": 4096,
+        "last_height": 2048
+      },
+      {
+        "file": "6f59caca9d2a40226b2bbfa28697e66fa5bc8768a77930ae9a2427827fc7d5f5.dds",
+        "bytes": 87188,
+        "width": 256,
+        "height": 256,
+        "levels": 4,
+        "full_levels": 9,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "6ffc63452c3c754778084a5cc48abfbf5aea800fa2aafa222a79c29c6b95b6d3.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "775b406af6ed880cf0bdb081635e6f701939067324fb24009fde03f0432e4fc5.dds",
+        "bytes": 5592212,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "78b771586a8e5b797f5110497efc45a20d12b9a0603db75d6bea39d876610e24.dds",
+        "bytes": 699028,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "7f0677f55fdbf4e2262ac368a0a92561d6e8bddc4c890b843a895cca667ff202.dds",
+        "bytes": 4194452,
+        "width": 2048,
+        "height": 2048,
+        "levels": 1,
+        "full_levels": 12,
+        "last_width": 2048,
+        "last_height": 2048
+      },
+      {
+        "file": "8482f6cf6664882c4c8893cedac253199531bf326d03a99c099b940d1104279b.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "8a2a6a6a4e0bb0554f50f7090c7128c4524619ba64878e6fac2768b908ba241b.dds",
+        "bytes": 174740,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "8a788786f61584515d7aafed303fa0b6671d69cb96e7257a1593889f91b3c6b0.dds",
+        "bytes": 2796180,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "8eedf1567aeb46d150e74a8883518fbb1829e4bc9d24a38cb3e2fb284d62d357.dds",
+        "bytes": 65684,
+        "width": 256,
+        "height": 256,
+        "levels": 1,
+        "full_levels": 9,
+        "last_width": 256,
+        "last_height": 256
+      },
+      {
+        "file": "8f914a6804331dee1c23cf535ab69c943ef89d56f8adc68b73fd757766602452.dds",
+        "bytes": 4194452,
+        "width": 2048,
+        "height": 2048,
+        "levels": 1,
+        "full_levels": 12,
+        "last_width": 2048,
+        "last_height": 2048
+      },
+      {
+        "file": "90a8f27281b47274ff0f763f3e2fa0218016d6bc7806d987b6f5fdeaa114831d.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "90dae9e73e62b875b789d872fece6777de35ed8636599129eb8a9c3254669edb.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "92bf7daa616236caed3ef8ccf8e616721c50d777b268c4e355d2c8e0f5054051.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "94164491eee3566cc6edbd924598c9cc89f7fdc289d50d02a9ddc072a8a3f929.dds",
+        "bytes": 5592212,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "94ef6d2cbd96694542f718a5503d5c1caae4724de9544bb1104cdcfc119eb94b.dds",
+        "bytes": 2796180,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "9769353c5900b1ec03043fbb69766e691eaaaaeb6befcd121082afb8911a8d5c.dds",
+        "bytes": 5592212,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "9cdf7b4e51f2bd8d5f5eaeb56ed23ab43a188feb29b8b497a8ccbf54f65c15b8.dds",
+        "bytes": 152,
+        "width": 1,
+        "height": 1,
+        "levels": 1,
+        "full_levels": 1,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "a4ab4c598c3b95bd74af451d5adea4611f5dff94ac4afc2b5582ee4a69af23a1.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "a7592af9d161fe59ed9724fc9c67bf4dac33c2d029e1dfc6794c1677a1d56d9c.dds",
+        "bytes": 1048724,
+        "width": 1024,
+        "height": 1024,
+        "levels": 1,
+        "full_levels": 11,
+        "last_width": 1024,
+        "last_height": 1024
+      },
+      {
+        "file": "a7954ebf061c9e820f9366edc4ea9d01d0991abf4b96fd44526db8c32d345ecc.dds",
+        "bytes": 2796180,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "a8efd2beabd874a0e1b28c265aee0fb7bf70876784628283b497a1bd199f0d9b.dds",
+        "bytes": 349332,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "a979c23a0141abc2e20434902ecc5ebe288fa0f7d94b3b0835f8c889973079ba.dds",
+        "bytes": 1048724,
+        "width": 1024,
+        "height": 1024,
+        "levels": 1,
+        "full_levels": 11,
+        "last_width": 1024,
+        "last_height": 1024
+      },
+      {
+        "file": "ae8ddd07161217430fbabb34a8179ad698a03d51d63cba27a3f97b7b0c87db12.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "b59bdfbeca746f799292a7aea5d87cdebe2b29096987f0ae6a862386a2dad7bd.dds",
+        "bytes": 65684,
+        "width": 256,
+        "height": 256,
+        "levels": 1,
+        "full_levels": 9,
+        "last_width": 256,
+        "last_height": 256
+      },
+      {
+        "file": "b77e02dcb60a6de36f2de5a9d95f0e9e931998c4bfd5794687f6c194f391909b.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "bc30458ccb13aec8fa2bedca8f225b079642b1cf74442dc2747f1eb96759eda3.dds",
+        "bytes": 5592212,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "c512f7ed3d0577a040d9dc18122c3dad9ac8cf80927f6bbc04386ef6083e884c.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "c585cb1ca19a6017fb564755cd085acab0addb87a387e63922e63961aef1bcba.dds",
+        "bytes": 174740,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "c8a225b5245ec698e29a72932a1eefa23a5da39ce186d5a8f4cdf36d261dd6c3.dds",
+        "bytes": 698516,
+        "width": 1024,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 11,
+        "last_width": 64,
+        "last_height": 32
+      },
+      {
+        "file": "c8bba18ffa71a4368b5df984393cc76fe15073298ae851e4e9fd2c5bb6dd6c95.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "c8c5139499996f5545ec90f92a689a50a0fe09aabf01bcdce2cf746c474c6f69.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "ca5a88bd6fe1c2496d6b3a933fb67954380681d4d95ff45814454264cb9fa9bf.dds",
+        "bytes": 174228,
+        "width": 256,
+        "height": 512,
+        "levels": 4,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 64
+      },
+      {
+        "file": "cb36800d0368ede30ab1ff80057b62cfe3f82f96f2c5028c501be90e25851341.dds",
+        "bytes": 2796352,
+        "width": 1024,
+        "height": 512,
+        "levels": 11,
+        "full_levels": 11,
+        "last_width": 1,
+        "last_height": 1
+      },
+      {
+        "file": "d045672b17a351f17b30c8cbdb5d9c5c076a541f83a6b78cb4c72d9e01219e2b.dds",
+        "bytes": 699028,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "df9d822466cedcc54e3d38fcae7e9bb6ef7a38dc436c5561612c1d222426dcc5.dds",
+        "bytes": 5592212,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "e5bd8878acce1e99c3b13ca15901ddc82db50df319396d2253a9e6cb3f7cf5d1.dds",
+        "bytes": 5592212,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "e5c00d347e5bb00b07058e62b7aeb50d28a78cf65f98eac8a80b18bb7ab7a03f.dds",
+        "bytes": 699028,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "e9b76cc6116aeba5996c729b2d4e6e75ad3342b7bc691ef27127e71becaa2f2f.dds",
+        "bytes": 349332,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "eaf4742cf8df5454df2d92b76162fa92c52ab7a9fdc9c547e9565f05f2f2b003.dds",
+        "bytes": 2796180,
+        "width": 2048,
+        "height": 2048,
+        "levels": 7,
+        "full_levels": 12,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "eb3cd7e9d6031385dba606895005ae294b1caa4b3d4c4670020a253b664a578a.dds",
+        "bytes": 10900,
+        "width": 128,
+        "height": 128,
+        "levels": 3,
+        "full_levels": 8,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "ed59646a26850594623cbbb11299c4c5e885ba03cf09f88a52602803f169c030.dds",
+        "bytes": 174740,
+        "width": 512,
+        "height": 512,
+        "levels": 5,
+        "full_levels": 10,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "eeaa565b58d4b6a43b91a852a525d1cc78d93ecd640a50324804708ea910db23.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "ef4cc07df0430fe61b8848b439f6b0ceac4c59b16edfa0be65c0de2d0e7b21ba.dds",
+        "bytes": 43668,
+        "width": 256,
+        "height": 256,
+        "levels": 4,
+        "full_levels": 9,
+        "last_width": 32,
+        "last_height": 32
+      },
+      {
+        "file": "f14681cf3d5ffb1eee767814249b75df5913c9ae761c572950f7ab786af28721.dds",
+        "bytes": 1397908,
+        "width": 1024,
+        "height": 1024,
+        "levels": 6,
+        "full_levels": 11,
+        "last_width": 32,
+        "last_height": 32
+      }
+    ],
+    "limits": "Source mip chains preserved as provided; partial source chains not synthesized. Submission fraction is not screen area or unique objects; different captures are not a controlled cache-size A/B."
+  },
+  "infected_audit": {
+    "trace_draws": 11508,
+    "samples": 40,
+    "phases": {
+      "raster": 8,
+      "baseline_world": 8,
+      "expanded_models": 24
+    },
+    "geometry_status": {
+      "complete": 40
+    },
+    "strides": {
+      "48": 40
+    },
+    "vertex_programs": {
+      "e9f1650bedd1575e46c486f522d3d0bb8a40e1abb8d78eb0d281daf93a267d72": 40
+    },
+    "pixel_programs": {
+      "3bac21dc89466c265f1c1411bd54bcdfeec8c0a9fafceab1b1891739384e7de7": 40
+    },
+    "declaration_elements": [
+      [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        12,
+        2,
+        0,
+        3,
+        0
+      ],
+      [
+        0,
+        24,
+        1,
+        0,
+        5,
+        0
+      ],
+      [
+        0,
+        32,
+        3,
+        0,
+        6,
+        0
+      ],
+      [
+        1,
+        0,
+        4,
+        0,
+        10,
+        1
+      ],
+      [
+        2,
+        0,
+        3,
+        0,
+        0,
+        1
+      ],
+      [
+        2,
+        16,
+        2,
+        0,
+        3,
+        1
+      ],
+      [
+        255,
+        0,
+        17,
+        0,
+        0,
+        0
+      ]
+    ],
+    "vertex_program": {
+      "version": "0xfffe0300",
+      "opcodes": {
+        "81": 1,
+        "31": 12,
+        "9": 7,
+        "1": 30,
+        "8": 32,
+        "36": 1,
+        "5": 39,
+        "2": 30,
+        "7": 9,
+        "6": 9,
+        "4": 42,
+        "10": 9,
+        "11": 9,
+        "40": 4,
+        "32": 8,
+        "42": 5,
+        "43": 8,
+        "41": 4,
+        "12": 1,
+        "46": 1
+      },
+      "ended": true
+    },
+    "pixel_program": {
+      "version": "0xffff0300",
+      "opcodes": {
+        "81": 1,
+        "31": 9,
+        "2": 6,
+        "5": 11,
+        "1": 7,
+        "66": 6,
+        "4": 12,
+        "18": 1,
+        "6": 1
+      },
+      "ended": true
+    },
+    "source_transform_audit": [
+      {
+        "ordinal": 512,
+        "world_matrix_max_absolute_delta": 4342.375,
+        "camera_matrix_max_absolute_delta": 0.00010961146745103179,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 519,
+        "world_matrix_max_absolute_delta": 4342.375,
+        "camera_matrix_max_absolute_delta": 0.00010961146745103179,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 668,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 0.00010961146745103179,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 669,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 0.00010961146745103179,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 670,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 0.00010961146745103179,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 671,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 0.00010961146745103179,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 674,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 0.00010961146745103179,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 679,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 0.00010961146745103179,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 23771,
+        "world_matrix_max_absolute_delta": 4621.96875,
+        "camera_matrix_max_absolute_delta": 2.5989212190324906e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 23779,
+        "world_matrix_max_absolute_delta": 4621.96875,
+        "camera_matrix_max_absolute_delta": 2.5989212190324906e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 23868,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 2.5989212190324906e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 23869,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 2.5989212190324906e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 23870,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 2.5989212190324906e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 23871,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 2.5989212190324906e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 23874,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 2.5989212190324906e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 23879,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 2.5989212190324906e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 92028,
+        "world_matrix_max_absolute_delta": 4342.375,
+        "camera_matrix_max_absolute_delta": 8.33309932204429e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 92029,
+        "world_matrix_max_absolute_delta": 4342.375,
+        "camera_matrix_max_absolute_delta": 8.33309932204429e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104087,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104088,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104089,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104090,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104091,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104092,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104093,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104094,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104095,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104096,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104097,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104098,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104099,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104100,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104101,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104102,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104103,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104104,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104105,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104106,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104107,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      },
+      {
+        "ordinal": 104108,
+        "world_matrix_max_absolute_delta": 4.179687493888196e-06,
+        "camera_matrix_max_absolute_delta": 9.405040418641875e-05,
+        "homogeneous_c0_y": 1.0,
+        "morph_c13_x": 0.0
+      }
+    ],
+    "position_path_review": "Exact sampled VS computes world position with c58..60, clip with c8..11, and base UV from input TEXCOORD0. Later branch-heavy code computes lighting outputs. All samples c0.y=1 and c13.x=0. Unknown-program and stride/layout guards currently exclude this 48-byte family. This is a candidate separate rigid-input profile, not blanket admission of all Infected programs. Fixed D3DTS_WORLD differs from c58..60 in some captures, so source shader constants must drive reconstruction.",
+    "live_rt_admission": "unrun",
+    "limits": "Source geometry and program evidence do not prove an RT instance, infection/skin/normal/detail shading, visibility, or all infected variants.",
+    "offline_position_normal_probe": {
+      "samples": [
+        {
+          "ordinal": 512,
+          "vertices": 2188,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 2188,
+          "inside_clip_vertices": 2188,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 519,
+          "vertices": 582,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 582,
+          "inside_clip_vertices": 582,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 668,
+          "vertices": 682,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 682,
+          "inside_clip_vertices": 682,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 669,
+          "vertices": 1117,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1117,
+          "inside_clip_vertices": 1117,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 670,
+          "vertices": 1159,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1159,
+          "inside_clip_vertices": 1159,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 671,
+          "vertices": 480,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 480,
+          "inside_clip_vertices": 480,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 674,
+          "vertices": 420,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 420,
+          "inside_clip_vertices": 420,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 679,
+          "vertices": 480,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 480,
+          "inside_clip_vertices": 480,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 23771,
+          "vertices": 2188,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 2188,
+          "inside_clip_vertices": 2188,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 23779,
+          "vertices": 582,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 582,
+          "inside_clip_vertices": 582,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 23868,
+          "vertices": 682,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 682,
+          "inside_clip_vertices": 682,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 23869,
+          "vertices": 1117,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1117,
+          "inside_clip_vertices": 1117,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 23870,
+          "vertices": 1159,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1159,
+          "inside_clip_vertices": 1159,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 23871,
+          "vertices": 480,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 480,
+          "inside_clip_vertices": 480,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 23874,
+          "vertices": 420,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 420,
+          "inside_clip_vertices": 420,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 23879,
+          "vertices": 480,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 480,
+          "inside_clip_vertices": 480,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 92028,
+          "vertices": 2188,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 2188,
+          "inside_clip_vertices": 2188,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 92029,
+          "vertices": 582,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 582,
+          "inside_clip_vertices": 582,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104087,
+          "vertices": 420,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 420,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104088,
+          "vertices": 1143,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1143,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104089,
+          "vertices": 604,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": false,
+          "zero_or_nonfinite_source_normals": 1,
+          "front_vertices": 604,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104090,
+          "vertices": 1061,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1061,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104091,
+          "vertices": 1148,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1148,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104092,
+          "vertices": 480,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 480,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104093,
+          "vertices": 1155,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1155,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104094,
+          "vertices": 438,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 438,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104095,
+          "vertices": 2281,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 2281,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104096,
+          "vertices": 1065,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1065,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104097,
+          "vertices": 426,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 426,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104098,
+          "vertices": 1143,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1143,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104099,
+          "vertices": 360,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 360,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104100,
+          "vertices": 1061,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1061,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104101,
+          "vertices": 1155,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1155,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104102,
+          "vertices": 480,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 480,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104103,
+          "vertices": 2312,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 2312,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104104,
+          "vertices": 480,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 480,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104105,
+          "vertices": 604,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 604,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104106,
+          "vertices": 604,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": false,
+          "zero_or_nonfinite_source_normals": 1,
+          "front_vertices": 604,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104107,
+          "vertices": 1234,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1234,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        },
+        {
+          "ordinal": 104108,
+          "vertices": 1152,
+          "world_position_finite": true,
+          "clip_position_finite": true,
+          "world_linear_determinant": 1.0,
+          "source_normal_nonzero_finite": true,
+          "zero_or_nonfinite_source_normals": 0,
+          "front_vertices": 1152,
+          "inside_clip_vertices": 0,
+          "base_uv_finite": true
+        }
+      ],
+      "limits": "Reconstructs only audited position transform/base UV/source normal transform. Does not replay original full program or prove raster/RT pixels, triangle visibility, all variants, or smooth RT normal import."
+    },
+    "fixed_world_state_disagrees_samples": 6
+  },
+  "light_requests": [
+    {
+      "event": "model_light_config_requested",
+      "after_present": 300,
+      "value": "3,3,3",
+      "code": 0
+    },
+    {
+      "event": "model_light_config_requested",
+      "after_present": 360,
+      "value": "30,30,30",
+      "code": 0
+    },
+    {
+      "event": "model_light_config_requested",
+      "after_present": 540,
+      "value": "30,30,30",
+      "code": 0
+    }
+  ],
+  "manual_visual_review": {
+    "stage_240_300_360": "Pink-white hair, dark clothes and character albedo details visible under baseline30 and low3; camera/pose changes prohibit strict photometric A/B.",
+    "stage_420": "Metal response visible.",
+    "stage_480": "Synthetic opacity stage executed; full original transparency not accepted.",
+    "stage_540": "Orange emissive response visible.",
+    "stage_600": "Explicit API models removed, world persists.",
+    "limits": "Reduced640x400 samples; original PS/Toon and smooth source normals not restored. Full scene coverage, stable continuous mode, performance and Source producer parallel preparation unaccepted."
+  },
+  "color_readback_metrics": [
+    {
+      "frame": 30,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.5073775053024292,
+        0.4775707423686981,
+        0.4473544955253601
+      ],
+      "clipped_fraction": 0.0017317708333333334
+    },
+    {
+      "frame": 120,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.07373085618019104,
+        0.04118659719824791,
+        0.03836086019873619
+      ],
+      "clipped_fraction": 0.0008828125
+    },
+    {
+      "frame": 180,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.603327751159668,
+        0.5369876623153687,
+        0.5281080007553101
+      ],
+      "clipped_fraction": 0.000796875
+    },
+    {
+      "frame": 240,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.5568219423294067,
+        0.5115916728973389,
+        0.5056249499320984
+      ],
+      "clipped_fraction": 0.0008528645833333333
+    },
+    {
+      "frame": 300,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.6288824677467346,
+        0.5603390336036682,
+        0.5509784817695618
+      ],
+      "clipped_fraction": 0.0007825520833333333
+    },
+    {
+      "frame": 360,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.5502262115478516,
+        0.5022726655006409,
+        0.49617359042167664
+      ],
+      "clipped_fraction": 0.0008346354166666667
+    },
+    {
+      "frame": 420,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.6137433648109436,
+        0.550062894821167,
+        0.5405879616737366
+      ],
+      "clipped_fraction": 0.00078515625
+    },
+    {
+      "frame": 480,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.5574817657470703,
+        0.5152424573898315,
+        0.5092876553535461
+      ],
+      "clipped_fraction": 0.0007786458333333333
+    },
+    {
+      "frame": 540,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.6660520434379578,
+        0.5767632722854614,
+        0.5540931224822998
+      ],
+      "clipped_fraction": 0.013154947916666666
+    },
+    {
+      "frame": 600,
+      "nonfinite_rgb": 0,
+      "exact_cyan_pixels": 0,
+      "rgb_mean": [
+        0.5659434199333191,
+        0.5343270301818848,
+        0.526394784450531
+      ],
+      "clipped_fraction": 0.0007890625
+    }
+  ],
+  "exit_analysis": {
+    "schema": 1,
+    "status": "abnormal",
+    "exceptions": [
+      {
+        "file": "game-logs/0/bridge32.log",
+        "side": "client",
+        "pid": 10488,
+        "code": "0xc0000005",
+        "target": "0x104b0",
+        "named_frames": [
+          {
+            "module": "necola.dll",
+            "offset": "0x1447fc"
+          },
+          {
+            "module": "necola.dll",
+            "offset": "0x1448de"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x766b6"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x46f1e"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x5e66d"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x5e2d5"
+          },
+          {
+            "module": "kernel32.dll",
+            "offset": "0x27493"
+          },
+          {
+            "module": "left4dead2.exe",
+            "offset": "0xb3c3"
+          }
+        ],
+        "pid_bound": true,
+        "phase": "exit_logs_requires_timing_review"
+      }
+    ],
+    "unbound_exception_logs": [],
+    "cleanup_logs": [
+      "bridge32.log",
+      "bridge64.log"
+    ],
+    "backend_objects_remaining": 40,
+    "limits": "Log evidence only. Cleanup messages alone do not prove a clean process exit; named stack frames do not establish the unique culprit."
+  },
+  "component_files": [
+    {
+      "module": "studiorender.dll",
+      "mapped_size": 6631424,
+      "size": 634672,
+      "sha256": "03964dedcf8b7f4ebde24cd3d0738873d37c075a7a9b313dad001bb937f9d1b6"
+    },
+    {
+      "module": "necola.dll",
+      "mapped_size": 2166784,
+      "size": 2117120,
+      "sha256": "742c17622e03a363cc0e2629049e8112c94557e46c6656b03bff2844c099ec1e"
+    }
+  ],
+  "next_work": [
+    "Use audited exact Infected VS/PS/declaration for separate48-byte rigid-input profile with camera/position validation and explicit fallbacks.",
+    "Separate texture residency/workset management from cumulative diagnostic export/archive budget; raising128MiB alone cannot provide continuous coverage.",
+    "Preserve source normals where audited and move toward a bounded continuous preview; combine future acceptance in oneF9 collection.",
+    "Investigate repeated exit fault using stable component hashes; same necola frames and unknown execute target do not establish unique ownership."
+  ],
+  "raw_user_assets_committed": false
+}
