@@ -22,3 +22,11 @@ Trace版本17、覆盖修订20，快照线格式保持不变；旧v19及更早�
 Windows MSVC双架构编译、真实NULLREF缓存/锁与回收测试及最终产品验证将在发布记录中列明。新原生用例覆盖精确Infected变换/UV/法线拒绝边界、API法线导入与几何回退，以及完成前不可驱逐、完成后驱逐、内容复用、后台文件保留和诊断副本额度。
 
 实际感染者RT像素、60秒持续预览和性能尚未在B580验收。原PS细节通道、完整Toon/透明、多贴图与其余人物平滑法线未完成。旧的退出执行异常及40个后端对象残留仍待调查，不把此次缓存改动声明为退出修复，也不把60秒预览声明为完整实时游戏版本。
+
+## 已完成交付验证
+
+源码 `7706e0d34adad41aded4a0bbab425a80e8b45f5f`，编译身份 `ldb-rt-observer+d89e71a2d31eb2bb`。Windows MSVC x86客户端/x64 Host Release构建通过，NULLREF及全部既有原生门禁通过；新增感染者配置、平滑法线/几何回退、工作集驱逐/后台文件寿命/证据限额用例通过。两端原生生成trace独立重读通过，覆盖修订20、600 Present边界正确。
+
+最终ZIP为11,994,205字节，SHA256 `ceeb037a1f85eadc1519f129516977915544889a09b585f99414a12bed578a5c`。逐成员哈希、源码收据30项输入、产品脚本/说明逐字匹配、双端PE架构和编译身份、Release编译参数、隔离Python入口/LZMA、固定API0.6.4初始化均通过；HTTP下载与Git blob一致，发布分支仍仅含ZIP。
+
+[文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/b6487f6c20e847e673f55c963352b2447fd730f7/downloads/rt-world-pilot-dev.zip)；[结构化交付核验](../../research/rt-world-pilot-v20-validation.json)。B580实际感染者像素、60秒预览与退出兼容仍待实机结果；本次交付记录不将其标为通过。
