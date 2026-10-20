@@ -319,6 +319,10 @@ def finish_world_capture(directory,game,since,report,notify):
         preview=review_preview(directory);save(directory/'preview-analysis.json',preview)
         report['preview']='completed_requires_image_review' if preview['pass'] else 'incomplete'
         if not preview['pass']:report['errors'].extend(preview['errors']);report['collection']='incomplete'
+    from analyze_rt_infected import analyze as analyze_infected
+    infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
+    report['infected_evidence']=infected['status']
+    if not infected['pass']:report['collection']='incomplete';report['errors'].extend(infected['errors'])
     outputs=analyze_world(directory);save(directory/'world-analysis.json',outputs)
     report['world_outputs']=outputs['runtime_outputs']
     live=outputs.get('live_mesh',{})
@@ -445,7 +449,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Textured Mesh v20: press F9 once; slow movement/turning allowed. World/HUD31-120; sky121-180; Neko textures181-240; combined textures241-300; headlamp30 by default; headlamp3 at301-360; metal361-420; alpha421-480; emissive481-540; recovery541-600. Audited Infected rendering, bounded texture evidence and adjacent poses are automatic. After600:60-second neutral live preview then automatic recovery; keep playing until this window asks you to exit.')
+        if world:notify('Textured Mesh v21: press F9 once; slow movement/turning allowed. World/HUD31-120; sky121-180; Neko textures181-240; combined textures241-300; headlamp30 by default; headlamp3 at301-360; metal361-420; alpha421-480; emissive481-540; recovery541-600. Infected palette/detail reconstruction, bright opaque double-sided control at361-420 and near-target evidence are automatic. Spawn common infected BEFORE F9 and keep them in view; all captured known model variants are included. After600:60-second neutral live preview then automatic recovery; keep playing until this window asks you to exit.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

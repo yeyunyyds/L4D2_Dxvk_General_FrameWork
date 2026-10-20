@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "pass": true,
+  "scope": "production C++ diffuse dependency compared against independently interpreted original SM3 PS tokens176..294; same actual captured constants, randomized texture return values",
+  "cases": 1750,
+  "captured_constant_samples": 33,
+  "max_absolute_delta": 1.9301491382961444e-07,
+  "pixel_shader_sha256": "3bac21dc89466c265f1c1411bd54bcdfeec8c0a9fafceab1b1891739384e7de7",
+  "source_header_sha256": "3b09cde9f6991007c6e0eaa0c41cd4764a1e0d42f6f2a9937d82921ed82833b7",
+  "native_math_decode_mips_cases": "pass",
+  "limits": "Texture returns randomized; not actual sampler4/5 appearance. Full original lighting/AO/fog excluded; GPU and bake aliasing acceptance pending."
+}

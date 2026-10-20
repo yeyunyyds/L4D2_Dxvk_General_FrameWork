@@ -6,6 +6,7 @@
 #include <set>
 using namespace ldb_rt;
 void require(bool value,const char* why) { if(!value) { throw std::runtime_error(why); } }
+#include "rt_infected_material_cases.h"
 namespace fixture {
 unsigned failureCode=1,fail=0,created=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live,materialLive;
 int lastAlpha=7;uint8_t lastRef=0;bool lastTextured=false;
@@ -51,7 +52,7 @@ struct CategoryDevice {
 #include "rt_model_texture_cases.h"
 int main() {
  try {
-  textureHashCases();systemTextureExport();
+  infectedMaterialCases();textureHashCases();systemTextureExport();
   for(DWORD category:std::array<DWORD,4>{{0,live_mesh::kUnused,4,0x100}}) {
    fixture::CategoryDevice d;d.value=category;
    { live_mesh::IgnoreScope<fixture::CategoryDevice> scope(&d);require(scope.ready()&&d.value==((category==live_mesh::kUnused?0:category)|live_mesh::kIgnore),"ignore flag not applied");scope.finish();require(SUCCEEDED(scope.restore),"ignore restoration"); }

@@ -6,7 +6,7 @@ import struct
 
 def analyze(directory,events):
     directory=Path(directory);errors=[];files={};bindings=[];mip_counts={};omitted=set()
-    v20=any(e.get('event')=='world_coverage_revision' and e.get('value')=='20' and e.get('code')==0 for e in events)
+    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21') and e.get('code')==0 for e in events)
     v19=v20 or any(e.get("event")=="world_coverage_revision" and e.get("value")=="19" and e.get("code")==0 for e in events)
     max_bytes=(512 if v20 else 128 if v19 else 64)*1024*1024;max_refs=256 if v19 else 128;max_file=(24 if v19 else 16)*1024*1024+148
     def check(value,why):

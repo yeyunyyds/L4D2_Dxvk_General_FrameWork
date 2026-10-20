@@ -15,6 +15,7 @@
 #define REMIX_WINAPI_NO_LIBRARY_LOADER
 #include "rt_world_remix_c.h"
 #include "rt_live_mesh.h"
+#include "rt_infected_material.h"
 #include <deque>
 #include <memory>
 #include <cmath>
@@ -34,6 +35,11 @@ uint64_t physicalDraws = 0;
 world_diagnostics::LiveCoverageComparison comparison;
 live_mesh::Scene apiMeshes(&api);
 model_texture::Cache modelTextures;
+infected_material::Cache infectedMaterials;
+uint64_t targetBytes=0,targetRows=0,targetFrame=0;unsigned targetFrameRows=0;
+std::map<std::string,uint64_t> liveShaderSubmissions,liveShaderFallbacks;
+std::set<std::pair<uintptr_t,uintptr_t>> unknownPrograms;
+uint64_t unknownBytes=0,unknownFrame=0;unsigned unknownRows=0,unknownFrameRows=0;
 uint64_t previewStarted=0,previewRecoverAt=0,previewFrames=0,previewStartSubmitted=0,previewFirstRead=0;
 unsigned previewReadbacks=0,previewBindingRows=0,previewBindingOmitted=0;bool previewRecover=false,previewReadFailed=false;
 world_diagnostics::ModelStage currentModels() {
@@ -304,9 +310,10 @@ void apiPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& p,u
   const bool save=(previous||frame==240||frame==300) && p.bytes.size()+p.indices.size()<=(previous?8ull:16ull)*1024*1024-apiPayloadBytes[stage];
   events << "{\"event\":\"" << (previous?"api_model_previous_sample":"api_model_sample") << "\",\"frame\":" << frame << ",\"ordinal\":" << s.ordinal
     << ",\"stage\":\"" << world_diagnostics::texturedName(currentModels()) << "\",\"shader\":\"" << s.materialInfo.shader.data()
-    << "\",\"material\":\"" << live_mesh::name(liveMaterial(currentModels())) << "\",\"kind\":" << kind << ",\"topology\":" << uint32_t(topology)
+    << "\",\"material\":\"" << (std::strcmp(s.materialInfo.shader.data(),"Infected")?live_mesh::name(liveMaterial(currentModels())):"neutral") << "\",\"kind\":" << kind << ",\"topology\":" << uint32_t(topology)
     << ",\"source_material\":" << s.material << ",\"source_vs_reason\":\"" << p.reason << "\",\"vertices\":" << p.bytes.size()/32 << ",\"triangles\":" << submission.triangles << ",\"index_bytes\":" << p.indexBytes
     << ",\"mesh\":" << submission.handle << ",\"created\":" << (submission.created?"true":"false") << ",\"textured\":" << (submission.textured?"true":"false") << ",\"material_handle\":" << submission.materialHandle << ",\"cull\":" << cull
+    << ",\"instance_cull\":" << ((!std::strcmp(s.materialInfo.shader.data(),"Infected")&&currentModels()==world_diagnostics::ModelStage::Combined)?DWORD(D3DCULL_NONE):cull)
     << ",\"ignored_category_at_original_draw\":" << ignored << ",\"vertices_sha256\":\"" << vh << "\",\"indices_sha256\":\"" << ih
     << "\",\"gpu_upload\":\"pinned_CreateMesh_synchronous_copy_queued_owned_buffers\",\"world\":[";
   for(unsigned i=0;i<16;++i) { if(i) { events<<','; }events<<p.world[i]; }events<<"],\"view\":[";
@@ -331,7 +338,7 @@ void textureBinding(const model_texture::Source& source,const live_mesh::Submiss
     << ",\"evidence_saved\":" << (source.evidenceSaved?"true":"false") << ",\"mip_levels\":" << source.levels << ",\"full_mip_levels\":" << source.fullMipLevels
     << ",\"alpha_test\":" << unsigned(source.alphaTest) << ",\"alpha_ref\":" << unsigned(source.alphaRef)
     << ",\"filter\":" << unsigned(source.filter) << ",\"wrap_u\":" << unsigned(source.wrapU) << ",\"wrap_v\":" << unsigned(source.wrapV)
-    << ",\"material\":\"" << live_mesh::name(liveMaterial(currentModels())) << "\"}\n" << std::flush;
+    << ",\"material\":\"" << (source.reason.rfind("infected_",0)==0?"neutral":live_mesh::name(liveMaterial(currentModels()))) << "\"}\n" << std::flush;
 }
 bool pollMeshCompletion() {
     while(!meshFences.empty()) {
@@ -369,6 +376,7 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
       << "\",\"submitted\":" << apiMeshes.submitted << ",\"created\":" << apiMeshes.created << ",\"reused\":" << apiMeshes.reused
       << ",\"destroyed\":" << apiMeshes.destroyed << ",\"entries\":" << apiMeshes.entries() << ",\"bytes\":" << apiMeshes.bytes
       << ",\"material_updates\":" << apiMeshes.materialUpdates << ",\"textured_submissions\":" << texturedSubmissions << ",\"texture_fallback_submissions\":" << textureFallbackSubmissions << ",\"texture_exports\":" << modelTextures.exported << ",\"texture_bytes\":" << modelTextures.bytes << ",\"texture_held\":" << modelTextures.held() << ",\"texture_read_failures\":" << modelTextures.failed << ",\"texture_budget_deferred\":" << modelTextures.deferred
+      << ",\"infected_bakes\":" << infectedMaterials.baked << ",\"infected_bake_deferred\":" << infectedMaterials.deferred << ",\"infected_bake_failures\":" << infectedMaterials.failed
       << ",\"texture_resident_bytes\":" << modelTextures.residentBytes << ",\"texture_evidence_bytes\":" << modelTextures.evidenceBytes << ",\"texture_evidence_files\":" << modelTextures.evidenceFiles << ",\"texture_evicted\":" << modelTextures.evicted
       << ",\"peak_bytes\":" << apiMeshes.peakBytes << ",\"completed_through\":" << completedMeshFrame << ",\"pending_fences\":" << meshFences.size()
       << ",\"frame_draws\":" << (apiMeshes.frame==frame?apiMeshes.frameDraws:0)
@@ -379,6 +387,87 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
     }
     events << "}}\n" << std::flush;
   } catch(...) { event("api_mesh_present_exception",uint32_t(E_FAIL));(void)raytracing(false);state().active=false; }
+}
+void unknownEvidence(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,const char* reason,uint64_t frame) {
+  if(frame%60||unknownRows>=32||unknownPrograms.size()>=256||!std::strcmp(reason,"api_model_stage_excluded")) { return; }
+  if(unknownFrame!=frame) { unknownFrame=frame;unknownFrameRows=0; }if(unknownFrameRows>=4) { return; }
+  static_draw::Ref<IDirect3DVertexShader9> vs;static_draw::Ref<IDirect3DPixelShader9> ps;
+  if(FAILED(device->GetVertexShader(&vs.value))||FAILED(device->GetPixelShader(&ps.value))) { return; }
+  if(!unknownPrograms.emplace(reinterpret_cast<uintptr_t>(vs.value),reinterpret_cast<uintptr_t>(ps.value)).second) { return; }
+  ++unknownFrameRows;const auto phase=comparison.phase();
+  const auto input=scene_input::capture(device,kind,type,args,true,scene_input::kAuditLimits,true);
+    const uint64_t bytes=input.vertices.size()+input.indices.size()+(input.vs.size()+input.ps.size())*4+input.declaration.size()*sizeof(D3DVERTEXELEMENT9)+
+      (SUCCEEDED(input.constantsResult)?sizeof(input.constants):0)+(SUCCEEDED(input.integerResult)?sizeof(input.integerConstants):0)+
+      (SUCCEEDED(input.boolResult)?sizeof(input.boolConstants):0)+(SUCCEEDED(input.pixelResult)?sizeof(input.pixelConstants):0)+
+      input.auxiliary[0].bytes.size()+input.auxiliary[1].bytes.size()+input.auxiliary[2].bytes.size()+input.morph.positions.size()*sizeof(sky_shader::Vec);
+    if(bytes>16ull*1024*1024-unknownBytes) { return; }
+    ++unknownRows;
+    std::ostringstream log;log << std::setprecision(9);
+    const std::string prefix="unknown-"+std::to_string(s.ordinal);
+    log << "{\"event\":\"unknown_model_input\",\"phase\":\"" << world_diagnostics::name(phase) << "\",\"ordinal\":" << s.ordinal
+      << ",\"material\":" << s.material << ",\"table\":" << s.materialTable << ",\"shader\":\"" << s.materialInfo.shader.data()
+      << "\",\"format\":" << s.materialInfo.format << ",\"kind\":" << kind << ",\"topology\":" << uint32_t(type) << ",\"args\":[";
+    for (unsigned i=0;i<6;++i) { if (i) { log << ','; }log << args[i]; }
+    log << "],\"world\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << s.world[i]; }
+    log << "],\"view\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << s.view[i]; }
+    log << "],\"projection\":[";for (unsigned i=0;i<16;++i) { if (i) { log << ','; }log << s.projection[i]; }
+    log << "],\"geometry_hresult\":" << uint32_t(input.geometryResult) << ",\"shader_hresult\":" << uint32_t(input.shaderResult)
+      << ",\"constants_hresult\":" << uint32_t(input.constantsResult) << ",\"geometry_status\":\"" << input.reason
+      << "\",\"replay_status\":\"" << reason << "\",\"first_absolute_vertex\":" << input.first << ",\"vertex_count\":" << input.count << ",\"stride\":" << input.stride
+      << ",\"geometry_window\":true,\"source_vertex_buffer_bytes\":" << input.vertexBufferBytes << ",\"stream_offset\":" << input.offset << ",\"index_bytes\":" << input.indexBytes << ",";
+    log << "\"morph_position\":{\"hresult\":" << uint32_t(input.morph.result) << ",\"stream\":" << input.morph.stream
+      << ",\"offset\":" << input.morph.offset << ",\"stride\":" << input.morph.stride << ",\"frequency\":" << input.morph.frequency
+      << ",\"source_buffer_bytes\":" << input.morph.bufferBytes << ",\"first_absolute_vertex\":" << input.first
+      << ",\"vertices\":" << input.morph.positions.size() << "},";
+    // Prefix-only auxiliary streams are evidence, never claimed as complete vertices.
+    log << "\"auxiliary\":[";
+    for (unsigned i=0;i<3;++i) { const auto& a=input.auxiliary[i];if (i) { log << ','; }
+      log << "{\"stream\":" << a.stream << ",\"offset\":" << a.offset << ",\"stride\":" << a.stride << ",\"frequency\":" << a.frequency << ",\"hresult\":" << uint32_t(a.result) << ",\"prefix_bytes\":" << a.bytes.size() << '}'; }
+    log << "],\"integer_constants_hresult\":" << uint32_t(input.integerResult) << ",\"bool_constants_hresult\":" << uint32_t(input.boolResult) << ",\"pixel_constants_hresult\":" << uint32_t(input.pixelResult) << ",\"files\":[";
+    bool comma=false;
+    const auto save=[&](const char* suffix,const void* bytes,size_t size) {
+      if (!size) { return; }const std::string name=prefix+suffix;
+      std::ofstream file(launch.output/name,std::ios::binary);file.write(static_cast<const char*>(bytes),std::streamsize(size));file.close();
+      if (!file) { return; }unknownBytes+=size;if (comma) { log << ','; }comma=true;
+      log << "{\"file\":\"" << name << "\",\"size\":" << size << ",\"sha256\":\"" << ldb_rt_file::fileSha256(launch.output/name) << "\"}";
+    };
+    save("-vertices.bin",input.vertices.data(),input.vertices.size());save("-indices.bin",input.indices.data(),input.indices.size());
+    save("-vs.bin",input.vs.data(),input.vs.size()*4);save("-ps.bin",input.ps.data(),input.ps.size()*4);
+    save("-declaration.bin",input.declaration.data(),input.declaration.size()*sizeof(D3DVERTEXELEMENT9));
+    if (SUCCEEDED(input.constantsResult)) { save("-constants.bin",input.constants.data(),sizeof(input.constants)); }
+    if (SUCCEEDED(input.integerResult)) { save("-vs-integers.bin",input.integerConstants.data(),sizeof(input.integerConstants)); }
+    if (SUCCEEDED(input.boolResult)) { save("-vs-bools.bin",input.boolConstants.data(),sizeof(input.boolConstants)); }
+    if (SUCCEEDED(input.pixelResult)) { save("-ps-constants.bin",input.pixelConstants.data(),sizeof(input.pixelConstants)); }
+    if (!input.morph.positions.empty()) { save("-morph-positions.bin",input.morph.positions.data(),input.morph.positions.size()*sizeof(sky_shader::Vec)); }
+    for (unsigned i=0;i<3;++i) { const std::string name="-stream-"+std::to_string(i+1)+".bin";save(name.c_str(),input.auxiliary[i].bytes.data(),input.auxiliary[i].bytes.size()); }
+
+    log << "]}\n";std::ofstream output(launch.output/"unknown-model-inputs.jsonl",std::ios::app);output << log.str();output.close();if(!output) { throw std::runtime_error("unknown shader journal"); }
+}
+void targetEvidence(const draw_observe::Snapshot& s,const scene_input::Prepared& p,const live_mesh::Submission& submitted,uint64_t frame) {
+  if(std::strcmp(s.materialInfo.shader.data(),"Infected")||frame%60||targetRows>=256||!std::strcmp(p.reason,"api_model_stage_excluded")) { return; }
+  if(targetFrame!=frame) { targetFrame=frame;targetFrameRows=0; }if(targetFrameRows>=4) { return; }
+  double distance=-1;std::array<double,3> center{};std::array<double,4> clip{};
+  if(p.ready&&!p.bytes.empty()) {
+    for(size_t at=0;at<p.bytes.size();at+=32) { float v[3]{};std::memcpy(v,p.bytes.data()+at,12);
+      for(unsigned j=0;j<3;++j) { center[j]+=double(v[0])*p.world[j]+double(v[1])*p.world[4+j]+double(v[2])*p.world[8+j]+p.world[12+j]; }
+    }
+    for(auto& v:center) { v/=double(p.bytes.size()/32); }
+    std::array<double,4> camera{};for(unsigned j=0;j<4;++j) { camera[j]=s.view[12+j];for(unsigned k=0;k<3;++k) { camera[j]+=center[k]*s.view[k*4+j]; } }
+    distance=std::sqrt(camera[0]*camera[0]+camera[1]*camera[1]+camera[2]*camera[2]);
+    if(distance>1024) { return; }for(unsigned j=0;j<4;++j) { for(unsigned k=0;k<4;++k) { clip[j]+=camera[k]*s.projection[k*4+j]; } }
+  }
+  ++targetRows;++targetFrameRows;std::string vertexFile,indexFile;
+  if(p.ready&&p.bytes.size()+p.indices.size()<=16ull*1024*1024-targetBytes) {
+    const auto write=[&](const char* suffix,const std::vector<uint8_t>& bytes) {
+      if(bytes.empty()) { return std::string{}; }const auto file="target-"+std::to_string(s.ordinal)+suffix;
+      std::ofstream f(launch.output/file,std::ios::binary);f.write(reinterpret_cast<const char*>(bytes.data()),std::streamsize(bytes.size()));f.close();if(!f) { throw std::runtime_error("write near target"); }targetBytes+=bytes.size();return file;
+    };vertexFile=write("-vertices.bin",p.bytes);indexFile=write("-indices.bin",p.indices);
+  }
+  events<<"{\"event\":\"infected_near_target\",\"frame\":"<<frame<<",\"ordinal\":"<<s.ordinal<<",\"preview\":"<<(state().preview?"true":"false")
+    <<",\"ready\":"<<(p.ready?"true":"false")<<",\"submitted\":"<<(submitted.success?"true":"false")<<",\"reason\":\""<<p.reason
+    <<"\",\"distance_source_units\":"<<distance<<",\"world_center\":["<<center[0]<<','<<center[1]<<','<<center[2]<<"],\"center_clip\":["<<clip[0]<<','<<clip[1]<<','<<clip[2]<<','<<clip[3]
+    <<"],\"vertex_file\":\""<<vertexFile<<"\",\"index_file\":\""<<indexFile<<"\",\"vertices_sha256\":\""<<ldb_rt_file::geometrySha256(p.bytes.data(),p.bytes.size())
+    <<"\",\"indices_sha256\":\""<<ldb_rt_file::geometrySha256(p.indices.data(),p.indices.size())<<"\",\"payload_bytes\":"<<targetBytes<<"}\n";
 }
 bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,
     static_draw::Report& report,bool& called,HRESULT& physical,HRESULT& result) noexcept {
@@ -433,9 +522,14 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
       bool sameCamera=true;for(unsigned i=0;i<16;++i) { sameCamera=sameCamera&&std::abs(apiView[i]-s.view[i])<=1e-4f&&std::abs(apiProjection[i]-s.projection[i])<=1e-4f; }
       if(SUCCEEDED(hr)&&sameCamera) {
         operation="acquire_model_texture";
-        const auto source=modelTextures.acquire(device,launch.output,frame,s.material);
+        const bool infected=!std::strcmp(s.materialInfo.shader.data(),"Infected");
+        const bool control=infected&&currentModels()==world_diagnostics::ModelStage::Combined;
+        auto source=infected?infectedMaterials.acquire(device,modelTextures,launch.output,frame,s.material):modelTextures.acquire(device,launch.output,frame,s.material);
+        if(control) { source={};source.key="infected-bright-opaque-control";source.reason="infected_bright_opaque_double_sided_control"; }
+        // Infected alpha is encoded palette data, never surface coverage.
+        const auto variant=infected?live_mesh::Material::Neutral:liveMaterial(currentModels());
         operation="submit_api_mesh";
-        submitted=apiMeshes.draw(prepared,kind,type,cull,liveMaterial(currentModels()),frame,meshFences.size(),source,completedMeshFrame);
+        submitted=apiMeshes.draw(prepared,kind,type,control?DWORD(D3DCULL_NONE):cull,variant,frame,meshFences.size(),source,completedMeshFrame);
         textureBinding(source,submitted,frame);
         if(submitted.success) { if(source.textured()) { ++texturedSubmissions; }else { ++textureFallbackSubmissions; } }
       }
@@ -454,8 +548,10 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
       FAILED(report.restore)?static_draw::Code::RestoreFailed:submitted.success?static_draw::Code::Applied:static_draw::Code::Layout;
     result=FAILED(report.restore)?report.restore:physical;
     operation="save_model_evidence";
-    if(report.converted&&SUCCEEDED(result)) { ++counts.reconstructed;apiPayload(s,prepared,kind,type,cull,submitted,ignored); }
-    else { ++counts.fallback; }return true;
+    if(report.converted&&SUCCEEDED(result)) { ++liveShaderSubmissions[s.materialInfo.shader.data()];++counts.reconstructed;apiPayload(s,prepared,kind,type,cull,submitted,ignored); }
+    else { ++counts.fallback;++liveShaderFallbacks[std::string(s.materialInfo.shader.data())+":"+prepared.reason]; }
+    if(!prepared.ready) { unknownEvidence(device,s,kind,type,args,prepared.reason,frame); }
+    targetEvidence(s,prepared,submitted,frame);return true;
   } catch(const std::exception& error) { return failed(error.what()); }
     catch(...) { return failed("non_standard_exception"); }
 }
@@ -586,13 +682,21 @@ void previewColor(IDirect3DDevice9* device) {
     <<",\"file\":\""<<file<<"\",\"width\":640,\"height\":400,\"copy_code\":"<<uint32_t(code)<<",\"hresult\":"<<uint32_t(hr)<<",\"written\":"<<(written?"true":"false")<<"}\n"<<std::flush;
   ++previewReadbacks;if(!written||FAILED(hr)) { previewReadFailed=true; }
 }
+void shaderSummary() {
+  events<<"{\"event\":\"live_shader_summary\",\"infected_bakes\":"<<infectedMaterials.baked<<",\"infected_deferred\":"<<infectedMaterials.deferred
+    <<",\"infected_failed\":"<<infectedMaterials.failed<<",\"near_target_rows\":"<<targetRows<<",\"near_target_payload_bytes\":"<<targetBytes<<",\"submissions\":{";
+  bool comma=false;for(const auto& row:liveShaderSubmissions) { if(comma) { events<<','; }comma=true;events<<'"'<<row.first<<"\":"<<row.second; }events<<"},\"fallbacks\":{";
+  comma=false;for(const auto& row:liveShaderFallbacks) { if(comma) { events<<','; }comma=true;events<<'"'<<row.first<<"\":"<<row.second; }events<<"}}\n";
+}
 void endPreview(bool clean,const char* reason) noexcept {
   try {
     (void)raytracing(false);state().active=false;
     const bool complete=clean&&!previewReadFailed&&previewReadbacks==3&&apiMeshes.entries()==0&&meshFences.empty();
     if(complete) { modelTextures.clear(); }
+    shaderSummary();
     events<<"{\"event\":\"preview_end\",\"complete\":"<<(complete?"true":"false")<<",\"reason\":\""<<reason
       <<"\",\"elapsed_ms\":"<<GetTickCount64()-previewStarted<<",\"frames\":"<<previewFrames
+      <<",\"texture_exports\":"<<modelTextures.exported<<",\"texture_bytes\":"<<modelTextures.bytes<<",\"texture_resident_bytes\":"<<modelTextures.residentBytes<<",\"texture_evicted\":"<<modelTextures.evicted
       <<",\"submitted\":"<<apiMeshes.submitted-previewStartSubmitted<<",\"entries\":"<<apiMeshes.entries()<<",\"pending_fences\":"<<meshFences.size()
       <<",\"binding_rows_omitted\":"<<previewBindingOmitted<<",\"held\":"<<modelTextures.held()<<",\"readbacks\":"<<previewReadbacks<<"}\n"<<std::flush;
     std::ofstream done(draw_observe::previewDoneFile(launch));done<<"{\"session\":"<<launch.session<<",\"complete\":"<<(complete?"true":"false")<<"}\n";done.close();
@@ -667,8 +771,8 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy",0,"v20_infected_rigid48_working_set_and_bounded_preview");
-    event("world_coverage_revision",0,"20");
+    event("coverage_comparison_policy",0,"v21_infected_palette_detail_bright_control_five_VLG_near_target_evidence");
+    event("world_coverage_revision",0,"21");
     event("api_mesh_policy",0,"per_frame_pose_direct_mesh_early_fence_retirement_soft_budget_original_draw_ignored_no_source_thread_changes");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_512MiB_spool_64MiB_evidence_256_refs_4_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");

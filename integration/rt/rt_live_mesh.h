@@ -154,9 +154,11 @@ public:
         result.operation="destroy_material_for_update";result.code=uint32_t(api->DestroyMaterial(material.handle));if(result.code) { return result; }material.handle=nullptr;
       }
       auto ext=opaque(variant);ext.albedoConstant=sourceMaterial.textured()?remixapi_Float3D{1,1,1}:remixapi_Float3D{0.55f,0.55f,0.55f};
+      if(sourceMaterial.key=="infected-bright-opaque-control") { ext.albedoConstant={0.1f,1.f,0.2f}; }
       ext.alphaTestType=sourceMaterial.alphaTest;ext.alphaReferenceValue=sourceMaterial.alphaRef;
       remixapi_MaterialInfo info{};info.sType=REMIXAPI_STRUCT_TYPE_MATERIAL_INFO;info.pNext=&ext;info.hash=material.hash;
       info.albedoTexture=sourceMaterial.textured()?sourceMaterial.path.c_str():nullptr;
+      if(sourceMaterial.key=="infected-bright-opaque-control") { info.emissiveIntensity=2;info.emissiveColorConstant={0.1f,1.f,0.2f}; }
       info.filterMode=sourceMaterial.filter;info.wrapModeU=sourceMaterial.wrapU;info.wrapModeV=sourceMaterial.wrapV;
       if(variant==Material::Emissive) { info.emissiveIntensity=3;info.emissiveColorConstant={0.8f,0.2f,0.05f}; }
       result.operation="create_material";result.code=uint32_t(api->CreateMaterial(&info,&material.handle));if(result.code||!material.handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }

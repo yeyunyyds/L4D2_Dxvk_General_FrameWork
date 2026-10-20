@@ -5,16 +5,20 @@
 
 namespace ldb_rt::model_shader {
 constexpr unsigned kMaxVertices=32768;
-// Complete SM3 programs audited in the 191200, 204924 and 004208 captures. A material name or
+// Complete SM3 programs audited in the 191200, 204924, 004208 and 141352 captures. A material name or
 // stride does not establish their position/UV contract. Unknown code falls back.
 enum class Profile { Unknown, Rigid, Bone0, Skin3, Neko3, InfectedRigid };
 inline Profile profile(const std::string& sha) {
   if(sha=="e9f1650bedd1575e46c486f522d3d0bb8a40e1abb8d78eb0d281daf93a267d72") { return Profile::InfectedRigid; }
-  if (sha=="3a9ebc14b4895b0614690472b2500c46c505ff282e6868472849900975493e41" ||
+  if (sha=="b9081b1aa48487b133f168edcf34a302ad06d9963e1bedab8d9dd62d98fbc606" ||
+      sha=="803be4995dac57ebc289dbcc97004a6b1f4c8ad616c7db8dc39f41c200663706" ||
+      sha=="1028c5ef031a8f9763c878ac9514dba6e628f87d3746ec373f4fc3b3e4486775" ||
+      sha=="3a9ebc14b4895b0614690472b2500c46c505ff282e6868472849900975493e41" ||
       sha=="3566b4c8bed75da732f7c8cdb1bce1bb1b5025c932916b2d739ec748f9b8526b" ||
       sha=="dbb52fd1bc05cfef85a1ddf3a4e1943b3e9001182934ee4df94289cd7e27b91e") { return Profile::Rigid; }
   if (sha=="f29d14d0f408c16686dbba5b391c48a8e7445de0d47162b7118d0baaca5519a3") { return Profile::Neko3; }
-  for (const char* known:{"84e1a3321dd4b0e7630372d7c229e37cadea38db2833da73cbfdd5bc8b7dce0d",
+  for (const char* known:{"d7f9daf0698882776cffeb478a6bfdf2a480ade55a7bc659bd76b36c589d5174",
+      "3c653c42a2ce6a7b2201a5b26af6cee4b501625b2d32f1063caafa78d9261d2b","84e1a3321dd4b0e7630372d7c229e37cadea38db2833da73cbfdd5bc8b7dce0d",
       "8eb1c8546fb7d3536f008f1e09998cf034849f5f67f23fc1d2fa61cea69774f9",
       "149c60569507ca934d0374759c8f998fa1ce0794937375a7a21b55549f8c7089",
       "76ed20af53d3a4e9c4bf430e99390c109159189292c0c91bd5abe026a0ecbb4b"}) {

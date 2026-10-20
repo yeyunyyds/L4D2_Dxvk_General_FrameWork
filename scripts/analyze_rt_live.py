@@ -15,7 +15,7 @@ CONFIG=('rtx.enablePreservePath','rtx.useBuffersDirectly','rtx.bloom.enable','rt
 
 def analyze(directory,events):
     errors=[];directory=Path(directory);samples=[];payload_bytes=0
-    v20=any(e.get('event')=='world_coverage_revision' and e.get('value')=='20' and e.get('code')==0 for e in events)
+    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21') and e.get('code')==0 for e in events)
     v19=v20 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='19' and e.get('code')==0 for e in events)
     v18=v19 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
     v17=v18 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='17' and e.get('code')==0 for e in events)
@@ -62,7 +62,7 @@ def analyze(directory,events):
     for e in rows:
         try:
             frame=e['frame'];previous_sample=e['event']=='api_model_previous_sample';check(frame in ((239,299) if previous_sample else FRAMES[3:-1]),'invalid_live_sample_frame');index=FRAMES.index(frame+1 if previous_sample else frame)
-            check(e['stage']==stages[index] and e['material']==materials[index],'live_sample_material_stage')
+            check(e['stage']==stages[index] and e['material']==('neutral' if e.get('shader')=='Infected' and any(x.get('event')=='world_coverage_revision' and x.get('value')=='21' for x in events) else materials[index]),'live_sample_material_stage')
             counts[frame]+=1;check(counts[frame]<=64,'live_sample_budget')
             check(type(e['ordinal']) is int and e['ordinal']>0 and e['ordinal'] not in ordinals,'live_sample_identity');ordinals.add(e['ordinal'])
             check(e['ignored_category_at_original_draw']&8 and e['cull'] in (1,2,3),'original_model_not_isolated')

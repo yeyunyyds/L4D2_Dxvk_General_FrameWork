@@ -18,6 +18,10 @@ int main() {
       const float bad=NAN;std::memcpy(input.data()+12,&bad,4);check(!model_shader::infected(c,input).valid,"infected nonfinite normal admitted");
       std::cout<<"RT Infected rigid48 exact program/c58/baseUV/source normals/invalid fallback: PASS\n";
     }
+    for(const auto* sha:{"b9081b1aa48487b133f168edcf34a302ad06d9963e1bedab8d9dd62d98fbc606","803be4995dac57ebc289dbcc97004a6b1f4c8ad616c7db8dc39f41c200663706","1028c5ef031a8f9763c878ac9514dba6e628f87d3746ec373f4fc3b3e4486775"}) { check(model_shader::profile(sha)==model_shader::Profile::Rigid,"v21 rigid program missing"); }
+    for(const auto* sha:{"d7f9daf0698882776cffeb478a6bfdf2a480ade55a7bc659bd76b36c589d5174","3c653c42a2ce6a7b2201a5b26af6cee4b501625b2d32f1063caafa78d9261d2b"}) { check(model_shader::profile(sha)==model_shader::Profile::Skin3,"v21 skin program missing"); }
+    check(model_shader::profile("b9081b1aa48487b133f168edcf34a302ad06d9963e1bedab8d9dd62d98fbc607")==model_shader::Profile::Unknown,"unknown adjacent program admitted");
+    std::cout<<"RT five 141352 VertexLitGeneric exact program profiles: PASS\n";
     sky_shader::Constants c{};c[0][1]=1;c[58]={0,2,0,123};c[59]={-3,0,0,10};c[60]={0,0,.5f,-20};c[48]={2,-1,0,.25f};c[49]={1,3,0,-.5f};
     std::vector<uint8_t> bytes(3*32);
     for (unsigned i=0;i<3;++i) {

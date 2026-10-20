@@ -109,12 +109,39 @@ public:
     }return true;
   }
   size_t held() const { return entries.size(); }
-  Source acquire(IDirect3DDevice9* d,const std::filesystem::path& directory,uint64_t at,uint32_t material) {
+  // All derived textures share the same spool/evidence budgets as source DDS.
+  bool persist(Source& s,const std::vector<uint8_t>& encoded,const std::filesystem::path& directory) {
+      s.digest=ddsSha256(encoded);
+      if(s.digest.empty()) { throw std::runtime_error("texture hash failed"); }
+      const auto size=uint64_t(encoded.size());const bool exists=spool.count(s.digest)!=0;
+      // Runtime paths remain until process exit: async backend loaders may still
+      // read a file after a source COM reference or API material was retired.
+      if(!exists&&(size>limits.spoolBytes-bytes||spool.size()>=limits.files)) {
+        s.digest.clear();s.reason="texture_spool_budget";++deferred;return false;
+      }
+      std::filesystem::create_directories(directory/"runtime-textures");
+      s.file="model-textures/"+s.digest+".dds";s.path=directory/"runtime-textures"/(s.digest+".dds");
+      if(!exists) {
+        if(std::filesystem::exists(s.path)) { throw std::runtime_error("untracked runtime texture path"); }
+        std::ofstream output(s.path,std::ios::binary);output.write(reinterpret_cast<const char*>(encoded.data()),std::streamsize(encoded.size()));output.close();
+        if(!output) { throw std::runtime_error("write runtime texture"); }
+        spool.emplace(s.digest,size);bytes+=size;++exported;
+      } else if(ldb_rt_file::fileSha256(s.path)!=s.digest) { throw std::runtime_error("existing runtime texture differs"); }
+      const auto evidence=directory/s.file;
+      if(std::filesystem::exists(evidence)) {
+        if(ldb_rt_file::fileSha256(evidence)!=s.digest) { throw std::runtime_error("existing texture evidence differs"); }s.evidenceSaved=true;
+      } else if(size<=limits.evidence-evidenceBytes) {
+        std::filesystem::create_directories(evidence.parent_path());
+        std::filesystem::copy_file(s.path,evidence);evidenceBytes+=size;++evidenceFiles;s.evidenceSaved=true;
+      }
+    return true;
+  }
+  Source acquire(IDirect3DDevice9* d,const std::filesystem::path& directory,uint64_t at,uint32_t material,DWORD slot=0) {
     Source s;s.key="fallback:"+std::to_string(material);
     DWORD alpha=0,func=D3DCMP_ALWAYS,ref=0,srgb=0,u=0,v=0,min=0,mag=0;
     const HRESULT queries[]={d->GetRenderState(D3DRS_ALPHATESTENABLE,&alpha),d->GetRenderState(D3DRS_ALPHAFUNC,&func),
-      d->GetRenderState(D3DRS_ALPHAREF,&ref),d->GetSamplerState(0,D3DSAMP_SRGBTEXTURE,&srgb),d->GetSamplerState(0,D3DSAMP_ADDRESSU,&u),
-      d->GetSamplerState(0,D3DSAMP_ADDRESSV,&v),d->GetSamplerState(0,D3DSAMP_MINFILTER,&min),d->GetSamplerState(0,D3DSAMP_MAGFILTER,&mag)};
+      d->GetRenderState(D3DRS_ALPHAREF,&ref),d->GetSamplerState(slot,D3DSAMP_SRGBTEXTURE,&srgb),d->GetSamplerState(slot,D3DSAMP_ADDRESSU,&u),
+      d->GetSamplerState(slot,D3DSAMP_ADDRESSV,&v),d->GetSamplerState(slot,D3DSAMP_MINFILTER,&min),d->GetSamplerState(slot,D3DSAMP_MAGFILTER,&mag)};
     for(auto q:queries) { if(FAILED(q)) { s.reason="texture_state_query_failed";return s; } }
     if(func<1||func>8||ref>255||!wrap(u,s.wrapU)||!wrap(v,s.wrapV)||
        (min!=D3DTEXF_POINT&&min!=D3DTEXF_LINEAR&&min!=D3DTEXF_ANISOTROPIC)||
@@ -122,7 +149,7 @@ public:
     s.srgb=srgb!=0;s.alphaTest=alpha?uint8_t(func-1):uint8_t(7);s.alphaRef=alpha?uint8_t(ref):uint8_t(0);s.filter=uint8_t(min!=D3DTEXF_POINT||mag!=D3DTEXF_POINT);
     const auto suffix=":"+std::to_string(s.alphaTest)+":"+std::to_string(s.alphaRef)+":"+std::to_string(s.wrapU)+":"+std::to_string(s.wrapV)+":"+std::to_string(s.filter);
     static_draw::Ref<IDirect3DBaseTexture9> base;
-    if(FAILED(d->GetTexture(0,&base.value))||!base.value||base.value->GetType()!=D3DRTYPE_TEXTURE) { s.reason="base_texture_unavailable";s.key+=suffix;return s; }
+    if(FAILED(d->GetTexture(slot,&base.value))||!base.value||base.value->GetType()!=D3DRTYPE_TEXTURE) { s.reason="base_texture_unavailable";s.key+=suffix;return s; }
     auto* texture=static_cast<IDirect3DTexture9*>(base.value);const auto id=std::make_pair(reinterpret_cast<uintptr_t>(texture),s.srgb);
     const auto found=entries.find(id);
     if(found!=entries.end()) {
@@ -142,30 +169,8 @@ public:
     auto entry=std::make_unique<Entry>();texture->AddRef();entry->texture=texture;entry->last=at;
     if(encoded.empty()) { s.reason="base_texture_read_unavailable";++failed; }
     else {
-      s.digest=ddsSha256(encoded);
-      if(s.digest.empty()) { throw std::runtime_error("texture hash failed"); }
-      const auto size=uint64_t(encoded.size());const bool exists=spool.count(s.digest)!=0;
-      // Runtime paths remain until process exit: async backend loaders may still
-      // read a file after a source COM reference or API material was retired.
-      if(!exists&&(size>limits.spoolBytes-bytes||spool.size()>=limits.files)) {
-        s.digest.clear();s.reason="texture_spool_budget";s.key+=suffix;++deferred;return s;
-      }
-      std::filesystem::create_directories(directory/"runtime-textures");
-      s.file="model-textures/"+s.digest+".dds";s.path=directory/"runtime-textures"/(s.digest+".dds");
-      if(!exists) {
-        if(std::filesystem::exists(s.path)) { throw std::runtime_error("untracked runtime texture path"); }
-        std::ofstream output(s.path,std::ios::binary);output.write(reinterpret_cast<const char*>(encoded.data()),std::streamsize(encoded.size()));output.close();
-        if(!output) { throw std::runtime_error("write runtime texture"); }
-        spool.emplace(s.digest,size);bytes+=size;++exported;
-      } else if(ldb_rt_file::fileSha256(s.path)!=s.digest) { throw std::runtime_error("existing runtime texture differs"); }
-      const auto evidence=directory/s.file;
-      if(std::filesystem::exists(evidence)) {
-        if(ldb_rt_file::fileSha256(evidence)!=s.digest) { throw std::runtime_error("existing texture evidence differs"); }s.evidenceSaved=true;
-      } else if(size<=limits.evidence-evidenceBytes) {
-        std::filesystem::create_directories(evidence.parent_path());
-        std::filesystem::copy_file(s.path,evidence);evidenceBytes+=size;++evidenceFiles;s.evidenceSaved=true;
-      }
-      s.reason="sampler0_source_mips_dds_dx10";frameBytes+=size;entry->cost=size;residentBytes+=size;
+      if(!persist(s,encoded,directory)) { s.key+=suffix;return s; }
+      const auto size=uint64_t(encoded.size());s.reason="sampler0_source_mips_dds_dx10";frameBytes+=size;entry->cost=size;residentBytes+=size;
 
     }
     entry->source=s;entries.emplace(id,std::move(entry));s.key=(s.textured()?s.digest:s.key)+suffix;return s;

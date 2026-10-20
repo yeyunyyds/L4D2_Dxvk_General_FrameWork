@@ -20,7 +20,7 @@ def sha(data):return hashlib.sha256(data).hexdigest()
 
 
 def observer_files():
-    names=['scripts/'+name for name in ['rt_draw_suite.py','analyze_rt_draw.py','analyze_rt_scene.py','analyze_rt_world.py','analyze_rt_live.py','analyze_rt_textures.py','rt_game_probe.py',
+    names=['scripts/'+name for name in ['rt_draw_suite.py','analyze_rt_draw.py','analyze_rt_scene.py','analyze_rt_world.py','analyze_rt_live.py','analyze_rt_textures.py','analyze_rt_infected.py','rt_game_probe.py',
                                        'rt_preflight.py','rt_visual.py','rt_suite.py']]
     names+=list(SUPPORT_FILES)
     entries={name:(ROOT/name).read_bytes() for name in names}
@@ -89,7 +89,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':20,
+    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':21,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':30,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -122,13 +122,18 @@ def package(source,output,python_package):
               'model_payload_limits_kib':{'api_neko_textured':16384,'api_combined_textured':16384,'api_combined_textured_low_light':0,'api_combined_textured_metal':0,'api_combined_textured_alpha':0,'api_combined_textured_emissive':0},
               'model_special_passes':'reject_stencil_user_clip_partial_rgb_and_non_less_depth',
               'sky_rebuilt_stride':140,'model_geometry_max_vertices':32768,'model_geometry_max_indices':131072,
+              'infected_diffuse':{'samplers':[0,4,5],'bake_max_dimension':256,'bakes_per_frame':1,'recipes':128,'output':'linear_BGRA8_opaque_generated_full_mips','excluded':'vertex_lighting_screen_AO_fog; base_level_bake_no_original_derivatives'},
+              'infected_control':{'presents':[361,420],'material':'bright_green_opaque_emissive_double_sided','other_stages':'reconstructed_diffuse_opaque_neutral'},
+              'infected_near_target':{'distance_source_units':1024,'cadence_presents':60,'rows':256,'rows_per_frame':4,'payload_bytes':16777216,'preview':True},
+              'unknown_model_probe':{'cadence_presents':60,'samples':32,'payload_bytes':16777216,'preview':True},
+              'new_vertexlitgeneric_profiles':{'rigid':3,'three_weight':2,'capture':'141352','admission':'full_VS_hash_layout_morph_and_camera_proof'},
               'infected_material':'exact_VS_PS_declaration48_rigid_c58_world_c8_clip_direct_baseUV_FLOAT3_normals; no_full_original_PS',
               'neko_material':'audited_full_vs_and_ps_sha256_sampler0_base_texture_original_alpha; no_full_toon_or_original_lighting',
               'model_morph':'complete_referenced_stream2_position1_float4_before_skinning_readonly',
               'scene_input_ps_float4_constants':224,'scene_input_complete_morph_positions':True,
               'bulk_static_stride_max':128,'scene_input_family_limits':[6,48,96,48,24],'scene_input_policy':'skinned_materials_v2','scene_input_payload_limits_mib':[3,3,3,16],'scene_input_family_payload_limits_kib':[[128,640,512,768,512]]*3+[[256,4096,1792,6144,4096]],'scene_input_geometry_window':True,'audit_only_families':[],'custom_audit_max_vertices':32768,'custom_audit_max_indices':131072,
               'sky_category_contract':{'render_state':42,'sky_bit':4,'unused':0xfefefefe},
-              'draw_trace_version':17,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
+              'draw_trace_version':18,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
               'material_samples_per_phase_limit':64,
               'world_ipc_producer_wait_ms':60000,'normal_ipc_producer_wait_ms':2000,
               'startup_raytracing':False,'rt_activation':'after_control_and_successful_world_scope_then_deferred_by_runtime',
