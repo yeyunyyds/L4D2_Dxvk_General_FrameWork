@@ -28,3 +28,13 @@
 Python检查覆盖trace20/coverage23、版本限定的4GiB/几何预算、超限拒绝和预览预算识别。实际游戏服装、透明外观、全部实体、长期稳定性与退出仍需同一F9测试；不新增测试按键。性能优化后置，也不把实验帧率下降作为本版显示验收失败条件。
 
 模型回放元数据：research/rt-world-v23-model-replay-check.json。用户原始纹理、程序与图像仅留本地。
+
+## 已发布成品
+
+- 构建源提交：`018149cd080d07bc19f6d2fc7e78a247fda18657`；Build ID：`ldb-rt-observer+3514d48e6c75fa84`。
+- Windows x86客户端、x64 Host Release构建及全部原生门禁通过；新DDS缓存/预留、Alpha材质、完整绘制状态和新增VS门禁通过。
+- 本地134项Python检查：132通过、2项Windows专用跳过；严格MinGW编译通过。新增透明转换及8种错误混合/深度状态拒绝检查、18项旧Draw检查通过。
+- 最终ZIP：12024262字节，SHA256 `d201efd078b12a9762f3c43ad37b1d515602112120b09885760cfd8ed8d1f628`。
+- [固定文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/57a4dd26cf832c4bfd5db2f2d84641b723c5ca40/downloads/rt-world-pilot-dev.zip)。逐成员哈希、双端架构/Build ID、32项源码收据、随包脚本/README、四份原生Draw trace独立分析、固定运行库初始化证据及发布分支只含ZIP均通过。
+- RT构建现在由新提交取代过时任务，避免连续修正版排队生成旧包。
+- 完整元数据：`research/rt-world-pilot-v23-validation.json`。服装颜色、透明边缘、全部模型显示和退出仍待B580实机验收，不以这些开发检查替代实际画面。
