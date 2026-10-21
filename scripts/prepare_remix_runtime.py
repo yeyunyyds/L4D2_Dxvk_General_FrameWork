@@ -7,6 +7,25 @@ from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+RUNTIME_SKINNING_SOURCE = Path('src/dxvk/rtx_render/rtx_remix_api.cpp')
+RUNTIME_SKINNING_PATCH = ROOT / 'integration/rt/remix-runtime-skinning.patch'
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_runtime_skinning_source(data):
+    required = [
+        b'expectedSkinningValues',
+        b'skinning.blendWeights_count != expectedSkinningValues',
+        b'skinning.blendIndices_count != expectedSkinningValues',
+        b'sizeof(float) * src.skinning_value.bonesPerVertex',
+    ]
+    if any(marker not in data for marker in required):
+        raise RuntimeError('Runtime skinning patch contract is incomplete')
+    if b'blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float),' in data:
+        raise RuntimeError('Runtime still uses the invalid one-float skinning vertex stride')
 
 
 def prepare(output):
@@ -22,11 +41,18 @@ def prepare(output):
     git('checkout', '-q', '--detach', baseline['runtime_commit'])
     if git('rev-parse', 'HEAD').decode().strip() != baseline['runtime_commit']:
         raise RuntimeError('Runtime checkout differs from pin')
+    git('apply', '--check', str(RUNTIME_SKINNING_PATCH))
+    git('apply', str(RUNTIME_SKINNING_PATCH))
+    runtime_skinning_source = output / RUNTIME_SKINNING_SOURCE
+    validate_runtime_skinning_source(runtime_skinning_source.read_bytes())
     api = output / 'public/include/remix/remix_c.h'
-    receipt = {'schema': 1, 'repository': baseline['runtime_repository'],
+    receipt = {'schema': 2, 'repository': baseline['runtime_repository'],
                'commit': baseline['runtime_commit'], 'branch_reference': baseline['runtime_branch_reference'],
-               'api_sha256': hashlib.sha256(api.read_bytes()).hexdigest(),
-               'smoke_source_sha256': hashlib.sha256((ROOT / 'integration/rt/rt_runtime_smoke.cpp').read_bytes()).hexdigest(),
+               'api_sha256': digest(api),
+               'smoke_source_sha256': digest(ROOT / 'integration/rt/rt_runtime_smoke.cpp'),
+               'runtime_skinning_patch_sha256': digest(RUNTIME_SKINNING_PATCH),
+               'runtime_skinning_source_sha256': digest(runtime_skinning_source),
+               'runtime_skinning_weight_stride': 'sizeof(float)*bonesPerVertex',
                'submodules': 'pending', 'runtime_execution': 'unrun', 'b580_rt': 'unrun'}
     def save():
         (output / 'rt-runtime-source.json').write_text(json.dumps(receipt, indent=2) + '\n')

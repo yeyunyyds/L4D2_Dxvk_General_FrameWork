@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import rt_preflight as runner
 import rt_visual as visual
 from package_rt_preflight import payloads
+from prepare_remix_runtime import RUNTIME_SKINNING_PATCH, validate_runtime_skinning_source
 
 
 class PreflightCases(unittest.TestCase):
@@ -41,6 +42,21 @@ class PreflightCases(unittest.TestCase):
         (self.root / 'research').mkdir(exist_ok=True)
         (self.root / 'research/rt-source-audit.json').write_text('{}')
         return manifest
+
+    def test_runtime_skinning_patch_corrects_weight_stride_and_rejects_bad_counts(self):
+        patch_text = RUNTIME_SKINNING_PATCH.read_text()
+        self.assertIn('+          dst.blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float) * src.skinning_value.bonesPerVertex', patch_text)
+        self.assertIn('skinning.blendWeights_count != expectedSkinningValues', patch_text)
+        self.assertIn('skinning.blendIndices_count != expectedSkinningValues', patch_text)
+        corrected = b' '.join((
+            b'expectedSkinningValues',
+            b'skinning.blendWeights_count != expectedSkinningValues',
+            b'skinning.blendIndices_count != expectedSkinningValues',
+            b'sizeof(float) * src.skinning_value.bonesPerVertex',
+        ))
+        validate_runtime_skinning_source(corrected)
+        with self.assertRaisesRegex(RuntimeError, 'one-float'):
+            validate_runtime_skinning_source(corrected + b' blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float),')
 
     def test_complete_cache_needs_no_network_and_tampered_file_is_repaired(self):
         manifest = self.fixture()

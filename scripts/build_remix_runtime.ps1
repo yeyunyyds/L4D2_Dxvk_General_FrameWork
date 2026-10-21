@@ -5,9 +5,14 @@ $sourcePath = (Resolve-Path (Join-Path $repo $Source)).Path
 $receipt = Get-Content (Join-Path $sourcePath 'rt-runtime-source.json') -Raw | ConvertFrom-Json
 $api = Join-Path $sourcePath 'public/include/remix/remix_c.h'
 $smoke = Join-Path $repo 'integration/rt/rt_runtime_smoke.cpp'
+$runtimeSkinningPatch = Join-Path $repo 'integration/rt/remix-runtime-skinning.patch'
+$runtimeSkinningSource = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_remix_api.cpp'
 if ((Get-FileHash $api -Algorithm SHA256).Hash.ToLower() -ne $receipt.api_sha256 -or
-    (Get-FileHash $smoke -Algorithm SHA256).Hash.ToLower() -ne $receipt.smoke_source_sha256) {
-  throw 'Runtime API/smoke input changed after preparation'
+    (Get-FileHash $smoke -Algorithm SHA256).Hash.ToLower() -ne $receipt.smoke_source_sha256 -or
+    (Get-FileHash $runtimeSkinningPatch -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_skinning_patch_sha256 -or
+    (Get-FileHash $runtimeSkinningSource -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_skinning_source_sha256 -or
+    $receipt.runtime_skinning_weight_stride -ne 'sizeof(float)*bonesPerVertex') {
+  throw 'Runtime API/smoke/skinning input changed after preparation'
 }
 $head = & git -C $sourcePath rev-parse HEAD
 if ($LASTEXITCODE -ne 0 -or $head.Trim() -ne $receipt.commit -or $receipt.submodules -ne 'ready') { throw 'Runtime pin/submodules not ready' }

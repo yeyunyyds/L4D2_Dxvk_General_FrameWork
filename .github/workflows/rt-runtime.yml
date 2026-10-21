@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/rt-runtime.yml
       - integration/rt/baseline.json
+      - integration/rt/remix-runtime-skinning.patch
       - scripts/prepare_remix_runtime.py
       - scripts/build_remix_runtime.ps1
       - scripts/package_remix_runtime_status.py

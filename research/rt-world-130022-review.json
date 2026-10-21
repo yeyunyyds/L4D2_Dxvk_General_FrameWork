@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "archive": "rt-world-20261021-130022-ce4a0064.zip",
+  "build_commit": "1eddbe65eab81104aee7b2184c43a9bc95bf243f",
+  "collection": "incomplete",
+  "last_complete_present": 209,
+  "failure": {
+    "observer_event": "api_mesh_fence_failed",
+    "hresult_unsigned": 2289436780,
+    "hresult_hex": "0x8876086c",
+    "hresult_name": "D3DERR_DEVICELOST",
+    "vulkan_error": "VK_ERROR_DEVICE_LOST"
+  },
+  "last_frame": {
+    "submitted": 609,
+    "created": 77,
+    "reused": 532,
+    "skinned_submitted": 551,
+    "skinned_created": 19,
+    "skinned_reused": 532,
+    "entries": 23,
+    "bytes": 8140884,
+    "pending_fences": 1,
+    "omitted": 0
+  },
+  "diagnosis": "Pinned Remix copied three weights per vertex but exposed a one-float vertex stride instead of three floats to GPU skinning.",
+  "required_fix": "Build and pin the runtime stride/count validation patch, then retest v26.",
+  "pass": false
+}

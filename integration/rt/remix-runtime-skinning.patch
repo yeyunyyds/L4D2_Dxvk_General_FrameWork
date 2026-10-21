@@ -1,0 +1,52 @@
+diff --git a/src/dxvk/rtx_render/rtx_remix_api.cpp b/src/dxvk/rtx_render/rtx_remix_api.cpp
+index 3113fe2..d97d3b3 100644
+--- a/src/dxvk/rtx_render/rtx_remix_api.cpp
++++ b/src/dxvk/rtx_render/rtx_remix_api.cpp
+@@ -919,7 +919,8 @@ namespace {
+     if (!remixDevice) {
+       return REMIXAPI_ERROR_CODE_REMIX_DEVICE_WAS_NOT_REGISTERED;
+     }
+-    if (!out_handle || !info || info->sType != REMIXAPI_STRUCT_TYPE_MESH_INFO) {
++    if (!out_handle || !info || info->sType != REMIXAPI_STRUCT_TYPE_MESH_INFO ||
++        (info->surfaces_count > 0 && info->surfaces_values == nullptr)) {
+       return REMIXAPI_ERROR_CODE_INVALID_ARGUMENTS;
+     }
+     static_assert(sizeof(remixapi_MeshHandle) == sizeof(info->hash));
+@@ -933,6 +934,28 @@ namespace {
+     for (size_t i = 0; i < info->surfaces_count; i++) {
+       const remixapi_MeshInfoSurfaceTriangles& src = info->surfaces_values[i];
+ 
++      if ((src.vertices_count > 0 && src.vertices_values == nullptr) ||
++          (src.indices_count > 0 && src.indices_values == nullptr)) {
++        return REMIXAPI_ERROR_CODE_INVALID_ARGUMENTS;
++      }
++
++      if (src.skinning_hasvalue) {
++        const auto& skinning = src.skinning_value;
++        const uint64_t expectedSkinningValues = uint64_t(src.vertices_count) * skinning.bonesPerVertex;
++        if (skinning.bonesPerVertex == 0 || skinning.bonesPerVertex > 4 ||
++            expectedSkinningValues > std::numeric_limits<uint32_t>::max() ||
++            skinning.blendWeights_count != expectedSkinningValues ||
++            skinning.blendIndices_count != expectedSkinningValues ||
++            skinning.blendWeights_values == nullptr || skinning.blendIndices_values == nullptr) {
++          return REMIXAPI_ERROR_CODE_INVALID_ARGUMENTS;
++        }
++        for (uint32_t value = 0; value < skinning.blendIndices_count; value++) {
++          if (skinning.blendIndices_values[value] > std::numeric_limits<uint8_t>::max()) {
++            return REMIXAPI_ERROR_CODE_INVALID_ARGUMENTS;
++          }
++        }
++      }
++
+       const size_t vertexDataSize = sizeInBytes(src.vertices_values, src.vertices_count);
+       const size_t indexDataSize = sizeInBytes(src.indices_values, src.indices_count);
+ 
+@@ -1014,7 +1037,7 @@ namespace {
+         dst.color0Buffer = dxvk::RasterBuffer { vertexSlice, offsetof(remixapi_HardcodedVertex, color), sizeof(remixapi_HardcodedVertex), VK_FORMAT_B8G8R8A8_UNORM };
+         if (src.skinning_hasvalue) {
+           dst.numBonesPerVertex = src.skinning_value.bonesPerVertex;
+-          dst.blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float), VK_FORMAT_R32_SFLOAT };;
++          dst.blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float) * src.skinning_value.bonesPerVertex, VK_FORMAT_R32_SFLOAT };
+           dst.blendIndicesBuffer = dxvk::RasterBuffer { blendIndicesSlice, 0, sizeof(uint32_t), VK_FORMAT_R8G8B8A8_USCALED };
+         }
+ 

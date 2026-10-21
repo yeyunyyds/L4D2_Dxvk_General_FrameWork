@@ -103,6 +103,9 @@ def package(source, output, python_package, build_commit, verify=False):
     parts = payloads(files, output)
     manifest = {'schema': 1, 'scope': 'rt_prerequisites', 'build_commit': build_commit,
                 'runtime_commit': receipt['commit'], 'runtime_execution': 'unrun',
+                'runtime_patches': {'skinning': {'sha256': receipt['runtime_skinning_patch_sha256'],
+                    'source_sha256': receipt['runtime_skinning_source_sha256'],
+                    'weight_stride': receipt['runtime_skinning_weight_stride']}},
                 'game_hook': 'not_installed', 'source_threading': 'unrun',
                 'payloads': parts, 'runtime_files': {name: {'size': path.stat().st_size,
                     'sha256': digest(path)} for name, path in sorted(files.items())},

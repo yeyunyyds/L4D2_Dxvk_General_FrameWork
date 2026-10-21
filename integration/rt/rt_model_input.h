@@ -132,6 +132,18 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
         matrix[row*4+col]=value;
       } }
     }
+    // Keep malformed palettes away from the runtime/BLAS boundary. This is a
+    // temporary full CPU oracle for the correctness pilot; it can become a
+    // sampled check after the runtime skinning layout is proven in game.
+    for(uint32_t n=0;n<input.count;++n) {
+      float positionValue[3]{},skinned[3]{};std::memcpy(positionValue,out.bytes.data()+size_t(input.first+n)*32,12);
+      const size_t base=size_t(input.first+n)*3;
+      for(unsigned k=0;k<3;++k) {
+        const auto& matrix=out.skinning.transforms[out.skinning.indices[base+k]];const float weightValue=out.skinning.weights[base+k];
+        for(unsigned row=0;row<3;++row) { skinned[row]+=(positionValue[0]*matrix[row*4]+positionValue[1]*matrix[row*4+1]+positionValue[2]*matrix[row*4+2]+matrix[row*4+3])*weightValue; }
+      }
+      for(float value:skinned) { if(!std::isfinite(value)||std::abs(value)>1e7f) { out.reason="gpu_skin_output_nonfinite";return out; } }
+    }
     model_shader::Result camera;camera.valid=true;camera.world=out.world;
     if(!model_shader::cameraCompatible(camera,input.constants,s.view,s.projection)) { out.reason="model_clip_camera_mismatch";return out; }
     out.reason=profile==model_shader::Profile::Neko3?"original_vs_gpu_neko_three_weight":"original_vs_gpu_three_weight";return out;
