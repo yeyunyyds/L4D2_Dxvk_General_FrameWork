@@ -1,4 +1,7 @@
-"""Optional bounded Windows GPU Engine PDH sampling; never gates rendering."""
+"""Optional bounded Windows GPU Engine PDH sampling; never gates rendering.
+
+The per-engine samples are directional diagnostics, not an aggregate GPU load.
+"""
 import ctypes
 import json
 import math
