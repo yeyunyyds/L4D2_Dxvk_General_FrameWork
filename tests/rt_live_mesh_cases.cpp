@@ -136,7 +136,7 @@ int main() {
   for(unsigned failure=4;failure<=5;++failure) { live_mesh::Scene broken(&api);auto input=fixture::source();require(broken.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Alpha,30).success,"destruction failure setup");fixture::fail=failure;
    require(broken.retire(100,100,true)!=0,"API destroy failure hidden");fixture::fail=0;require(!broken.retire(100,100,true),"destruction retry failed"); }
   { live_mesh::Scene capped(&api);auto input=fixture::source();
-    for(unsigned i=0;i<512;++i) { require(capped.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,50).success,"draw budget early failure"); }
+    for(unsigned i=0;i<1024;++i) { require(capped.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,50).success,"draw budget early failure"); }
     auto omitted=capped.draw(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,50);
     require(omitted.deferred&&!omitted.success&&!omitted.code&&omitted.budget==live_mesh::Budget::Draws&&capped.omitted==1,"draw budget must omit, not fail API");
     require(!capped.retire(49,100,true)&&capped.entries()==1,"recovery destroyed uncompleted resource");
