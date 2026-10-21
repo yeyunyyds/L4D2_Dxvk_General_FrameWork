@@ -112,7 +112,7 @@ def package(source, output, python_package, build_commit, verify=False):
                 'python': {'version': '3.12.10', 'url': PYTHON_URL, 'sha256': PYTHON_SHA}}
     package = output / 'rt-preflight-dev.zip'
     with zipfile.ZipFile(package, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-        for name in ('rt_preflight.py', 'rt_game_probe.py', 'rt_suite.py'):
+        for name in ('rt_preflight.py', 'rt_game_probe.py', 'rt_suite.py', 'rt_visual.py'):
             archive.write(ROOT / 'scripts' / name, 'scripts/' + name)
         for name in ('integration/rt/baseline.json', 'research/rt-source-audit.json',
                      'research/rt-source-queue-sdk.json'):

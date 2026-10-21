@@ -59,6 +59,9 @@ class PreflightCases(unittest.TestCase):
             validate_runtime_skinning_source(corrected + b' blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float),')
         build_script = (Path(__file__).resolve().parents[1] / 'scripts/build_remix_runtime.ps1').read_text()
         self.assertIn('dbghelp.lib', build_script)
+        packager = (Path(__file__).resolve().parents[1] / 'scripts/package_rt_preflight.py').read_text()
+        for module in ('rt_preflight.py', 'rt_game_probe.py', 'rt_suite.py', 'rt_visual.py'):
+            self.assertIn(repr(module), packager)
 
     def test_complete_cache_needs_no_network_and_tampered_file_is_repaired(self):
         manifest = self.fixture()
