@@ -4,6 +4,7 @@
 #include "rt_live_mesh.h"
 #include <iostream>
 #include <set>
+#include <thread>
 using namespace ldb_rt;
 void require(bool value,const char* why) { if(!value) { throw std::runtime_error(why); } }
 #include "rt_infected_material_cases.h"

@@ -24,6 +24,7 @@ inline bool ownDraw(scene_input::Prepared& out,const scene_input::Data& input,ui
   out.ownedDraw=true;return true;
 }
 inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest) {
+  runtime_profile::Scope timing(runtime_profile::Stage::Skin);
   scene_input::Prepared out;
   if (FAILED(input.result)) {
     out.reason=input.reason;out.result=input.result;
@@ -98,6 +99,7 @@ template<class Device> bool standardAlpha(Device* d) {
     src==D3DBLEND_SRCALPHA&&dst==D3DBLEND_INVSRCALPHA&&op==D3DBLENDOP_ADD&&!separate;
 }
 inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false) {
+  runtime_profile::Scope timing(runtime_profile::Stage::Prepare);
   DWORD values[7]{};scene_input::Prepared rejected;
   const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
   for (unsigned i=0;i<7;++i) {

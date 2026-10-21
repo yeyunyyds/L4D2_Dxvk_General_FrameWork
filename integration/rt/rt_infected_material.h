@@ -115,7 +115,7 @@ public:
     const auto key=base.key+":"+detail.key+":"+palette.key+":"+constants;
     const auto found=entries.find(key);if(found!=entries.end()) { return found->second; }
     if(lastBake==frame||entries.size()>=128) { ++deferred;out.reason="infected_bake_budget";return out; }
-    lastBake=frame;Image a,b,c;
+    lastBake=frame;runtime_profile::Scope timing(runtime_profile::Stage::InfectedBake);Image a,b,c;
     if(!a.load(base)||!b.load(detail)||!c.load(palette)) { ++failed;out.reason="infected_dependency_decode_failed";return out; }
     const unsigned width=std::min(256u,base.width),height=std::min(256u,base.height);const auto encoded=bake(a,b,c,p,width,height);
     if(encoded.empty()) { ++failed;out.reason="infected_bake_failed";return out; }

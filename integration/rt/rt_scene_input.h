@@ -1,6 +1,7 @@
 #pragma once
 #include "rt_scene_draw.h"
 #include "rt_sky_shader.h"
+#include "rt_runtime_profile.h"
 
 namespace ldb_rt::scene_input {
 constexpr uint32_t kMaxVertices=4096,kMaxIndices=16384;
@@ -36,6 +37,7 @@ template<class Shader> HRESULT shaderBytes(Shader* shader,std::vector<uint32_t>&
 // Bounds are computed in 64 bits before Lock. All source locks are READONLY;
 // a failed read never retries with write flags or modifies a game buffer.
 inline HRESULT geometry(IDirect3DDevice9* d,uint32_t kind,D3DPRIMITIVETYPE topology,const std::array<uint32_t,6>& args,Data& out,Limits limits={},bool auditWindow=false) {
+  runtime_profile::Scope timing(runtime_profile::Stage::SourceGeometry);
   if ((kind!=1 && kind!=2) || (topology!=D3DPT_TRIANGLELIST && topology!=D3DPT_TRIANGLESTRIP)) { out.reason="unsupported_draw";return E_INVALIDARG; }
   static_draw::Ref<IDirect3DVertexDeclaration9> declaration;auto hr=d->GetVertexDeclaration(&declaration.value);
   if (FAILED(hr) || !declaration.value) { out.reason="declaration_unavailable";return FAILED(hr)?hr:E_FAIL; }

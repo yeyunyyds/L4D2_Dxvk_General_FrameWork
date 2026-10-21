@@ -2,6 +2,18 @@
 // Real DDS sizes which exceeded the old geometry-only SHA256 bound. Digests
 // were computed independently with Python hashlib over the complete DDS.
 inline void textureHashCases() {
+  // Independent known vector, repeated and concurrent invocations must each
+  // create their own hash state despite sharing the immutable algorithm.
+  const std::string known="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+  const auto* provider=&ldb_rt_file::sha256Provider();
+  for(unsigned i=0;i<64;++i) { require(ldb_rt_file::bytesSha256("abc",3)==known && &ldb_rt_file::sha256Provider()==provider,"shared SHA256 state corrupted"); }
+  std::array<bool,4> valid{};std::vector<std::thread> workers;
+  for(unsigned i=0;i<valid.size();++i) { workers.emplace_back([&,i] { valid[i]=true;for(unsigned j=0;j<64;++j) { if(ldb_rt_file::bytesSha256("abc",3)!=known) { valid[i]=false; } } }); }
+  for(auto& worker:workers) { worker.join(); }for(bool okay:valid) { require(okay,"concurrent SHA256 mixed hash state"); }
+  runtime_profile::reset();{ runtime_profile::Scope outer(runtime_profile::Stage::Texture);require(ldb_rt_file::bytesSha256("abc",3)==known,"timed hash changed bytes"); }
+  auto& window=runtime_profile::window();require(window.values[unsigned(runtime_profile::Stage::Hash)].calls==1&&window.values[unsigned(runtime_profile::Stage::Texture)].calls==1,"timing scopes not independently counted");
+  std::ostringstream evidence;runtime_profile::emit(evidence,60,"native_fixture");require(evidence.str().find("runtime_timing_window")!=std::string::npos&&window.values[unsigned(runtime_profile::Stage::Hash)].calls==0&&window.first==60,"timing window not reset");window.enabled=false;
+  std::cout<<"RT shared SHA256 independent concurrent state and nested timing windows: PASS\n";
   struct Case { UINT width,height;D3DFORMAT format;const char* expected; };
   const Case cases[]={
     {1024,1024,D3DFMT_A8R8G8B8,"4b0f1caecc8f94d8b43e16316623813297826893aeeaea5e53cbad7f71ef7b79"},

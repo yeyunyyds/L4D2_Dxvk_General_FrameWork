@@ -90,7 +90,8 @@ index 73dc9db..168f95d 100644
 +        ldb_rt_host::reset(rpcHeader.pHandle, currentUID, hresult);
          char message[768] {};
 @@ -965,2 +988,3 @@ void ProcessDeviceCommandQueue() {
-         const auto hresult = l4d2_api_wait::backend([&]() { return pD3DDevice->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion); });
+-        const auto hresult = l4d2_api_wait::backend([&]() { return pD3DDevice->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion); });
++        const auto hresult = l4d2_api_wait::backend([&]() { ldb_rt::runtime_profile::Scope rtPresent(ldb_rt::runtime_profile::Stage::Present); return pD3DDevice->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion); });
 +        ldb_rt_host::present(rpcHeader.pHandle, currentUID, hresult);
          if (!SUCCEEDED(hresult)) {
 @@ -1620,3 +1644,6 @@ void ProcessDeviceCommandQueue() {
@@ -126,7 +127,8 @@ index 73dc9db..168f95d 100644
 +        ldb_rt_host::drawResult(rpcHeader.pHandle, currentUID, hresult);
          assert(SUCCEEDED(hresult));
 @@ -2091,2 +2127,9 @@ void ProcessDeviceCommandQueue() {
-         const auto hresult = l4d2_api_wait::backend([&]() { return pSwapChain->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion, dwFlags); });
+-        const auto hresult = l4d2_api_wait::backend([&]() { return pSwapChain->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion, dwFlags); });
++        const auto hresult = l4d2_api_wait::backend([&]() { ldb_rt::runtime_profile::Scope rtPresent(ldb_rt::runtime_profile::Stage::Present); return pSwapChain->Present(pSourceRect, pDestRect, hwnd, pDirtyRegion, dwFlags); });
 +        IDirect3DDevice9* rtDevice = nullptr;
 +        if (SUCCEEDED(pSwapChain->GetDevice(&rtDevice))) {
 +          for (const auto& entry : gpD3DDevices) {

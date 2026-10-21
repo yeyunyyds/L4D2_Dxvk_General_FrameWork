@@ -125,6 +125,7 @@ inline void draw(uint64_t device, uint32_t uid) noexcept { (void)takeDraw(device
 // This is opt-in state diagnostic/conversion, not evidence that RT executed.
 template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t uid, Device* graphics,
     D3DPRIMITIVETYPE type, bool userMemory, Draw&& physicalDraw) noexcept {
+  ldb_rt::runtime_profile::Scope timing(ldb_rt::runtime_profile::Stage::Draw);
   try {
     if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
       auto& runtime = ldb_rt::world_runtime::state();
@@ -161,6 +162,7 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
               report.code=ldb_rt::static_draw::Code::Layout;called=true;physical=physicalDraw();
               consumer->second->conversion(uid,ldb_rt::consumer_world::Decision::BulkStatic,report,called,physical);return physical;
             }
+            ldb_rt::runtime_profile::Scope staticTiming(ldb_rt::runtime_profile::Stage::Static);
             const auto result=ldb_rt::bulk_static::execute(graphics,current,type,userMemory,
               [&] { called=true;physical=physicalDraw();return physical; },report);
             consumer->second->conversion(uid,ldb_rt::consumer_world::Decision::BulkStatic,report,called,physical);return result;

@@ -24,6 +24,8 @@ from rt_preflight import game_pids
 from rt_preflight import ensure_runtime, verify_load, check_file
 from analyze_rt_world import analyze as analyze_world
 from analyze_rt_scene import analyze as analyze_scene
+from rt_gpu_telemetry import Sampler
+from analyze_rt_runtime import analyze as analyze_runtime
 
 TARGETS=('bin/dxvk_d3d9.dll','bin/.l4d2bridge/L4D2Bridge64.exe')
 SUPPORT_FILES=('integration/rt/baseline.json','research/rt-source-audit.json',
@@ -319,6 +321,9 @@ def finish_world_capture(directory,game,since,report,notify):
         preview=review_preview(directory);save(directory/'preview-analysis.json',preview)
         report['preview']='completed_requires_image_review' if preview['pass'] else 'incomplete'
         if not preview['pass']:report['errors'].extend(preview['errors']);report['collection']='incomplete'
+    runtime=analyze_runtime(directory);save(directory/'runtime-analysis.json',runtime)
+    report['runtime_profile']=runtime['status']
+    if not runtime['pass']:report['errors'].extend(runtime['errors']);report['collection']='incomplete'
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
     report['infected_evidence']=infected['status']
@@ -422,7 +427,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
     report={'schema':1,'scope':'actual_draw_consumer_observation','build_commit':manifest['build_commit'],
             'collection':'incomplete','errors':[],'game_rt':'unrun','source_queue_execution':'unrun',
             'source_parallel_preparation':'unrun','performance':'unrun'}
-    request=None;content=None;location=None;started_at=time.time()
+    request=None;content=None;location=None;started_at=time.time();gpu_sampler=None
     def notify(message):
         print(message,flush=True)
         with (directory/'progress.log').open('a',encoding='utf-8') as f:f.write(time.strftime('%H:%M:%S ')+message+'\n')
@@ -437,7 +442,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         content=(f'LDB_RT_WORLD_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n' if world else
                  f'LDB_RT_DRAW_1\n{session:x}\n{directory.resolve()}\n').encode('utf-8')
         if world:
-            config='\n'.join(['rtx.enableRaytracing = False','rtx.useVertexCapture = False','rtx.upscalerType = 0',
+            config='\n'.join(['rtx.enableRaytracing = False','rtx.useVertexCapture = False','rtx.upscalerType = 0','rtx.resolutionScale = 1.0',
                 'rtx.enableRayReconstruction = False','rtx.sceneScale = 0.3937007874',
                 'rtx.fallbackLightMode = 2','rtx.fallbackLightType = 1','rtx.fallbackLightRadiance = 30,30,30','rtx.fallbackLightRadius = 5',
                 'rtx.fallbackLightPositionOffset = 0,0,0','rtx.enableFallbackLightShaping = False','rtx.fallbackLightDirection = 0,0,-1',
@@ -450,20 +455,27 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('World Pilot v23: spawn common infected nearby, then press F9 ONCE. Move and turn slowly. The600-frame diagnostic and60-second live preview run automatically. Observe clothing, hair and transparent parts. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
+        if world:notify('World Pilot v24: spawn common infected nearby, then press F9 ONCE. Move and turn slowly. The600-frame diagnostic and60-second live preview run automatically. Preview first30s: no AA; last30s: native TAA. Observe edge blocks, hair/clothes and trails. GPU timing/engine evidence joins the same ZIP. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None
         while time.monotonic()<deadline and not done.exists():
-            candidates=game_pids()
+            process_diagnostics={};candidates=game_pids(process_diagnostics)
+            if gpu_sampler:gpu_sampler.track([p['pid'] for p in process_diagnostics.get('related_processes',[]) if p['exe'].casefold()=='l4d2bridge64.exe'])
             if len(candidates)>1:raise ValueError('Multiple L4D2 processes found')
             if candidates:
                 pid=candidates[0];last_alive=time.monotonic()
                 report['game_pid']=pid
                 if first_alive is None:first_alive=last_alive
+                if world and manifest.get('pilot_revision',0)>=24 and gpu_sampler is None:
+                    gpu_sampler=Sampler(directory).start();gpu_sampler.track([pid])
                 if world and not startup_saved and last_alive-first_alive>=5:
                     startup_saved=True
-                    try:startup_modules(directory,pid,notify)
+                    try:
+                        startup_modules(directory,pid,notify)
+                        if gpu_sampler:
+                            modules=json.loads((directory/'startup-modules.json').read_text(encoding='utf-8'))
+                            gpu_sampler.track([x['pid'] for x in modules['processes']])
                     except OSError as error:notify('Startup module inventory unavailable: '+str(error))
             elif pid and time.monotonic()-last_alive>3:
                 raise RuntimeError('Game exited before capture completion; partial results retained')
@@ -487,13 +499,15 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         preview_running=directory/f'rt-preview-running-{session}.json'
         if world and manifest.get('pilot_revision',0)>=20:report['preview']='incomplete'
         if world and preview_running.is_file():
-            notify('600-Present diagnostic saved. Neutral live preview runs for60 seconds; move/turn normally, then wait for automatic recovery. No second keypress.')
+            notify('600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
             preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+90
             while not preview_done.is_file() and time.monotonic()<preview_deadline:
                 if pid not in game_pids():break
                 time.sleep(.5)
             report['preview']='collected_requires_review' if preview_done.is_file() else 'incomplete'
             if preview_done.is_file():notify('Preview segment finished. Collecting final evidence; exit only when requested below.')
+        if gpu_sampler:
+            report['gpu_sampler_stopped']=gpu_sampler.stop();gpu_sampler=None
         finish_capture(directory,root,pid,report,notify)
         if not marker_ok:
             report['collection']='incomplete';report['errors'].append('Capture completion marker identity/count/reason mismatch')
@@ -503,6 +517,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         report['collection']='incomplete'
         report['errors'].append(f'{type(error).__name__}: {error}');notify(report['errors'][-1])
     finally:
+        if gpu_sampler:report['gpu_sampler_stopped']=gpu_sampler.stop()
         if request and content and request.is_file() and request.read_bytes()==content:request.unlink()
         if world and location:
             try:collect_game_logs(location,directory,started_at)

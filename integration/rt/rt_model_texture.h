@@ -60,6 +60,7 @@ template<class Texture> struct ReadLock {
   ~ReadLock() { (void)finish(); }
 };
 template<class Texture> std::vector<uint8_t> mipDds(Texture* texture,const D3DSURFACE_DESC& base,bool srgb,UINT levels) {
+  runtime_profile::Scope timing(runtime_profile::Stage::TextureRead);
   const auto bytes=mipBytes(base.Width,base.Height,base.Format,srgb,levels);if(!bytes) { return {}; }
   std::vector<uint8_t> out;out.reserve(size_t(bytes)+kDdsHeaderBytes);UINT width=base.Width,height=base.Height;
   for(UINT level=0;level<levels;++level) {
@@ -152,6 +153,7 @@ public:
   size_t rejectedCount() const { return rejected.size(); }
   size_t backingCount() const { return backing.size(); }
   bool persist(Source& s,const std::vector<uint8_t>& encoded,const std::filesystem::path& directory,bool priority=false) {
+      runtime_profile::Scope timing(runtime_profile::Stage::TexturePersist);
       s.digest=ddsSha256(encoded);
       if(s.digest.empty()) { throw std::runtime_error("texture hash failed"); }
       const auto size=uint64_t(encoded.size());const bool exists=spool.count(s.digest)!=0;

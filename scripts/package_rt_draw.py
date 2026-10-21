@@ -20,7 +20,7 @@ def sha(data):return hashlib.sha256(data).hexdigest()
 
 
 def observer_files():
-    names=['scripts/'+name for name in ['rt_draw_suite.py','analyze_rt_draw.py','analyze_rt_scene.py','analyze_rt_world.py','analyze_rt_live.py','analyze_rt_textures.py','analyze_rt_infected.py','rt_game_probe.py',
+    names=['scripts/'+name for name in ['rt_draw_suite.py','rt_gpu_telemetry.py','analyze_rt_runtime.py','analyze_rt_draw.py','analyze_rt_scene.py','analyze_rt_world.py','analyze_rt_live.py','analyze_rt_textures.py','analyze_rt_infected.py','rt_game_probe.py',
                                        'rt_preflight.py','rt_visual.py','rt_suite.py']]
     names+=list(SUPPORT_FILES)
     entries={name:(ROOT/name).read_bytes() for name in names}
@@ -89,7 +89,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':23,
+    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':24,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':30,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -125,10 +125,14 @@ def package(source,output,python_package):
               'texture_evidence_reservation':{'total':67108864,'ordinary_limit':50331648,'infected_priority_reserved':16777216},
               'device_cleanup':'before_IDirect3DDevice9Ex_Destroy_safeDestroy;after_command_loop_before_other_teardown;abort_cleanup;final_partial_frame_EVENT;idempotent',
               'actual_model_materials':'neutral_source_alpha_throughout_except_Infected_bright_control;legacy_stage_names_retained_only_as_trace_phase_IDs',
-              'bounded_preview':{'after_diagnostic_present':600,'duration_ms':60000,'recovery_timeout_ms':5000,'mode':'neutral; same_one_F9; no_Draw_trace_extension; requires_review'},
+              'bounded_preview':{'after_diagnostic_present':600,'duration_ms':60000,'recovery_timeout_ms':5000,'mode':'neutral;30s_no_AA_then30s_native_TAA;same_one_F9;no_Draw_trace_extension;requires_review'},
               'result_archive_policy':'runtime-textures_spool_excluded;64MiB_DDS_evidence_explicit_omissions;INCOMPLETE_recovery_ZIP_before_exit_wait;atomic_replace_same_ZIP_after_final_analysis',
               'pending_material_audit':{'shader':'Infected','samples_per_phase':24,'render_admission':'exact_VS_PS_declaration_rigid48_only'},
               'exit_review':'final_Bridge_log_exceptions_and_backend_cleanup_reported_separately_from_collection',
+              'diagnostic_coverage_revision':23,'preview_edge_comparison':{'first_seconds':30,'baseline_upscaler':0,'second_upscaler':3,'resolution_scale':1.0,'native_bgra8_max_bytes_per_sample':16777216,'crop_if_larger':[1024,768],'sequential_not_matched_AB':True},
+              'runtime_profiling':'nested_QPC_elapsed_scopes_not_CPU_usage_or_GPU_duration;optional_bounded_one_second_PDH_per_process_engine_samples;do_not_sum_engines',
+              'shader_census':'up_to128_source_shader_names_cumulative_per_segment;not_entity_or_image_coverage',
+              'hash_optimization':'immutable_shared_SHA256_algorithm_provider;independent_hash_object_every_call;no_mutable_geometry_or_texture_cache',
               'exposure_changed':False,'model_samples_per_readback_limit':64,
               'model_payload_limits_kib':{'api_neko_textured':16384,'api_combined_textured':16384,'api_combined_textured_low_light':0,'api_combined_textured_metal':0,'api_combined_textured_alpha':0,'api_combined_textured_emissive':0},
               'model_special_passes':'reject_stencil_user_clip_partial_rgb_and_non_less_depth',

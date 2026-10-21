@@ -96,15 +96,17 @@ public:
   template<class Device> void draw(Device* device, uint32_t uid, const Snapshot& snapshot, uint32_t kind,
       D3DPRIMITIVETYPE type, const std::array<uint32_t, 6>& args) {
     if (snapshot.session != request.session) { ++failures; return; }
+    runtime_profile::Scope metadataTiming(runtime_profile::Stage::Metadata);
     nextSnapshot = snapshot; nextUid = uid; nextKind=kind;nextArgs=args;hasNext = true;
     if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
       nativeDevice = device;
       if (request.world && world_runtime::state().active && world_runtime::state().bind) { world_runtime::state().bind(device); }
     }
-    if (finished) { return; }
     if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
       if (request.world && world_runtime::state().active && world_runtime::state().inspect) { world_runtime::state().inspect(device,snapshot,kind,type,args); }
     }
+    if (finished) { return; }
+    runtime_profile::Scope traceTiming(runtime_profile::Stage::Trace);
     if (written > 256 * 1024 * 1024) { finish(2); return; }
     Writer payload; payload.data = pack(snapshot);const auto snapshotBytes=payload.data.size();payload.u32(kind); payload.u32(uint32_t(type));
     for (auto arg : args) { payload.u32(arg); }

@@ -38,6 +38,7 @@ struct Geometry {
   uint64_t bytes() const { return vertices.size()*sizeof(remixapi_HardcodedVertex)+indices.size()*4; }
 };
 inline bool build(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE type,DWORD cull,Geometry& out) {
+  runtime_profile::Scope timing(runtime_profile::Stage::GeometryBuild);
   out.vertices.clear();out.indices.clear();
   if(source.stride!=32 || !source.ownedDraw || source.bytes.empty() || source.bytes.size()%32 ||
      source.bytes.size()/32>32768 || (cull!=D3DCULL_NONE&&cull!=D3DCULL_CW&&cull!=D3DCULL_CCW)) { return false; }
@@ -159,6 +160,7 @@ public:
       if(meshes.size()>=limits.entries) { return defer(Budget::Entries,at); }
     }
     if(!material.handle||material.variant!=variant) {
+      runtime_profile::Scope timing(runtime_profile::Stage::Material);
       if(material.handle) {
         result.operation="destroy_material_for_update";result.code=uint32_t(api->DestroyMaterial(material.handle));if(result.code) { return result; }material.handle=nullptr;
       }
@@ -180,6 +182,7 @@ public:
       surface.indices_values=geometry.indices.data();surface.indices_count=geometry.indices.size();surface.material=material.handle;
       remixapi_MeshInfo mesh{};mesh.sType=REMIXAPI_STRUCT_TYPE_MESH_INFO;mesh.hash=0x4c444d5300000000ull+next++;
       mesh.surfaces_values=&surface;mesh.surfaces_count=1;remixapi_MeshHandle handle=nullptr;
+      runtime_profile::Scope timing(runtime_profile::Stage::MeshCreate);
       result.operation="create_mesh";result.code=uint32_t(api->CreateMesh(&mesh,&handle));if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
       // The pinned CreateMesh copies CPU arrays before returning and queues
       // Rc-owned buffers. CPU scratch can be dropped here, handles cannot.
@@ -190,10 +193,11 @@ public:
     result.triangles=kind==2?source.drawArgs[4]:source.drawArgs[1];
     remixapi_InstanceInfo instance{};instance.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO;instance.mesh=r.mesh;instance.doubleSided=cull==D3DCULL_NONE;
     for(unsigned row=0;row<3;++row) { for(unsigned col=0;col<4;++col) { instance.transform.matrix[row][col]=source.world[col*4+row]; } }
-    result.operation="draw_instance";result.code=uint32_t(api->DrawInstance(&instance));if(result.code) { return result; }
+    result.operation="draw_instance";{ runtime_profile::Scope timing(runtime_profile::Stage::Instance);result.code=uint32_t(api->DrawInstance(&instance)); }if(result.code) { return result; }
     material.last=at;++submitted;++frameDraws;result.success=true;return result;
   }
   uint32_t retire(uint64_t completed,uint64_t now,bool all=false) {
+    runtime_profile::Scope timing(runtime_profile::Stage::Retire);
     for(auto it=meshes.begin();it!=meshes.end();) {
       const auto& r=it->second;
       if(r.last<=completed && (all || (now>=r.last && now-r.last>=2))) {
