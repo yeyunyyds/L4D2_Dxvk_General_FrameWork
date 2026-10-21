@@ -57,6 +57,8 @@ class PreflightCases(unittest.TestCase):
         validate_runtime_skinning_source(corrected)
         with self.assertRaisesRegex(RuntimeError, 'one-float'):
             validate_runtime_skinning_source(corrected + b' blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float),')
+        build_script = (Path(__file__).resolve().parents[1] / 'scripts/build_remix_runtime.ps1').read_text()
+        self.assertIn('dbghelp.lib', build_script)
 
     def test_complete_cache_needs_no_network_and_tampered_file_is_repaired(self):
         manifest = self.fixture()

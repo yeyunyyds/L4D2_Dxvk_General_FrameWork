@@ -22,7 +22,7 @@ Push-Location $sourcePath
 try {
   . .\build_common.ps1
   SetupBuild -BuildArch x64
-  & cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT "/external:I$sourcePath/public/include" /external:W0 $smoke "/Fe:$checks/rt-runtime-smoke.exe" "/Fo:$checks/rt-runtime-smoke.obj" /link user32.lib
+  & cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT "/external:I$sourcePath/public/include" /external:W0 $smoke "/Fe:$checks/rt-runtime-smoke.exe" "/Fo:$checks/rt-runtime-smoke.obj" /link user32.lib dbghelp.lib
   if ($LASTEXITCODE -ne 0) { throw 'Static RT diagnostic compilation failed' }
   Write-Host 'RT static-scene diagnostic: COMPILED (GPU execution unrun)'
   $negative = Join-Path $checks ('negative-' + [Guid]::NewGuid().ToString('N'))
