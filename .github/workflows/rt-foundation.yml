@@ -12,8 +12,8 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: rt-foundation
-  cancel-in-progress: true
+  group: zip-host-capture-publish-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: windows-2022

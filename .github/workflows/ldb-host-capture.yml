@@ -2,11 +2,18 @@ name: Build LDB Host capture test package
 on:
   push:
     branches: [ldb-host-capture]
+    paths-ignore:
+      - integration/rt/**
+      - scripts/*rt*
+      - tests/rt_*
+      - tests/test_rt_*
+      - docs/research/rt-*
+      - research/rt-*
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: ldb-host-capture-publish
+  group: zip-host-capture-publish-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   build:
