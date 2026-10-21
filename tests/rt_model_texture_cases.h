@@ -121,6 +121,35 @@ inline void systemTextureExport() {
     check(d->SetTexture(0,nullptr));working.clear();require(working.residentBytes==0&&!working.held(),"working cache source release");
     std::cout<<"RT texture source-ref eviction/spool dedup/bounded evidence/backing lifetime: PASS\n";
   }
+  {
+    model_texture::Cache::Limits policy;policy.spoolBytes=700;policy.resident=4096;policy.evidence=700;
+    model_texture::Cache bounded(policy);static_draw::Ref<IDirect3DTexture9> a,b,large,c;
+    const auto make=[&](IDirect3DTexture9** texture,UINT width,UINT height,unsigned char value) {
+      check(d->CreateTexture(width,height,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,texture,nullptr));D3DLOCKED_RECT lock{};
+      check((*texture)->LockRect(0,&lock,nullptr,0));for(UINT y=0;y<height;++y) { std::memset(static_cast<uint8_t*>(lock.pBits)+size_t(y)*size_t(lock.Pitch),value,width*4); }check((*texture)->UnlockRect(0));
+    };
+    make(&a.value,4,4,21);make(&b.value,8,4,22);make(&large.value,16,8,23);make(&c.value,4,4,24);
+    check(d->SetSamplerState(0,D3DSAMP_SRGBTEXTURE,FALSE));
+    for(auto* texture:{a.value,b.value}) { check(d->SetTexture(0,texture));require(bounded.acquire(d,directory.path/"rejected",500,1).textured(),"bounded spool setup"); }
+    check(d->SetTexture(0,large.value));const auto blocked=bounded.acquire(d,directory.path/"rejected",500,2);
+    require(!blocked.textured()&&blocked.reason=="texture_spool_budget"&&bounded.sourceReads==3,"spool rejection setup");
+    for(unsigned i=0;i<40;++i) { require(!bounded.acquire(d,directory.path/"rejected",500,2).textured(),"rejected resource unexpectedly bound"); }
+    require(bounded.sourceReads==3&&bounded.retrySuppressed==40&&bounded.rejectedCount()==1,"capacity rejection reread source or consumed new quota");
+    check(d->SetTexture(0,c.value));const auto small=bounded.acquire(d,directory.path/"rejected",500,3);
+    require(small.textured()&&bounded.bytes==700&&bounded.sourceReads==4,"capacity rejection starved following smaller texture");
+    bounded.invalidate(large.value);check(d->SetTexture(0,large.value));(void)bounded.acquire(d,directory.path/"rejected",501,2);
+    require(bounded.sourceReads==5&&bounded.invalidated==1,"resource mutation did not reset rejected-version state");bounded.clear();
+    policy.spoolBytes=800;policy.priorityReserve=300;model_texture::Cache reserved(policy);
+    for(auto* texture:{a.value,b.value}) { check(d->SetTexture(0,texture));require(reserved.acquire(d,directory.path/"reserved",510,1).textured(),"priority spool setup"); }
+    check(d->SetTexture(0,c.value));require(!reserved.acquire(d,directory.path/"reserved",510,1).textured(),"ordinary DDS consumed reserved runtime space");
+    const auto priority=reserved.acquire(d,directory.path/"reserved",510,1,0,true);
+    require(priority.textured()&&reserved.bytes==700&&reserved.sourceReads==4,"priority upgrade reused ordinary failure or could not use reservation");
+    check(d->SetRenderState(D3DRS_ALPHABLENDENABLE,TRUE));const auto alpha=reserved.acquire(d,directory.path/"reserved",510,1,0,true);
+    require(alpha.textured()&&alpha.alphaBlend&&alpha.digest==priority.digest&&alpha.key!=priority.key&&reserved.sourceReads==4,"source alpha blend changed DDS identity or lost material variant");
+    check(d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE));reserved.clear();check(d->SetTexture(0,nullptr));
+    require(model_texture::Cache::maxBytes==4294967296ull,"runtime spool ceiling overflowed 32 bits");
+    std::cout<<"RT runtime spool rejection no-reread/no-starvation/mutation/priority reserve/source alpha: PASS\n";
+  }
   std::cout<<"RT resource-cookie DDS reuse beyond working-set and per-frame read budgets: PASS\n";
   std::cout<<"RT model source mip chain NULLREF/hash/sRGB/small BC levels/partial failure unlock: PASS\n";
   std::cout<<"RT model texture system NULLREF 1024/2048 cache export/rehash/reuse/unlock/clear: PASS; GPU RT unrun\n";

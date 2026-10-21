@@ -104,7 +104,7 @@ inline const char* name(Budget reason) {
     case Budget::LiveBytes:return "live_geometry_bytes";case Budget::Entries:return "mesh_entries";
     case Budget::GpuBacklog:return "gpu_backlog";default:return "none"; }
 }
-struct Limits { uint64_t bytes=256ull*1024*1024,frameBytes=96ull*1024*1024;unsigned draws=1024,entries=2048; };
+struct Limits { uint64_t bytes=512ull*1024*1024,frameBytes=192ull*1024*1024;unsigned draws=1024,entries=2048; };
 struct Submission {
   bool success=false,created=false,deferred=false;Budget budget=Budget::None;
   uint64_t handle=0,triangles=0,materialHandle=0;bool materialUpdated=false,textured=false;uint32_t code=0;const char* operation="input";std::string key;
@@ -116,7 +116,7 @@ class Scene {
   std::map<std::string,MaterialRecord> materials;
 public:
   uint64_t bytes=0,peakBytes=0,created=0,reused=0,destroyed=0,submitted=0,materialUpdates=0;
-  static constexpr uint64_t maxBytes=256ull*1024*1024,maxFrameBytes=96ull*1024*1024;
+  static constexpr uint64_t maxBytes=512ull*1024*1024,maxFrameBytes=192ull*1024*1024;
   uint64_t frame=0,frameBytes=0,omitted=0;unsigned frameDraws=0,frameOmitted=0;
   std::array<uint64_t,size_t(Budget::Count)> omissionTotals{};
   explicit Scene(remixapi_Interface* table=nullptr,Limits policy={}):api(table),limits(policy) {}
@@ -164,6 +164,7 @@ public:
       }
       auto ext=opaque(variant);ext.albedoConstant=sourceMaterial.textured()?remixapi_Float3D{1,1,1}:remixapi_Float3D{0.55f,0.55f,0.55f};
       if(sourceMaterial.key=="infected-bright-opaque-control") { ext.albedoConstant={0.1f,1.f,0.2f}; }
+      if(sourceMaterial.alphaBlend) { ext.blendType_hasvalue=TRUE;ext.blendType_value=0;ext.opacityConstant=1; }
       ext.alphaTestType=sourceMaterial.alphaTest;ext.alphaReferenceValue=sourceMaterial.alphaRef;
       remixapi_MaterialInfo info{};info.sType=REMIXAPI_STRUCT_TYPE_MATERIAL_INFO;info.pNext=&ext;info.hash=material.hash;
       info.albedoTexture=sourceMaterial.textured()?sourceMaterial.path.c_str():nullptr;

@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <atomic>
+#include <tuple>
 
 namespace ldb_rt::model_texture {
 constexpr size_t kMaxPayloadBytes=16u*1024*1024,kMaxMipPayloadBytes=24u*1024*1024,kDdsHeaderBytes=148,kMaxDdsBytes=kMaxMipPayloadBytes+kDdsHeaderBytes;
@@ -74,7 +75,7 @@ template<class Texture> std::vector<uint8_t> mipDds(Texture* texture,const D3DSU
 }
 struct Source {
   std::string key="synthetic",digest,file,reason="unavailable";std::filesystem::path path;
-  uint32_t width=0,height=0,format=0,levels=0,fullMipLevels=0;bool evidenceSaved=false;bool srgb=false;uint8_t alphaTest=7,alphaRef=0,wrapU=1,wrapV=1,filter=1;
+  uint32_t width=0,height=0,format=0,levels=0,fullMipLevels=0;bool evidenceSaved=false;bool srgb=false;bool alphaBlend=false;uint8_t alphaTest=7,alphaRef=0,wrapU=1,wrapV=1,filter=1;
   bool textured() const { return !path.empty(); }
 };
 inline bool wrap(DWORD value,uint8_t& out) {
@@ -96,12 +97,13 @@ class Cache {
     value=nextIdentity.fetch_add(1,std::memory_order_relaxed);
     return value&&SUCCEEDED(texture->SetPrivateData(identityGuid,&value,sizeof(value),0))?value:0;
   }
+  std::map<std::tuple<uint64_t,bool,bool>,Source> rejected;
   uint64_t completed=0;
   uint64_t frame=0,frameBytes=0;unsigned frameReads=0;
 public:
-  uint64_t bytes=0,exported=0,failed=0,deferred=0,residentBytes=0,evidenceBytes=0,evidenceFiles=0,evicted=0,backingHits=0,sourceReads=0,invalidated=0;
-  static constexpr uint64_t maxBytes=512ull*1024*1024,maxResidentBytes=128ull*1024*1024,maxEvidenceBytes=64ull*1024*1024;
-  struct Limits { uint64_t resident=maxResidentBytes,spoolBytes=maxBytes,evidence=maxEvidenceBytes;size_t refs=256,files=1024; };
+  uint64_t bytes=0,exported=0,failed=0,deferred=0,residentBytes=0,evidenceBytes=0,evidenceFiles=0,evicted=0,backingHits=0,sourceReads=0,invalidated=0,retrySuppressed=0;
+  static constexpr uint64_t maxBytes=4ull*1024*1024*1024,maxResidentBytes=128ull*1024*1024,maxEvidenceBytes=64ull*1024*1024;
+  struct Limits { uint64_t resident=maxResidentBytes,spoolBytes=maxBytes,evidence=maxEvidenceBytes;size_t refs=256,files=4096;uint64_t priorityReserve=0; };
 private:
   Limits limits;
 public:
@@ -129,7 +131,11 @@ public:
       if(it->first.first==reinterpret_cast<uintptr_t>(texture)) { residentBytes-=it->second->cost;it=entries.erase(it);++evicted;changed=true; }else { ++it; }
     }
     uint64_t token=0;DWORD size=sizeof(token);
-    if(SUCCEEDED(texture->GetPrivateData(identityGuid,&token,&size))) { (void)texture->FreePrivateData(identityGuid);changed=true; }
+    if(SUCCEEDED(texture->GetPrivateData(identityGuid,&token,&size))) {
+      (void)texture->FreePrivateData(identityGuid);changed=true;
+      for(auto it=backing.begin();it!=backing.end();) { if(it->first.first==token) { it=backing.erase(it); }else { ++it; } }
+      for(auto it=rejected.begin();it!=rejected.end();) { if(std::get<0>(it->first)==token) { it=rejected.erase(it); }else { ++it; } }
+    }
     if(changed) { ++invalidated; }
   }
   size_t held() const { return entries.size(); }
@@ -143,6 +149,7 @@ public:
     std::filesystem::create_directories(target.parent_path());std::filesystem::copy_file(s.path,target);
     evidenceBytes+=size;++evidenceFiles;s.evidenceSaved=true;
   }
+  size_t rejectedCount() const { return rejected.size(); }
   size_t backingCount() const { return backing.size(); }
   bool persist(Source& s,const std::vector<uint8_t>& encoded,const std::filesystem::path& directory,bool priority=false) {
       s.digest=ddsSha256(encoded);
@@ -150,7 +157,9 @@ public:
       const auto size=uint64_t(encoded.size());const bool exists=spool.count(s.digest)!=0;
       // Runtime paths remain until process exit: async backend loaders may still
       // read a file after a source COM reference or API material was retired.
-      if(!exists&&(size>limits.spoolBytes-bytes||spool.size()>=limits.files)) {
+      const auto reserve=limits.priorityReserve?std::min(limits.priorityReserve,limits.spoolBytes):(limits.spoolBytes==maxBytes?256ull*1024*1024:0);
+      const auto capacity=priority?limits.spoolBytes:limits.spoolBytes-std::min(limits.spoolBytes,reserve);
+      if(!exists&&(bytes>capacity||size>capacity-bytes||spool.size()>=(limits.files-(!priority&&limits.files==4096?64:0)))) {
         s.digest.clear();s.reason="texture_spool_budget";++deferred;return false;
       }
       std::filesystem::create_directories(directory/"runtime-textures");
@@ -166,6 +175,8 @@ public:
   }
   Source acquire(IDirect3DDevice9* d,const std::filesystem::path& directory,uint64_t at,uint32_t material,DWORD slot=0,bool priority=false) {
     Source s;s.key="fallback:"+std::to_string(material);
+    DWORD blend=0;
+    if(FAILED(d->GetRenderState(D3DRS_ALPHABLENDENABLE,&blend))) { s.reason="texture_state_query_failed";return s; }s.alphaBlend=blend!=0;
     DWORD alpha=0,func=D3DCMP_ALWAYS,ref=0,srgb=0,u=0,v=0,min=0,mag=0;
     const HRESULT queries[]={d->GetRenderState(D3DRS_ALPHATESTENABLE,&alpha),d->GetRenderState(D3DRS_ALPHAFUNC,&func),
       d->GetRenderState(D3DRS_ALPHAREF,&ref),d->GetSamplerState(slot,D3DSAMP_SRGBTEXTURE,&srgb),d->GetSamplerState(slot,D3DSAMP_ADDRESSU,&u),
@@ -175,7 +186,7 @@ public:
        (min!=D3DTEXF_POINT&&min!=D3DTEXF_LINEAR&&min!=D3DTEXF_ANISOTROPIC)||
        (mag!=D3DTEXF_POINT&&mag!=D3DTEXF_LINEAR&&mag!=D3DTEXF_ANISOTROPIC)) { s.reason="texture_sampler_unsupported";return s; }
     s.srgb=srgb!=0;s.alphaTest=alpha?uint8_t(func-1):uint8_t(7);s.alphaRef=alpha?uint8_t(ref):uint8_t(0);s.filter=uint8_t(min!=D3DTEXF_POINT||mag!=D3DTEXF_POINT);
-    const auto suffix=":"+std::to_string(s.alphaTest)+":"+std::to_string(s.alphaRef)+":"+std::to_string(s.wrapU)+":"+std::to_string(s.wrapV)+":"+std::to_string(s.filter);
+    const auto suffix=":"+std::to_string(s.alphaTest)+":"+std::to_string(s.alphaRef)+":"+std::to_string(s.wrapU)+":"+std::to_string(s.wrapV)+":"+std::to_string(s.filter)+":"+std::to_string(s.alphaBlend);
     static_draw::Ref<IDirect3DBaseTexture9> base;
     if(FAILED(d->GetTexture(slot,&base.value))||!base.value||base.value->GetType()!=D3DRTYPE_TEXTURE) { s.reason="base_texture_unavailable";s.key+=suffix;return s; }
     auto* texture=static_cast<IDirect3DTexture9*>(base.value);const auto id=std::make_pair(reinterpret_cast<uintptr_t>(texture),s.srgb);
@@ -188,10 +199,16 @@ public:
     const auto token=identity(texture);const auto retained=token?backing.find({token,s.srgb}):backing.end();
     if(retained!=backing.end()) {
       ++backingHits;
-      const auto alphaTest=s.alphaTest,alphaRef=s.alphaRef,wrapU=s.wrapU,wrapV=s.wrapV,filter=s.filter;
-      s=retained->second;s.alphaTest=alphaTest;s.alphaRef=alphaRef;s.wrapU=wrapU;s.wrapV=wrapV;s.filter=filter;
+      const bool alphaBlend=s.alphaBlend;const auto alphaTest=s.alphaTest,alphaRef=s.alphaRef,wrapU=s.wrapU,wrapV=s.wrapV,filter=s.filter;
+      s=retained->second;s.alphaBlend=alphaBlend;s.alphaTest=alphaTest;s.alphaRef=alphaRef;s.wrapU=wrapU;s.wrapV=wrapV;s.filter=filter;
       if(priority&&!s.evidenceSaved) { evidence(s,directory,true);retained->second.evidenceSaved=s.evidenceSaved; }
       s.key=s.digest+suffix;return s;
+    }
+    const auto rejectedKey=std::make_tuple(token,s.srgb,priority);
+    const auto blocked=token?rejected.find(rejectedKey):rejected.end();
+    if(blocked!=rejected.end()) {
+      ++retrySuppressed;++deferred;s.reason=blocked->second.reason;s.width=blocked->second.width;s.height=blocked->second.height;
+      s.format=blocked->second.format;s.levels=blocked->second.levels;s.fullMipLevels=blocked->second.fullMipLevels;s.key+=suffix;return s;
     }
     if(frame!=at) { frame=at;frameBytes=0;frameReads=0; }
     D3DSURFACE_DESC desc{};const auto described=texture->GetLevelDesc(0,&desc);
@@ -200,14 +217,14 @@ public:
     s.width=desc.Width;s.height=desc.Height;s.format=uint32_t(desc.Format);s.levels=texture->GetLevelCount();s.fullMipLevels=fullLevels(desc.Width,desc.Height);
     const auto payload=mipBytes(desc.Width,desc.Height,desc.Format,s.srgb,s.levels);
     if(!payload) { s.reason="base_texture_mip_layout_unsupported";s.key+=suffix;++failed;return s; }
-    if(frameReads>=4||payload+148>(kMaxMipPayloadBytes+4*148)-frameBytes) { s.reason="texture_frame_budget";s.key+=suffix;++deferred;return s; }
+    if(frameReads>=16||payload+148>(4ull*kMaxMipPayloadBytes+16*148)-frameBytes) { s.reason="texture_frame_budget";s.key+=suffix;++deferred;return s; }
     if(!reserve(payload+148,at)) { s.reason="texture_cache_budget";s.key+=suffix;++deferred;return s; }
-    ++frameReads;++sourceReads;auto encoded=mipDds(texture,desc,s.srgb,s.levels);
+    ++frameReads;++sourceReads;frameBytes+=payload+kDdsHeaderBytes;auto encoded=mipDds(texture,desc,s.srgb,s.levels);
     auto entry=std::make_unique<Entry>();texture->AddRef();entry->texture=texture;entry->last=at;
     if(encoded.empty()) { s.reason="base_texture_read_unavailable";++failed; }
     else {
-      if(!persist(s,encoded,directory,priority)) { s.key+=suffix;return s; }
-      const auto size=uint64_t(encoded.size());s.reason="sampler0_source_mips_dds_dx10";frameBytes+=size;entry->cost=size;residentBytes+=size;
+      if(!persist(s,encoded,directory,priority)) { if(token&&rejected.size()<2*limits.files) { rejected[rejectedKey]=s; }s.key+=suffix;return s; }
+      const auto size=uint64_t(encoded.size());s.reason="sampler0_source_mips_dds_dx10";entry->cost=size;residentBytes+=size;
 
     }
     if(token&&s.textured()&&backing.size()<limits.files) { backing[{token,s.srgb}]=s; }

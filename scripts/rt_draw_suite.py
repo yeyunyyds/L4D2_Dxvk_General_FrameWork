@@ -360,6 +360,7 @@ def review_preview(directory):
     directory=Path(directory);errors=[];path=directory/'preview-runtime.jsonl'
     if not path.is_file() or path.stat().st_size>8*1024*1024:return {'pass':False,'errors':['missing_or_oversized_preview_log']}
     events=[json.loads(s) for s in path.read_text(encoding='utf-8').splitlines() if s.strip()]
+    v23=any(e.get('event')=='world_coverage_revision' and e.get('value')=='23' for e in events)
     ends=[e for e in events if e.get('event')=='preview_end'];reads=[e for e in events if e.get('event')=='preview_readback']
     if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('elapsed_ms',0)<60000 or ends[0].get('submitted',0)<=0 or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('preview_duration_or_completion')
     if len(reads)!=3:errors.append('preview_readback_count')
@@ -376,7 +377,7 @@ def review_preview(directory):
             if invalid:errors.append('preview_nonfinite_rgb')
     for e in events:
         if e.get('code',0):errors.append('preview_runtime_failure:'+e.get('event','unknown'))
-        if e.get('event')=='api_mesh_frame' and (e.get('bytes',0)>256*1024*1024 or e.get('texture_resident_bytes',0)>128*1024*1024 or e.get('texture_bytes',0)>512*1024*1024 or e.get('pending_fences',0)>8):errors.append('preview_budget')
+        if e.get('event')=='api_mesh_frame' and (e.get('bytes',0)>(512 if v23 else 256)*1024*1024 or e.get('texture_resident_bytes',0)>128*1024*1024 or e.get('texture_bytes',0)>(4096 if v23 else 512)*1024*1024 or e.get('pending_fences',0)>8):errors.append('preview_budget')
     return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'end':ends[-1] if ends else None,'color_metrics':metrics,'readbacks':reads,'gpu_image_acceptance':'unrun','limits':'Bounded neutral realtime preview, independent of600-Present diagnostic; no sustained performance or full coverage acceptance.'}
 
 def startup_modules(directory,pid,notify):
@@ -449,7 +450,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('Indexed Mesh v22: press F9 once; slow movement/turning allowed. World/HUD31-120; sky121-180; Neko textures181-240; combined textures241-300; headlamp30 by default; headlamp3 at301-360; bright Infected control361-420; neutral opaque421-540; recovery541-600. Indexed model geometry, persistent texture backing, Infected palette/detail reconstruction, bright opaque double-sided control at361-420 and near-target evidence are automatic. Spawn common infected BEFORE F9 and keep them in view; all captured known model variants are included. After600:60-second neutral live preview then automatic recovery; keep playing until this window asks you to exit.')
+        if world:notify('World Pilot v23: spawn common infected nearby, then press F9 ONCE. Move and turn slowly. The600-frame diagnostic and60-second live preview run automatically. Observe clothing, hair and transparent parts. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

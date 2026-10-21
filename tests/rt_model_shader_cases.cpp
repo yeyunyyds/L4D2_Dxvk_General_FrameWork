@@ -24,6 +24,8 @@ int main() {
     check(model_shader::profile("7aab351541ae0799d92e5a2c11fee647df4a5b3319037e20ea3721093de9fc33")==model_shader::Profile::Rigid&&model_shader::profile("6812e9511ea1734cb3a529f9cd30b234f60bb9262a5dc35c55bec26636889210")==model_shader::Profile::Skin3,"163633 audited programs missing");
     std::cout<<"RT two 163633 VertexLitGeneric exact program profiles: PASS\n";
     std::cout<<"RT five 141352 VertexLitGeneric exact program profiles: PASS\n";
+    check(model_shader::profile("21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b")==model_shader::Profile::Skin3,"204426 audited skin program missing");
+    std::cout<<"RT 204426 three-weight VertexLitGeneric exact program profile: PASS\n";
     sky_shader::Constants c{};c[0][1]=1;c[58]={0,2,0,123};c[59]={-3,0,0,10};c[60]={0,0,.5f,-20};c[48]={2,-1,0,.25f};c[49]={1,3,0,-.5f};
     std::vector<uint8_t> bytes(3*32);
     for (unsigned i=0;i<3;++i) {

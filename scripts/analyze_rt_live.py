@@ -15,13 +15,14 @@ CONFIG=('rtx.enablePreservePath','rtx.useBuffersDirectly','rtx.bloom.enable','rt
 
 def analyze(directory,events):
     errors=[];directory=Path(directory);samples=[];payload_bytes=0
-    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21','22') and e.get('code')==0 for e in events)
+    v23=any(e.get('event')=='world_coverage_revision' and e.get('value')=='23' for e in events)
+    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21','22','23') and e.get('code')==0 for e in events)
     v19=v20 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='19' and e.get('code')==0 for e in events)
     v18=v19 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
     v17=v18 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='17' and e.get('code')==0 for e in events)
     stages=STAGES_V18 if v18 else STAGES;materials=MATERIALS_V18 if v18 else MATERIALS
     reasons=('draw_limit','frame_geometry_bytes','live_geometry_bytes','mesh_entries','gpu_backlog')
-    if any(e.get('event')=='world_coverage_revision' and e.get('value')=='22' for e in events):materials=['neutral' if m in ('metal','alpha','emissive') else m for m in materials]
+    if any(e.get('event')=='world_coverage_revision' and e.get('value') in ('22','23') for e in events):materials=['neutral' if m in ('metal','alpha','emissive') else m for m in materials]
     def check(value,why):
         if not value:raise ValueError(why)
     for e in events:
@@ -41,16 +42,16 @@ def analyze(directory,events):
                 check(type(e.get(k)) is int and e[k]>=0,'invalid_live_counter')
             for k in ('submitted','created','reused','destroyed','peak_bytes','completed_through'):
                 check(e[k]>=previous.get(k,0),'regressing_live_counter')
-            check(e['created']-e['destroyed']==e['entries'] and e['entries']<=(2048 if any(x.get('event')=='world_coverage_revision' and x.get('value')=='22' for x in events) else 512),'live_resource_accounting')
-            check(e['bytes']<=e['peak_bytes']<=256*1024*1024 and e['pending_fences']<=8,'live_resource_budget')
+            check(e['created']-e['destroyed']==e['entries'] and e['entries']<=(2048 if any(x.get('event')=='world_coverage_revision' and x.get('value') in ('22','23') for x in events) else 512),'live_resource_accounting')
+            check(e['bytes']<=e['peak_bytes']<=(512 if v23 else 256)*1024*1024 and e['pending_fences']<=8,'live_resource_budget')
             check(e['completed_through']<=e['frame'],'invalid_live_completion')
             if e['destroyed']>previous.get('destroyed',0):check(e['completed_through']>0,'retirement_without_completion')
             if e['frame']<=180:check(e['submitted']==0,'premature_live_submission')
             if v17:
                 for k in ('frame_draws','frame_new_bytes','frame_omitted','omitted_total'):
                     check(type(e.get(k)) is int and e[k]>=0,'invalid_live_budget_counter')
-                check(e['frame_draws']==e['submitted']-previous.get('submitted',0) and e['frame_draws']<=(1024 if any(x.get('event')=='world_coverage_revision' and x.get('value')=='22' for x in events) else 512),'invalid_live_frame_draws')
-                check(e['frame_new_bytes']<=96*1024*1024,'invalid_live_frame_bytes')
+                check(e['frame_draws']==e['submitted']-previous.get('submitted',0) and e['frame_draws']<=(1024 if any(x.get('event')=='world_coverage_revision' and x.get('value') in ('22','23') for x in events) else 512),'invalid_live_frame_draws')
+                check(e['frame_new_bytes']<=(192 if v23 else 96)*1024*1024,'invalid_live_frame_bytes')
                 check(e['omitted_total']-previous.get('omitted_total',0)==e['frame_omitted'],'live_omission_delta')
                 omission=e.get('omission_reasons',{})
                 check(set(omission)==set(reasons) and all(type(n) is int and n>=0 for n in omission.values()) and sum(omission.values())==e['omitted_total'],'live_omission_reason_accounting')
@@ -63,7 +64,7 @@ def analyze(directory,events):
     for e in rows:
         try:
             frame=e['frame'];previous_sample=e['event']=='api_model_previous_sample';check(frame in ((239,299) if previous_sample else FRAMES[3:-1]),'invalid_live_sample_frame');index=FRAMES.index(frame+1 if previous_sample else frame)
-            check(e['stage']==stages[index] and e['material']==('neutral' if e.get('shader')=='Infected' and any(x.get('event')=='world_coverage_revision' and x.get('value') in ('21','22') for x in events) else materials[index]),'live_sample_material_stage')
+            check(e['stage']==stages[index] and e['material']==('neutral' if e.get('shader')=='Infected' and any(x.get('event')=='world_coverage_revision' and x.get('value') in ('21','22','23') for x in events) else materials[index]),'live_sample_material_stage')
             counts[frame]+=1;check(counts[frame]<=64,'live_sample_budget')
             check(type(e['ordinal']) is int and e['ordinal']>0 and e['ordinal'] not in ordinals,'live_sample_identity');ordinals.add(e['ordinal'])
             check(e['ignored_category_at_original_draw']&8 and e['cull'] in (1,2,3),'original_model_not_isolated')

@@ -6,9 +6,10 @@ import struct
 
 def analyze(directory,events):
     directory=Path(directory);errors=[];files={};bindings=[];mip_counts={};omitted=set()
-    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21','22') and e.get('code')==0 for e in events)
+    v23=any(e.get('event')=='world_coverage_revision' and e.get('value')=='23' for e in events)
+    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21','22','23') and e.get('code')==0 for e in events)
     v19=v20 or any(e.get("event")=="world_coverage_revision" and e.get("value")=="19" and e.get("code")==0 for e in events)
-    max_bytes=(512 if v20 else 128 if v19 else 64)*1024*1024;max_refs=256 if v19 else 128;max_file=(24 if v19 else 16)*1024*1024+148
+    max_bytes=(4096 if v23 else 512 if v20 else 128 if v19 else 64)*1024*1024;max_refs=256 if v19 else 128;max_file=(24 if v19 else 16)*1024*1024+148
     def check(value,why):
         if not value:raise ValueError(why)
     if not any(e.get('event')=='model_texture_policy' and e.get('code')==0 for e in events):errors.append('missing_model_texture_policy')
@@ -20,6 +21,9 @@ def analyze(directory,events):
         try:
             check(type(e.get('frame')) is int and 181<=e['frame']<=540 and type(e.get('material_handle')) is int and e['material_handle']>0,'invalid_texture_binding_identity')
             check(type(e.get('textured')) is bool and type(e.get('srgb')) is bool,'invalid_texture_binding_flags')
+            if v23:
+                check(type(e.get('alpha_blend')) is bool,'missing_source_alpha_blend')
+                check(type(e.get('source_material')) is int and e['source_material']>=0 and e.get('source_shader') in ('Infected','VertexLitGeneric','NekoToon'),'missing_texture_source_identity')
             check(e.get('alpha_test') in range(8) and e.get('alpha_ref') in range(256) and e.get('filter') in (0,1) and e.get('wrap_u') in (0,1,2) and e.get('wrap_v') in (0,1,2),'invalid_texture_alpha_sampler')
             if not e['textured']:
                 check(not e.get('file') and not e.get('sha256') and e.get('reason') not in ('sampler0_base_level_dds_dx10','sampler0_source_mips_dds_dx10'),'invalid_texture_fallback')
@@ -36,7 +40,7 @@ def analyze(directory,events):
             path=directory/name;check(path.is_file() and 148<path.stat().st_size<=max_file,'missing_or_oversized_texture')
             if name not in files:
                 raw=path.read_bytes();check(hashlib.sha256(raw).hexdigest()==digest,'texture_file_digest');files[name]=len(raw)
-                check(len(files)<=(1024 if v20 else max_refs) and sum(files.values())<=(64*1024*1024 if v20 else max_bytes),'texture_export_budget')
+                check(len(files)<=(4096 if v23 else 1024 if v20 else max_refs) and sum(files.values())<=(64*1024*1024 if v20 else max_bytes),'texture_export_budget')
             else:raw=path.read_bytes()[:148]
             h=struct.unpack_from('<37I',raw)
             row=((e['width']+3)//4)*block if block else e['width']*4;rows=(e['height']+3)//4 if block else e['height']
@@ -60,11 +64,13 @@ def analyze(directory,events):
                 check(type(e.get(k)) is int and e[k]>=0,'invalid_texture_counter')
                 if k!='texture_held':check(e[k]>=previous.get(k,0),'regressing_texture_counter')
             check(e['textured_submissions']+e['texture_fallback_submissions']==e['submitted'],'texture_submission_accounting')
-            check(e['texture_exports']<=(1024 if v20 else max_refs) and e['texture_held']<=max_refs and e['texture_bytes']<=max_bytes,'texture_runtime_budget')
-            if any(x.get('event')=='world_coverage_revision' and x.get('value')=='22' for x in events):
-                check(0<=e.get('texture_backing_entries',-1)<=1024,'texture_backing_entry_budget')
+            check(e['texture_exports']<=(4096 if v23 else 1024 if v20 else max_refs) and e['texture_held']<=max_refs and e['texture_bytes']<=max_bytes,'texture_runtime_budget')
+            if any(x.get('event')=='world_coverage_revision' and x.get('value') in ('22','23') for x in events):
+                check(0<=e.get('texture_backing_entries',-1)<=(4096 if v23 else 1024),'texture_backing_entry_budget')
                 for key in ('texture_backing_hits','texture_source_reads','texture_invalidated'):
                     check(type(e.get(key)) is int and e[key]>=previous.get(key,0),'texture_backing_counter')
+            if v23:
+                check(0<=e.get('texture_rejected_entries',-1)<=8192 and e.get('texture_retry_suppressed',-1)>=previous.get('texture_retry_suppressed',0),'texture_rejection_counter')
             if v20:
                 check(0<=e.get('texture_resident_bytes',-1)<=128*1024*1024 and 0<=e.get('texture_evidence_bytes',-1)<=64*1024*1024,'texture_working_evidence_budget')
                 check(type(e.get('texture_evicted')) is int and e['texture_evicted']>=previous.get('texture_evicted',0),'texture_eviction_counter')

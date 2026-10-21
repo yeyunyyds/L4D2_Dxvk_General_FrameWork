@@ -9,7 +9,7 @@ void require(bool value,const char* why) { if(!value) { throw std::runtime_error
 #include "rt_infected_material_cases.h"
 namespace fixture {
 unsigned failureCode=1,fail=0,created=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live,materialLive;
-int lastAlpha=7;uint8_t lastRef=0;bool lastTextured=false;
+int lastAlpha=7;uint8_t lastRef=0;bool lastTextured=false,lastBlend=false;float lastOpacity=0;
 std::vector<remixapi_HardcodedVertex> received;remixapi_Transform lastTransform{};
 remixapi_ErrorCode result(unsigned at) { return static_cast<remixapi_ErrorCode>(fail==at?failureCode:0); }
 remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remixapi_MaterialHandle* out) {
@@ -17,6 +17,7 @@ remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remi
   const auto& p=*static_cast<remixapi_MaterialInfoOpaqueEXT*>(info->pNext);
   require(p.alphaTestType>=0&&p.alphaTestType<=7&&!p.useDrawCallAlphaState&&p.opacityConstant>0,"invalid API material alpha");
   require(materialLive.insert(info->hash).second,"repeated registration ignored by pinned runtime; destroy first");lastAlpha=p.alphaTestType;lastRef=p.alphaReferenceValue;lastTextured=info->albedoTexture!=nullptr;
+  lastBlend=p.blendType_hasvalue!=FALSE;lastOpacity=p.opacityConstant;
   ++materials;*out=reinterpret_cast<remixapi_MaterialHandle>(info->hash);return static_cast<remixapi_ErrorCode>(0);
 }
 remixapi_ErrorCode REMIXAPI_CALL mesh(const remixapi_MeshInfo* info,remixapi_MeshHandle* out) {
@@ -85,6 +86,21 @@ int main() {
     require(geometry.vertices.size()==4&&geometry.indices.size()==6&&geometry.bytes()==4*64+6*4,"indexed byte budget differs");
     const auto& n=geometry.vertices[1].normal;require(n[0]<0&&n[1]<0&&n[2]>0&&std::abs(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]-1)<1e-5,"area-weighted shared normal incorrect");
     std::cout<<"RT compact indexed topology/source normals/area-weighted fallback/bytes: PASS\n";
+  }
+  {
+    struct AlphaDevice {
+      DWORD src=D3DBLEND_SRCALPHA,dst=D3DBLEND_INVSRCALPHA,op=D3DBLENDOP_ADD,separate=0;bool failed=false;
+      HRESULT GetRenderState(D3DRENDERSTATETYPE state,DWORD* out) {
+        if(failed) { return E_FAIL; }*out=state==D3DRS_SRCBLEND?src:state==D3DRS_DESTBLEND?dst:state==D3DRS_BLENDOP?op:separate;return S_OK;
+      }
+    } device;
+    require(model_input::standardAlpha(&device),"standard texture alpha rejected");device.dst=D3DBLEND_ONE;require(!model_input::standardAlpha(&device),"additive pass treated as ordinary alpha");device.dst=D3DBLEND_INVSRCALPHA;
+    device.src=D3DBLEND_ONE;require(!model_input::standardAlpha(&device),"premultiplied pass silently changed");device.src=D3DBLEND_SRCALPHA;
+    device.separate=1;require(!model_input::standardAlpha(&device),"separate alpha pass silently changed");device.separate=0;device.failed=true;require(!model_input::standardAlpha(&device),"failed blend getter admitted");
+    auto api=fixture::table();live_mesh::Scene alphaScene(&api);model_texture::Source source;source.key="source-alpha";source.alphaBlend=true;source.path=L"alpha.dds";source.alphaTest=4;source.alphaRef=100;
+    require(alphaScene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1,0,source).success&&fixture::lastBlend&&fixture::lastOpacity==1&&fixture::lastAlpha==4&&fixture::lastRef==100,"source alpha material not preserved");
+    require(!alphaScene.retire(1,3,true),"alpha resource cleanup");fixture::created=fixture::destroyed=fixture::materials=fixture::materialDestroyed=fixture::draws=0;
+    std::cout<<"RT standard alpha admission/rejection/DDS opacity/material cleanup: PASS\n";
   }
   auto api=fixture::table();live_mesh::Scene scene(&api);
   auto a=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1);require(a.success&&a.created&&fixture::created==1,"first API mesh not created");

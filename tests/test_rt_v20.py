@@ -34,6 +34,9 @@ class V20Evidence(unittest.TestCase):
                 (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events));return review_preview(root)
             self.assertTrue(review()['pass']);events[-1]['complete']=False;self.assertFalse(review()['pass']);events[-1]['complete']=True
             events[-1]['entries']=1;self.assertIn('preview_duration_or_completion',review()['errors']);events[-1]['entries']=0
+            budget=dict(event='api_mesh_frame',bytes=300*1024*1024,texture_bytes=1024*1024*1024);events.insert(0,budget)
+            self.assertIn('preview_budget',review()['errors']);events.insert(0,dict(event='world_coverage_revision',value='23',code=0));self.assertTrue(review()['pass'])
+            budget['texture_bytes']=4294967297;self.assertIn('preview_budget',review()['errors']);budget['texture_bytes']=1024*1024*1024
             (root/'preview-1.rgba32f').write_bytes(struct.pack('<f',float('nan'))+raw[4:]);self.assertIn('preview_nonfinite_rgb',review()['errors'])
 
     def test_runtime_backing_is_excluded_without_silent_archive_loss(self):

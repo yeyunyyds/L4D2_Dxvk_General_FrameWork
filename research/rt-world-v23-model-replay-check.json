@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "pass": true,
+  "scope": "v23 exact VS admission plus prior 64-sample production regression; independent double-precision position/UV, not GPU material acceptance",
+  "source_vs_sha256": "21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b",
+  "source_ordinal": 333911,
+  "source_vertices": 230,
+  "prior_samples": 64,
+  "prior_outputs_exact_match": true,
+  "position_uv_max_abs_error": [
+    0.00012196868237879244,
+    3.144731533666345e-05,
+    6.474504198195064e-05,
+    0.0,
+    0.0
+  ],
+  "morph_control": 0.0,
+  "audit": {
+    "full_program_words": 977,
+    "position_path_word_offsets": [
+      316,
+      320,
+      324,
+      328,
+      332,
+      336,
+      339,
+      344,
+      350,
+      360,
+      363,
+      366,
+      371,
+      394,
+      399,
+      405,
+      415,
+      419,
+      424,
+      430,
+      440,
+      447,
+      450,
+      454,
+      458,
+      462,
+      496
+    ],
+    "uv_output_word_offsets": [
+      375,
+      379
+    ],
+    "position_or_uv_overwritten_after_496": false,
+    "special_38bb_program_admitted": false
+  }
+}

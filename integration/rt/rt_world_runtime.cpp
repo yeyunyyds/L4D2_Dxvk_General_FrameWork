@@ -238,6 +238,10 @@ void inspect(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t k
     log << "\"auxiliary\":[";
     for (unsigned i=0;i<3;++i) { const auto& a=input.auxiliary[i];if (i) { log << ','; }
       log << "{\"stream\":" << a.stream << ",\"offset\":" << a.offset << ",\"stride\":" << a.stride << ",\"frequency\":" << a.frequency << ",\"hresult\":" << uint32_t(a.result) << ",\"prefix_bytes\":" << a.bytes.size() << '}'; }
+    log << "],\"render_states\":[";
+    const D3DRENDERSTATETYPE states[]={D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_ALPHATESTENABLE,D3DRS_ALPHABLENDENABLE,D3DRS_SRCBLEND,D3DRS_DESTBLEND,D3DRS_BLENDOP,D3DRS_SEPARATEALPHABLENDENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
+    bool stateComma=false;for(const auto state:states) { DWORD value=0;const auto hr=device->GetRenderState(state,&value);if(stateComma) { log<<','; }stateComma=true;
+      log<<"{\"state\":"<<unsigned(state)<<",\"value\":"<<value<<",\"hresult\":"<<uint32_t(hr)<<'}'; }
     log << "],\"integer_constants_hresult\":" << uint32_t(input.integerResult) << ",\"bool_constants_hresult\":" << uint32_t(input.boolResult) << ",\"pixel_constants_hresult\":" << uint32_t(input.pixelResult) << ",\"files\":[";
     bool comma=false;
     const auto save=[&](const char* suffix,const void* bytes,size_t size) {
@@ -282,7 +286,7 @@ std::array<unsigned,world_diagnostics::kModelStages> modelPreviousSampleCounts{}
 void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
   const auto stage=unsigned(currentModels());
   if (modelStateCounts[stage]>=world_diagnostics::kModelSampleLimit) { return; }++modelStateCounts[stage];
-  const unsigned names[]={7,14,15,23,24,25,27,28,22,42,52,137,149,150,152,168,169,174,175,177,195,196,197,206,210,211,212,213,214,215,216,217,218,219,220};
+  const unsigned names[]={7,14,15,23,24,25,27,28,171,206,22,42,52,137,149,150,152,168,169,174,175,177,195,196,197,206,210,211,212,213,214,215,216,217,218,219,220};
   events << "{\"event\":\"model_state_sample\",\"ordinal\":" << s.ordinal << ",\"material\":" << s.material
     << ",\"frame\":" << state().presents+1 << ",\"model_stage\":\"" << world_diagnostics::texturedName(currentModels()) << "\",\"shader\":\"" << s.materialInfo.shader.data() << "\",\"states\":[";
   for (unsigned i=0;i<sizeof(names)/sizeof(names[0]);++i) {
@@ -292,7 +296,7 @@ void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
   events << "]}\n" << std::flush;
 }
 live_mesh::Material liveMaterial(world_diagnostics::ModelStage stage) {
-  // v22 uses neutral opaque base materials throughout. Synthetic metallic,
+  // v23 uses neutral opaque base materials throughout. Synthetic metallic,
   // translucent and emissive probes obscured the actual clothing comparison.
   (void)stage;return live_mesh::Material::Neutral;
 }
@@ -325,15 +329,15 @@ void apiPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& p,u
   };
   write("-vertices.bin",p.bytes,vh);write("-indices.bin",p.indices,ih);events<<"],\"payload_saved\":"<<(save?"true":"false")<<"}\n"<<std::flush;
 }
-void textureBinding(const model_texture::Source& source,const live_mesh::Submission& submission,uint64_t frame) {
+void textureBinding(const model_texture::Source& source,const live_mesh::Submission& submission,uint64_t frame,const draw_observe::Snapshot& snapshot) {
   if(!submission.materialUpdated) { return; }
   if(state().preview&&previewBindingRows++>=2048) { ++previewBindingOmitted;return; }
   events << "{\"event\":\"model_texture_binding\",\"frame\":" << frame << ",\"material_handle\":" << submission.materialHandle
-    << ",\"textured\":" << (source.textured()?"true":"false") << ",\"reason\":\"" << source.reason
+    << ",\"source_material\":" << snapshot.material << ",\"source_shader\":\"" << snapshot.materialInfo.shader.data() << "\",\"textured\":" << (source.textured()?"true":"false") << ",\"reason\":\"" << source.reason
     << "\",\"file\":\"" << source.file << "\",\"sha256\":\"" << source.digest << "\",\"width\":" << source.width
     << ",\"height\":" << source.height << ",\"format\":" << source.format << ",\"srgb\":" << (source.srgb?"true":"false")
     << ",\"evidence_saved\":" << (source.evidenceSaved?"true":"false") << ",\"mip_levels\":" << source.levels << ",\"full_mip_levels\":" << source.fullMipLevels
-    << ",\"alpha_test\":" << unsigned(source.alphaTest) << ",\"alpha_ref\":" << unsigned(source.alphaRef)
+    << ",\"alpha_blend\":" << (source.alphaBlend?"true":"false") << ",\"alpha_test\":" << unsigned(source.alphaTest) << ",\"alpha_ref\":" << unsigned(source.alphaRef)
     << ",\"filter\":" << unsigned(source.filter) << ",\"wrap_u\":" << unsigned(source.wrapU) << ",\"wrap_v\":" << unsigned(source.wrapV)
     << ",\"material\":\"" << (source.reason.rfind("infected_",0)==0?"neutral":live_mesh::name(liveMaterial(currentModels()))) << "\"}\n" << std::flush;
 }
@@ -374,6 +378,7 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
       << ",\"destroyed\":" << apiMeshes.destroyed << ",\"entries\":" << apiMeshes.entries() << ",\"bytes\":" << apiMeshes.bytes
       << ",\"material_updates\":" << apiMeshes.materialUpdates << ",\"textured_submissions\":" << texturedSubmissions << ",\"texture_fallback_submissions\":" << textureFallbackSubmissions << ",\"texture_exports\":" << modelTextures.exported << ",\"texture_bytes\":" << modelTextures.bytes << ",\"texture_held\":" << modelTextures.held() << ",\"texture_read_failures\":" << modelTextures.failed << ",\"texture_budget_deferred\":" << modelTextures.deferred
       << ",\"infected_bakes\":" << infectedMaterials.baked << ",\"infected_bake_deferred\":" << infectedMaterials.deferred << ",\"infected_bake_failures\":" << infectedMaterials.failed
+      << ",\"texture_rejected_entries\":"<<modelTextures.rejectedCount()<<",\"texture_retry_suppressed\":"<<modelTextures.retrySuppressed
       << ",\"texture_backing_entries\":"<<modelTextures.backingCount()<<",\"texture_backing_hits\":"<<modelTextures.backingHits<<",\"texture_source_reads\":"<<modelTextures.sourceReads<<",\"texture_invalidated\":"<<modelTextures.invalidated
       << ",\"texture_resident_bytes\":" << modelTextures.residentBytes << ",\"texture_evidence_bytes\":" << modelTextures.evidenceBytes << ",\"texture_evidence_files\":" << modelTextures.evidenceFiles << ",\"texture_evicted\":" << modelTextures.evicted
       << ",\"peak_bytes\":" << apiMeshes.peakBytes << ",\"completed_through\":" << completedMeshFrame << ",\"pending_fences\":" << meshFences.size()
@@ -421,6 +426,10 @@ void unknownEvidence(IDirect3DDevice9* device,const draw_observe::Snapshot& s,ui
     log << "\"auxiliary\":[";
     for (unsigned i=0;i<3;++i) { const auto& a=input.auxiliary[i];if (i) { log << ','; }
       log << "{\"stream\":" << a.stream << ",\"offset\":" << a.offset << ",\"stride\":" << a.stride << ",\"frequency\":" << a.frequency << ",\"hresult\":" << uint32_t(a.result) << ",\"prefix_bytes\":" << a.bytes.size() << '}'; }
+    log << "],\"render_states\":[";
+    const D3DRENDERSTATETYPE states[]={D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_ALPHATESTENABLE,D3DRS_ALPHABLENDENABLE,D3DRS_SRCBLEND,D3DRS_DESTBLEND,D3DRS_BLENDOP,D3DRS_SEPARATEALPHABLENDENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
+    bool stateComma=false;for(const auto state:states) { DWORD value=0;const auto hr=device->GetRenderState(state,&value);if(stateComma) { log<<','; }stateComma=true;
+      log<<"{\"state\":"<<unsigned(state)<<",\"value\":"<<value<<",\"hresult\":"<<uint32_t(hr)<<'}'; }
     log << "],\"integer_constants_hresult\":" << uint32_t(input.integerResult) << ",\"bool_constants_hresult\":" << uint32_t(input.boolResult) << ",\"pixel_constants_hresult\":" << uint32_t(input.pixelResult) << ",\"files\":[";
     bool comma=false;
     const auto save=[&](const char* suffix,const void* bytes,size_t size) {
@@ -462,6 +471,7 @@ void targetEvidence(const draw_observe::Snapshot& s,const scene_input::Prepared&
     };vertexFile=write("-vertices.bin",p.bytes);indexFile=write("-indices.bin",p.indices);
   }
   events<<"{\"event\":\"infected_near_target\",\"frame\":"<<frame<<",\"ordinal\":"<<s.ordinal<<",\"preview\":"<<(state().preview?"true":"false")
+    <<",\"material_handle\":"<<submitted.materialHandle<<",\"textured\":"<<(submitted.textured?"true":"false")
     <<",\"shader\":\""<<s.materialInfo.shader.data()<<"\",\"source_material\":"<<s.material<<",\"ready\":"<<(p.ready?"true":"false")<<",\"submitted\":"<<(submitted.success?"true":"false")<<",\"reason\":\""<<p.reason
     <<"\",\"distance_source_units\":"<<distance<<",\"world_center\":["<<center[0]<<','<<center[1]<<','<<center[2]<<"],\"center_clip\":["<<clip[0]<<','<<clip[1]<<','<<clip[2]<<','<<clip[3]
     <<"],\"vertex_file\":\""<<vertexFile<<"\",\"index_file\":\""<<indexFile<<"\",\"vertices_sha256\":\""<<ldb_rt_file::geometrySha256(p.bytes.data(),p.bytes.size())
@@ -528,7 +538,7 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
         const auto variant=infected?live_mesh::Material::Neutral:liveMaterial(currentModels());
         operation="submit_api_mesh";
         submitted=apiMeshes.draw(prepared,kind,type,control?DWORD(D3DCULL_NONE):cull,variant,frame,meshFences.size(),source,completedMeshFrame);
-        textureBinding(source,submitted,frame);
+        textureBinding(source,submitted,frame,s);
         if(submitted.success) { if(source.textured()) { ++texturedSubmissions; }else { ++textureFallbackSubmissions; } }
       }
       else { submitted.code=ERROR_INVALID_DATA;submitted.operation="camera_or_cull"; }
@@ -710,6 +720,7 @@ void startPreview(IDirect3DDevice9* device) noexcept {
     if(!marker) { return; }
     state().preview=true;state().active=true;previewStarted=GetTickCount64();previewRecoverAt=0;previewFrames=0;
     previewRecover=false;previewReadFailed=false;previewReadbacks=0;previewBindingRows=0;previewBindingOmitted=0;previewFirstRead=0;previewStartSubmitted=apiMeshes.submitted;
+    event("world_coverage_revision",0,"23");
     event("preview_begin",0,"60_seconds_neutral_then_completion_gated_recovery;no_Draw_trace_extension;not_performance_acceptance");
     if(!raytracing(true)) { endPreview(false,"rt_enable_failed"); }
   } catch(...) { endPreview(false,"start_exception"); }
@@ -769,10 +780,10 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy",0,"v22_indexed_geometry_persistent_texture_backing_lossless_trace_pre_destroy_cleanup");
-    event("world_coverage_revision",0,"22");
+    event("coverage_comparison_policy",0,"v23_display_4GiB_priority_spool_no_rejected_rereads_standard_alpha_models");
+    event("world_coverage_revision",0,"23");
     event("api_mesh_policy",0,"per_frame_pose_direct_mesh_early_fence_retirement_soft_budget_original_draw_ignored_no_source_thread_changes");
-    event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_512MiB_spool_64MiB_evidence_256_refs_4_reads_per_frame");
+    event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw};

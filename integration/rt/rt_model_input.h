@@ -91,13 +91,19 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
   out.elements={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
   out.bytes.resize(size_t(input.first+input.count)*32);std::memcpy(out.bytes.data()+size_t(input.first)*32,transformed.vertices.data(),transformed.vertices.size());return out;
 }
+template<class Device> bool standardAlpha(Device* d) {
+  DWORD src=0,dst=0,op=0,separate=0;
+  return SUCCEEDED(d->GetRenderState(D3DRS_SRCBLEND,&src))&&SUCCEEDED(d->GetRenderState(D3DRS_DESTBLEND,&dst))&&
+    SUCCEEDED(d->GetRenderState(D3DRS_BLENDOP,&op))&&SUCCEEDED(d->GetRenderState(D3DRS_SEPARATEALPHABLENDENABLE,&separate))&&
+    src==D3DBLEND_SRCALPHA&&dst==D3DBLEND_INVSRCALPHA&&op==D3DBLENDOP_ADD&&!separate;
+}
 inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false) {
   DWORD values[7]{};scene_input::Prepared rejected;
   const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
   for (unsigned i=0;i<7;++i) {
     const auto hr=d->GetRenderState(names[i],values+i);if (FAILED(hr)) { rejected.result=hr;rejected.reason="model_pipeline_query_failed";return rejected; }
   }
-  if (values[0] || values[1]!=1 || values[2]!=1) { rejected.reason="model_pipeline_unsupported";return rejected; }
+  if (values[1]!=1 || values[2]>1 || (!values[0]&&!values[2]) || (values[0]&&(!standardAlpha(d)||!std::strcmp(s.materialInfo.shader.data(),"Infected")))) { rejected.reason="model_pipeline_unsupported";return rejected; }
   if (values[3] || values[4] || (values[5]&7)!=7 || (values[5]&~15u) || (values[6]!=D3DCMP_LESS && values[6]!=D3DCMP_LESSEQUAL)) { rejected.reason="model_pipeline_special_pass";return rejected; }
   auto input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
   const auto digest=ldb_rt_file::bytesSha256(input.vs.data(),input.vs.size()*4);

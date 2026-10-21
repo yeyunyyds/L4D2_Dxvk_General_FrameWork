@@ -25,7 +25,8 @@ def analyze(directory):
             verified.add(name)
     try:
         for name in ('world-runtime.jsonl','preview-runtime.jsonl'):events.extend(rows(name,8*1024*1024))
-        if not any(e.get('event')=='world_coverage_revision' and e.get('value') in ('21','22') for e in events):return {'schema':1,'pass':True,'status':'not_requested'}
+        if not any(e.get('event')=='world_coverage_revision' and e.get('value') in ('21','22','23') for e in events):return {'schema':1,'pass':True,'status':'not_requested'}
+        v23=any(e.get('event')=='world_coverage_revision' and e.get('value')=='23' for e in events)
         recipes=rows('infected-materials.jsonl',1024*1024);check(len(recipes)<=128,'infected_recipe_budget')
         for e in recipes:
             check(e['event']=='infected_diffuse_bake' and type(e['frame']) is int and e['frame']>=241,'infected_recipe_identity')
@@ -42,6 +43,8 @@ def analyze(directory):
         unknown=rows('unknown-model-inputs.jsonl',1024*1024);unknown_used=0;unknown_files=set()
         check(len(unknown)<=32,'unknown_model_row_budget')
         for sample in unknown:
+            if v23:
+                states=sample.get('render_states',[]);check(len(states)==12 and len({x['state'] for x in states})==12 and all(type(x.get(k)) is int and x[k]>=0 for x in states for k in ('state','value','hresult')),'unknown_model_render_states')
             check(sample['event']=='unknown_model_input' and sample['shader'] in ('VertexLitGeneric','NekoToon','Infected'),'unknown_model_identity')
             for item in sample['files']:
                 name=item['file'];check(Path(name).name==name and name.startswith('unknown-'+str(sample['ordinal'])+'-') and name not in unknown_files,'unknown_model_path');unknown_files.add(name)
@@ -50,6 +53,7 @@ def analyze(directory):
         check(unknown_used<=16*1024*1024,'unknown_model_payload_budget')
         targets=[e for e in events if e.get('event')=='infected_near_target'];check(len(targets)<=256,'infected_target_row_budget')
         for e in targets:
+            if v23:check(type(e.get('material_handle')) is int and e['material_handle']>=0 and type(e.get('textured')) is bool and (not e['submitted'] or e['material_handle']>0),'near_target_material_binding')
             check(type(e['ready']) is bool and type(e['submitted']) is bool and (e['ready'] or not e['submitted']),'infected_target_status')
             check(type(e['distance_source_units']) in (int,float) and math.isfinite(e['distance_source_units']) and -1<=e['distance_source_units']<=1024,'infected_target_distance')
             check(len(e['center_clip'])==4 and len(e['world_center'])==3 and all(math.isfinite(x) for x in e['center_clip']+e['world_center']),'infected_target_projection')
