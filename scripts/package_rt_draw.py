@@ -135,6 +135,7 @@ def package(source,output,python_package):
               'sky_rebuilt_stride':140,'model_geometry_max_vertices':32768,'model_geometry_max_indices':131072,
               'infected_diffuse':{'samplers':[0,4,5],'bake_max_dimension':256,'bakes_per_frame':1,'recipes':128,'output':'linear_BGRA8_opaque_generated_full_mips','excluded':'vertex_lighting_screen_AO_fog; base_level_bake_no_original_derivatives'},
               'infected_control':{'presents':[361,420],'material':'bright_green_opaque_emissive_double_sided','other_stages':'reconstructed_diffuse_opaque_neutral'},
+              'near_target_selection':'Infected_or_VertexLitGeneric_three_weight_at_least512_vertices;ready;center_in_expanded_frustum;not_entity_identity',
               'infected_near_target':{'distance_source_units':1024,'cadence_presents':60,'rows':256,'rows_per_frame':4,'payload_bytes':16777216,'preview':True},
               'unknown_model_probe':{'cadence_presents':60,'samples':32,'payload_bytes':16777216,'preview':True},
               'new_vertexlitgeneric_profiles':{'rigid':3,'three_weight':2,'capture':'141352','admission':'full_VS_hash_layout_morph_and_camera_proof'},

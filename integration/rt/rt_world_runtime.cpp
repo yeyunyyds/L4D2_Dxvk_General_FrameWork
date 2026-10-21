@@ -452,6 +452,11 @@ void unknownEvidence(IDirect3DDevice9* device,const draw_observe::Snapshot& s,ui
 }
 void targetEvidence(const draw_observe::Snapshot& s,const scene_input::Prepared& p,const live_mesh::Submission& submitted,uint64_t frame) {
   if((std::strcmp(s.materialInfo.shader.data(),"Infected")&&std::strcmp(s.materialInfo.shader.data(),"VertexLitGeneric"))||frame%60||targetRows>=256||!std::strcmp(p.reason,"api_model_stage_excluded")) { return; }
+  // The first nearby Draws were often tiny rigid props/weapon parts. Prefer
+  // substantial skinned candidates; this remains a heuristic, not entity identity.
+  if(!p.ready) { return; }
+  if(!std::strcmp(s.materialInfo.shader.data(),"VertexLitGeneric")&&
+     (std::strcmp(p.reason,"original_vs_three_weight")||p.bytes.size()/32<512)) { return; }
   if(targetFrame!=frame) { targetFrame=frame;targetFrameRows=0; }if(targetFrameRows>=4) { return; }
   double distance=-1;std::array<double,3> center{};std::array<double,4> clip{};
   if(p.ready&&!p.bytes.empty()) {
@@ -463,6 +468,7 @@ void targetEvidence(const draw_observe::Snapshot& s,const scene_input::Prepared&
     distance=std::sqrt(camera[0]*camera[0]+camera[1]*camera[1]+camera[2]*camera[2]);
     if(distance>1024) { return; }for(unsigned j=0;j<4;++j) { for(unsigned k=0;k<4;++k) { clip[j]+=camera[k]*s.projection[k*4+j]; } }
   }
+  if(clip[3]<=0||std::abs(clip[0])>1.1*clip[3]||std::abs(clip[1])>1.1*clip[3]||clip[2]<0||clip[2]>clip[3]) { return; }
   ++targetRows;++targetFrameRows;std::string vertexFile,indexFile;
   if(p.ready&&p.bytes.size()+p.indices.size()<=16ull*1024*1024-targetBytes) {
     const auto write=[&](const char* suffix,const std::vector<uint8_t>& bytes) {
