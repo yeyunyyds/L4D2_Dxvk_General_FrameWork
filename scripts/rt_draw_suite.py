@@ -92,7 +92,8 @@ def install(root,game,manifest):
                 raise ValueError('Conflicting original backups; restore the earlier observer first')
             inherited=previous
         except (OSError,KeyError,TypeError,json.JSONDecodeError):continue
-    known_observers={'c220626110df028be42f3df7732b116ae8c04c341fce8dd695362bc608b43b64',
+    known_observers={'59053aa7c512601ac1c623e31dd3acdcfc9197fb921c917ef8f79c3b0510254e',
+                     'c220626110df028be42f3df7732b116ae8c04c341fce8dd695362bc608b43b64',
                      '26507cdd3315268f6beb8c03ecf98b113c0135f423f5209d1f5ab17cdec80c11',
                      '9b8436a1832eb1133ab2a0d94989e84c24bb633e55c606a7baec009d6a096d15',
                      'b0bbc701404bfeaa1be6f51183716ce98e79884209818b35b55f5267131b8f8a',
