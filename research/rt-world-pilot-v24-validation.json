@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "scope": "Verified v24 native AA comparison and runtime profiling publication; actual B580 image quality, timing and GPU utilization review unrun",
+  "build_commit": "dade7572a474e1a1bc3a122e41d56c3f247c9f45",
+  "download_ref": "126fe00ddab6623d16b731cd8decd19bfce8014d",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/126fe00ddab6623d16b731cd8decd19bfce8014d/downloads/rt-world-pilot-dev.zip",
+  "filename": "rt-world-pilot-dev.zip",
+  "size": 12035650,
+  "sha256": "0fd02e818135af14a8dead7a2951b53b2ca1df42a18d4b7e928bd83d52b0cc98",
+  "git_blob": "8d9e5c3732ab63b115642ec9f4d13d734e01c03e",
+  "build_id": "ldb-rt-observer+48c43fc7b5216f41",
+  "source_receipt_fingerprint": "48c43fc7b5216f411c290a70a7027300645a9cf90620207525ba1e40aa59645c",
+  "zip_crc": "pass",
+  "publication_tree_zip_only": true,
+  "publication_tree_entries": 31,
+  "all_manifest_members_verified": true,
+  "manifest_files": 748,
+  "zip_members": 749,
+  "source_inputs_match_native_receipt": true,
+  "binary_identity": {
+    "bin/dxvk_d3d9.dll": {
+      "architecture": "x86",
+      "sha256": "655860068deb6f11249fe3f413b87d2905732bca814aa28aeae549dd3477ee24",
+      "size": 1410560,
+      "compiled_identity_match": true
+    },
+    "bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "architecture": "x64",
+      "sha256": "7d28e9d0d5bdbc11768882c3e1ce204ac4f597645df4b65584919e1a2edcdb05",
+      "size": 1636352,
+      "compiled_identity_match": true
+    }
+  },
+  "foundation_status": {
+    "commit": "dade7572a474e1a1bc3a122e41d56c3f247c9f45",
+    "native_outcome": "success",
+    "artifact_validation": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "sdk_queue_development_execution": "pass",
+    "consumer_world_development_execution": "pass",
+    "world_startup_gate_development_execution": "pass",
+    "world_live_mesh_development_execution": "pass",
+    "world_live_mesh_budget_development_execution": "pass",
+    "world_model_texture_development_execution": "pass",
+    "world_live_material_rebind_development_execution": "pass"
+  },
+  "observer_status": {
+    "commit": "dade7572a474e1a1bc3a122e41d56c3f247c9f45",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "package_validation": {
+    "package_validation": "pass",
+    "primary_sha256": "0fd02e818135af14a8dead7a2951b53b2ca1df42a18d4b7e928bd83d52b0cc98",
+    "primary_size": 12035650,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "pinned_native_loader_api_initialization": "pass"
+  },
+  "pilot_contract": {
+    "pilot_revision": 24,
+    "diagnostic_coverage_revision": 23,
+    "draw_trace_version": 20,
+    "one_f9": true,
+    "preview_first_seconds": 30,
+    "baseline_upscaler": 0,
+    "preview_second_seconds": 30,
+    "second_upscaler": 3,
+    "resolution_scale": 1.0,
+    "native_edge_readbacks": [
+      "native-no-aa.bgra8",
+      "native-taa.bgra8"
+    ],
+    "native_edge_max_bytes_per_sample": 16777216,
+    "native_edge_large_frame_crop": [
+      1024,
+      768
+    ],
+    "comparison_limit": "Sequential dynamic scenes are not matched A/B; image quality requires actual game review"
+  },
+  "profiling_contract": {
+    "host_timing": "nested QPC elapsed scopes including waits; not CPU utilization and scopes must not be summed",
+    "gpu_telemetry": "bounded one-second Windows PDH samples for exact game and Host PIDs; engine rows must not be summed as total GPU utilization",
+    "shader_census": "bounded cumulative source shader names; not entity or image coverage",
+    "runtime_analysis_output": "runtime-analysis.json",
+    "telemetry_failure_blocks_primary_capture": false
+  },
+  "hash_optimization": {
+    "algorithm_provider": "immutable shared SHA256 provider",
+    "hash_objects": "independent per call",
+    "native_concurrency_fixture": "pass",
+    "mutable_geometry_or_texture_result_cache": false
+  },
+  "local_validation": {
+    "python_tests_run": 138,
+    "python_tests_passed": 136,
+    "windows_only_skipped": 2,
+    "strict_mingw_x64_compile": "pass",
+    "packaged_coordinator_tests": 18,
+    "result": "pass"
+  },
+  "actual_game": {
+    "b580_rt": "unrun",
+    "native_edge_quality": "unrun",
+    "runtime_timing": "unrun",
+    "gpu_engine_utilization": "unrun",
+    "performance_claim": "none"
+  }
+}

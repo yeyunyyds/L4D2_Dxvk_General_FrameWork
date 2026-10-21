@@ -12,6 +12,8 @@
 
 代码可确认当前模型需同步只读源VB/IB、CPU执行位置/蒙皮重建、哈希、构造API几何并对新姿态调用CreateMesh；贴图首次导出需同步读取全部提供的mip及写DDS；Infected有有界CPU底色烘焙。GPU负责后端RT，但这些工作可能让GPU收到命令较晚。当前没有实际分项时间，不能由低GPU占用直接确定CPU蒙皮、IO、RPC等待或GPU渲染中的唯一瓶颈。
 
+已有v23的600份逐帧记录还提供数据周转基线：模型提交120045次、新建Mesh105953次（88.26%）、复用14092次；360个有新增几何的帧累计准备18214168464字节API顶点/索引载荷，峰值活跃300892356字节、预算遗漏0。这是累计约18.2GB，不是同时占用显存，也不是实测PCIe传输量。它支持优先调查逐姿态Mesh重建，但没有证明其耗时占比。元数据：research/rt-world-v24-profile-baseline.json。
+
 新增QPC窗口记录metadata、draw、static、model、prepare、source_geometry、skin、texture、texture_read、texture_persist、infected_bake、hash、geometry_build、material、mesh_create、instance、retire、original_draw、readback、present。作用域含调用内部等待、部分相互嵌套；比如prepare包含source_geometry/skin，draw包含model。不能相加当总CPU时间，未计入的帧间隙也不能直接定为RPC等待。窗口内诊断回读开销可单独辨认。开始窗口含启动/等待，预览是更有参考价值的已加载区间。
 
 另用Python独立后台线程每秒采样Windows英文GPU Engine PDH计数器，限定游戏与Host PID；最多960行，每行128引擎，单次数组4MiB上限。统计可能涉及3D、Compute、Copy等引擎，同一GPU多引擎可并行；不直接相加。计数器不可用不挡主要采集，记录明确status，不把缺失记录当零GPU使用。其时间戳用于与Host时间窗关联；这不是逐Vulkan pass GPU计时。
@@ -23,3 +25,7 @@
 bytesSha256此前每次都打开CNG SHA256提供器并查询对象尺寸。本版复用不可变算法提供器，每次调用仍拥有独立hash和内存对象；不缓存可变资源结果，也不移除文件完整性保护。已知向量、并发独立状态及现有大DDS独立哈希门禁验证输出。它移除了确定重复初始化，实际游戏收益尚未测量。
 
 源shader普查覆盖诊断及预览，最多128种、超额计数明确保留，帮助同一测试辨认未接入材质。普查不会新增水、粒子、折射或加法材质的渲染支持；特殊pass继续保持原审核边界，避免破坏本次已通过的部件显示。游戏全覆盖、画质和正常退出仍需各自验收。
+
+## 发布验收
+
+Windows CI在提交`dade7572a474e1a1bc3a122e41d56c3f247c9f45`完成x86/x64编译和原生门禁，交付Build ID为`ldb-rt-observer+48c43fc7b5216f41`。发布ZIP的748个清单成员、配对二进制和固定源码回执均已复核，验证记录见`research/rt-world-pilot-v24-validation.json`。这些结果只确认交付完整；B580原生边缘画质、分段耗时和GPU Engine结果仍需一次实际游戏运行。

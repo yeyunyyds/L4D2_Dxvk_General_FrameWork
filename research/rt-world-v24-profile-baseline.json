@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "scope": "Existing v23 600-Present diagnostic geometry churn baseline; no new run, elapsed timing, GPU utilization or PCIe measurement",
+  "session": "rt-world-20261020-220654-169346c5",
+  "log_sha256": "7507944f8ac3c360c525adc156cdf4a1e7e5519eb19418fc181b28fb2010b0e6",
+  "complete_present_records": 600,
+  "new_geometry_payload_bytes": 18214168464,
+  "frames_with_new_geometry": 360,
+  "mesh_created": 105953,
+  "mesh_reused": 14092,
+  "model_submissions": 120045,
+  "create_fraction": 0.8826106876587946,
+  "peak_live_geometry_bytes": 300892356,
+  "budget_omissions": 0,
+  "scope_limits": [
+    "Cumulative newly-created API vertex/index payload, not simultaneous VRAM or measured PCIe traffic",
+    "Animated poses and per-material meshes, not unique entity count",
+    "No measured allocation/hash/CPU-skin/upload contribution yet; new timing and GPU engine data required",
+    "Potential persistent mesh and GPU skinning route requires morph, normal and motion-history validation"
+  ]
+}
