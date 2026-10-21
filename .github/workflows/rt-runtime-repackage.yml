@@ -1,0 +1,47 @@
+name: Package verified custom Remix runtime product
+on:
+  push:
+    branches: [ldb-host-capture]
+    paths:
+      - .github/workflows/rt-runtime-repackage.yml
+      - scripts/package_rt_preflight.py
+      - scripts/rt_preflight.py
+      - scripts/rt_game_probe.py
+      - scripts/rt_suite.py
+      - scripts/rt_visual.py
+      - integration/rt/preflight-readme.txt
+      - tests/test_rt_preflight.py
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+concurrency:
+  group: rt-runtime-repackage
+  cancel-in-progress: true
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Check prerequisite coordinator
+        run: python -m unittest discover -s tests -p "test_rt_preflight.py" -v
+      - name: Restore the successfully compiled patched runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: rt-runtime-product-bdd17b2c8ea12cf51e3fed7535ee6e58c37978c6
+          run-id: 39675334790
+          github-token: ${{ github.token }}
+          path: .research/rt-remix-runtime
+      - name: Verify and package the restored runtime
+        run: python scripts/package_rt_preflight.py --verify
+      - name: Publish verified prerequisite launcher and payloads together
+        run: python scripts/publish_rt_build_status.py --packages-directory .research/dist/rt-prerequisites
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rt-runtime-repackage-${{ github.sha }}
+          path: .research/dist/rt-prerequisites/**
+          if-no-files-found: error

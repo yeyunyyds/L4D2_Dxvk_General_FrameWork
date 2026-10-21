@@ -1,6 +1,7 @@
 """Exercise dependency integrity, process timeouts and retained one-ZIP results."""
 
 import json
+import hashlib
 import io
 import os
 from pathlib import Path
@@ -16,7 +17,7 @@ import urllib.error
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import rt_preflight as runner
 import rt_visual as visual
-from package_rt_preflight import payloads
+from package_rt_preflight import payloads, pinned_vulkan_loader
 from prepare_remix_runtime import RUNTIME_SKINNING_PATCH, validate_runtime_skinning_source
 
 
@@ -62,6 +63,16 @@ class PreflightCases(unittest.TestCase):
         packager = (Path(__file__).resolve().parents[1] / 'scripts/package_rt_preflight.py').read_text()
         for module in ('rt_preflight.py', 'rt_game_probe.py', 'rt_suite.py', 'rt_visual.py'):
             self.assertIn(repr(module), packager)
+
+    def test_pinned_vulkan_loader_checks_outer_and_inner_hashes(self):
+        payload = self.root / 'loader.zip'; output = self.root / 'vulkan-1.dll'; data = b'audited loader fixture'
+        with zipfile.ZipFile(payload, 'w', zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr('vulkan-1.dll', data)
+        digest = hashlib.sha256
+        self.assertEqual(pinned_vulkan_loader(payload, output, digest(payload.read_bytes()).hexdigest(), digest(data).hexdigest()), output)
+        self.assertEqual(output.read_bytes(), data)
+        with self.assertRaisesRegex(ValueError, 'payload SHA256'):
+            pinned_vulkan_loader(payload, output, '0' * 64, digest(data).hexdigest())
 
     def test_complete_cache_needs_no_network_and_tampered_file_is_repaired(self):
         manifest = self.fixture()

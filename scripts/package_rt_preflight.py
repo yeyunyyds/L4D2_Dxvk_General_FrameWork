@@ -5,6 +5,7 @@ automatically on first use, then verifies every file before running anything.
 """
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,24 @@ from rt_preflight import MAX_PART, digest
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_URL = 'https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg'
 PYTHON_SHA = '0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8'
+VULKAN_PAYLOAD_URL = ('https://raw.githubusercontent.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/'
+                      '75e75334074a15f2a912cc91396be2280d3733ec/downloads/'
+                      'rt-prereq-payload-008180112dfe090e53cf769b.zip')
+VULKAN_PAYLOAD_SHA = '008180112dfe090e53cf769bbf4f37c170b2b6070e8cbb8e3d96b3817ac4cb30'
+VULKAN_DLL_SHA = '31ee4674b814b712aaa9899005e9d8dde9a07a2e2cb6f6004daa7439e4027948'
+
+
+def pinned_vulkan_loader(payload, output, payload_sha=VULKAN_PAYLOAD_SHA, dll_sha=VULKAN_DLL_SHA):
+    if digest(payload) != payload_sha:
+        raise ValueError('Pinned Vulkan loader payload SHA256 mismatch')
+    with zipfile.ZipFile(payload) as archive:
+        if archive.namelist() != ['vulkan-1.dll'] or archive.testzip() is not None:
+            raise ValueError('Pinned Vulkan loader payload layout/CRC mismatch')
+        data = archive.read('vulkan-1.dll')
+    if hashlib.sha256(data).hexdigest() != dll_sha:
+        raise ValueError('Pinned Vulkan loader DLL SHA256 mismatch')
+    output.write_bytes(data)
+    return output
 
 
 def compressed_size(path):
@@ -75,7 +94,7 @@ def python_files(nupkg):
                 yield 'python/' + name, archive.read(info)
 
 
-def package(source, output, python_package, build_commit, verify=False):
+def package(source, output, python_package, vulkan_loader, build_commit, verify=False):
     if output.exists():
         raise FileExistsError('Preserve package output; choose a new directory')
     output.mkdir(parents=True)
@@ -87,6 +106,9 @@ def package(source, output, python_package, build_commit, verify=False):
              for p in (source / '_output').rglob('*')
              if p.is_file() and p.suffix.lower() not in ('.pdb', '.lib', '.exp', '.ilk', '.pyc')}
     files['rt-runtime-smoke.exe'] = source / 'checks/rt-runtime-smoke.exe'
+    if digest(vulkan_loader) != VULKAN_DLL_SHA:
+        raise ValueError('Pinned Vulkan loader differs from audited product')
+    files['vulkan-1.dll'] = vulkan_loader
     if os.name == 'nt':
         vswhere = Path(os.environ['ProgramFiles(x86)']) / 'Microsoft Visual Studio/Installer/vswhere.exe'
         installation = subprocess.check_output([str(vswhere), '-latest', '-products', '*',
@@ -106,6 +128,10 @@ def package(source, output, python_package, build_commit, verify=False):
                 'runtime_patches': {'skinning': {'sha256': receipt['runtime_skinning_patch_sha256'],
                     'source_sha256': receipt['runtime_skinning_source_sha256'],
                     'weight_stride': receipt['runtime_skinning_weight_stride']}},
+                'vulkan_loader': {'repository': 'https://github.com/KhronosGroup/Vulkan-Loader.git',
+                    'commit': 'fb78607414e154c7a5c01b23177ba719c8a44909',
+                    'headers_commit': '409c16be502e39fe70dd6fe2d9ad4842ef2c9a53',
+                    'sha256': VULKAN_DLL_SHA, 'scope': 'app_local_standard_loader_not_gpu_driver'},
                 'game_hook': 'not_installed', 'source_threading': 'unrun',
                 'payloads': parts, 'runtime_files': {name: {'size': path.stat().st_size,
                     'sha256': digest(path)} for name, path in sorted(files.items())},
@@ -174,5 +200,9 @@ if __name__ == '__main__':
         if not args.python_package:
             with urllib.request.urlopen(PYTHON_URL, timeout=60) as response, nupkg.open('wb') as target:
                 shutil.copyfileobj(response, target)
-        package(args.source.resolve(), args.output.resolve(), nupkg,
+        vulkan_payload = Path(temporary) / 'vulkan-loader.zip'
+        with urllib.request.urlopen(VULKAN_PAYLOAD_URL, timeout=60) as response, vulkan_payload.open('wb') as target:
+            shutil.copyfileobj(response, target)
+        vulkan_loader = pinned_vulkan_loader(vulkan_payload, Path(temporary) / 'vulkan-1.dll')
+        package(args.source.resolve(), args.output.resolve(), nupkg, vulkan_loader,
                 os.environ.get('GITHUB_SHA', 'local_uncommitted'), args.verify)
