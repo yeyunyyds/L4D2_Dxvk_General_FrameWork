@@ -456,7 +456,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('World Pilot v24: spawn common infected nearby, then press F9 ONCE. Move and turn slowly. The600-frame diagnostic and60-second live preview run automatically. Preview first30s: no AA; last30s: native TAA. Observe edge blocks, hair/clothes and trails. GPU timing/engine evidence joins the same ZIP. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
+        if world:notify('World Pilot v25: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. The600-frame diagnostic and60-second live preview run automatically. Check animation, stretching, missing parts and edge blocks; first30s has no AA, last30s requests native TAA. Persistent-skin counters, Host timing and GPU engines join the same ZIP. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None

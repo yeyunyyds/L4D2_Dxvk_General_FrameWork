@@ -27,6 +27,7 @@ def analyze(directory):
         for name in ('world-runtime.jsonl','preview-runtime.jsonl'):events.extend(rows(name,8*1024*1024))
         if not any(e.get('event')=='world_coverage_revision' and e.get('value') in ('21','22','23') for e in events):return {'schema':1,'pass':True,'status':'not_requested'}
         v23=any(e.get('event')=='world_coverage_revision' and e.get('value')=='23' for e in events)
+        v25=any(e.get('event')=='pilot_delivery_revision' and e.get('value')=='25' for e in events)
         recipes=rows('infected-materials.jsonl',1024*1024);check(len(recipes)<=128,'infected_recipe_budget')
         for e in recipes:
             check(e['event']=='infected_diffuse_bake' and type(e['frame']) is int and e['frame']>=241,'infected_recipe_identity')
@@ -64,6 +65,20 @@ def analyze(directory):
                 path=root/name;check(path.is_file() and 0<path.stat().st_size<=1048576,'infected_target_payload');raw=path.read_bytes();used+=len(raw)
                 check(hashlib.sha256(raw).hexdigest()==e[key+'_sha256'],'infected_target_digest')
                 if key=='vertices':check(len(raw)%32==0 and all(math.isfinite(x) and abs(x)<=1e7 for at in range(0,len(raw),32) for x in struct.unpack_from('<8f',raw,at)),'infected_target_vertices')
+            if v25:
+                check(type(e.get('skinned')) is bool,'target_skin_flag')
+                skin=[]
+                for key,file_key,suffix in (('skin_weights','skin_weight_file','skin-weights'),('skin_indices','skin_index_file','skin-indices'),('bone_transforms','bone_transform_file','bone-transforms')):
+                    name=e[file_key]
+                    if e['skinned']:
+                        check(name==f"target-{e['ordinal']}-{suffix}.bin" and name not in files,'target_skin_path');files.add(name)
+                        raw=(root/name).read_bytes();check(raw and len(raw)<=4*1024*1024 and hashlib.sha256(raw).hexdigest()==e[key+'_sha256'],'target_skin_payload');used+=len(raw);skin.append(raw)
+                    else:check(name=='' and e[key+'_sha256']==hashlib.sha256(b'').hexdigest(),'unexpected_target_skin_payload')
+                if e['skinned']:
+                    weights,indices,transforms=skin;check(len(weights)%12==0 and len(indices)==len(weights) and len(transforms)%48==0 and 0<len(transforms)//48<=256,'target_skin_layout')
+                    ws=struct.unpack('<'+str(len(weights)//4)+'f',weights);ix=struct.unpack('<'+str(len(indices)//4)+'I',indices);bones=len(transforms)//48
+                    check(all(math.isfinite(x) and 0<=x<=1 for x in ws) and all(abs(sum(ws[i:i+3])-1)<1e-5 for i in range(0,len(ws),3)) and all(x<bones for x in ix),'target_skin_weights_or_indices')
+                    check(all(math.isfinite(x) and abs(x)<=1e7 for x in struct.unpack('<'+str(len(transforms)//4)+'f',transforms)),'target_skin_transforms')
             check(used==e['payload_bytes'] and used<=16*1024*1024,'infected_target_payload_accounting')
         summaries=[e for e in events if e.get('event')=='live_shader_summary']
         check(len(summaries)==1,'infected_missing_final_shader_summary')

@@ -11,6 +11,7 @@ void require(bool value,const char* why) { if(!value) { throw std::runtime_error
 namespace fixture {
 unsigned failureCode=1,fail=0,created=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live,materialLive;
 int lastAlpha=7;uint8_t lastRef=0;bool lastTextured=false,lastBlend=false;float lastOpacity=0;
+bool lastSkinned=false;uint32_t lastSkinWeights=0,lastSkinIndices=0,lastBoneCount=0;float lastBoneX=0;
 std::vector<remixapi_HardcodedVertex> received;remixapi_Transform lastTransform{};
 remixapi_ErrorCode result(unsigned at) { return static_cast<remixapi_ErrorCode>(fail==at?failureCode:0); }
 remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remixapi_MaterialHandle* out) {
@@ -25,11 +26,15 @@ remixapi_ErrorCode REMIXAPI_CALL mesh(const remixapi_MeshInfo* info,remixapi_Mes
   if(fail==2) { return result(2); }require(info&&info->surfaces_count==1,"invalid mesh surface count");
   const auto& s=info->surfaces_values[0];require(s.material&&s.vertices_count&&s.indices_count&&s.indices_count%3==0,"indexed mesh correspondence");
   for(size_t i=0;i<s.indices_count;++i) { require(s.indices_values[i]<s.vertices_count,"API index exceeds retained vertex range"); }
+  lastSkinned=s.skinning_hasvalue!=FALSE;lastSkinWeights=s.skinning_value.blendWeights_count;lastSkinIndices=s.skinning_value.blendIndices_count;
+  if(lastSkinned) { require(s.skinning_value.bonesPerVertex==3&&lastSkinWeights==s.vertices_count*3&&lastSkinIndices==s.vertices_count*3,"API skinning scalar counts"); }
   require(live.insert(info->hash).second,"duplicate live API mesh handle");++created;
   received.assign(s.vertices_values,s.vertices_values+s.vertices_count);*out=reinterpret_cast<remixapi_MeshHandle>(info->hash);return static_cast<remixapi_ErrorCode>(0);
 }
 remixapi_ErrorCode REMIXAPI_CALL draw(const remixapi_InstanceInfo* info) {
-  if(fail==3) { return result(3); }require(live.count(reinterpret_cast<uint64_t>(info->mesh))!=0,"draw dead mesh");lastTransform=info->transform;++draws;return static_cast<remixapi_ErrorCode>(0);
+  if(fail==3) { return result(3); }require(live.count(reinterpret_cast<uint64_t>(info->mesh))!=0,"draw dead mesh");lastTransform=info->transform;
+  lastBoneCount=0;lastBoneX=0;if(info->pNext) { const auto* b=static_cast<const remixapi_InstanceInfoBoneTransformsEXT*>(info->pNext);require(b->sType==REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_BONE_TRANSFORMS_EXT,"unknown instance extension");lastBoneCount=b->boneTransforms_count;if(lastBoneCount>1) { lastBoneX=b->boneTransforms_values[1].matrix[0][3]; } }
+  ++draws;return static_cast<remixapi_ErrorCode>(0);
 }
 remixapi_ErrorCode REMIXAPI_CALL destroy(remixapi_MeshHandle handle) {
   if(fail==4) { return result(4); }require(live.erase(reinterpret_cast<uint64_t>(handle))==1,"double mesh destruction");++destroyed;return static_cast<remixapi_ErrorCode>(0);
@@ -73,6 +78,28 @@ int main() {
   p.indices[0]=9;require(!live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry),"out-of-range index accepted");p.indices[0]=0;
   const float nan=std::numeric_limits<float>::quiet_NaN();std::memcpy(p.bytes.data(),&nan,4);require(!live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry),"NaN position accepted");const float zero=0;std::memcpy(p.bytes.data(),&zero,4);
   std::cout<<"RT live mesh normalized indices/strip winding/flat normals/finite bounds: PASS\n";
+  {
+    draw_observe::Snapshot snapshot;snapshot.materialInfo.shader={};std::memcpy(snapshot.materialInfo.shader.data(),"VertexLitGeneric",16);
+    snapshot.view={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};snapshot.projection=snapshot.view;
+    scene_input::Data input;input.first=0;input.count=4;input.stride=32;input.indexBytes=2;input.vertices.resize(128);input.indices={0,0,1,0,2,0,3,0};
+    input.declaration={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_SHORT2,0,D3DDECLUSAGE_BLENDWEIGHT,0},
+      {0,16,D3DDECLTYPE_D3DCOLOR,0,D3DDECLUSAGE_BLENDINDICES,0},{0,24,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
+    input.constants[0][1]=1;input.constants[48]={1,0,0,0};input.constants[49]={0,1,0,0};
+    for(unsigned i=0;i<4;++i) { input.constants[8+i][i]=1;const float vertex[]={float(i&1),float(i>>1),0};const float uv[]={float(i&1),float(i>>1)};const int16_t weights[]={8191,16383};const uint8_t bones[]={2,0,1,255};
+      std::memcpy(input.vertices.data()+i*32,vertex,12);std::memcpy(input.vertices.data()+i*32+12,weights,4);std::memcpy(input.vertices.data()+i*32+16,bones,4);std::memcpy(input.vertices.data()+i*32+24,uv,8); }
+    for(unsigned bone=0;bone<3;++bone) { input.constants[58+bone*3]={1,0,0,float(bone*10)};input.constants[59+bone*3]={0,1,0,0};input.constants[60+bone*3]={0,0,1,0}; }
+    auto prepared=model_input::reconstruct(snapshot,input,"21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b");
+    require(prepared.skinning.enabled&&prepared.skinning.weights.size()==12&&prepared.skinning.transforms.size()==3,"audited three-weight bind pose did not select GPU skinning");
+    require(model_input::ownDraw(prepared,input,2,{0,0,4,0,2,0}),"GPU skinning owned Draw compaction");prepared.ready=true;
+    auto skinApi=fixture::table();live_mesh::Scene skins(&skinApi);const auto first=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1);
+    require(first.success&&first.created&&first.skinned&&fixture::lastSkinned&&fixture::lastSkinWeights==12&&fixture::lastBoneCount==3&&fixture::lastBoneX==10,"first persistent skinned mesh payload");
+    prepared.skinning.transforms[1][3]=20;const auto second=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);
+    require(second.success&&!second.created&&second.handle==first.handle&&fixture::lastBoneX==20&&skins.skinnedCreated==1&&skins.skinnedReused==1,"bone update recreated persistent mesh");
+    require(!skins.retire(2,4,true),"persistent skin cleanup");
+    input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,"21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b");
+    require(!morphed.skinning.enabled&&std::string(morphed.reason)=="original_vs_three_weight","morph must retain CPU skin fallback");
+    std::cout<<"RT audited no-morph GPU skin/persistent mesh/bone update/morph CPU fallback: PASS\n";
+  }
   {
     auto smooth=fixture::source();smooth.elements={{0,20,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,0},D3DDECL_END()};
     const float normal[]={0,1,0};for(unsigned i=0;i<4;++i) { std::memcpy(smooth.bytes.data()+i*32+20,normal,12); }

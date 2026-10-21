@@ -8,6 +8,12 @@ static_assert(model_shader::kMaxVertices==scene_input::kModelLimits.vertices,"mo
 inline bool ownDraw(scene_input::Prepared& out,const scene_input::Data& input,uint32_t kind,const std::array<uint32_t,6>& args) {
   if (!input.count || out.bytes.size()!=size_t(input.first+input.count)*32) { out.reason="model_owned_vertex_range";return false; }
   std::vector<uint8_t> compact(out.bytes.begin()+size_t(input.first)*32,out.bytes.end());out.bytes.swap(compact);
+  if(out.skinning.enabled) {
+    const auto bones=out.skinning.bonesPerVertex;const size_t begin=size_t(input.first)*bones,total=size_t(input.first+input.count)*bones;
+    if(!bones||out.skinning.weights.size()!=total||out.skinning.indices.size()!=total) { out.reason="model_owned_skin_range";return false; }
+    std::vector<float> weights(out.skinning.weights.begin()+begin,out.skinning.weights.end());out.skinning.weights.swap(weights);
+    std::vector<uint32_t> indices(out.skinning.indices.begin()+begin,out.skinning.indices.end());out.skinning.indices.swap(indices);
+  }
   out.drawArgs={};out.indexBytes=input.indexBytes;
   if (kind==2) {
     if ((input.indexBytes!=2 && input.indexBytes!=4) || input.indices.empty() || input.indices.size()%input.indexBytes) { out.reason="model_owned_index_format";return false; }
@@ -83,6 +89,52 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
   if (position<0 || uv<0) { out.reason="model_position_or_uv_unavailable";return out; }
   if (input.constants[13][0]!=0 && input.morph.positions.size()!=input.count) {
     out.reason="model_morph_position_unavailable";out.result=input.morph.result;return out;
+  }
+  // Preserve immutable bind-pose geometry and move only the audited three-
+  // weight palette each Draw. Morph targets retain the exact CPU path below.
+  const bool gpuSkin=(profile==model_shader::Profile::Skin3||profile==model_shader::Profile::Neko3)&&input.constants[13][0]==0;
+  if(gpuSkin) {
+    constexpr uint32_t maxBones=256;
+    if(input.stride!=32||input.vertices.size()!=size_t(input.count)*32||!input.count||uint64_t(input.first)+input.count>model_shader::kMaxVertices||
+       weight<0||indices<0||unsigned(weight)>28||unsigned(indices)>28||input.constants[0][1]!=1||
+       (profile==model_shader::Profile::Neko3&&input.constants[12][3]!=0)) { out.reason="gpu_skin_layout_or_control";return out; }
+    for(unsigned r:{48u,49u}) { for(float v:input.constants[r]) { if(!std::isfinite(v)) { out.reason="model_uv_nonfinite";return out; } } }
+    out.stride=32;out.world={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};out.sourceDeclaration=input.declaration;
+    out.elements={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
+    out.bytes.resize(size_t(input.first+input.count)*32);out.skinning.enabled=true;out.skinning.bonesPerVertex=3;
+    out.skinning.weights.resize(size_t(input.first+input.count)*3);out.skinning.indices.resize(size_t(input.first+input.count)*3);
+    std::array<bool,maxBones> used{};uint32_t highest=0;
+    for(uint32_t n=0;n<input.count;++n) {
+      const auto* src=input.vertices.data()+size_t(n)*32;auto* dst=out.bytes.data()+size_t(input.first+n)*32;
+      float v[3]{},t[2]{};std::memcpy(v,src+position,12);std::memcpy(t,src+uv,8);
+      for(float x:v) { if(!std::isfinite(x)||std::abs(x)>1e7f) { out.reason="model_position_nonfinite";return out; } }
+      int16_t packed[2]{};std::memcpy(packed,src+weight,4);
+      const float weights[3]={(float(packed[0])+1.f)/32768.f,(float(packed[1])+1.f)/32768.f,
+        1.f-((float(packed[0])+1.f)/32768.f+(float(packed[1])+1.f)/32768.f)};
+      const auto* bones=src+indices;const size_t at=size_t(input.first+n)*3;
+      for(unsigned k=0;k<3;++k) {
+        if(weights[k]<0||weights[k]>1||unsigned(bones[k])*3+60>=input.constants.size()) { out.reason="model_bone_weight_or_palette_range";return out; }
+        out.skinning.weights[at+k]=weights[k];out.skinning.indices[at+k]=bones[k];used[bones[k]]=true;highest=(std::max)(highest,uint32_t(bones[k]));
+      }
+      float mapped[2]{};for(unsigned j=0;j<2;++j) {
+        mapped[j]=t[0]*input.constants[48+j][0]+t[1]*input.constants[48+j][1]+input.constants[48+j][3];
+        if(!std::isfinite(mapped[j])||std::abs(mapped[j])>1e8f) { out.reason="model_uv_nonfinite";return out; }
+      }
+      std::memcpy(dst,v,12);std::memcpy(dst+12,mapped,8);
+    }
+    out.skinning.transforms.resize(highest+1);
+    for(uint32_t bone=0;bone<=highest;++bone) {
+      auto& matrix=out.skinning.transforms[bone];matrix={1,0,0,0,0,1,0,0,0,0,1,0};
+      if(!used[bone]) { continue; }
+      for(unsigned row=0;row<3;++row) { for(unsigned col=0;col<4;++col) {
+        const float value=input.constants[58+bone*3+row][col];
+        if(!std::isfinite(value)||std::abs(value)>1e7f) { out.reason="model_bone_matrix_nonfinite";return out; }
+        matrix[row*4+col]=value;
+      } }
+    }
+    model_shader::Result camera;camera.valid=true;camera.world=out.world;
+    if(!model_shader::cameraCompatible(camera,input.constants,s.view,s.projection)) { out.reason="model_clip_camera_mismatch";return out; }
+    out.reason=profile==model_shader::Profile::Neko3?"original_vs_gpu_neko_three_weight":"original_vs_gpu_three_weight";return out;
   }
   auto transformed=model_shader::reconstruct(profile,input.constants,input.vertices,input.stride,unsigned(position),unsigned(uv),weight,indices,input.morph.positions);
   out.reason=transformed.reason;if (!transformed.valid) { return out; }

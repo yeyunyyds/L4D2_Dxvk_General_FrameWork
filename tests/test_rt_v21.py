@@ -38,3 +38,15 @@ class V21Evidence(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);(root/'world-runtime.jsonl').write_text('{"event":"world_coverage_revision","value":"20","code":0}')
             self.assertEqual(analyze(root)['status'],'not_requested')
+    def test_v25_skin_payload_layout_and_accounting(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);events,recipe,save=self.fixture(root);events.insert(1,dict(event='pilot_delivery_revision',value='25'));row=events[2]
+            payloads={'skin_weights':struct.pack('<9f',*([.25,.5,.25]*3)),
+                      'skin_indices':struct.pack('<9I',*([0,1,2]*3)),
+                      'bone_transforms':struct.pack('<36f',*([1,0,0,0,0,1,0,0,0,0,1,0]*3))}
+            for key,raw in payloads.items():
+                suffix=key.replace('_','-');name=f'target-42-{suffix}.bin';(root/name).write_bytes(raw)
+                row[{'skin_weights':'skin_weight_file','skin_indices':'skin_index_file','bone_transforms':'bone_transform_file'}[key]]=name
+                row[key+'_sha256']=hashlib.sha256(raw).hexdigest();row['payload_bytes']+=len(raw);events[-1]['near_target_payload_bytes']+=len(raw)
+            row['skinned']=True;save();result=analyze(root);self.assertTrue(result['pass'],result)
+            row['skin_indices_sha256']='0'*64;save();self.assertIn('target_skin_payload',analyze(root)['errors'])

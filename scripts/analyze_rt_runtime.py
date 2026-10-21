@@ -1,4 +1,4 @@
-"""Review v24 native edge evidence and nested Host elapsed timing windows."""
+"""Review v24+ native edge evidence and nested Host elapsed timing windows."""
 from collections import defaultdict
 import hashlib
 import json
@@ -12,7 +12,8 @@ def analyze(directory):
         p=root/name
         if p.is_file() and p.stat().st_size<=32*1024*1024:
             events.extend(json.loads(line) for line in p.read_text(encoding='utf-8').splitlines() if line.strip())
-    requested=any(e.get('event')=='pilot_delivery_revision' and e.get('value')=='24' for e in events)
+    revisions=[int(e['value']) for e in events if e.get('event')=='pilot_delivery_revision' and str(e.get('value','')).isdigit()]
+    requested=any(value>=24 for value in revisions);v25=any(value>=25 for value in revisions)
     if not requested:return {'schema':1,'status':'not_requested','pass':True}
     windows=[e for e in events if e.get('event')=='runtime_timing_window'];totals=defaultdict(lambda:defaultdict(lambda:{'calls':0,'elapsed_ms':0.,'max_ms':0.}))
     for e in windows:
@@ -39,8 +40,20 @@ def analyze(directory):
     edge_complete=len(samples)==2 and {x.get('mode') for x in samples}=={'no-aa','taa'} and all(x['payload_valid'] for x in samples)
     gpu_status=root/'gpu-engine-status.json'
     gpu=json.loads(gpu_status.read_text(encoding='utf-8')) if gpu_status.is_file() else {'status':'unavailable','error':'missing_sampler_status'}
+    skin={'status':'not_requested'}
+    if v25:
+        frames=[e for e in events if e.get('event')=='api_mesh_frame'];ends=[e for e in events if e.get('event')=='preview_end']
+        keys=('skinned_submitted','skinned_created','skinned_reused')
+        valid=all(all(isinstance(e.get(k),int) and e[k]>=0 for k in keys) for e in frames+ends)
+        if not frames or len(ends)!=1 or not valid:errors.append('missing_or_invalid_gpu_skinning_counters')
+        elif ends[0]['skinned_submitted']==0:errors.append('gpu_skinning_not_exercised')
+        elif ends[0]['skinned_created']+ends[0]['skinned_reused']!=ends[0]['skinned_submitted'] or ends[0]['skinned_created']>ends[0]['skinned_submitted']:
+            errors.append('invalid_gpu_skinning_accounting')
+        skin={'status':'exercised_requires_image_review' if valid and ends and ends[0].get('skinned_submitted',0)>0 else 'unexercised_or_incomplete',
+              'preview':{k:ends[0].get(k) for k in keys} if ends else {},
+              'mesh_frames':len(frames),'limits':'Counters establish API path and persistent-key reuse, not correct animated pixels; image review is required.'}
     return {'schema':1,'pass':not errors,'status':'valid_evidence_requires_review' if not errors else 'incomplete','errors':sorted(set(errors)),
             'timing_windows':len(windows),'window_timeline':[{k:e.get(k) for k in ('frame','first_after_frame','segment','wall_ms','qpc_begin','qpc_end','qpc_frequency','utc_filetime_100ns')} for e in windows],'elapsed_scopes_by_segment':dict(totals),'native_taa_requests':taa,
             'native_edge_payloads':samples,'native_edge_evidence':'complete_requires_image_review' if edge_complete else 'unavailable_or_incomplete',
-            'source_shader_census':[e for e in events if e.get('event')=='source_shader_census'],
+            'source_shader_census':[e for e in events if e.get('event')=='source_shader_census'],'gpu_skinning':skin,
             'gpu_engine_collection':gpu,'limits':'Nested QPC scopes include blocking and overlap; do not sum. PDH engines overlap; do not sum as whole-GPU utilization. Sequential dynamic scenes are not matched A/B. Queued TAA request is not proof of effective image quality; motion-history/ghosting requires review.'}

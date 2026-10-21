@@ -59,12 +59,14 @@ def prepare(output, bridge, upstream, detours):
     world_hooks = ROOT / 'integration/rt/world-hooks.patch'
     transport_hooks = ROOT / 'integration/rt/transport-hooks.patch'
     lifecycle_hooks = ROOT / 'integration/rt/lifecycle-hooks.patch'
-    for current in [base_patch, hooks, consumer_hooks, world_hooks, transport_hooks, lifecycle_hooks]:
+    skinning_transport = ROOT / 'integration/rt/remix-skinning-transport.patch'
+    for current in [base_patch, hooks, consumer_hooks, world_hooks, transport_hooks, lifecycle_hooks, skinning_transport]:
         subprocess.run(['git', '-C', str(output), 'apply', '--check', str(current)], check=True)
         subprocess.run(['git', '-C', str(output), 'apply', str(current)], check=True)
     base_patch.unlink()
     inputs = {'bridge-hooks.patch': digest(hooks), 'consumer-hooks.patch': digest(consumer_hooks),
-              'world-hooks.patch': digest(world_hooks), 'lifecycle-hooks.patch':digest(lifecycle_hooks), 'transport-hooks.patch': digest(transport_hooks)}
+              'world-hooks.patch': digest(world_hooks), 'lifecycle-hooks.patch':digest(lifecycle_hooks), 'transport-hooks.patch': digest(transport_hooks),
+              'remix-skinning-transport.patch': digest(skinning_transport)}
     for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h', 'rt_material_decode.h', 'rt_file_hash.h', 'rt_runtime_profile.h']),
                         ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h',
                                     'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_runtime_profile.h', 'rt_scene_draw.h', 'rt_sky_shader.h', 'rt_scene_input.h', 'rt_bulk_static.h', 'rt_model_shader.h', 'rt_model_input.h', 'rt_model_texture.h', 'rt_infected_material.h', 'rt_live_mesh.h']),
@@ -95,6 +97,7 @@ def prepare(output, bridge, upstream, detours):
     checks['src/dxvk/rtx_render/rtx_scene_manager.cpp'] = [b'accessExternalMaterial(submeshes[i].externalMaterial)', b'setHashOverride(material->getHash())']
     checks['src/dxvk/rtx_render/rtx_asset_replacer.cpp'] = [b'm_extMaterials.emplace(handle, std::move(data))', b'Ignoring repeated material registration', b'm_extMaterials.erase(handle)']
     checks['src/dxvk/rtx_render/rtx_remix_api.cpp'] = [b'CreateMesh', b'DestroyMesh', b'EmitCs', b'memcpy', b'vertices_values', b'indices_values']
+    checks['src/dxvk/rtx_render/rtx_remix_api.cpp'] += [b'blendWeights_count', b'blendIndices_values', b'boneTransforms_count', b'pBoneMatrices']
     for name, required in checks.items():
         data = git(runtime, 'show', baseline['runtime_commit'] + ':' + name)
         if not all(pattern in data for pattern in required):
