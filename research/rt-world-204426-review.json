@@ -1,0 +1,474 @@
+{
+  "schema": 1,
+  "scope": "Independent v22 204426 uploaded result review; actual images manually reviewed; no full-game/material/performance acceptance",
+  "input": {
+    "parts": [
+      {
+        "name": "rt-world-20261020-204426-52d14fa5.z01",
+        "size": 25600000,
+        "sha256": "85683ce538208fdef8af5fb625b990ba2a31b4d3f948d80e3012e1a36f542e07"
+      },
+      {
+        "name": "rt-world-20261020-204426-52d14fa5.z02",
+        "size": 25600000,
+        "sha256": "1a64ab4f2753defc9465e5dbe1c1ad7e8f2a3a4328e2695ba6e89bb5a7e6ca3a"
+      },
+      {
+        "name": "rt-world-20261020-204426-52d14fa5.zip",
+        "size": 4207676,
+        "sha256": "7156a4a78cc41c247cef4dd63579259642cd978d135ef54c9c2defaa9408671d"
+      }
+    ],
+    "outer_crc": "pass",
+    "inner_crc": "pass",
+    "original_zip_bytes": 55480045,
+    "original_zip_sha256": "cc4ff7b575d259f95c4316e546eec5cda969e502900559a11238a88f44806e32",
+    "inner_members": 4317,
+    "expanded_bytes": 437826294
+  },
+  "build_commit": "6aba8cc5f98bf880e2b73e3f1fcfea9e9a5e9da7",
+  "build_id": "ldb-rt-observer+5d050ca13b55dcc1",
+  "installed_pair_matches_verified_publication": true,
+  "trace": {
+    "size": 190359840,
+    "sha256": "87c740994a3abc57acf6bd4c47a5980c2b1c621ae69270319b3603b511a8b39d",
+    "pass": true,
+    "errors": [],
+    "header": {
+      "session": 5628931437237923309,
+      "device": 2,
+      "frequency": 10000000,
+      "profile": "world_pilot",
+      "target_presents": 600,
+      "control_presents": 30,
+      "coverage_revision": 22
+    },
+    "footer": {
+      "draws": 543316,
+      "valid": 543316,
+      "presents": 600,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 0
+    },
+    "world_conversion": {
+      "reports": 543316,
+      "converted": 155282,
+      "hud_replaced": 570,
+      "sky_converted": 2880,
+      "bulk_static_converted": 123619
+    }
+  },
+  "independent_checks": {
+    "world_outputs": "pass",
+    "world_errors": [],
+    "scene_pass": true,
+    "scene_errors": [],
+    "live_mesh_pass": true,
+    "textures_pass": true,
+    "infected": {
+      "schema": 1,
+      "pass": true,
+      "status": "collected_requires_image_review",
+      "recipes": 2,
+      "unknown_model_inputs": 10,
+      "unknown_payload_bytes": 1279866,
+      "verified_dependency_files": 6,
+      "omitted_dependency_files": 0,
+      "near_target_rows": 36,
+      "near_submitted_rows": 35,
+      "payload_bytes": 4396072,
+      "shader_summary": [
+        {
+          "event": "live_shader_summary",
+          "infected_bakes": 2,
+          "infected_deferred": 8322,
+          "infected_failed": 0,
+          "near_target_rows": 36,
+          "near_target_payload_bytes": 4396072,
+          "submissions": {
+            "Infected": 11395,
+            "NekoToon": 11025,
+            "VertexLitGeneric": 182504
+          },
+          "fallbacks": {
+            "Infected:api_model_stage_excluded": 112,
+            "Infected:original_vs_infected_rigid48": 24,
+            "NekoToon:api_model_stage_excluded": 793,
+            "VertexLitGeneric:api_model_stage_excluded": 64832,
+            "VertexLitGeneric:model_pipeline_unsupported": 74211,
+            "VertexLitGeneric:original_vs_three_weight": 3940,
+            "VertexLitGeneric:unknown_model_program": 1638
+          }
+        }
+      ],
+      "errors": [],
+      "gpu_visibility": "unrun",
+      "limits": "File integrity, diffuse dependency graph and projected center only; no triangle occlusion, actual appearance or full material coverage acceptance."
+    }
+  },
+  "diagnostic_mesh_final": {
+    "event": "api_mesh_frame",
+    "frame": 600,
+    "stage": "recovery",
+    "submitted": 122433,
+    "created": 95519,
+    "reused": 26914,
+    "destroyed": 95519,
+    "entries": 0,
+    "bytes": 0,
+    "material_updates": 1374,
+    "textured_submissions": 34529,
+    "texture_fallback_submissions": 87904,
+    "texture_exports": 135,
+    "texture_bytes": 536864100,
+    "texture_held": 0,
+    "texture_read_failures": 0,
+    "texture_budget_deferred": 98105,
+    "infected_bakes": 2,
+    "infected_bake_deferred": 4847,
+    "infected_bake_failures": 0,
+    "texture_backing_entries": 133,
+    "texture_backing_hits": 29378,
+    "texture_source_reads": 1205,
+    "texture_invalidated": 0,
+    "texture_resident_bytes": 0,
+    "texture_evidence_bytes": 50298372,
+    "texture_evidence_files": 30,
+    "texture_evicted": 99,
+    "peak_bytes": 241188952,
+    "completed_through": 540,
+    "pending_fences": 0,
+    "frame_draws": 0,
+    "frame_new_bytes": 0,
+    "frame_omitted": 0,
+    "omitted_total": 3964,
+    "omission_reasons": {
+      "draw_limit": 0,
+      "frame_geometry_bytes": 3964,
+      "live_geometry_bytes": 0,
+      "mesh_entries": 0,
+      "gpu_backlog": 0
+    }
+  },
+  "diagnostic_geometry_omission_fraction": 0.031361503833160595,
+  "diagnostic_texture_fallback_fraction": 0.7179763625819836,
+  "diagnostic_resource_peaks": {
+    "entries": 902,
+    "bytes": 241188952,
+    "frame_draws": 600,
+    "frame_new_bytes": 100663296,
+    "pending_fences": 1
+  },
+  "diagnostic_binding_reasons": {
+    "sampler0_source_mips_dds_dx10": 383,
+    "texture_frame_budget": 823,
+    "infected_palette_detail_diffuse_linear_opaque_256": 6,
+    "infected_dependencies_unavailable": 118,
+    "texture_spool_budget": 43,
+    "infected_bright_opaque_double_sided_control": 1
+  },
+  "texture_timeline": [
+    {
+      "frame": 240,
+      "texture_exports": 5,
+      "texture_bytes": 16776932,
+      "texture_source_reads": 5,
+      "texture_backing_hits": 0,
+      "texture_budget_deferred": 1,
+      "textured_submissions": 1259,
+      "texture_fallback_submissions": 1
+    },
+    {
+      "frame": 241,
+      "texture_exports": 10,
+      "texture_bytes": 25531164,
+      "texture_source_reads": 9,
+      "texture_backing_hits": 0,
+      "texture_budget_deferred": 286,
+      "textured_submissions": 1282,
+      "texture_fallback_submissions": 286
+    },
+    {
+      "frame": 250,
+      "texture_exports": 47,
+      "texture_bytes": 164257748,
+      "texture_source_reads": 45,
+      "texture_backing_hits": 69,
+      "texture_budget_deferred": 2425,
+      "textured_submissions": 1891,
+      "texture_fallback_submissions": 2425
+    },
+    {
+      "frame": 260,
+      "texture_exports": 87,
+      "texture_bytes": 316648868,
+      "texture_source_reads": 85,
+      "texture_backing_hits": 1250,
+      "texture_budget_deferred": 5526,
+      "textured_submissions": 3569,
+      "texture_fallback_submissions": 5313
+    },
+    {
+      "frame": 270,
+      "texture_exports": 127,
+      "texture_bytes": 517465796,
+      "texture_source_reads": 125,
+      "texture_backing_hits": 3296,
+      "texture_budget_deferred": 10342,
+      "textured_submissions": 5899,
+      "texture_fallback_submissions": 8748
+    },
+    {
+      "frame": 280,
+      "texture_exports": 132,
+      "texture_bytes": 535640488,
+      "texture_source_reads": 165,
+      "texture_backing_hits": 5587,
+      "texture_budget_deferred": 14653,
+      "textured_submissions": 8409,
+      "texture_fallback_submissions": 11791
+    },
+    {
+      "frame": 300,
+      "texture_exports": 134,
+      "texture_bytes": 536820432,
+      "texture_source_reads": 245,
+      "texture_backing_hits": 7419,
+      "texture_budget_deferred": 21149,
+      "textured_submissions": 10563,
+      "texture_fallback_submissions": 17549
+    },
+    {
+      "frame": 360,
+      "texture_exports": 135,
+      "texture_bytes": 536864100,
+      "texture_source_reads": 485,
+      "texture_backing_hits": 12792,
+      "texture_budget_deferred": 39357,
+      "textured_submissions": 16469,
+      "texture_fallback_submissions": 34760
+    },
+    {
+      "frame": 420,
+      "texture_exports": 135,
+      "texture_bytes": 536864100,
+      "texture_source_reads": 725,
+      "texture_backing_hits": 18419,
+      "texture_budget_deferred": 60173,
+      "textured_submissions": 22431,
+      "texture_fallback_submissions": 53478
+    },
+    {
+      "frame": 480,
+      "texture_exports": 135,
+      "texture_bytes": 536864100,
+      "texture_source_reads": 965,
+      "texture_backing_hits": 28082,
+      "texture_budget_deferred": 79040,
+      "textured_submissions": 33091,
+      "texture_fallback_submissions": 68839
+    },
+    {
+      "frame": 540,
+      "texture_exports": 135,
+      "texture_bytes": 536864100,
+      "texture_source_reads": 1205,
+      "texture_backing_hits": 29378,
+      "texture_budget_deferred": 98105,
+      "textured_submissions": 34529,
+      "texture_fallback_submissions": 87904
+    },
+    {
+      "frame": 600,
+      "texture_exports": 135,
+      "texture_bytes": 536864100,
+      "texture_source_reads": 1205,
+      "texture_backing_hits": 29378,
+      "texture_budget_deferred": 98105,
+      "textured_submissions": 34529,
+      "texture_fallback_submissions": 87904
+    }
+  ],
+  "runtime_spool_remaining_bytes": 6812,
+  "first_logged_spool_failure_frame": 288,
+  "cpu_bake_replay": {
+    "schema": 1,
+    "scope": "Production Image/sample/diffuse/bake CPU replay of both actual v22 recipes, not independent GPU material acceptance",
+    "production_function_sha256": "d5af17882e85bae47ea6fbf4d30cb26b9554a770a891181691ff1f25666b1f79",
+    "pass": true,
+    "recipes": [
+      {
+        "source_material": 970592876,
+        "bytes": 349672,
+        "sha256": "9f96362e77b75997c61964275bca040a6be0b6e8e819167afa07f3854f1ff0f5",
+        "full_dds_exact_match": true
+      },
+      {
+        "source_material": 970592724,
+        "bytes": 349672,
+        "sha256": "9ac7a2655dd26d348d042049abd6df7e1ad96e0b56c7ef25ae0aee3573f9d3e1",
+        "full_dds_exact_match": true
+      }
+    ]
+  },
+  "preview": {
+    "pass": true,
+    "end": {
+      "event": "preview_end",
+      "complete": true,
+      "reason": "duration_complete",
+      "elapsed_ms": 60110,
+      "frames": 270,
+      "texture_exports": 135,
+      "texture_bytes": 536864100,
+      "texture_resident_bytes": 0,
+      "texture_evicted": 99,
+      "submitted": 82491,
+      "entries": 0,
+      "pending_fences": 0,
+      "binding_rows_omitted": 0,
+      "held": 0,
+      "readbacks": 3
+    },
+    "observed_presents_per_wall_second": 4.4917650973215775,
+    "qualification": "Includes experimental CPU reconstruction, synchronous texture reads and evidence/readback overhead; not an isolated renderer benchmark",
+    "readbacks": [
+      {
+        "event": "preview_readback",
+        "frame": 660,
+        "elapsed_ms": 13875,
+        "file": "preview-0.rgba32f",
+        "width": 640,
+        "height": 400,
+        "copy_code": 0,
+        "hresult": 0,
+        "written": true
+      },
+      {
+        "event": "preview_readback",
+        "frame": 732,
+        "elapsed_ms": 30219,
+        "file": "preview-1.rgba32f",
+        "width": 640,
+        "height": 400,
+        "copy_code": 0,
+        "hresult": 0,
+        "written": true
+      },
+      {
+        "event": "preview_readback",
+        "frame": 869,
+        "elapsed_ms": 60047,
+        "file": "preview-2.rgba32f",
+        "width": 640,
+        "height": 400,
+        "copy_code": 0,
+        "hresult": 0,
+        "written": true
+      }
+    ]
+  },
+  "shutdown_rt_events": [
+    {
+      "event": "before_device_destroy",
+      "code": 0
+    },
+    {
+      "event": "api_mesh_shutdown_retire",
+      "code": 0
+    },
+    {
+      "event": "api_mesh_shutdown_remaining",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "model_texture_shutdown_held",
+      "code": 0,
+      "value": "0"
+    },
+    {
+      "event": "host_cleanup",
+      "code": 0
+    }
+  ],
+  "exit": {
+    "schema": 1,
+    "status": "abnormal",
+    "exceptions": [
+      {
+        "file": "game-logs/0/bridge32.log",
+        "side": "client",
+        "pid": 21804,
+        "code": "0xc0000005",
+        "target": "0x104b0",
+        "named_frames": [
+          {
+            "module": "necola.dll",
+            "offset": "0x1447fc"
+          },
+          {
+            "module": "necola.dll",
+            "offset": "0x1448de"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x766b6"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x46f1e"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x5e66d"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x5e2d5"
+          },
+          {
+            "module": "kernel32.dll",
+            "offset": "0x27493"
+          },
+          {
+            "module": "left4dead2.exe",
+            "offset": "0xb3c3"
+          }
+        ],
+        "pid_bound": true,
+        "phase": "exit_logs_requires_timing_review"
+      }
+    ],
+    "unbound_exception_logs": [],
+    "cleanup_logs": [
+      "bridge32.log",
+      "bridge64.log"
+    ],
+    "backend_objects_remaining": 40,
+    "limits": "Log evidence only. Cleanup messages alone do not prove a clean process exit; named stack frames do not establish the unique culprit."
+  },
+  "unknown_model_programs": {
+    "model_pipeline_unsupported": 9,
+    "unknown_model_program": 1
+  },
+  "visual_review": {
+    "world_sky_hud_and_neko": "visible",
+    "many_nearby_humanoid_models": "visible but gray/white without accepted clothing colors; some visible deformation/overlap remains",
+    "all_models_or_entities": "not accepted",
+    "infection_identity": "Near-target heuristic also matches VertexLitGeneric props and weapons; cannot bind every target row to common infected",
+    "infected_control_420": "No unequivocal bright-green infected model identified in selected readback; not accepted",
+    "texture_binding_vs_pixels": "Fallback counters and gray models coexist, but per-triangle/object correspondence and all GPU DDS appearances are not proven",
+    "normal_source_mips": "Runtime warns partial source mip chains for some textures; not a complete material implementation"
+  },
+  "next_steps": [
+    "Stop repeated spool-rejected source reads from consuming all four per-frame read slots; preserve resource mutation invalidation",
+    "Plan bounded source-mip resolution/runtime spool allocation, prioritize near characters and reserve runtime space for Infected dependencies/output; evidence reservation alone is insufficient",
+    "Bind visible target geometry/material/DDS evidence and classify unsupported pipeline/programs without unconditional admission",
+    "Reduce animation mesh recreation and texture IO before evaluating playable performance; retain early device cleanup and investigate separate client exit fault"
+  ],
+  "source_parallel_preparation": "unrun",
+  "full_game_rt": "not_accepted"
+}
