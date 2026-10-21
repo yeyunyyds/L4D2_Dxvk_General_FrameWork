@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "scope": "Verified v25 persistent bind-pose GPU skinning pilot publication; actual B580 animation correctness and performance remain unrun",
+  "build_commit": "1eddbe65eab81104aee7b2184c43a9bc95bf243f",
+  "workflow_run": 39627093504,
+  "workflow_number": 87,
+  "workflow_conclusion": "success",
+  "download_ref": "830d7f43150ae007492df244c6138de5165cfc64",
+  "file_page": "https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/830d7f43150ae007492df244c6138de5165cfc64/downloads/rt-world-pilot-dev.zip",
+  "filename": "rt-world-pilot-dev.zip",
+  "size": 12040122,
+  "sha256": "f5d85243b8adfeffad04dbf0cf1ce68ed39181450ab4947a2b3b3d415f29ffae",
+  "git_blob": "e310e89cd3482a1478ed32b183637ff89d5f81f5",
+  "http_bytes_match_git_blob": true,
+  "build_id": "ldb-rt-observer+591a5241037b6ed3",
+  "source_receipt_fingerprint": "591a5241037b6ed37f6370d06a0845b43791b43b29c1ef7b3ef472f4e07b36b8",
+  "source_receipt_inputs": 34,
+  "skinning_transport_patch_pinned": true,
+  "zip_crc": "pass",
+  "publication_tree_zip_only": true,
+  "publication_tree_entries": 31,
+  "all_manifest_members_verified": true,
+  "manifest_files": 748,
+  "zip_members": 749,
+  "binary_identity": {
+    "payload/bin/dxvk_d3d9.dll": {
+      "architecture": "x86",
+      "sha256": "3cdf266e3485fed0eb2cb724ac4fcf80554d8af597fcc7480a6965019bde58d3",
+      "size": 1410560,
+      "compiled_identity_match": true
+    },
+    "payload/bin/.l4d2bridge/L4D2Bridge64.exe": {
+      "architecture": "x64",
+      "sha256": "7c3990bc7ad9b9950624d702e8a3b2fedb6330e7fe150b2a24efe996b908780f",
+      "size": 1640448,
+      "compiled_identity_match": true
+    }
+  },
+  "foundation_status": {
+    "commit": "1eddbe65eab81104aee7b2184c43a9bc95bf243f",
+    "native_outcome": "success",
+    "artifact_validation": "pass",
+    "system_d3d9_nullref_state": {
+      "x86": "pass",
+      "x64": "pass"
+    },
+    "consumer_world_development_execution": "pass",
+    "world_live_mesh_development_execution": "pass",
+    "world_live_mesh_budget_development_execution": "pass",
+    "world_model_texture_development_execution": "pass",
+    "world_live_material_rebind_development_execution": "pass"
+  },
+  "observer_status": {
+    "commit": "1eddbe65eab81104aee7b2184c43a9bc95bf243f",
+    "native_outcome": "success",
+    "package_outcome": "success",
+    "game_rt": "unrun",
+    "actual_game_observation": "unrun"
+  },
+  "package_validation": {
+    "package_validation": "pass",
+    "primary_sha256": "f5d85243b8adfeffad04dbf0cf1ce68ed39181450ab4947a2b3b3d415f29ffae",
+    "primary_size": 12040122,
+    "packaged_python_isolated_entry": "pass",
+    "packaged_collector_configuration": "pass",
+    "native_consumer_fixture_execution": "pass",
+    "pinned_runtime_dependency_load": "pass",
+    "pinned_native_loader_api_initialization": "pass"
+  },
+  "pilot_contract": {
+    "pilot_revision": 25,
+    "diagnostic_coverage_revision": 23,
+    "draw_trace_version": 20,
+    "one_f9": true,
+    "gpu_skinning_profiles": [
+      "Skin3",
+      "Neko3"
+    ],
+    "bones_per_vertex": 3,
+    "max_bones": 256,
+    "requires_no_morph": true,
+    "mesh_key_excludes_bone_transforms": true,
+    "bridge_scalar_count_transport_fix": true,
+    "cpu_fallback_retained": true,
+    "image_review_required": true
+  },
+  "local_validation": {
+    "python_tests_run": 197,
+    "python_tests_passed": 195,
+    "windows_only_skipped": 2,
+    "prepared_source_transport_patch_verified": true,
+    "result": "pass"
+  },
+  "actual_game": {
+    "b580_rt": "unrun",
+    "animation_correctness": "unrun",
+    "persistent_skinning_path_exercised": "unrun",
+    "runtime_timing": "unrun",
+    "gpu_engine_utilization": "unrun",
+    "performance_claim": "none"
+  }
+}

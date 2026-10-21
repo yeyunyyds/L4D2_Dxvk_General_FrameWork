@@ -18,3 +18,9 @@
 
 性能判定同时看相同分项。成功信号是 CPU skin、geometry build、mesh create 和 hash 每帧下降，持久网格复用非零，Host GPU 3D 利用率上升；由于动态场景负载不同，不能只比较两个屏显 FPS。第一轮若发现拉伸、爆炸或部件错位，应按 shader/模型回退并使用同包中的矩阵与计数定位，不能扩大启用范围。
 
+## 发布验收
+
+Windows CI #87 在提交 `1eddbe65eab81104aee7b2184c43a9bc95bf243f` 完成 x86 Client、x64 Host、Bridge 双端及 GPU 蒙皮网格复用 fixture，全部原生门禁通过；Build ID 为 `ldb-rt-observer+591a5241037b6ed3`。重新从发布分支和 HTTP 下载取回成品后，CRC、748 个清单成员、PE 架构、二进制身份和固定源码回执均匹配。完整元数据见 `research/rt-world-pilot-v25-validation.json`。
+
+[固定测试包文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/830d7f43150ae007492df244c6138de5165cfc64/downloads/rt-world-pilot-dev.zip)。本轮仍需 B580 实机确认人物动画没有拉伸、爆炸、错位或缺部件，并用同一次 F9 的分项记录判断 CPU 重建是否实际下降；构建门禁不替代这两项验收。
+
