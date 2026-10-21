@@ -45,7 +45,7 @@ class PreflightCases(unittest.TestCase):
 
     def test_runtime_skinning_patch_corrects_weight_stride_and_rejects_bad_counts(self):
         patch_text = RUNTIME_SKINNING_PATCH.read_text()
-        self.assertIn('+          dst.blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float) * src.skinning_value.bonesPerVertex', patch_text)
+        self.assertIn('+          dst.blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, uint32_t(sizeof(float) * src.skinning_value.bonesPerVertex)', patch_text)
         self.assertIn('skinning.blendWeights_count != expectedSkinningValues', patch_text)
         self.assertIn('skinning.blendIndices_count != expectedSkinningValues', patch_text)
         corrected = b' '.join((
