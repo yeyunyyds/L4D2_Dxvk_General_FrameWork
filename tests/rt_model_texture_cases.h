@@ -135,8 +135,8 @@ inline void systemTextureExport() {
     require(!blocked.textured()&&blocked.reason=="texture_spool_budget"&&bounded.sourceReads==3,"spool rejection setup");
     for(unsigned i=0;i<40;++i) { require(!bounded.acquire(d,directory.path/"rejected",500,2).textured(),"rejected resource unexpectedly bound"); }
     require(bounded.sourceReads==3&&bounded.retrySuppressed==40&&bounded.rejectedCount()==1,"capacity rejection reread source or consumed new quota");
-    check(d->SetTexture(0,c.value));const auto small=bounded.acquire(d,directory.path/"rejected",500,3);
-    require(small.textured()&&bounded.bytes==700&&bounded.sourceReads==4,"capacity rejection starved following smaller texture");
+    check(d->SetTexture(0,c.value));const auto followingTexture=bounded.acquire(d,directory.path/"rejected",500,3);
+    require(followingTexture.textured()&&bounded.bytes==700&&bounded.sourceReads==4,"capacity rejection starved following smaller texture");
     bounded.invalidate(large.value);check(d->SetTexture(0,large.value));(void)bounded.acquire(d,directory.path/"rejected",501,2);
     require(bounded.sourceReads==5&&bounded.invalidated==1,"resource mutation did not reset rejected-version state");bounded.clear();
     policy.spoolBytes=800;policy.priorityReserve=300;model_texture::Cache reserved(policy);
