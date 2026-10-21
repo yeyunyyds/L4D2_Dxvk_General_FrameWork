@@ -1,0 +1,258 @@
+{
+  "schema": 1,
+  "session": "rt-world-20261020-220654-169346c5",
+  "version": "v23",
+  "source_commit": "018149cd080d07bc19f6d2fc7e78a247fda18657",
+  "build_id": "ldb-rt-observer+3514d48e6c75fa84",
+  "installed_pair_matches_verified_publication": true,
+  "archive": {
+    "parts": [
+      {
+        "name": "rt-world-20261020-220654-169346c5.z01",
+        "size": 25600000,
+        "sha256": "80a129bdb150ea69585e85a8baf57b16f34f6eeda4dcf201ce8146dc789cfb6e"
+      },
+      {
+        "name": "rt-world-20261020-220654-169346c5.z02",
+        "size": 25600000,
+        "sha256": "79fc1c0a3c93c0c56d44ae7f62b6a3ce5a8927b2ba54e3967639a43f1c8b380c"
+      },
+      {
+        "name": "rt-world-20261020-220654-169346c5.zip",
+        "size": 6260728,
+        "sha256": "bb41353f6825f9bb95eabdce2a4ba31f59fd387b962bf94863e0f4a0d5843810"
+      }
+    ],
+    "outer_crc": "pass",
+    "inner_crc": "pass",
+    "original_zip_bytes": 57530941,
+    "original_zip_sha256": "a3dc87c964d97a539cdcf866a5dab9809222588e7a3a075e423ba43b58b637a4",
+    "inner_members": 4301,
+    "expanded_bytes": 421403771
+  },
+  "independent_reviews": {
+    "draw": {
+      "sha256": "ebee126c32847b3275123c1d6b210925abe0806d840f86300e10a4cfea4a1dfc",
+      "pass": true
+    },
+    "world": {
+      "sha256": "ddcc1b666ffb8cc44ec2d0262c5f8a17475a75c73338dbc11d7cbf216ce5bc47",
+      "pass": true
+    },
+    "scene": {
+      "sha256": "8982ca2ac34ae448cd53e4d385a88d9d379e60e704c682057fd3c584f3c8bb1b",
+      "pass": true
+    },
+    "infected": {
+      "sha256": "70da26ff0d5d4a4179224f8939471d2ae64e3e0b0be837fa06771674c444c742",
+      "pass": true
+    },
+    "preview": {
+      "sha256": "834ff6a695788168613feced89e19cbf5e17ea8aab4f044a851b58f0895ddef3",
+      "pass": true
+    }
+  },
+  "trace": {
+    "bytes": 158723224,
+    "sha256": "5b7cdc4821ee7b4f17fa9b89263fddf8c2a599adcd1114094de302fc8181f107",
+    "presents": 600,
+    "valid_draws": 469430,
+    "resets": 0,
+    "failures": 0,
+    "unobserved": 0
+  },
+  "model_diagnostic": {
+    "submitted": 120045,
+    "textured": 117985,
+    "fallback": 2060,
+    "textured_percent": 98.28397684201758,
+    "budget_omissions": 0,
+    "peak": {
+      "entries": 1254,
+      "bytes": 300892356,
+      "frame_draws": 788,
+      "frame_new_bytes": 131518296,
+      "pending_fences": 1
+    },
+    "fallback_no_increase_frames": [
+      301,
+      540
+    ]
+  },
+  "preview_end": {
+    "event": "preview_end",
+    "complete": true,
+    "reason": "duration_complete",
+    "elapsed_ms": 60140,
+    "frames": 607,
+    "texture_exports": 392,
+    "texture_bytes": 1085323716,
+    "texture_resident_bytes": 0,
+    "texture_evicted": 346,
+    "submitted": 121702,
+    "entries": 0,
+    "pending_fences": 0,
+    "binding_rows_omitted": 0,
+    "held": 0,
+    "readbacks": 3
+  },
+  "texture_supply": {
+    "spool_rejections_recorded": 0,
+    "source_reads": 378,
+    "source_read_failures": 0,
+    "final_source_backing_hits": 260994,
+    "source_evictions": 346,
+    "infected_recipes": 41,
+    "infected_failures": 0,
+    "latest_sample_frame": 1200,
+    "latest_sample_cumulative_fallback": 2105,
+    "fallback_new_after_diagnostic_by_sample": 45,
+    "limits": "Full texture counters are sampled; final seven preview frames have no full counter snapshot. Runtime DDS is not all retained in evidence."
+  },
+  "material_cpu_replay": {
+    "schema": 1,
+    "scope": "Production Image/sample/diffuse/bake CPU replay of available complete actual v23 recipes (4 of 41), not independent GPU material acceptance",
+    "production_function_sha256": "d5af17882e85bae47ea6fbf4d30cb26b9554a770a891181691ff1f25666b1f79",
+    "pass": true,
+    "recipes": [
+      {
+        "source_material": 1081220228,
+        "bytes": 349672,
+        "sha256": "9f96362e77b75997c61964275bca040a6be0b6e8e819167afa07f3854f1ff0f5",
+        "full_dds_exact_match": true
+      },
+      {
+        "source_material": 1081220076,
+        "bytes": 349672,
+        "sha256": "9ac7a2655dd26d348d042049abd6df7e1ad96e0b56c7ef25ae0aee3573f9d3e1",
+        "full_dds_exact_match": true
+      },
+      {
+        "source_material": 807731156,
+        "bytes": 349672,
+        "sha256": "1bbe372e0bd07d0ed3fa0c8edce282dff49d0d4214e211e42c6b813832ef3278",
+        "full_dds_exact_match": true
+      },
+      {
+        "source_material": 807731308,
+        "bytes": 349672,
+        "sha256": "99a54c3550d94beb6b88508e250f7e0c0c3fb482469e6798bd09fa8b23010020",
+        "full_dds_exact_match": true
+      }
+    ]
+  },
+  "coverage_limits": {
+    "near_rows": 60,
+    "near_rows_textured": 60,
+    "near_shader": "VertexLitGeneric",
+    "near_rows_are_entity_identity": false,
+    "standard_alpha_textured_binding_rows": 59,
+    "unsupported_input_samples": 3,
+    "unknown_vs_samples": 0,
+    "special_pipelines": [
+      "two additive ONE/ONE samples with depth test",
+      "one depth-disabled alpha-test sample"
+    ],
+    "green_infected_control_seen": false,
+    "green_control_limit": "No Infected ready-path increase during control window; absence does not establish a new control failure."
+  },
+  "user_visual_confirmation": {
+    "all_parts_displayed": true,
+    "scope": "This tested scene as reported by user; not all-map/full original shading acceptance.",
+    "latest_artifact_description": "人物边缘变成微小肉眼可见的方块",
+    "supersedes": "Earlier general description of slight world blur"
+  },
+  "edge_quality_review": {
+    "effective_startup_upscaler_type": 0,
+    "upscaler_type_name": "None",
+    "temporal_aa_enabled_in_current_mode": false,
+    "ray_reconstruction_requested": false,
+    "bloom_requested": false,
+    "postfx_requested": false,
+    "source_viewport": [
+      1920,
+      1200
+    ],
+    "diagnostic_readback": [
+      640,
+      400
+    ],
+    "pinned_runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
+    "source_findings": [
+      "UpscalerType::None=0; isTAAEnabled only when TAAU",
+      "setDownscaleExtent preserves output extent when no upscaler selected; default resolutionScale 0.75 does not apply in None mode",
+      "Camera jitter defaults off and is not automatically applied in None mode"
+    ],
+    "leading_hypothesis": "Visible pixel stair steps from absent temporal antialiasing",
+    "alternatives": [
+      "alpha-test/transparent hair or clothing contour handling",
+      "material sampling or coverage artifacts"
+    ],
+    "root_cause_proven": false,
+    "limits": "Reduced readbacks cannot establish native edge shape or exclude alpha-specific artifacts. No per-frame internal-extent telemetry or native matched AA comparison.",
+    "next_combined_validation": "Compare baseline and full-resolution TAA (upscalerType=3,resolutionScale=1.0) in one F9 session; check solid contours and alpha contours separately and retain previous camera/jitter consistency before acceptance."
+  },
+  "exit": {
+    "schema": 1,
+    "status": "abnormal",
+    "exceptions": [
+      {
+        "file": "game-logs/0/bridge32.log",
+        "side": "client",
+        "pid": 6404,
+        "code": "0xc0000005",
+        "target": "0x104b0",
+        "named_frames": [
+          {
+            "module": "necola.dll",
+            "offset": "0x1447fc"
+          },
+          {
+            "module": "necola.dll",
+            "offset": "0x1448de"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x766b6"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x46f1e"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x5e66d"
+          },
+          {
+            "module": "ntdll.dll",
+            "offset": "0x5e2d5"
+          },
+          {
+            "module": "kernel32.dll",
+            "offset": "0x27493"
+          },
+          {
+            "module": "left4dead2.exe",
+            "offset": "0xb3c3"
+          }
+        ],
+        "pid_bound": true,
+        "phase": "exit_logs_requires_timing_review"
+      }
+    ],
+    "unbound_exception_logs": [],
+    "cleanup_logs": [
+      "bridge32.log",
+      "bridge64.log"
+    ],
+    "backend_objects_remaining": 40,
+    "limits": "Log evidence only. Cleanup messages alone do not prove a clean process exit; named stack frames do not establish the unique culprit."
+  },
+  "exit_timing": {
+    "host_cleanup_local": "22:15:32.986",
+    "client_exception_local": "22:15:34.505",
+    "host_query_release_exception_recurred": false,
+    "clean_exit_accepted": false
+  },
+  "scope": "Metadata only; raw user textures, images, shader programs and DLLs remain local. No new build or GPU quality test in this analysis."
+}
