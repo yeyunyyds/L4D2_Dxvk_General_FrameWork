@@ -28,3 +28,12 @@ v21用户确认后半段普通感染者已经出现，但衣服颜色缺失。�
 - 一次F9：先准备近处普通感染者，再慢转头/移动；600帧诊断和60秒预览自动进行，按提示退出后上传最终同一个ZIP。
 
 元数据：`research/rt-world-v22-{geometry,trace,model}-replay-check.json`、`research/rt-world-v22-infected-material-check.json`。原始用户纹理、程序和画面仅保留本地。
+
+## 发布验证
+
+- 源提交：`6aba8cc5f98bf880e2b73e3f1fcfea9e9a5e9da7`；Build ID：`ldb-rt-observer+5d050ca13b55dcc1`。
+- Windows x86客户端/x64 Host Release构建和全部原生门禁通过；预算测试按1024 Draw边界更新后重跑通过。
+- 最终本地131项Python测试：129通过、2项Windows专用跳过；严格MinGW x64编译通过。
+- 成品ZIP：12022296字节，SHA256 `237af2199e225d3f6d68cfd9cb7d8e73839f3e7057b75fbae4148412e77ebbb0`。
+- [固定文件页面](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/8ac42f8dded1da226f205ecc2897049db4eb188f/downloads/rt-world-pilot-dev.zip)；逐成员哈希、双端机器类型/Build ID、32项源码收据、随包脚本/README、x86/x64原生trace独立分析、运行库初始化证据、发布分支只含ZIP均通过。
+- 完整元数据：`research/rt-world-pilot-v22-validation.json`。实机衣服颜色、600帧+60秒完成和退出稳定性仍待新测试验收。
