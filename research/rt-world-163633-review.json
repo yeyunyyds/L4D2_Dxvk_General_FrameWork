@@ -1,0 +1,427 @@
+{
+  "schema": 1,
+  "scope": "v21 uploaded split archive review; partial run, no whole-game acceptance",
+  "archive": {
+    "volumes": [
+      {
+        "name": "rt-world-20261020-163633-45ce6a78.z01",
+        "size": 20971520,
+        "sha256": "eb8d83060590ca3fb4992d7734b5da15dc8d0d9f7e38455706bd710a54f7fb08"
+      },
+      {
+        "name": "rt-world-20261020-163633-45ce6a78.zip",
+        "size": 18147932,
+        "sha256": "e5bbd90dc0afbd13e091ecc8233d6b70334b0ecc27dc62f264f682aac5f98221"
+      }
+    ],
+    "restored_crc": "pass",
+    "outer_single_member": true,
+    "result_crc": "pass",
+    "result_size": 40334845,
+    "result_sha256": "30828dbb872c4f4d73bb5f6e3a0ab6aed1618c6c03630569754a97ffdb830d3a",
+    "members": 4108,
+    "uncompressed_bytes": 477691557,
+    "payload_preserved": true
+  },
+  "installed_pair_matches_v21": true,
+  "build_commit": "3748cc19deb243759f3d15829b26fd59add97e45",
+  "build_id": "ldb-rt-observer+bd6829acc4a2c550",
+  "trace": {
+    "header": {
+      "session": 9049861636585367528,
+      "device": 2,
+      "frequency": 10000000,
+      "profile": "world_pilot",
+      "target_presents": 600,
+      "control_presents": 30,
+      "coverage_revision": 21
+    },
+    "footer": {
+      "draws": 399330,
+      "valid": 399330,
+      "presents": 463,
+      "resets": 0,
+      "failures": 0,
+      "unobserved": 0,
+      "reason": 2
+    },
+    "errors": [
+      "incomplete_or_failed_segment"
+    ],
+    "world_conversion": {
+      "reports": 399330,
+      "converted": 69773,
+      "hud_replaced": 433,
+      "sky_converted": 2058,
+      "bulk_static_converted": 44231
+    },
+    "bytes": 268436212,
+    "stop_reason": "host Recorder.draw written >256MiB -> finish(2); not a failed Present, Reset, or proof of an in-play crash",
+    "original_presents_target": 600,
+    "completed_presents": 463,
+    "original_Draw_failures": 0,
+    "reset_count": 0
+  },
+  "images": {
+    "frames": [
+      30,
+      120,
+      180,
+      240,
+      300,
+      360,
+      420
+    ],
+    "contact_local_path": ".research/rt-foundation/world-163633-images/color-contact.png",
+    "assessment": "World/sky/HUD and Neko visible; more VLG characters/models appear at300/420 with partial bodies/artifacts. No ordinary-infected entity identity or complete visual acceptance established."
+  },
+  "model_resources": {
+    "last": {
+      "event": "api_mesh_frame",
+      "frame": 463,
+      "stage": "api_combined_textured_alpha",
+      "submitted": 43328,
+      "created": 31185,
+      "reused": 12143,
+      "destroyed": 30854,
+      "entries": 331,
+      "bytes": 250175196,
+      "material_updates": 1374,
+      "textured_submissions": 25133,
+      "texture_fallback_submissions": 18195,
+      "texture_exports": 161,
+      "texture_bytes": 408313452,
+      "texture_held": 78,
+      "texture_read_failures": 0,
+      "texture_budget_deferred": 40791,
+      "infected_bakes": 2,
+      "infected_bake_deferred": 3777,
+      "infected_bake_failures": 0,
+      "texture_resident_bytes": 134186440,
+      "texture_evidence_bytes": 67104604,
+      "texture_evidence_files": 30,
+      "texture_evicted": 289,
+      "peak_bytes": 250179276,
+      "completed_through": 462,
+      "pending_fences": 1,
+      "frame_draws": 242,
+      "frame_new_bytes": 100658088,
+      "frame_omitted": 295,
+      "omitted_total": 39942,
+      "omission_reasons": {
+        "draw_limit": 0,
+        "frame_geometry_bytes": 35249,
+        "live_geometry_bytes": 0,
+        "mesh_entries": 4693,
+        "gpu_backlog": 0
+      }
+    },
+    "first_geometry_omission_present": 241,
+    "geometry_omission_fraction": 0.4796685480965534,
+    "texture_fallback_fraction": 0.41993629985228953,
+    "texture_first_cache_budget_present": 250,
+    "sample_geometry_expansion": [
+      {
+        "frame": 240,
+        "samples": 21,
+        "vertices": 74742,
+        "triangles": 109787,
+        "triangle_expanded_API_bytes": 22396548,
+        "indexed_API_bytes_if_valid_vertex_normals": 6100932,
+        "estimated_ratio": 3.6710043645790513,
+        "limits": "sampled geometry only; indexed path requires valid source/fallback normal semantics and runtime validation, not an implemented optimization"
+      },
+      {
+        "frame": 300,
+        "samples": 64,
+        "vertices": 290435,
+        "triangles": 289459,
+        "triangle_expanded_API_bytes": 59049636,
+        "indexed_API_bytes_if_valid_vertex_normals": 22061348,
+        "estimated_ratio": 2.6766105135552007,
+        "limits": "sampled geometry only; indexed path requires valid source/fallback normal semantics and runtime validation, not an implemented optimization"
+      },
+      {
+        "frame": 360,
+        "samples": 64,
+        "vertices": 125093,
+        "triangles": 149985,
+        "triangle_expanded_API_bytes": 30596940,
+        "indexed_API_bytes_if_valid_vertex_normals": 9805772,
+        "estimated_ratio": 3.120298942296435,
+        "limits": "sampled geometry only; indexed path requires valid source/fallback normal semantics and runtime validation, not an implemented optimization"
+      },
+      {
+        "frame": 420,
+        "samples": 64,
+        "vertices": 222516,
+        "triangles": 224515,
+        "triangle_expanded_API_bytes": 45801060,
+        "indexed_API_bytes_if_valid_vertex_normals": 16935204,
+        "estimated_ratio": 2.7044882364570277,
+        "limits": "sampled geometry only; indexed path requires valid source/fallback normal semantics and runtime validation, not an implemented optimization"
+      }
+    ],
+    "diagnosis": "expanded triangle vertices plus per-pose CreateMesh/reconstruction and working-set pressure; arbitrary draw-level omission can remove body parts. Not all stretching/temporal artifacts have a proven unique cause."
+  },
+  "infected_material": {
+    "recipes": [
+      {
+        "event": "infected_diffuse_bake",
+        "frame": 248,
+        "material": 1056642404,
+        "output_sha256": "9f96362e77b75997c61964275bca040a6be0b6e8e819167afa07f3854f1ff0f5",
+        "output_file": "model-textures/9f96362e77b75997c61964275bca040a6be0b6e8e819167afa07f3854f1ff0f5.dds",
+        "output_evidence_saved": false,
+        "parameters": [
+          0.100000001,
+          0.899999976,
+          0,
+          0,
+          0.150000006,
+          0,
+          0,
+          0,
+          0,
+          0.5,
+          0.15625,
+          0.65625,
+          2,
+          0,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0
+        ],
+        "inputs": [
+          {
+            "slot": 0,
+            "sha256": "1c06b4fa08c2438fc86e539928253e8715b650e7a1e069ff0f5c3e27d5bfaed0",
+            "file": "model-textures/1c06b4fa08c2438fc86e539928253e8715b650e7a1e069ff0f5c3e27d5bfaed0.dds",
+            "evidence_saved": false,
+            "srgb": false,
+            "wrap_u": 0,
+            "wrap_v": 0,
+            "filter": 1
+          },
+          {
+            "slot": 4,
+            "sha256": "58d0ea8c63a06ebe5a23790cd00f7000e8a9cf95647ff658b7d322eca8d7dba9",
+            "file": "model-textures/58d0ea8c63a06ebe5a23790cd00f7000e8a9cf95647ff658b7d322eca8d7dba9.dds",
+            "evidence_saved": false,
+            "srgb": false,
+            "wrap_u": 1,
+            "wrap_v": 1,
+            "filter": 1
+          },
+          {
+            "slot": 5,
+            "sha256": "8b135f364cf4e47aa26c974e53847232b712fbece2123f6f8f2a4bd9d2c2f987",
+            "file": "model-textures/8b135f364cf4e47aa26c974e53847232b712fbece2123f6f8f2a4bd9d2c2f987.dds",
+            "evidence_saved": true,
+            "srgb": true,
+            "wrap_u": 0,
+            "wrap_v": 0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "event": "infected_diffuse_bake",
+        "frame": 249,
+        "material": 1056642252,
+        "output_sha256": "9ac7a2655dd26d348d042049abd6df7e1ad96e0b56c7ef25ae0aee3573f9d3e1",
+        "output_file": "model-textures/9ac7a2655dd26d348d042049abd6df7e1ad96e0b56c7ef25ae0aee3573f9d3e1.dds",
+        "output_evidence_saved": false,
+        "parameters": [
+          0,
+          0.5,
+          0,
+          0,
+          0.150000006,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.15625,
+          0.65625,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "inputs": [
+          {
+            "slot": 0,
+            "sha256": "c50ce758c492e375a3345f9b9060fbf9dc42a94e9754e86dccfe767bacc179be",
+            "file": "model-textures/c50ce758c492e375a3345f9b9060fbf9dc42a94e9754e86dccfe767bacc179be.dds",
+            "evidence_saved": false,
+            "srgb": false,
+            "wrap_u": 1,
+            "wrap_v": 1,
+            "filter": 1
+          },
+          {
+            "slot": 4,
+            "sha256": "58d0ea8c63a06ebe5a23790cd00f7000e8a9cf95647ff658b7d322eca8d7dba9",
+            "file": "model-textures/58d0ea8c63a06ebe5a23790cd00f7000e8a9cf95647ff658b7d322eca8d7dba9.dds",
+            "evidence_saved": false,
+            "srgb": false,
+            "wrap_u": 1,
+            "wrap_v": 1,
+            "filter": 1
+          },
+          {
+            "slot": 5,
+            "sha256": "8b135f364cf4e47aa26c974e53847232b712fbece2123f6f8f2a4bd9d2c2f987",
+            "file": "model-textures/8b135f364cf4e47aa26c974e53847232b712fbece2123f6f8f2a4bd9d2c2f987.dds",
+            "evidence_saved": true,
+            "srgb": true,
+            "wrap_u": 0,
+            "wrap_v": 0,
+            "filter": 1
+          }
+        ]
+      }
+    ],
+    "bakes": 2,
+    "deferred": 3777,
+    "failures": 0,
+    "output_evidence_files_present": 0,
+    "near_target_rows": 0,
+    "bright_control_binding_present": true,
+    "limits": "2bakes succeeded in runtime, both diagnostic output files omitted due64MiB evidence budget; cannot verify derived DDS/appearance. Infected-family near rows0 does not prove absence of common infected; modded entities may use VLG, identification unverified."
+  },
+  "unknown_model_inputs": [
+    {
+      "ordinal": 264300,
+      "shader": "VertexLitGeneric",
+      "reason": "unknown_model_program",
+      "stride": 32,
+      "vertices": 3186,
+      "vs_sha256": "7aab351541ae0799d92e5a2c11fee647df4a5b3319037e20ea3721093de9fc33",
+      "ps_sha256": "41ff52de5b1a1e96984c88cb3ba644c6e30f910ba6012dab527364c0c77ec786"
+    },
+    {
+      "ordinal": 264302,
+      "shader": "VertexLitGeneric",
+      "reason": "model_pipeline_unsupported",
+      "stride": 32,
+      "vertices": 1047,
+      "vs_sha256": "38bbd1312196c778b8e22785ed54892e50aeed953dc14df38a05fa3a8991ba13",
+      "ps_sha256": "396e027005afa718f051796137183b0304ebefde56d1b9bd467fae816ee083ed"
+    },
+    {
+      "ordinal": 264307,
+      "shader": "VertexLitGeneric",
+      "reason": "unknown_model_program",
+      "stride": 32,
+      "vertices": 12655,
+      "vs_sha256": "7aab351541ae0799d92e5a2c11fee647df4a5b3319037e20ea3721093de9fc33",
+      "ps_sha256": "41ff52de5b1a1e96984c88cb3ba644c6e30f910ba6012dab527364c0c77ec786"
+    },
+    {
+      "ordinal": 264331,
+      "shader": "VertexLitGeneric",
+      "reason": "unknown_model_program",
+      "stride": 32,
+      "vertices": 5425,
+      "vs_sha256": "7aab351541ae0799d92e5a2c11fee647df4a5b3319037e20ea3721093de9fc33",
+      "ps_sha256": "3b0e0741e8eaa45e176ab8167a6e2f6ee73b8b5e59a6f4a28a3e7ee85b58228f"
+    },
+    {
+      "ordinal": 308346,
+      "shader": "VertexLitGeneric",
+      "reason": "unknown_model_program",
+      "stride": 32,
+      "vertices": 16977,
+      "vs_sha256": "6812e9511ea1734cb3a529f9cd30b234f60bb9262a5dc35c55bec26636889210",
+      "ps_sha256": "2219dd553743165fb48948e78071e518af4c7523a70093757b6ce194ea3488db"
+    },
+    {
+      "ordinal": 308349,
+      "shader": "VertexLitGeneric",
+      "reason": "unknown_model_program",
+      "stride": 32,
+      "vertices": 1567,
+      "vs_sha256": "6812e9511ea1734cb3a529f9cd30b234f60bb9262a5dc35c55bec26636889210",
+      "ps_sha256": "e462c4e7f53210e492659f76a917f962e34244015bf61f53de7c92e49f430b72"
+    },
+    {
+      "ordinal": 308688,
+      "shader": "VertexLitGeneric",
+      "reason": "model_pipeline_unsupported",
+      "stride": 32,
+      "vertices": 377,
+      "vs_sha256": "d7f9daf0698882776cffeb478a6bfdf2a480ade55a7bc659bd76b36c589d5174",
+      "ps_sha256": "7f3254f96d75aadd357f0cc4ade5fa52d2b73be71f0477eb660d0d3e81a8fba7"
+    },
+    {
+      "ordinal": 308703,
+      "shader": "VertexLitGeneric",
+      "reason": "model_pipeline_unsupported",
+      "stride": 32,
+      "vertices": 5953,
+      "vs_sha256": "d7f9daf0698882776cffeb478a6bfdf2a480ade55a7bc659bd76b36c589d5174",
+      "ps_sha256": "e462c4e7f53210e492659f76a917f962e34244015bf61f53de7c92e49f430b72"
+    },
+    {
+      "ordinal": 366952,
+      "shader": "VertexLitGeneric",
+      "reason": "model_pipeline_unsupported",
+      "stride": 32,
+      "vertices": 1783,
+      "vs_sha256": "3c653c42a2ce6a7b2201a5b26af6cee4b501625b2d32f1063caafa78d9261d2b",
+      "ps_sha256": "41ff52de5b1a1e96984c88cb3ba644c6e30f910ba6012dab527364c0c77ec786"
+    },
+    {
+      "ordinal": 366957,
+      "shader": "VertexLitGeneric",
+      "reason": "model_pipeline_unsupported",
+      "stride": 32,
+      "vertices": 1248,
+      "vs_sha256": "3c653c42a2ce6a7b2201a5b26af6cee4b501625b2d32f1063caafa78d9261d2b",
+      "ps_sha256": "3b0e0741e8eaa45e176ab8167a6e2f6ee73b8b5e59a6f4a28a3e7ee85b58228f"
+    }
+  ],
+  "preview": {
+    "started": false,
+    "reason": "trace ended before600; missing preview is a consequence, not a second user trigger error"
+  },
+  "exit": {
+    "status": "abnormal",
+    "side": "host",
+    "pid": 19860,
+    "pid_bound_to_trace_filename": true,
+    "time_utc": "2026-10-20T23:44:24.021Z",
+    "exception": "0xc0000005",
+    "runtime_offset": "0xa9d1e",
+    "Host_return_offset": "0x7a774",
+    "Host_caller_return_offset": "0x575ff",
+    "binary_sha256": "30633a1c682f03ed989b18b60d94b21fa12118b723c637894e367349ba1f9041",
+    "disassembly": "RVA0x575fa calls0x7a650 shutdown; RVA0x7a71c calls COM vtable+0x38 GetData; RVA0x7a771 calls COM vtable+0x10 Release, return0x7a774 matches crash stack. Source matches shutdown meshFences.pop_front after GetData(S_OK).",
+    "diagnosis": "fault during shutdown GPU-query Release after module-destroy/command-loop-end log; separate from reason2 trace cutoff. Exact backend lifetime corruption requires further validation.",
+    "automatic_exit_report_pid_bound_flag": false,
+    "automatic_exit_report_limit": "Host PID can be independently bound using trace filename; do not treat backend_objects_remaining0 as clean-exit proof"
+  },
+  "reshade": {
+    "overlay_registration_logged": true,
+    "effects_or_order_verified": false,
+    "causality": "no evidence ReShade caused trace byte cap, application geometry/texture omissions, or established unique exit culprit"
+  },
+  "conclusion": "partial coverage progress; v21 acceptance failed due diagnostic cap and resource limits; data sufficient for implementation fixes, no unchanged recollection requested",
+  "next_combined_work": [
+    "replace repetitive full-Draw trace with bounded/deduplicated audit preserving counts, completion and cleanup",
+    "reduce model geometry expansion, repeated per-pose create/destroy and unstable material fallback churn; validate indexed normals before admission",
+    "reserve infected dependency/output evidence and near-visible sampling across model families rather than shader-name alone",
+    "move abort/normal device-lifetime cleanup before backend destruction; audit GPU-query Release",
+    "audit newly captured VS variants and unsupported pipeline semantics with the same dataset"
+  ]
+}
