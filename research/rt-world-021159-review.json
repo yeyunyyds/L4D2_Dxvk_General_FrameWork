@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "source_build_commit": "dade7572a474e1a1bc3a122e41d56c3f247c9f45",
+  "collection_complete": true,
+  "draws": 549699,
+  "presents": 600,
+  "preview": {
+    "no_aa": {
+      "wall_ms": 30068.5783,
+      "frames": 436,
+      "fps": 14.5002,
+      "model_calls_per_frame": 141.2018
+    },
+    "native_taa": {
+      "wall_ms": 30213.2795,
+      "frames": 347,
+      "fps": 11.4850,
+      "model_calls_per_frame": 195.0605
+    },
+    "comparison_limit": "Sequential dynamic scenes have different visible-model load and are not a matched image or performance A/B."
+  },
+  "host_bottleneck": {
+    "conclusion": "CPU model submission starves the Host GPU queue",
+    "no_aa_ms_per_frame": {
+      "model": 45.8055,
+      "prepare": 30.9345,
+      "skin": 21.9485,
+      "hash": 5.7145,
+      "geometry_build": 6.7033,
+      "mesh_create": 1.8922,
+      "present": 0.1088
+    },
+    "taa_ms_per_frame": {
+      "model": 63.1367,
+      "prepare": 43.1471,
+      "skin": 30.3177,
+      "hash": 8.3041,
+      "geometry_build": 8.3935,
+      "mesh_create": 2.3753,
+      "present": 0.1131
+    },
+    "scope_limit": "QPC scopes are nested and include blocking; values must not be summed."
+  },
+  "host_gpu_3d_percent": {
+    "no_aa": {"samples": 29, "mean": 49.2254, "median": 55.9669, "p95": 70.3595, "max": 71.1172},
+    "native_taa": {"samples": 30, "mean": 54.5416, "median": 53.3357, "p95": 68.3756, "max": 71.6503},
+    "game_pid_engine_rows": 0,
+    "interpretation": "GPU RT work is owned by the Host process; engines overlap and are not summed."
+  },
+  "native_edge_review": "TAA request and native readback succeeded, but visible character-edge blocks/halo remain and the scenes are unmatched.",
+  "next_change": "Audited no-morph three-weight models: persistent base mesh plus per-frame bone transforms, retaining CPU fallback and adding transport-size validation.",
+  "exit": {
+    "status": "abnormal_after_collection",
+    "exception": "client 0xc0000005 at necola.dll+0x1447fc",
+    "backend_objects_remaining": 40
+  }
+}
