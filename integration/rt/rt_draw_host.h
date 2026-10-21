@@ -36,12 +36,17 @@ template<class Device> Bytes pipeline(Device* device, bool coverageV7 = false) {
   if (coverageV7 && FAILED(device->GetRenderState(D3DRS_LIGHTING,&lighting))) { failures |= 1024; }
   if (coverageV7 && FAILED(device->GetRenderState(D3DRS_FOGENABLE,&fog))) { failures |= 2048; }
   if (coverageV7 && FAILED(device->GetRenderState(static_cast<D3DRENDERSTATETYPE>(42),&category))) { failures |= 4096; }
+  DWORD blend[8]{};
+  if(coverageV7) {
+    const D3DRENDERSTATETYPE extra[]={D3DRS_SRCBLEND,D3DRS_DESTBLEND,D3DRS_BLENDOP,D3DRS_SEPARATEALPHABLENDENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
+    for(unsigned i=0;i<8;++i) { if(FAILED(device->GetRenderState(extra[i],&blend[i]))) { failures|=8192u<<i; } }
+  }
   w.u32(failures); w.u32(offset); w.u32(stride); w.u32(frequency);
   for (auto value : state) { w.u32(value); }
   w.u32(viewport.X); w.u32(viewport.Y); w.u32(viewport.Width); w.u32(viewport.Height);
   w.f32(viewport.MinZ); w.f32(viewport.MaxZ);
   w.u32(desc.Width); w.u32(desc.Height); w.u32(uint32_t(desc.Format)); w.u32(count);
-  if (coverageV7) { w.u32(cull);w.u32(lighting);w.u32(fog);w.u32(category); }
+  if (coverageV7) { w.u32(cull);w.u32(lighting);w.u32(fog);w.u32(category);for(auto value:blend) { w.u32(value); } }
   for (unsigned i = 0; i < count; ++i) {
     const auto* bytes = reinterpret_cast<const uint8_t*>(&elements[i]);
     w.data.insert(w.data.end(), bytes, bytes + sizeof(elements[i]));

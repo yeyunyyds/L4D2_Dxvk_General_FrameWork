@@ -11,6 +11,7 @@ SNAPSHOT = struct.Struct('<IIQQQII48fII4I2f')
 MATERIAL = struct.Struct('<QII64s')
 PIPELINE = struct.Struct('<12I2f4I')
 PIPELINE_V7 = struct.Struct('<12I2f5I')  # original CULLMODE follows declaration count
+PIPELINE_V23 = struct.Struct('<12I2f16I')  # adds blend/depth special-pass proof
 PIPELINE_V8 = struct.Struct('<12I2f8I')  # adds original lighting, fog, reserved category42
 STATUS = {1:'valid',2:'module_missing',3:'version_mismatch',4:'read_failed',5:'invalid_stack',
           6:'changed_during_read',7:'invalid_matrices',8:'not_sampled'}
@@ -108,7 +109,7 @@ def analyze(path):
                 if event==9:
                     if pending is not None or uid or len(payload)<8 or len(templates)>=4096:raise ValueError('invalid_template_definition')
                     ident,kind=struct.unpack_from('<2I',payload);raw=payload[8:]
-                    if ident!=len(templates)+1 or kind not in (1,2) or (kind==1 and len(raw) not in (SNAPSHOT.size-40,SNAPSHOT.size+MATERIAL.size-40)) or (kind==2 and not PIPELINE.size<=len(raw)<=PIPELINE_V8.size+65*8):raise ValueError('invalid_template_layout')
+                    if ident!=len(templates)+1 or kind not in (1,2) or (kind==1 and len(raw) not in (SNAPSHOT.size-40,SNAPSHOT.size+MATERIAL.size-40)) or (kind==2 and not PIPELINE.size<=len(raw)<=PIPELINE_V23.size+65*8):raise ValueError('invalid_template_layout')
                     templates[ident]=(kind,raw);continue
                 if len(payload)!=80:raise ValueError('invalid_compact_draw')
                 snapshot_id,pipeline_id=struct.unpack_from('<2I',payload,72)
@@ -180,7 +181,7 @@ def analyze(path):
                 state_at = snapshot_size + 32
                 v8=header.get('coverage_revision') in (8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
                 v7=header.get('coverage_revision') in (7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
-                pipeline=PIPELINE_V8 if v8 else PIPELINE_V7 if v7 else PIPELINE
+                pipeline=PIPELINE_V23 if header.get('coverage_revision')==23 else PIPELINE_V8 if v8 else PIPELINE_V7 if v7 else PIPELINE
                 state = pipeline.unpack_from(payload, state_at)
                 failures, stream_offset, stride, stream_frequency = state[:4]
                 alpha, test, depth, depth_write = state[4:8]
@@ -239,10 +240,12 @@ def analyze(path):
                     model_phase_safe=(180<=counts[3]<540 if shader=='NekoToon' else 360<=counts[3]<540)
                 if header.get('coverage_revision') in (16,17,18,19,20,21,22,23) and shader in ('VertexLitGeneric','NekoToon'):
                     model_phase_safe=(180<=counts[3]<540 if shader=='NekoToon' else 240<=counts[3]<540)
+                source_alpha=(header.get('coverage_revision')==23 and shader in ('VertexLitGeneric','NekoToon') and alpha==1 and depth==1 and depth_write in (0,1)
+                    and state[22:28]==(5,6,1,0,0,0) and state[28]&7==7 and not state[28]&~15 and state[29] in (2,4))
                 pending_bulk_safe=(model_phase_safe and header.get('coverage_revision') in (10,11,12,13,14,15,16,17,18,19,20,21,22,23) and counts[3]>=180 and status==1 and fields[55] and fields[56] and flags==3
                     and (shader in STATIC_SHADERS or header.get('coverage_revision') in (13,14,15,16,17,18,19,20,21,22,23) and shader=='NekoToon') and static_affine(matrices[:16]) and affine_rigid(matrices[16:32]) and camera
                     and fields[57:59]==(0,0) and fields[61:63]==(0.,1.) and fmt==113 and (width,height)==fields[59:61]
-                    and not failures and kind in (1,2) and topology in (4,5) and not alpha and depth==depth_write==1
+                    and not failures and kind in (1,2) and topology in (4,5) and ((not alpha and depth==depth_write==1) or source_alpha)
                     and stream_frequency==1 and stream_offset%4==0 and static_layout(declaration,stride,header.get('coverage_revision') in (11,12,13,14,15,16,17,18,19,20,21,22,23) and shader=='VertexLitGeneric' or header.get('coverage_revision') in (13,14,15,16,17,18,19,20,21,22,23) and shader=='NekoToon'))
                 if header.get('coverage_revision') in (20,21,22,23) and shader=='Infected':
                     infected_decl=bytes.fromhex('000000000200000000000c0002000300000018000100050000002000030006000100000004000a0102000000030000010200100002000301ff00000011000000')
