@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "pass": true,
+  "samples": 156,
+  "source_header_sha256": "4042d008a950751d7a3dfcfdb942e3ab9ec58d44990814e3d480da0acb08e591",
+  "source_vertices": 591413,
+  "triangles": 647425,
+  "old_expanded_API_bytes": 132074700,
+  "indexed_API_bytes": 45619532,
+  "ratio": 0.3454070461640269,
+  "position_UV_topology_winding_parity": true,
+  "finite_normal_unit_lengths": true,
+  "limits": "actual saved canonical inputs through unchanged production Geometry/build; Linux dependency shim, not GPU visibility/performance. Generic source normals remain area-weighted fallback; audited FLOAT3 normal import covered separately in native tests."
+}

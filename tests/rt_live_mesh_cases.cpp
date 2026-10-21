@@ -21,7 +21,8 @@ remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remi
 }
 remixapi_ErrorCode REMIXAPI_CALL mesh(const remixapi_MeshInfo* info,remixapi_MeshHandle* out) {
   if(fail==2) { return result(2); }require(info&&info->surfaces_count==1,"invalid mesh surface count");
-  const auto& s=info->surfaces_values[0];require(s.material&&s.vertices_count==s.indices_count,"expanded mesh correspondence");
+  const auto& s=info->surfaces_values[0];require(s.material&&s.vertices_count&&s.indices_count&&s.indices_count%3==0,"indexed mesh correspondence");
+  for(size_t i=0;i<s.indices_count;++i) { require(s.indices_values[i]<s.vertices_count,"API index exceeds retained vertex range"); }
   require(live.insert(info->hash).second,"duplicate live API mesh handle");++created;
   received.assign(s.vertices_values,s.vertices_values+s.vertices_count);*out=reinterpret_cast<remixapi_MeshHandle>(info->hash);return static_cast<remixapi_ErrorCode>(0);
 }
@@ -63,9 +64,9 @@ int main() {
   { fixture::CategoryDevice d;d.failSet=2;live_mesh::IgnoreScope<fixture::CategoryDevice> scope(&d);scope.finish();require(FAILED(scope.restore),"restore error hidden"); }
   std::cout<<"RT live mesh original Draw category isolation/capture/apply/restore faults: PASS\n";
   auto p=fixture::source();live_mesh::Geometry geometry;
-  require(live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry)&&geometry.vertices.size()==6,"strip expansion");
+  require(live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry)&&geometry.vertices.size()==4,"indexed strip vertex retention");
   const unsigned expected[]={0,1,2,2,1,3};
-  for(unsigned i=0;i<6;++i) { const auto& a=geometry.vertices[i];require(!std::memcmp(a.position,p.bytes.data()+expected[i]*32,12),"strip position changed");require(a.normal[2]==1&&a.color==0xffffffff,"flat normal wrong"); }
+  for(unsigned i=0;i<6;++i) { require(geometry.indices[i]==expected[i],"strip triangle indices changed");const auto& a=geometry.vertices[geometry.indices[i]];require(!std::memcmp(a.position,p.bytes.data()+expected[i]*32,12),"strip position changed");require(a.normal[2]==1&&a.color==0xffffffff,"flat normal wrong"); }
   require(live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_CW,geometry)&&geometry.vertices[0].normal[2]==-1,"CW winding not mirrored");
   p.indices[0]=9;require(!live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry),"out-of-range index accepted");p.indices[0]=0;
   const float nan=std::numeric_limits<float>::quiet_NaN();std::memcpy(p.bytes.data(),&nan,4);require(!live_mesh::build(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry),"NaN position accepted");const float zero=0;std::memcpy(p.bytes.data(),&zero,4);
@@ -77,6 +78,13 @@ int main() {
     std::memset(smooth.bytes.data()+20,0,12);
     require(live_mesh::build(smooth,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry)&&geometry.vertices[0].normal[2]==1&&geometry.vertices[1].normal[1]==1,"invalid normal failed per-vertex geometric fallback");
     std::cout<<"RT audited smooth normal import/per-vertex geometric fallback: PASS\n";
+  }
+  {
+    auto bent=fixture::source();const float z=1;std::memcpy(bent.bytes.data()+3*32+8,&z,4);
+    require(live_mesh::build(bent,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,geometry),"bent indexed geometry rejected");
+    require(geometry.vertices.size()==4&&geometry.indices.size()==6&&geometry.bytes()==4*64+6*4,"indexed byte budget differs");
+    const auto& n=geometry.vertices[1].normal;require(n[0]<0&&n[1]<0&&n[2]>0&&std::abs(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]-1)<1e-5,"area-weighted shared normal incorrect");
+    std::cout<<"RT compact indexed topology/source normals/area-weighted fallback/bytes: PASS\n";
   }
   auto api=fixture::table();live_mesh::Scene scene(&api);
   auto a=scene.draw(p,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1);require(a.success&&a.created&&fixture::created==1,"first API mesh not created");

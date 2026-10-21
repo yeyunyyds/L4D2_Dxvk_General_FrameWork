@@ -54,6 +54,7 @@ class Recorder {
   std::ofstream trace;
   fs::path file;
   uint64_t written = 0, draws = 0, valid = 0, presents = 0, resets = 0, failures = 0, unobserved = 0;
+  std::map<Bytes,uint32_t> templates;
   uint32_t pendingUid = 0;
   Snapshot nextSnapshot;
   uint32_t nextUid = 0, nextKind = 0;
@@ -80,7 +81,7 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.world ? 18 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    Writer header; header.u32(request.world ? 19 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
     if (request.world) { header.u32(uint32_t(world_diagnostics::kCoveragePresents)); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
@@ -100,12 +101,26 @@ public:
       if (request.world && world_runtime::state().active && world_runtime::state().inspect) { world_runtime::state().inspect(device,snapshot,kind,type,args); }
     }
     if (written > 256 * 1024 * 1024) { finish(2); return; }
-    Writer payload; payload.data = pack(snapshot); payload.u32(kind); payload.u32(uint32_t(type));
+    Writer payload; payload.data = pack(snapshot);const auto snapshotBytes=payload.data.size();payload.u32(kind); payload.u32(uint32_t(type));
     for (auto arg : args) { payload.u32(arg); }
     auto state = pipeline(device, request.world); payload.data.insert(payload.data.end(), state.begin(), state.end());
     if (pending) { ++failures; }
     pending = true; pendingUid = uid;
-    record(1, uid, payload.data); ++draws; if (snapshot.status == Status::Valid) { ++valid; }
+    if(request.world&&templates.size()<4094) {
+      const auto define=[&](uint32_t type,const uint8_t* bytes,size_t size) {
+        Bytes key;key.reserve(size+1);key.push_back(uint8_t(type));key.insert(key.end(),bytes,bytes+size);
+        auto found=templates.find(key);
+        if(found==templates.end()) {
+          const auto id=uint32_t(templates.size()+1);Writer definition;definition.u32(id);definition.u32(type);
+          definition.data.insert(definition.data.end(),bytes,bytes+size);record(9,0,definition.data);found=templates.emplace(std::move(key),id).first;
+        }return found->second;
+      };
+      const auto snapshotId=define(1,payload.data.data()+40,snapshotBytes-40),pipelineId=define(2,state.data(),state.size());
+      Writer compact;compact.data.insert(compact.data.end(),payload.data.begin(),payload.data.begin()+40);
+      compact.data.insert(compact.data.end(),payload.data.begin()+snapshotBytes,payload.data.begin()+snapshotBytes+32);
+      compact.u32(snapshotId);compact.u32(pipelineId);record(10,uid,compact.data);
+    }else { record(1,uid,payload.data); }
+    ++draws; if (snapshot.status == Status::Valid) { ++valid; }
   }
   uint32_t kind() const { return nextKind; }
   const std::array<uint32_t,6>& args() const { return nextArgs; }
@@ -144,7 +159,7 @@ public:
     }
     if (request.world && world_runtime::state().active && world_runtime::state().capture && nativeDevice &&
         world_diagnostics::readback(presents)) { world_runtime::state().capture(nativeDevice, presents); }
-    trace.flush(); if (presents >= (request.world ? world_diagnostics::kCoveragePresents : 120u)) { finish(0); }
+    templates.clear();trace.flush(); if (presents >= (request.world ? world_diagnostics::kCoveragePresents : 120u)) { finish(0); }
   }
   void reset(uint32_t uid, HRESULT result) {
     if(finished&&request.world&&world_runtime::state().previewStep&&world_runtime::state().preview) { world_runtime::state().previewStep(nativeDevice,false); }
@@ -158,6 +173,7 @@ public:
     if (request.world) {
       if (world_runtime::state().raytracing) { (void)world_runtime::state().raytracing(false); }
       world_runtime::state().active = false;
+      if(reason!=0&&nativeDevice&&world_runtime::state().release) { world_runtime::state().release(nativeDevice); }
     }
     try {
       if (pending) { ++failures; }

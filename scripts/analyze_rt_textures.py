@@ -6,7 +6,7 @@ import struct
 
 def analyze(directory,events):
     directory=Path(directory);errors=[];files={};bindings=[];mip_counts={};omitted=set()
-    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21') and e.get('code')==0 for e in events)
+    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21','22') and e.get('code')==0 for e in events)
     v19=v20 or any(e.get("event")=="world_coverage_revision" and e.get("value")=="19" and e.get("code")==0 for e in events)
     max_bytes=(512 if v20 else 128 if v19 else 64)*1024*1024;max_refs=256 if v19 else 128;max_file=(24 if v19 else 16)*1024*1024+148
     def check(value,why):
@@ -61,6 +61,10 @@ def analyze(directory,events):
                 if k!='texture_held':check(e[k]>=previous.get(k,0),'regressing_texture_counter')
             check(e['textured_submissions']+e['texture_fallback_submissions']==e['submitted'],'texture_submission_accounting')
             check(e['texture_exports']<=(1024 if v20 else max_refs) and e['texture_held']<=max_refs and e['texture_bytes']<=max_bytes,'texture_runtime_budget')
+            if any(x.get('event')=='world_coverage_revision' and x.get('value')=='22' for x in events):
+                check(0<=e.get('texture_backing_entries',-1)<=1024,'texture_backing_entry_budget')
+                for key in ('texture_backing_hits','texture_source_reads','texture_invalidated'):
+                    check(type(e.get(key)) is int and e[key]>=previous.get(key,0),'texture_backing_counter')
             if v20:
                 check(0<=e.get('texture_resident_bytes',-1)<=128*1024*1024 and 0<=e.get('texture_evidence_bytes',-1)<=64*1024*1024,'texture_working_evidence_budget')
                 check(type(e.get('texture_evicted')) is int and e['texture_evicted']>=previous.get('texture_evicted',0),'texture_eviction_counter')

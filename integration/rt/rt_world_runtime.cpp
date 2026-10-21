@@ -292,14 +292,11 @@ void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
   events << "]}\n" << std::flush;
 }
 live_mesh::Material liveMaterial(world_diagnostics::ModelStage stage) {
-  switch(stage) {
-    case world_diagnostics::ModelStage::NekoRecheck:return live_mesh::Material::Neutral;
-    case world_diagnostics::ModelStage::Combined:return live_mesh::Material::Metal;
-    case world_diagnostics::ModelStage::Matte:return live_mesh::Material::Alpha;
-    case world_diagnostics::ModelStage::Directional:return live_mesh::Material::Emissive;
-    default:return live_mesh::Material::Neutral;
-  }
+  // v22 uses neutral opaque base materials throughout. Synthetic metallic,
+  // translucent and emissive probes obscured the actual clothing comparison.
+  (void)stage;return live_mesh::Material::Neutral;
 }
+
 void apiPayload(const draw_observe::Snapshot& s,const scene_input::Prepared& p,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,
                 const live_mesh::Submission& submission,DWORD ignored) {
   const uint64_t frame=state().presents+1;const bool previous=frame==239||frame==299;
@@ -377,6 +374,7 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
       << ",\"destroyed\":" << apiMeshes.destroyed << ",\"entries\":" << apiMeshes.entries() << ",\"bytes\":" << apiMeshes.bytes
       << ",\"material_updates\":" << apiMeshes.materialUpdates << ",\"textured_submissions\":" << texturedSubmissions << ",\"texture_fallback_submissions\":" << textureFallbackSubmissions << ",\"texture_exports\":" << modelTextures.exported << ",\"texture_bytes\":" << modelTextures.bytes << ",\"texture_held\":" << modelTextures.held() << ",\"texture_read_failures\":" << modelTextures.failed << ",\"texture_budget_deferred\":" << modelTextures.deferred
       << ",\"infected_bakes\":" << infectedMaterials.baked << ",\"infected_bake_deferred\":" << infectedMaterials.deferred << ",\"infected_bake_failures\":" << infectedMaterials.failed
+      << ",\"texture_backing_entries\":"<<modelTextures.backingCount()<<",\"texture_backing_hits\":"<<modelTextures.backingHits<<",\"texture_source_reads\":"<<modelTextures.sourceReads<<",\"texture_invalidated\":"<<modelTextures.invalidated
       << ",\"texture_resident_bytes\":" << modelTextures.residentBytes << ",\"texture_evidence_bytes\":" << modelTextures.evidenceBytes << ",\"texture_evidence_files\":" << modelTextures.evidenceFiles << ",\"texture_evicted\":" << modelTextures.evicted
       << ",\"peak_bytes\":" << apiMeshes.peakBytes << ",\"completed_through\":" << completedMeshFrame << ",\"pending_fences\":" << meshFences.size()
       << ",\"frame_draws\":" << (apiMeshes.frame==frame?apiMeshes.frameDraws:0)
@@ -444,7 +442,7 @@ void unknownEvidence(IDirect3DDevice9* device,const draw_observe::Snapshot& s,ui
     log << "]}\n";std::ofstream output(launch.output/"unknown-model-inputs.jsonl",std::ios::app);output << log.str();output.close();if(!output) { throw std::runtime_error("unknown shader journal"); }
 }
 void targetEvidence(const draw_observe::Snapshot& s,const scene_input::Prepared& p,const live_mesh::Submission& submitted,uint64_t frame) {
-  if(std::strcmp(s.materialInfo.shader.data(),"Infected")||frame%60||targetRows>=256||!std::strcmp(p.reason,"api_model_stage_excluded")) { return; }
+  if((std::strcmp(s.materialInfo.shader.data(),"Infected")&&std::strcmp(s.materialInfo.shader.data(),"VertexLitGeneric"))||frame%60||targetRows>=256||!std::strcmp(p.reason,"api_model_stage_excluded")) { return; }
   if(targetFrame!=frame) { targetFrame=frame;targetFrameRows=0; }if(targetFrameRows>=4) { return; }
   double distance=-1;std::array<double,3> center{};std::array<double,4> clip{};
   if(p.ready&&!p.bytes.empty()) {
@@ -464,7 +462,7 @@ void targetEvidence(const draw_observe::Snapshot& s,const scene_input::Prepared&
     };vertexFile=write("-vertices.bin",p.bytes);indexFile=write("-indices.bin",p.indices);
   }
   events<<"{\"event\":\"infected_near_target\",\"frame\":"<<frame<<",\"ordinal\":"<<s.ordinal<<",\"preview\":"<<(state().preview?"true":"false")
-    <<",\"ready\":"<<(p.ready?"true":"false")<<",\"submitted\":"<<(submitted.success?"true":"false")<<",\"reason\":\""<<p.reason
+    <<",\"shader\":\""<<s.materialInfo.shader.data()<<"\",\"source_material\":"<<s.material<<",\"ready\":"<<(p.ready?"true":"false")<<",\"submitted\":"<<(submitted.success?"true":"false")<<",\"reason\":\""<<p.reason
     <<"\",\"distance_source_units\":"<<distance<<",\"world_center\":["<<center[0]<<','<<center[1]<<','<<center[2]<<"],\"center_clip\":["<<clip[0]<<','<<clip[1]<<','<<clip[2]<<','<<clip[3]
     <<"],\"vertex_file\":\""<<vertexFile<<"\",\"index_file\":\""<<indexFile<<"\",\"vertices_sha256\":\""<<ldb_rt_file::geometrySha256(p.bytes.data(),p.bytes.size())
     <<"\",\"indices_sha256\":\""<<ldb_rt_file::geometrySha256(p.indices.data(),p.indices.size())<<"\",\"payload_bytes\":"<<targetBytes<<"}\n";
@@ -771,14 +769,14 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     initialized = true;
     if (!configure()) { return nullptr; }
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
-    event("coverage_comparison_policy",0,"v21_infected_palette_detail_bright_control_five_VLG_near_target_evidence");
-    event("world_coverage_revision",0,"21");
+    event("coverage_comparison_policy",0,"v22_indexed_geometry_persistent_texture_backing_lossless_trace_pre_destroy_cleanup");
+    event("world_coverage_revision",0,"22");
     event("api_mesh_policy",0,"per_frame_pose_direct_mesh_early_fence_retirement_soft_budget_original_draw_ignored_no_source_thread_changes");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_512MiB_spool_64MiB_evidence_256_refs_4_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
     state() = {true, &bind, &capture, &raytracing, &draw, &audit, &inspect, &model, &scene, &overlayDraw};
-    state().presented=&presented;state().startPreview=&startPreview;state().previewStep=&previewStep;return module;
+    state().presented=&presented;state().startPreview=&startPreview;state().previewStep=&previewStep;state().release=&beforeDeviceDestroy;return module;
   } catch (...) { event("runtime_initialization_exception", uint32_t(E_FAIL)); return nullptr; }
 }
 bool configureRaster() noexcept {
@@ -790,12 +788,33 @@ bool configureRaster() noexcept {
     raytracingRequested = false; event("post_d3d9_startup_raster_request", 0); return true;
   } catch (...) { event("post_d3d9_configuration_exception", uint32_t(E_FAIL)); return false; }
 }
+void invalidateTexture(IDirect3DBaseTexture9* texture) noexcept {
+  if(initialized&&texture) { modelTextures.invalidate(texture); }
+}
+void invalidateSurface(IDirect3DSurface9* surface) noexcept {
+  if(!initialized||!surface) { return; }
+  constexpr GUID textureGuid{0x85c31227,0x3de5,0x4f00,{0x9b,0x3a,0xf1,0x1a,0xc3,0x8c,0x18,0xb5}};
+  static_draw::Ref<IDirect3DTexture9> texture;
+  if(SUCCEEDED(surface->GetContainer(textureGuid,reinterpret_cast<void**>(&texture.value)))) { invalidateTexture(texture.value); }
+}
+void beforeDeviceDestroy(IDirect3DDevice9* device) noexcept {
+  if(device&&device==registered) { event("before_device_destroy",0);shutdown(); }
+}
 void shutdown() noexcept {
+  if(!initialized&&!registered&&!events.is_open()) { return; }
   // The game owns its device. Do not call the standalone API Shutdown path:
   // it force-releases the device and D3D9 object to zero. The Bridge owns both.
   if(state().preview) { endPreview(false,"game_shutdown"); }
   (void)raytracing(false);
   if(registered) {
+    // Include commands from an aborted partial frame, not only prior Presents.
+    // This runs from the device-destroy hook while the backend is still alive.
+    if(apiMeshes.entries()) {
+      auto fence=std::make_unique<MeshFence>();fence->frame=state().presents+1;
+      auto hr=registered->CreateQuery(D3DQUERYTYPE_EVENT,&fence->query.value);
+      if(SUCCEEDED(hr)&&fence->query.value) { hr=fence->query.value->Issue(D3DISSUE_END); }else if(SUCCEEDED(hr)) { hr=E_FAIL; }
+      event("device_release_final_fence",uint32_t(hr));if(SUCCEEDED(hr)) { meshFences.push_back(std::move(fence)); }
+    }
     const ULONGLONG deadline=GetTickCount64()+1500;
     while(!meshFences.empty()&&GetTickCount64()<deadline) {
       const auto hr=meshFences.front()->query.value->GetData(nullptr,0,D3DGETDATA_FLUSH);

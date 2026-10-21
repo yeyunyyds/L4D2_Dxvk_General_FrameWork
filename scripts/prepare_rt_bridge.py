@@ -58,12 +58,13 @@ def prepare(output, bridge, upstream, detours):
     consumer_hooks = ROOT / 'integration/rt/consumer-hooks.patch'
     world_hooks = ROOT / 'integration/rt/world-hooks.patch'
     transport_hooks = ROOT / 'integration/rt/transport-hooks.patch'
-    for current in [base_patch, hooks, consumer_hooks, world_hooks, transport_hooks]:
+    lifecycle_hooks = ROOT / 'integration/rt/lifecycle-hooks.patch'
+    for current in [base_patch, hooks, consumer_hooks, world_hooks, transport_hooks, lifecycle_hooks]:
         subprocess.run(['git', '-C', str(output), 'apply', '--check', str(current)], check=True)
         subprocess.run(['git', '-C', str(output), 'apply', str(current)], check=True)
     base_patch.unlink()
     inputs = {'bridge-hooks.patch': digest(hooks), 'consumer-hooks.patch': digest(consumer_hooks),
-              'world-hooks.patch': digest(world_hooks), 'transport-hooks.patch': digest(transport_hooks)}
+              'world-hooks.patch': digest(world_hooks), 'lifecycle-hooks.patch':digest(lifecycle_hooks), 'transport-hooks.patch': digest(transport_hooks)}
     for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h', 'rt_material_decode.h', 'rt_file_hash.h']),
                         ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h',
                                     'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_scene_draw.h', 'rt_sky_shader.h', 'rt_scene_input.h', 'rt_bulk_static.h', 'rt_model_shader.h', 'rt_model_input.h', 'rt_model_texture.h', 'rt_infected_material.h', 'rt_live_mesh.h']),

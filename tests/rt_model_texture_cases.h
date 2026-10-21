@@ -100,16 +100,28 @@ inline void systemTextureExport() {
     for(auto* texture:{a.value,b.value}) { D3DLOCKED_RECT lock{};D3DSURFACE_DESC desc{};check(texture->GetLevelDesc(0,&desc));check(texture->LockRect(0,&lock,nullptr,0));for(UINT y=0;y<desc.Height;++y) { std::memset(static_cast<uint8_t*>(lock.pBits)+size_t(y)*size_t(lock.Pitch),73,desc.Width*4); }check(texture->UnlockRect(0)); }
     check(d->SetTexture(0,a.value));auto first=working.acquire(d,directory.path,181,1);
     require(first.textured()&&first.evidenceSaved&&working.residentBytes==212,"working cache first export/evidence");
-    check(d->SetTexture(0,b.value));working.completedThrough(180);auto pending=working.acquire(d,directory.path,184,1);
-    require(!pending.textured()&&working.held()==1&&!working.evicted,"working cache evicted uncompleted source");
-    working.completedThrough(181);auto second=working.acquire(d,directory.path,184,1);
-    require(second.textured()&&!second.evidenceSaved&&working.evicted==1&&working.held()==1&&working.residentBytes==276&&working.bytes==488,"working eviction or independent evidence budget");
+    check(d->SetTexture(0,b.value));working.completedThrough(180);auto second=working.acquire(d,directory.path,184,1);
+    require(second.textured()&&!second.evidenceSaved&&working.evicted==1&&working.held()==1&&working.residentBytes==276&&working.bytes==488,"source-only eviction or independent evidence budget");
     require(std::filesystem::is_regular_file(first.path)&&std::filesystem::is_regular_file(second.path),"async runtime backing file deleted");
-    check(d->SetTexture(0,a.value));working.completedThrough(184);auto reused=working.acquire(d,directory.path,186,1);
-    require(reused.textured()&&reused.digest==first.digest&&reused.evidenceSaved&&working.exported==2&&working.bytes==488&&working.evicted==2,"working cache repeated content charged twice");
+    check(d->SetTexture(0,a.value));auto reused=working.acquire(d,directory.path,184,1);
+    require(reused.textured()&&reused.digest==first.digest&&reused.evidenceSaved&&working.exported==2&&working.bytes==488&&working.evicted==1&&working.backingCount()==2,"resource-cookie DDS binding was re-read/re-exported");
+    for(unsigned i=0;i<20;++i) { check(d->SetTexture(0,i%2?a.value:b.value));const auto hit=working.acquire(d,directory.path,184,1);require(hit.textured(),"per-frame read budget affected immutable backing hit"); }
+    require(!working.deferred,"DDS association hit incorrectly charged to read budget");
+    {
+      model_texture::Cache priority;priority.evidenceBytes=48ull*1024*1024;
+      check(d->SetTexture(0,a.value));const auto ordinary=priority.acquire(d,directory.path/"priority",400,1);
+      require(ordinary.textured()&&!ordinary.evidenceSaved,"ordinary DDS consumed reserved infected evidence");
+      const auto promoted=priority.acquire(d,directory.path/"priority",400,1,0,true);
+      require(promoted.textured()&&promoted.evidenceSaved&&priority.evidenceBytes==48ull*1024*1024+212&&priority.exported==1,"priority evidence promotion re-read or failed");
+      D3DLOCKED_RECT update{};check(a.value->LockRect(0,&update,nullptr,0));static_cast<uint8_t*>(update.pBits)[0]^=1;check(a.value->UnlockRect(0));
+      priority.invalidate(a.value);const auto changed=priority.acquire(d,directory.path/"priority",401,1,0,true);
+      require(changed.textured()&&changed.digest!=promoted.digest&&priority.invalidated==1&&priority.sourceReads==2,"updated texture reused stale DDS association");
+      priority.clear();std::cout<<"RT resource-cookie mutation invalidation/new DDS identity: PASS\n";std::cout<<"RT infected priority DDS evidence reservation/promotion: PASS\n";
+    }
     check(d->SetTexture(0,nullptr));working.clear();require(working.residentBytes==0&&!working.held(),"working cache source release");
-    std::cout<<"RT texture working-set completed idle eviction/spool dedup/bounded evidence/backing lifetime: PASS\n";
+    std::cout<<"RT texture source-ref eviction/spool dedup/bounded evidence/backing lifetime: PASS\n";
   }
+  std::cout<<"RT resource-cookie DDS reuse beyond working-set and per-frame read budgets: PASS\n";
   std::cout<<"RT model source mip chain NULLREF/hash/sRGB/small BC levels/partial failure unlock: PASS\n";
   std::cout<<"RT model texture system NULLREF 1024/2048 cache export/rehash/reuse/unlock/clear: PASS; GPU RT unrun\n";
 }

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <atomic>
 
 namespace ldb_rt::model_texture {
 constexpr size_t kMaxPayloadBytes=16u*1024*1024,kMaxMipPayloadBytes=24u*1024*1024,kDdsHeaderBytes=148,kMaxDdsBytes=kMaxMipPayloadBytes+kDdsHeaderBytes;
@@ -84,10 +85,21 @@ class Cache {
   struct Entry { IDirect3DTexture9* texture=nullptr;Source source;uint64_t last=0,cost=0;~Entry() { if(texture) { texture->Release(); } } };
   std::map<std::pair<uintptr_t,bool>,std::unique_ptr<Entry>> entries;
   std::map<std::string,uint64_t> spool;
+  // Resource private data dies with the resource, unlike a recycled COM address.
+  // Backing records own only immutable DDS paths, never source/GPU references.
+  std::map<std::pair<uint64_t,bool>,Source> backing;
+  inline static std::atomic<uint64_t> nextIdentity{1};
+  inline static constexpr GUID identityGuid{0x9fded342,0xd791,0x4aa1,{0x98,0x2f,0x3b,0x45,0x11,0xa7,0x6c,0x52}};
+  static uint64_t identity(IDirect3DTexture9* texture) {
+    uint64_t value=0;DWORD size=sizeof(value);
+    if(SUCCEEDED(texture->GetPrivateData(identityGuid,&value,&size))&&size==sizeof(value)&&value) { return value; }
+    value=nextIdentity.fetch_add(1,std::memory_order_relaxed);
+    return value&&SUCCEEDED(texture->SetPrivateData(identityGuid,&value,sizeof(value),0))?value:0;
+  }
   uint64_t completed=0;
   uint64_t frame=0,frameBytes=0;unsigned frameReads=0;
 public:
-  uint64_t bytes=0,exported=0,failed=0,deferred=0,residentBytes=0,evidenceBytes=0,evidenceFiles=0,evicted=0;
+  uint64_t bytes=0,exported=0,failed=0,deferred=0,residentBytes=0,evidenceBytes=0,evidenceFiles=0,evicted=0,backingHits=0,sourceReads=0,invalidated=0;
   static constexpr uint64_t maxBytes=512ull*1024*1024,maxResidentBytes=128ull*1024*1024,maxEvidenceBytes=64ull*1024*1024;
   struct Limits { uint64_t resident=maxResidentBytes,spoolBytes=maxBytes,evidence=maxEvidenceBytes;size_t refs=256,files=1024; };
 private:
@@ -96,21 +108,43 @@ public:
   Cache():limits{} {}explicit Cache(Limits policy):limits(policy) {}
   void completedThrough(uint64_t value) { completed=value; }
   void clear() { entries.clear();residentBytes=0; }
+  // Releasing this cache's source AddRef is safe immediately after export:
+  // API materials load the persistent DDS path, not this D3D9 texture object.
   bool reserve(uint64_t cost,uint64_t now) {
     if(cost>limits.resident) { return false; }
     while(entries.size()>=limits.refs||cost>limits.resident-residentBytes) {
       auto oldest=entries.end();
       for(auto it=entries.begin();it!=entries.end();++it) {
         const auto last=it->second->last;
-        if(last<=completed&&now>=last&&now-last>=2&&(oldest==entries.end()||last<oldest->second->last)) { oldest=it; }
+        if(now>=last&&(oldest==entries.end()||last<oldest->second->last)) { oldest=it; }
       }
       if(oldest==entries.end()) { return false; }
       residentBytes-=oldest->second->cost;entries.erase(oldest);++evicted;
     }return true;
   }
+  void invalidate(IDirect3DBaseTexture9* base) {
+    if(!base||base->GetType()!=D3DRTYPE_TEXTURE) { return; }
+    auto* texture=static_cast<IDirect3DTexture9*>(base);bool changed=false;
+    for(auto it=entries.begin();it!=entries.end();) {
+      if(it->first.first==reinterpret_cast<uintptr_t>(texture)) { residentBytes-=it->second->cost;it=entries.erase(it);++evicted;changed=true; }else { ++it; }
+    }
+    uint64_t token=0;DWORD size=sizeof(token);
+    if(SUCCEEDED(texture->GetPrivateData(identityGuid,&token,&size))) { (void)texture->FreePrivateData(identityGuid);changed=true; }
+    if(changed) { ++invalidated; }
+  }
   size_t held() const { return entries.size(); }
   // All derived textures share the same spool/evidence budgets as source DDS.
-  bool persist(Source& s,const std::vector<uint8_t>& encoded,const std::filesystem::path& directory) {
+  void evidence(Source& s,const std::filesystem::path& directory,bool priority) {
+    const auto limit=(!priority&&limits.evidence==maxEvidenceBytes)?limits.evidence-16ull*1024*1024:limits.evidence;
+    const auto target=directory/s.file;
+    if(std::filesystem::exists(target)) { s.evidenceSaved=true;return; }
+    const auto size=std::filesystem::file_size(s.path);
+    if(evidenceBytes>limit||size>limit-evidenceBytes) { return; }
+    std::filesystem::create_directories(target.parent_path());std::filesystem::copy_file(s.path,target);
+    evidenceBytes+=size;++evidenceFiles;s.evidenceSaved=true;
+  }
+  size_t backingCount() const { return backing.size(); }
+  bool persist(Source& s,const std::vector<uint8_t>& encoded,const std::filesystem::path& directory,bool priority=false) {
       s.digest=ddsSha256(encoded);
       if(s.digest.empty()) { throw std::runtime_error("texture hash failed"); }
       const auto size=uint64_t(encoded.size());const bool exists=spool.count(s.digest)!=0;
@@ -127,16 +161,10 @@ public:
         if(!output) { throw std::runtime_error("write runtime texture"); }
         spool.emplace(s.digest,size);bytes+=size;++exported;
       } else if(ldb_rt_file::fileSha256(s.path)!=s.digest) { throw std::runtime_error("existing runtime texture differs"); }
-      const auto evidence=directory/s.file;
-      if(std::filesystem::exists(evidence)) {
-        if(ldb_rt_file::fileSha256(evidence)!=s.digest) { throw std::runtime_error("existing texture evidence differs"); }s.evidenceSaved=true;
-      } else if(size<=limits.evidence-evidenceBytes) {
-        std::filesystem::create_directories(evidence.parent_path());
-        std::filesystem::copy_file(s.path,evidence);evidenceBytes+=size;++evidenceFiles;s.evidenceSaved=true;
-      }
+      evidence(s,directory,priority);
     return true;
   }
-  Source acquire(IDirect3DDevice9* d,const std::filesystem::path& directory,uint64_t at,uint32_t material,DWORD slot=0) {
+  Source acquire(IDirect3DDevice9* d,const std::filesystem::path& directory,uint64_t at,uint32_t material,DWORD slot=0,bool priority=false) {
     Source s;s.key="fallback:"+std::to_string(material);
     DWORD alpha=0,func=D3DCMP_ALWAYS,ref=0,srgb=0,u=0,v=0,min=0,mag=0;
     const HRESULT queries[]={d->GetRenderState(D3DRS_ALPHATESTENABLE,&alpha),d->GetRenderState(D3DRS_ALPHAFUNC,&func),
@@ -154,7 +182,16 @@ public:
     const auto found=entries.find(id);
     if(found!=entries.end()) {
       found->second->last=at;const auto& cached=found->second->source;s.evidenceSaved=cached.evidenceSaved;s.path=cached.path;s.file=cached.file;s.digest=cached.digest;s.width=cached.width;s.height=cached.height;s.format=cached.format;s.reason=cached.reason;s.levels=cached.levels;s.fullMipLevels=cached.fullMipLevels;
+      if(priority&&s.textured()&&!s.evidenceSaved) { evidence(s,directory,true);found->second->source.evidenceSaved=s.evidenceSaved; }
       s.key=(s.textured()?s.digest:s.key)+suffix;return s;
+    }
+    const auto token=identity(texture);const auto retained=token?backing.find({token,s.srgb}):backing.end();
+    if(retained!=backing.end()) {
+      ++backingHits;
+      const auto alphaTest=s.alphaTest,alphaRef=s.alphaRef,wrapU=s.wrapU,wrapV=s.wrapV,filter=s.filter;
+      s=retained->second;s.alphaTest=alphaTest;s.alphaRef=alphaRef;s.wrapU=wrapU;s.wrapV=wrapV;s.filter=filter;
+      if(priority&&!s.evidenceSaved) { evidence(s,directory,true);retained->second.evidenceSaved=s.evidenceSaved; }
+      s.key=s.digest+suffix;return s;
     }
     if(frame!=at) { frame=at;frameBytes=0;frameReads=0; }
     D3DSURFACE_DESC desc{};const auto described=texture->GetLevelDesc(0,&desc);
@@ -165,14 +202,15 @@ public:
     if(!payload) { s.reason="base_texture_mip_layout_unsupported";s.key+=suffix;++failed;return s; }
     if(frameReads>=4||payload+148>(kMaxMipPayloadBytes+4*148)-frameBytes) { s.reason="texture_frame_budget";s.key+=suffix;++deferred;return s; }
     if(!reserve(payload+148,at)) { s.reason="texture_cache_budget";s.key+=suffix;++deferred;return s; }
-    ++frameReads;auto encoded=mipDds(texture,desc,s.srgb,s.levels);
+    ++frameReads;++sourceReads;auto encoded=mipDds(texture,desc,s.srgb,s.levels);
     auto entry=std::make_unique<Entry>();texture->AddRef();entry->texture=texture;entry->last=at;
     if(encoded.empty()) { s.reason="base_texture_read_unavailable";++failed; }
     else {
-      if(!persist(s,encoded,directory)) { s.key+=suffix;return s; }
+      if(!persist(s,encoded,directory,priority)) { s.key+=suffix;return s; }
       const auto size=uint64_t(encoded.size());s.reason="sampler0_source_mips_dds_dx10";frameBytes+=size;entry->cost=size;residentBytes+=size;
 
     }
+    if(token&&s.textured()&&backing.size()<limits.files) { backing[{token,s.srgb}]=s; }
     entry->source=s;entries.emplace(id,std::move(entry));s.key=(s.textured()?s.digest:s.key)+suffix;return s;
   }
 };

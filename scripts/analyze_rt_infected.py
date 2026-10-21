@@ -25,7 +25,7 @@ def analyze(directory):
             verified.add(name)
     try:
         for name in ('world-runtime.jsonl','preview-runtime.jsonl'):events.extend(rows(name,8*1024*1024))
-        if not any(e.get('event')=='world_coverage_revision' and e.get('value')=='21' for e in events):return {'schema':1,'pass':True,'status':'not_requested'}
+        if not any(e.get('event')=='world_coverage_revision' and e.get('value') in ('21','22') for e in events):return {'schema':1,'pass':True,'status':'not_requested'}
         recipes=rows('infected-materials.jsonl',1024*1024);check(len(recipes)<=128,'infected_recipe_budget')
         for e in recipes:
             check(e['event']=='infected_diffuse_bake' and type(e['frame']) is int and e['frame']>=241,'infected_recipe_identity')

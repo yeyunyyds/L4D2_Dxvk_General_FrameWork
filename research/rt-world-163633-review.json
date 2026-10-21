@@ -423,5 +423,10 @@
     "reserve infected dependency/output evidence and near-visible sampling across model families rather than shader-name alone",
     "move abort/normal device-lifetime cleanup before backend destruction; audit GPU-query Release",
     "audit newly captured VS variants and unsupported pipeline semantics with the same dataset"
-  ]
+  ],
+  "user_visual_confirmation": {
+    "common_infected": "visible_later_in_capture",
+    "reported_problem": "clothing_color_missing",
+    "limits": "user confirmation of entity presence; does not identify each API submission or shader family"
+  }
 }

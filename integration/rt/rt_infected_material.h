@@ -103,7 +103,7 @@ public:
   uint64_t baked=0,deferred=0,failed=0;
   model_texture::Source acquire(IDirect3DDevice9* d,model_texture::Cache& sources,const std::filesystem::path& directory,uint64_t frame,uint32_t material) {
     model_texture::Source out;out.key="infected-neutral:"+std::to_string(material);out.reason="infected_dependencies_unavailable";
-    const auto base=sources.acquire(d,directory,frame,material,0),detail=sources.acquire(d,directory,frame,material,4),palette=sources.acquire(d,directory,frame,material,5);
+    const auto base=sources.acquire(d,directory,frame,material,0,true),detail=sources.acquire(d,directory,frame,material,4,true),palette=sources.acquire(d,directory,frame,material,5,true);
     Parameters p{};float vs[8]{};
     if(FAILED(d->GetPixelShaderConstantF(3,p.range.data(),1))||FAILED(d->GetPixelShaderConstantF(4,p.tint.data(),1))||
        FAILED(d->GetPixelShaderConstantF(10,p.atlas.data(),1))||FAILED(d->GetVertexShaderConstantF(50,vs,2))) { ++failed;out.reason="infected_constant_query_failed";return out; }
@@ -121,7 +121,7 @@ public:
     if(encoded.empty()) { ++failed;out.reason="infected_bake_failed";return out; }
     out.width=width;out.height=height;out.format=uint32_t(D3DFMT_A8R8G8B8);out.levels=out.fullMipLevels=model_texture::fullLevels(width,height);
     out.wrapU=base.wrapU;out.wrapV=base.wrapV;out.filter=base.filter;
-    if(!sources.persist(out,encoded,directory)) { ++deferred;return out; }
+    if(!sources.persist(out,encoded,directory,true)) { ++deferred;return out; }
     std::ofstream proof(directory/"infected-materials.jsonl",std::ios::app);proof<<std::setprecision(9);
     proof<<"{\"event\":\"infected_diffuse_bake\",\"frame\":"<<frame<<",\"material\":"<<material<<",\"output_sha256\":\""<<out.digest<<"\",\"output_file\":\""<<out.file<<"\",\"output_evidence_saved\":"<<(out.evidenceSaved?"true":"false")<<",\"parameters\":[";
     bool comma=false;for(const auto* row:{&p.range,&p.tint,&p.atlas,&p.detailU,&p.detailV}) { for(float v:*row) { if(comma) { proof<<','; }comma=true;proof<<v; } }

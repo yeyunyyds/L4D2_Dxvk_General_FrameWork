@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "pass": true,
+  "input_bytes": 268436212,
+  "output_bytes": 146629132,
+  "ratio": 0.5462345445405108,
+  "dictionary_definitions": 187744,
+  "compact_draws": 399330,
+  "raw_fallback_draws": 0,
+  "counter_and_conversion_parity": true,
+  "original_stop_reason_preserved": 2,
+  "projected_600_present_bytes_at_observed_average": 190016153,
+  "limit_bytes": 268435456,
+  "elapsed_seconds": 43.599714317999315,
+  "limits": "lossless re-encoding of real v21 records and v22 parser parity; actual future workloads may differ"
+}

@@ -44,7 +44,7 @@ def analyze(directory):
     if not path.is_file():return {'schema':1,'status':'not_requested','pass':True,'samples':[]}
     if path.stat().st_size>4*1024*1024:raise ValueError('Runtime event budget exceeded')
     events=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21') for e in events)
+    v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21','22') for e in events)
     v19=v20 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='19' and e.get('code')==0 for e in events)
     v18=v19 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='18' and e.get('code')==0 for e in events)
     v17=v18 or any(e.get('event')=='world_coverage_revision' and e.get('code')==0 and e.get('value')=='17' for e in events)

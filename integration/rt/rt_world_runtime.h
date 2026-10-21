@@ -21,9 +21,13 @@ struct State {
   bool preview=false;
   void (*startPreview)(IDirect3DDevice9*) noexcept = nullptr;
   void (*previewStep)(IDirect3DDevice9*,bool) noexcept = nullptr;
+  void (*release)(IDirect3DDevice9*) noexcept = nullptr;
 };
 inline State& state() { static State value; return value; }
 HMODULE load(const draw_observe::Request& request) noexcept;
 bool configureRaster() noexcept;
+void invalidateTexture(IDirect3DBaseTexture9* texture) noexcept;
+void invalidateSurface(IDirect3DSurface9* surface) noexcept;
+void beforeDeviceDestroy(IDirect3DDevice9* device) noexcept;
 void shutdown() noexcept;
 } // namespace ldb_rt::world_runtime

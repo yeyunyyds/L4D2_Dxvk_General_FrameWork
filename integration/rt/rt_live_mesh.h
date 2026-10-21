@@ -56,26 +56,35 @@ inline bool build(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVE
   if(!triangles || triangles>131072 || (type!=D3DPT_TRIANGLELIST&&type!=D3DPT_TRIANGLESTRIP) ||
      indices.size()!=(type==D3DPT_TRIANGLELIST?uint64_t(triangles)*3:uint64_t(triangles)+2)) { return false; }
   for(auto i:indices) { if(i>=count) { return false; } }
-  out.vertices.resize(size_t(triangles)*3);out.indices.resize(size_t(triangles)*3);
+  // Keep Source's indexed vertex/seam boundaries. Area-weighted geometric
+  // normals are an explicit fallback; audited FLOAT3 normals take precedence.
+  // This avoids allocating 3 independent 64-byte vertices for every triangle.
+  out.vertices.resize(count);out.indices.resize(size_t(triangles)*3);
+  std::vector<std::array<double,3>> accumulated(count);
+  for(size_t i=0;i<count;++i) {
+    auto& vertex=out.vertices[i];vertex={};float v[5]{};std::memcpy(v,source.bytes.data()+i*32,20);
+    for(float x:v) { if(!std::isfinite(x)||std::abs(x)>1e7f) { out={};return false; } }
+    std::memcpy(vertex.position,v,12);std::memcpy(vertex.texcoord,v+3,8);vertex.color=0xffffffff;
+  }
   for(uint32_t t=0;t<triangles;++t) {
     uint32_t ix[3]{};for(unsigned j=0;j<3;++j) { ix[j]=indices[type==D3DPT_TRIANGLELIST?size_t(t)*3+j:size_t(t)+j]; }
-    if(type==D3DPT_TRIANGLESTRIP && t%2) { std::swap(ix[0],ix[1]); }
+    if(type==D3DPT_TRIANGLESTRIP&&t%2) { std::swap(ix[0],ix[1]); }
     if(cull==D3DCULL_CW) { std::swap(ix[0],ix[1]); }
-    float p[3][5]{};
-    for(unsigned j=0;j<3;++j) { std::memcpy(p[j],source.bytes.data()+size_t(ix[j])*32,20);
-      for(float x:p[j]) { if(!std::isfinite(x)||std::abs(x)>1e7f) { out={};return false; } } }
-    double u[3]{},v[3]{};for(unsigned j=0;j<3;++j) { u[j]=double(p[1][j])-p[0][j];v[j]=double(p[2][j])-p[0][j]; }
-    double n[]={u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]};
-    const double length=std::sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]);
-    if(length<1e-12) { n[0]=0;n[1]=0;n[2]=1; }else { for(double& x:n) { x/=length; } }
-    for(unsigned j=0;j<3;++j) { const size_t i=size_t(t)*3+j;auto& a=out.vertices[i];a={};
-      std::memcpy(a.position,p[j],12);std::memcpy(a.texcoord,p[j]+3,8);for(unsigned k=0;k<3;++k) { a.normal[k]=float(n[k]); }
-      if(smooth) {
-        float normal[3]{};std::memcpy(normal,source.bytes.data()+size_t(ix[j])*32+20,12);
-        const double norm=std::sqrt(double(normal[0])*normal[0]+double(normal[1])*normal[1]+double(normal[2])*normal[2]);
-        if(std::isfinite(norm)&&norm>1e-8) { for(unsigned k=0;k<3;++k) { a.normal[k]=float(normal[k]/norm); } }
-      }
-      a.color=0xffffffff;out.indices[i]=uint32_t(i); }
+    double u[3]{},v[3]{};
+    for(unsigned k=0;k<3;++k) { u[k]=double(out.vertices[ix[1]].position[k])-out.vertices[ix[0]].position[k];v[k]=double(out.vertices[ix[2]].position[k])-out.vertices[ix[0]].position[k]; }
+    const double n[]={u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]};
+    for(unsigned j=0;j<3;++j) { out.indices[size_t(t)*3+j]=ix[j];for(unsigned k=0;k<3;++k) { accumulated[ix[j]][k]+=n[k]; } }
+  }
+  for(size_t i=0;i<count;++i) {
+    auto n=accumulated[i];double length=0;
+    if(smooth) {
+      float sourceNormal[3]{};std::memcpy(sourceNormal,source.bytes.data()+i*32+20,12);
+      length=std::sqrt(double(sourceNormal[0])*sourceNormal[0]+double(sourceNormal[1])*sourceNormal[1]+double(sourceNormal[2])*sourceNormal[2]);
+      if(std::isfinite(length)&&length>1e-8) { for(unsigned k=0;k<3;++k) { n[k]=sourceNormal[k]; } }else { length=0; }
+    }
+    if(length==0) { length=std::sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]); }
+    if(!std::isfinite(length)||length<1e-12) { n={0,0,1};length=1; }
+    for(unsigned k=0;k<3;++k) { out.vertices[i].normal[k]=float(n[k]/length); }
   }
   return true;
 }
@@ -95,7 +104,7 @@ inline const char* name(Budget reason) {
     case Budget::LiveBytes:return "live_geometry_bytes";case Budget::Entries:return "mesh_entries";
     case Budget::GpuBacklog:return "gpu_backlog";default:return "none"; }
 }
-struct Limits { uint64_t bytes=256ull*1024*1024,frameBytes=96ull*1024*1024;unsigned draws=512,entries=512; };
+struct Limits { uint64_t bytes=256ull*1024*1024,frameBytes=96ull*1024*1024;unsigned draws=1024,entries=2048; };
 struct Submission {
   bool success=false,created=false,deferred=false;Budget budget=Budget::None;
   uint64_t handle=0,triangles=0,materialHandle=0;bool materialUpdated=false,textured=false;uint32_t code=0;const char* operation="input";std::string key;
@@ -130,7 +139,7 @@ public:
     const auto materialKey=sourceMaterial.key;
     auto materialFound=materials.find(materialKey);
     if(materialFound==materials.end()) {
-      if(materials.size()>=256) { return defer(Budget::Entries,at); }
+      if(materials.size()>=512) { return defer(Budget::Entries,at); }
       MaterialRecord record;record.hash=0x4c444d4100000000ull+nextMaterial++;
       materialFound=materials.emplace(materialKey,record).first;
     }
