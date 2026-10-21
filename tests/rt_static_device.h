@@ -103,6 +103,12 @@ struct Graphics {
   HRESULT GetRenderTarget(DWORD, IDirect3DSurface9** out) { *out = nullptr; return E_NOTIMPL; }
   HRESULT GetRenderState(D3DRENDERSTATETYPE type, DWORD* out) {
     switch (DWORD(type)) {
+    case D3DRS_SRCBLEND: *out=D3DBLEND_SRCALPHA;break;
+    case D3DRS_DESTBLEND: *out=D3DBLEND_INVSRCALPHA;break;
+    case D3DRS_BLENDOP: *out=D3DBLENDOP_ADD;break;
+    case D3DRS_SEPARATEALPHABLENDENABLE: case D3DRS_STENCILENABLE: case D3DRS_CLIPPLANEENABLE: *out=0;break;
+    case D3DRS_COLORWRITEENABLE: *out=15;break;
+    case D3DRS_ZFUNC: *out=D3DCMP_LESSEQUAL;break;
     case D3DRS_ALPHABLENDENABLE: *out = alpha; break;
     case D3DRS_ALPHATESTENABLE: *out = alphaTest; break;
     case D3DRS_ZWRITEENABLE: *out = depthWrite; break;
