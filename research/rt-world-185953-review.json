@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "archive": "rt-world-20261021-185953-2d2b49a7.zip",
+  "build_commit": "da01257c3318c40a06836433e699ff03e8f9bf90",
+  "pilot_revision": 26,
+  "collection": "incomplete",
+  "last_complete_present": 243,
+  "failure": {
+    "observer_event": "api_mesh_fence_failed",
+    "hresult_unsigned": 2289436780,
+    "hresult_hex": "0x8876086c",
+    "hresult_name": "D3DERR_DEVICELOST",
+    "vulkan_error": "VK_ERROR_DEVICE_LOST"
+  },
+  "last_frame": {
+    "submitted": 3273,
+    "created": 275,
+    "reused": 2998,
+    "skinned_submitted": 3102,
+    "skinned_created": 131,
+    "skinned_reused": 2971,
+    "entries": 135,
+    "bytes": 30269980,
+    "pending_fences": 1,
+    "omitted": 0
+  },
+  "user_observation": "Characters fragmented and the screen froze; the process stayed alive.",
+  "diagnosis": "The v26 stride patch loaded successfully but did not make the persistent GPU-skin path safe. Stable v24 CPU skinning versus failed v25/v26 runs isolates persistent GPU skinning as the unsafe boundary without proving the remaining internal Remix defect.",
+  "required_fix": "Disable persistent GPU skinning by default, restore CPU-skinned pose meshes, and require zero skin counters in v27 evidence.",
+  "pass": false
+}

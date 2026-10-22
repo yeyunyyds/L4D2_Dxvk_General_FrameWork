@@ -29,7 +29,7 @@ inline bool ownDraw(scene_input::Prepared& out,const scene_input::Data& input,ui
   else { out.reason="model_owned_draw_kind";return false; }
   out.ownedDraw=true;return true;
 }
-inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest) {
+inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest,bool allowPersistentGpuSkinning=false) {
   runtime_profile::Scope timing(runtime_profile::Stage::Skin);
   scene_input::Prepared out;
   if (FAILED(input.result)) {
@@ -92,7 +92,8 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
   }
   // Preserve immutable bind-pose geometry and move only the audited three-
   // weight palette each Draw. Morph targets retain the exact CPU path below.
-  const bool gpuSkin=(profile==model_shader::Profile::Skin3||profile==model_shader::Profile::Neko3)&&input.constants[13][0]==0;
+  const bool gpuSkin=allowPersistentGpuSkinning&&
+    (profile==model_shader::Profile::Skin3||profile==model_shader::Profile::Neko3)&&input.constants[13][0]==0;
   if(gpuSkin) {
     constexpr uint32_t maxBones=256;
     if(input.stride!=32||input.vertices.size()!=size_t(input.count)*32||!input.count||uint64_t(input.first)+input.count>model_shader::kMaxVertices||

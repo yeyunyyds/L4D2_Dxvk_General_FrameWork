@@ -88,7 +88,10 @@ int main() {
     for(unsigned i=0;i<4;++i) { input.constants[8+i][i]=1;const float vertex[]={float(i&1),float(i>>1),0};const float uv[]={float(i&1),float(i>>1)};const int16_t weights[]={8191,16383};const uint8_t bones[]={2,0,1,255};
       std::memcpy(input.vertices.data()+i*32,vertex,12);std::memcpy(input.vertices.data()+i*32+12,weights,4);std::memcpy(input.vertices.data()+i*32+16,bones,4);std::memcpy(input.vertices.data()+i*32+24,uv,8); }
     for(unsigned bone=0;bone<3;++bone) { input.constants[58+bone*3]={1,0,0,float(bone*10)};input.constants[59+bone*3]={0,1,0,0};input.constants[60+bone*3]={0,0,1,0}; }
-    auto prepared=model_input::reconstruct(snapshot,input,"21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b");
+    const auto digest="21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b";
+    auto cpuPrepared=model_input::reconstruct(snapshot,input,digest);
+    require(!cpuPrepared.skinning.enabled&&std::string(cpuPrepared.reason)=="original_vs_three_weight","default path must retain stable CPU skinning after device loss");
+    auto prepared=model_input::reconstruct(snapshot,input,digest,true);
     require(prepared.skinning.enabled&&prepared.skinning.weights.size()==12&&prepared.skinning.transforms.size()==3,"audited three-weight bind pose did not select GPU skinning");
     for(size_t vertex=0;vertex<4;++vertex) {
       float bind[3]{},skinned[3]{};std::memcpy(bind,prepared.bytes.data()+vertex*32,12);const size_t base=vertex*prepared.skinning.bonesPerVertex;
@@ -102,9 +105,9 @@ int main() {
     prepared.skinning.transforms[1][3]=20;const auto second=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);
     require(second.success&&!second.created&&second.handle==first.handle&&fixture::lastBoneX==20&&skins.skinnedCreated==1&&skins.skinnedReused==1,"bone update recreated persistent mesh");
     require(!skins.retire(2,4,true),"persistent skin cleanup");
-    input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,"21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b");
+    input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,digest,true);
     require(!morphed.skinning.enabled&&std::string(morphed.reason)=="original_vs_three_weight","morph must retain CPU skin fallback");
-    std::cout<<"RT audited no-morph GPU skin/persistent mesh/bone update/morph CPU fallback: PASS\n";
+    std::cout<<"RT default CPU skin safety path/isolated GPU skin fixture/persistent mesh/bone update/morph fallback: PASS\n";
   }
   {
     auto smooth=fixture::source();smooth.elements={{0,20,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,0},D3DDECL_END()};
