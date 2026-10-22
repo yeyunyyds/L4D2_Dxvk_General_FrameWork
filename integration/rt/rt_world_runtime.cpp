@@ -838,7 +838,7 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     if (!events || !request.world || sizeof(void*) != 8) { return nullptr; }
     events << std::setprecision(9);
     const auto path = request.runtime / "d3d9.dll";
-    if (ldb_rt_file::fileSha256(path) != "21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7") {
+    if (ldb_rt_file::fileSha256(path) != "9c8571ac417b6fbfde5533b0bf83f1dcb11fbceb10e9431d0c0a73afc1c65d34") {
       event("runtime_sha_mismatch", ERROR_INVALID_DATA); return nullptr;
     }
     for (const auto* name : {L"DXVK_LOG_PATH", L"DXVK_METRICS_PATH"}) { SetEnvironmentVariableW(name, request.output.c_str()); }

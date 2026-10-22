@@ -50,7 +50,7 @@ def verify_package(root):
         if name not in manifest['files']:raise ValueError('World runtime catalog missing from manifest')
         runtime=json.loads((root/name).read_text(encoding='utf-8'))
         if (runtime.get('scope')!='rt_prerequisites' or runtime['runtime_files']['d3d9.dll']['sha256']!=
-                '21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7'):
+                '9c8571ac417b6fbfde5533b0bf83f1dcb11fbceb10e9431d0c0a73afc1c65d34'):
             raise ValueError('World runtime pin differs')
     return manifest
 

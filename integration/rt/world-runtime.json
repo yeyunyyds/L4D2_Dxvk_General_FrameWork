@@ -1,35 +1,43 @@
 {
   "schema": 1,
   "scope": "rt_prerequisites",
-  "build_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
+  "build_commit": "ddb9596e1fb427ff0da3ce24ebbef19ca1072686",
   "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
   "runtime_execution": "unrun",
+  "runtime_patches": {
+    "skinning": {
+      "sha256": "a07c39f7b32fad2d2c1b6d2996fa67736eaed1c239469cb5ff9b5ea2e1b99690",
+      "source_sha256": "157894bad010f7a1f8bf21077a99b7d09a45ea5894d4bf43e3801a33e4c577dd",
+      "weight_stride": "sizeof(float)*bonesPerVertex"
+    }
+  },
+  "vulkan_loader": {
+    "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+    "commit": "fb78607414e154c7a5c01b23177ba719c8a44909",
+    "headers_commit": "409c16be502e39fe70dd6fe2d9ad4842ef2c9a53",
+    "sha256": "31ee4674b814b712aaa9899005e9d8dde9a07a2e2cb6f6004daa7439e4027948",
+    "scope": "app_local_standard_loader_not_gpu_driver"
+  },
   "game_hook": "not_installed",
   "source_threading": "unrun",
   "payloads": [
     {
-      "name": "rt-prereq-payload-25802f8447a81def30122c8d.zip",
-      "sha256": "25802f8447a81def30122c8d8a6511ee7cec86b321826526c0d4ce35c5f94814",
-      "size": 78275253,
-      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+      "name": "rt-prereq-payload-e57babdd4676a42857181ec3.zip",
+      "sha256": "e57babdd4676a42857181ec3cb206cdadd921877f47ce88756bd1a6a947d70f2",
+      "size": 78275935,
+      "ref": "36f8209d5f5359bd30611a028c6241dc7f78bcac"
     },
     {
-      "name": "rt-prereq-payload-cc8723b1f848c058238dcf27.zip",
-      "sha256": "cc8723b1f848c058238dcf27c0fa610a05654c707672341bfeae24ca127e7633",
+      "name": "rt-prereq-payload-01ef47c5e9fff20e44f017cb.zip",
+      "sha256": "01ef47c5e9fff20e44f017cb5a11feb4a04089f53c6cb7a4dbde1393f2a2e11a",
       "size": 95644514,
-      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
+      "ref": "36f8209d5f5359bd30611a028c6241dc7f78bcac"
     },
     {
-      "name": "rt-prereq-payload-b6201876eb36a3699d3c04ed.zip",
-      "sha256": "b6201876eb36a3699d3c04ed97fe90b395c1ca803f839d2f586290bab7125f15",
-      "size": 89038588,
-      "ref": "fbcf82c9bcdec9aa4fc0fe9a7b3caa5f99eb08e0"
-    },
-    {
-      "name": "rt-prereq-payload-008180112dfe090e53cf769b.zip",
-      "size": 259360,
-      "sha256": "008180112dfe090e53cf769bbf4f37c170b2b6070e8cbb8e3d96b3817ac4cb30",
-      "ref": "75e75334074a15f2a912cc91396be2280d3733ec"
+      "name": "rt-prereq-payload-416d899bbb490aa72e5b86cb.zip",
+      "sha256": "416d899bbb490aa72e5b86cbda1b562cbb7180c1238b91d10d18b82dec49f403",
+      "size": 89310528,
+      "ref": "36f8209d5f5359bd30611a028c6241dc7f78bcac"
     }
   ],
   "runtime_files": {
@@ -71,7 +79,7 @@
     },
     "d3d9.dll": {
       "size": 210378240,
-      "sha256": "21c826bac9fe6a27b28d0b1300f838efa21b010b24216c44f4728b266d8a8ec7"
+      "sha256": "9c8571ac417b6fbfde5533b0bf83f1dcb11fbceb10e9431d0c0a73afc1c65d34"
     },
     "gf.dll": {
       "size": 587800,
@@ -146,8 +154,8 @@
       "sha256": "8ca6c5ae3bea150892db021bb3267f9e01e5e4d5da40b3f75f1de7646cecdff1"
     },
     "rt-runtime-smoke.exe": {
-      "size": 291328,
-      "sha256": "16313c79783afe6251e82cc2b121393553d894394dc9c6cab4f7421032942b4d"
+      "size": 321536,
+      "sha256": "6d2d2f5d3b4d5314753990dab07c8692bc8b48a25ff425654fdbd3499806d04d"
     },
     "rtxio.dll": {
       "size": 2622976,
@@ -415,7 +423,7 @@
     },
     "usd/plugins/RemixCategories/RemixCategories.dll": {
       "size": 69120,
-      "sha256": "594b1642bb5ba36e9225d063dec594cf02136a2014251da797e705b05d59c060"
+      "sha256": "3132e5d7430596a86422e11f06bff51b403e93cb0800c3931df16c152cd08102"
     },
     "usd/plugins/RemixCategories/generatedSchema.usda": {
       "size": 13073,
@@ -427,7 +435,7 @@
     },
     "usd/plugins/RemixParticleSystem/RemixParticleSystem.dll": {
       "size": 200192,
-      "sha256": "da436d0ea0f33ab4f488460119c60bb983b8d437398c5e77f9e55b8d7559a2a5"
+      "sha256": "7d8d781f41c57cb78bc64492a1f8c880e2ef73ee2680017b1495f0d73ee18138"
     },
     "usd/plugins/RemixParticleSystem/generatedSchema.usda": {
       "size": 49208,
@@ -717,13 +725,13 @@
       "size": 905752,
       "sha256": "0981175ac33229b3358b8d64d633dbd7616146d51376b60a388aac60870a2564"
     },
+    "vulkan-1.dll": {
+      "size": 687104,
+      "sha256": "31ee4674b814b712aaa9899005e9d8dde9a07a2e2cb6f6004daa7439e4027948"
+    },
     "work.dll": {
       "size": 40984,
       "sha256": "5c41ada21cd1cdcface40103366fa48a9f6bcb87ebb822efea5c227cd94eda30"
-    },
-    "vulkan-1.dll": {
-      "sha256": "31ee4674b814b712aaa9899005e9d8dde9a07a2e2cb6f6004daa7439e4027948",
-      "size": 687104
     }
   },
   "python": {
@@ -731,13 +739,7 @@
     "url": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
     "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8"
   },
-  "native_build_commit": "9c3b2f860095d4e75e283d24dd9a54c0343554ec",
-  "code_commit": "58c732be9396aec53f2e0516d8d43ba00750747c",
-  "vulkan_loader": {
-    "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
-    "commit": "fb78607414e154c7a5c01b23177ba719c8a44909",
-    "headers_commit": "409c16be502e39fe70dd6fe2d9ad4842ef2c9a53",
-    "scope": "app_local_standard_loader_not_gpu_driver"
-  },
-  "world_use": "same runtime/dependencies as passed B580 standalone v6; game execution unrun"
+  "native_build_commit": "ddb9596e1fb427ff0da3ce24ebbef19ca1072686",
+  "code_commit": "ddb9596e1fb427ff0da3ce24ebbef19ca1072686",
+  "world_use": "patched v26 skinning runtime; Windows native build and dependency load passed; L4D2 B580 execution unrun"
 }
