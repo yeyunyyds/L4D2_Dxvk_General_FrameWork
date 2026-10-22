@@ -34,6 +34,10 @@ SUPPORT_FILES=('integration/rt/baseline.json','research/rt-source-audit.json',
 
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def save(path,value):Path(path).write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+def completed_preview(path,session):
+    try:marker=json.loads(Path(path).read_text(encoding='utf-8'))
+    except (OSError,json.JSONDecodeError):return False
+    return marker.get('session')==session and marker.get('complete') is True
 
 
 def verify_package(root):
@@ -462,8 +466,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if beta:notify('RT Beta v29: after the 30-frame safety gate, play normally for five minutes. Complete scene/model coverage stays active; GPU skinning is capped at the B580-verified 16 submissions per frame and excess models use the stable CPU path. Do not press F9 again. Exit only when this window asks.')
-        elif world:notify('World Pilot v29: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. The 600-frame diagnostic and 60-second live preview run automatically. GPU skinning uses the B580-verified maximum of 16 successful submissions per frame; every excess model uses the stable CPU path. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
+        if beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
+        elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None
@@ -512,8 +516,10 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
             while not preview_done.is_file() and time.monotonic()<preview_deadline:
                 if pid not in game_pids():break
                 time.sleep(.5)
-            report['preview']='collected_requires_review' if preview_done.is_file() else 'incomplete'
-            if preview_done.is_file():notify(('Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
+            preview_complete=completed_preview(preview_done,session)
+            report['preview']='collected_requires_review' if preview_complete else 'incomplete'
+            if preview_complete:notify(('Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
+            elif preview_done.is_file():notify('Preview stopped early and retained partial evidence. Collecting final diagnostics; this run has not passed.')
         if gpu_sampler:
             report['gpu_sampler_stopped']=gpu_sampler.stop();gpu_sampler=None
         finish_capture(directory,root,pid,report,notify)

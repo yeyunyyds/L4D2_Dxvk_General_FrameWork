@@ -94,5 +94,20 @@ class RuntimeEvidenceTests(unittest.TestCase):
                 file=f'native-{mode}.bgra8';(root/file).write_bytes(bytes(16));events.append(dict(event='native_edge_readback',mode=mode,file=file,width=2,height=2,source_width=2,source_height=2,x=0,y=0,resampled=False,copy_code=0,hresult=0,written=True))
             (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
             result=analyze(root);self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['gpu_skinning']['status'],'safety_limit_requires_image_review')
+    def test_v30_retains_a_bounded_gpu_baseline_in_high_density_frames(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);events=[dict(event='pilot_delivery_revision',value='30'),
+                dict(event='runtime_timing_window',wall_ms=1,segment='preview_no_aa',scopes={}),
+                dict(event='native_taa_requested',scale_code=0,taa_code=0,resolution_scale=1,upscaler_type=3),
+                dict(event='api_mesh_frame',skinned_submitted=4,skinned_created=1,skinned_reused=3,skinned_frame_submitted=4,skinned_frame_limit=4,skinned_frame_max=16,
+                     gpu_skin_previous_frame_draws=629,gpu_skin_density_limit=256,gpu_skin_high_density_limit=4,gpu_skin_density_throttle_frames=59),
+                dict(event='preview_end',skinned_submitted=4,skinned_created=1,skinned_reused=3,gpu_skin_density_throttle_frames=64)]
+            for mode in ('no-aa','taa'):
+                file=f'native-{mode}.bgra8';(root/file).write_bytes(bytes(16));events.append(dict(event='native_edge_readback',mode=mode,file=file,width=2,height=2,source_width=2,source_height=2,x=0,y=0,resampled=False,copy_code=0,hresult=0,written=True))
+            def review():
+                (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events));return analyze(root)
+            result=review();self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['gpu_skinning']['status'],'density_adaptive_requires_image_review')
+            events[3]['skinned_frame_submitted']=5
+            self.assertIn('invalid_gpu_skinning_density_policy',review()['errors'])
 
 if __name__=='__main__':unittest.main()

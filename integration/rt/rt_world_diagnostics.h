@@ -16,6 +16,22 @@ inline const char* name(Phase phase) noexcept {
 }
 constexpr uint64_t kCoveragePresents=600;
 inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 && frame<=kCoveragePresents && frame%60==0); }
+// Persistent GPU skinning is safe at 16 submissions in the validated low-density
+// scene. A later gameplay beta lost the B580 device while total model traffic was
+// roughly 629 submissions per frame even though this limit was respected. Use the
+// preceding complete frame as a density gate. High-density scenes keep a small
+// GPU baseline instead of disabling the path. Zero means that no representative
+// frame exists yet, so the stable CPU pose path remains active for the warm-up.
+constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
+constexpr unsigned kGpuSkinModelDensityLimit=256;
+constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
+inline unsigned persistentGpuSkinLimit(unsigned previousModelDraws) noexcept {
+  return previousModelDraws==0?0:previousModelDraws<=kGpuSkinModelDensityLimit?
+    kGpuSkinSubmissionsPerFrame:kGpuSkinHighDensitySubmissionsPerFrame;
+}
+inline bool allowPersistentGpuSkin(unsigned previousModelDraws,unsigned currentGpuSkinDraws) noexcept {
+  return currentGpuSkinDraws<persistentGpuSkinLimit(previousModelDraws);
+}
 enum class ModelStage : uint32_t { Off, Ordinary, Neko, Combined, Recovery, NekoPreserve, NekoRecheck, Matte, Directional, Preview, Count };
 constexpr size_t kModelStages=size_t(ModelStage::Count);
 constexpr unsigned kModelSampleLimit=64;

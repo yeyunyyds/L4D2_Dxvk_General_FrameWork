@@ -14,7 +14,8 @@ def analyze(directory):
             events.extend(json.loads(line) for line in p.read_text(encoding='utf-8').splitlines() if line.strip())
     revisions=[int(e['value']) for e in events if e.get('event')=='pilot_delivery_revision' and str(e.get('value','')).isdigit()]
     requested=any(value>=24 for value in revisions);gpu_pilot=any(25<=value<27 for value in revisions)
-    cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value==28 for value in revisions);safety_limit=any(value>=29 for value in revisions)
+    cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value==28 for value in revisions)
+    safety_limit=any(value==29 for value in revisions);density_limit=any(value>=30 for value in revisions)
     if not requested:return {'schema':1,'status':'not_requested','pass':True}
     windows=[e for e in events if e.get('event')=='runtime_timing_window'];totals=defaultdict(lambda:defaultdict(lambda:{'calls':0,'elapsed_ms':0.,'max_ms':0.}))
     for e in windows:
@@ -42,7 +43,7 @@ def analyze(directory):
     gpu_status=root/'gpu-engine-status.json'
     gpu=json.loads(gpu_status.read_text(encoding='utf-8')) if gpu_status.is_file() else {'status':'unavailable','error':'missing_sampler_status'}
     skin={'status':'not_requested'}
-    if gpu_pilot or cpu_rollback or bounded_canary or safety_limit:
+    if gpu_pilot or cpu_rollback or bounded_canary or safety_limit or density_limit:
         frames=[e for e in events if e.get('event')=='api_mesh_frame'];ends=[e for e in events if e.get('event')=='preview_end']
         keys=('skinned_submitted','skinned_created','skinned_reused')
         valid=all(all(isinstance(e.get(k),int) and e[k]>=0 for k in keys) for e in frames+ends)
@@ -57,13 +58,26 @@ def analyze(directory):
             if not bounded:errors.append('gpu_skinning_canary_frame_limit')
             if not ends[0]['skinned_submitted'] or not any(e.get('skinned_frame_submitted',0)>0 for e in frames):errors.append('gpu_skinning_canary_not_exercised')
             if ends[0]['skinned_created']+ends[0]['skinned_reused']!=ends[0]['skinned_submitted']:errors.append('invalid_gpu_skinning_accounting')
+        elif density_limit:
+            density_valid=all(isinstance(e.get('gpu_skin_previous_frame_draws'),int) and e['gpu_skin_previous_frame_draws']>=0 and
+                              e.get('gpu_skin_density_limit')==256 and e.get('gpu_skin_high_density_limit')==4 and
+                              isinstance(e.get('gpu_skin_density_throttle_frames'),int) and e['gpu_skin_density_throttle_frames']>=0 and
+                              isinstance(e.get('skinned_frame_submitted'),int) and e.get('skinned_frame_max')==16 and
+                              e.get('skinned_frame_limit')==(0 if e['gpu_skin_previous_frame_draws']==0 else 16 if e['gpu_skin_previous_frame_draws']<=256 else 4) and
+                              0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] for e in frames)
+            if not density_valid:errors.append('invalid_gpu_skinning_density_policy')
+            throttle=ends[0].get('gpu_skin_density_throttle_frames',-1)
+            if not isinstance(throttle,int) or throttle<0:errors.append('invalid_gpu_skinning_density_throttle_count')
+            if not ends[0]['skinned_submitted'] or not any(e.get('skinned_frame_submitted',0)>0 for e in frames):errors.append('gpu_skinning_density_policy_not_exercised')
+            if ends[0]['skinned_created']+ends[0]['skinned_reused']!=ends[0]['skinned_submitted']:errors.append('invalid_gpu_skinning_accounting')
         bounded_ok=valid and frames and len(ends)==1 and ends[0].get('skinned_submitted',0)>0 and all(0<=e.get('skinned_frame_submitted',-1)<=16 and e.get('skinned_frame_limit')==16 for e in frames)
-        status=('safety_limit_requires_image_review' if safety_limit and bounded_ok else 'bounded_canary_requires_image_review' if bounded_canary and bounded_ok
+        density_ok=density_limit and valid and frames and len(ends)==1 and ends[0].get('skinned_submitted',0)>0 and not any(error in errors for error in ('invalid_gpu_skinning_density_policy','invalid_gpu_skinning_density_throttle_count','gpu_skinning_density_policy_not_exercised','invalid_gpu_skinning_accounting'))
+        status=('density_adaptive_requires_image_review' if density_ok else 'safety_limit_requires_image_review' if safety_limit and bounded_ok else 'bounded_canary_requires_image_review' if bounded_canary and bounded_ok
                 else 'disabled_cpu_fallback' if cpu_rollback and valid and frames and len(ends)==1 and not any(e[k] for e in frames+ends for k in keys)
                 else 'exercised_requires_image_review' if gpu_pilot and valid and ends and ends[0].get('skinned_submitted',0)>0 else 'unexercised_or_incomplete')
         skin={'status':status,
               'preview':{k:ends[0].get(k) for k in keys} if ends else {},
-              'mesh_frames':len(frames),'limits':'v27 requires zero persistent skinning. v28 validates and v29+ enforces at most 16 successful GPU-skinned submissions per frame; excess models stay on the CPU path and image review remains required.'}
+              'mesh_frames':len(frames),'limits':'v27 requires zero persistent skinning. v28-v29 enforce at most 16 successful GPU-skinned submissions per frame. v30 keeps 16 at up to 256 preceding-frame model submissions and a 4-submission GPU baseline above that density; the warm-up frame and excess models use CPU poses. Image review remains required.'}
     return {'schema':1,'pass':not errors,'status':'valid_evidence_requires_review' if not errors else 'incomplete','errors':sorted(set(errors)),
             'timing_windows':len(windows),'window_timeline':[{k:e.get(k) for k in ('frame','first_after_frame','segment','wall_ms','qpc_begin','qpc_end','qpc_frequency','utc_filetime_100ns')} for e in windows],'elapsed_scopes_by_segment':dict(totals),'native_taa_requests':taa,
             'native_edge_payloads':samples,'native_edge_evidence':'complete_requires_image_review' if edge_complete else 'unavailable_or_incomplete',

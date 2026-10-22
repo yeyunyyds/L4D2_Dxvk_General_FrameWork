@@ -47,6 +47,15 @@ assert result['execution']=='incomplete'
         with self.assertRaisesRegex(ValueError,'configuration missing'):
             suite.verify_package(self.root)
 
+    def test_preview_marker_requires_matching_session_and_explicit_completion(self):
+        marker=self.root/'preview.json'
+        marker.write_text(json.dumps({'session':7,'complete':False}))
+        self.assertFalse(suite.completed_preview(marker,7))
+        marker.write_text(json.dumps({'session':8,'complete':True}))
+        self.assertFalse(suite.completed_preview(marker,7))
+        marker.write_text(json.dumps({'session':7,'complete':True}))
+        self.assertTrue(suite.completed_preview(marker,7))
+
     def test_configuration_tampering_is_rejected_before_install(self):
         (self.root/'integration/rt/baseline.json').write_text('{}')
         with self.assertRaisesRegex(ValueError,'checksum mismatch'):

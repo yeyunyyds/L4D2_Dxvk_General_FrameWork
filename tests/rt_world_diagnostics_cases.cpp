@@ -7,6 +7,12 @@ using namespace ldb_rt::world_diagnostics;
 void require(bool ok, const char* why) { if (!ok) { throw std::runtime_error(why); } }
 int main() {
   try {
+    require(!allowPersistentGpuSkin(0,0),"GPU skin warm-up needs a complete density sample");
+    require(allowPersistentGpuSkin(kGpuSkinModelDensityLimit,0)&&allowPersistentGpuSkin(1,kGpuSkinSubmissionsPerFrame-1),"low-density GPU skin path rejected");
+    require(allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame-1)&&
+      !allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame)&&
+      !allowPersistentGpuSkin(1,kGpuSkinSubmissionsPerFrame),"adaptive GPU skin density or submission bound exceeded");
+    std::cout << "RT GPU skin previous-frame density and submission limits: PASS\n";
     CoverageComparison coverage;
     require(coverage.phase()==CoveragePhase::Raster && !coverage.afterCapture(120), "coverage must wait for raster control");
     require(coverage.afterCapture(30) && coverage.phase()==CoveragePhase::BaselineWorld, "baseline remains old coverage");

@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "source_archive": "rt-beta-20261022-140637-ca472738.zip",
+  "source_sha256": "5c92ba055904d091b956099cb113a19eb84bc6d0af42d12f777026193f236ed1",
+  "pilot_revision": 29,
+  "verdict": "incomplete_device_lost",
+  "gate_presents": 30,
+  "preview": {
+    "elapsed_ms": 17453,
+    "frames": 64,
+    "readbacks": 1,
+    "readback_size": [640, 400],
+    "nonfinite_rgb": 0
+  },
+  "failure": {
+    "runtime_event": "api_mesh_fence_failed",
+    "hresult": "0x8876086c",
+    "backend": "VK_ERROR_DEVICE_LOST"
+  },
+  "model_pressure": {
+    "preview_submissions": 40920,
+    "frame_60_submissions": 629,
+    "frame_60_live_bytes": 183896344,
+    "frame_60_entries": 1217,
+    "frame_60_pending_fences": 1
+  },
+  "gpu_skinning": {
+    "submitted": 1024,
+    "created": 20,
+    "reused": 1004,
+    "v29_frame_limit": 16,
+    "limit_respected": true
+  },
+  "v30_policy": {
+    "model_density_threshold": 256,
+    "low_density_gpu_skin_limit": 16,
+    "high_density_gpu_skin_limit": 4,
+    "warmup_gpu_skin_limit": 0,
+    "planned_high_density_steps_after_stability": [4, 8, 12, 16]
+  }
+}
