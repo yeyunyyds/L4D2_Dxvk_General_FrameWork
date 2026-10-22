@@ -741,5 +741,5 @@
   },
   "native_build_commit": "ddb9596e1fb427ff0da3ce24ebbef19ca1072686",
   "code_commit": "ddb9596e1fb427ff0da3ce24ebbef19ca1072686",
-  "world_use": "v28 retains the v27 CPU pose baseline and permits a bounded maximum of 16 persistent GPU-skin submissions per frame to isolate the v26 high-density failure"
+  "world_use": "v29 promotes the v28 B580-verified limit of 16 persistent GPU-skin submissions per frame and adds a five-minute gameplay beta entry; excess models retain the v27 CPU pose baseline"
 }

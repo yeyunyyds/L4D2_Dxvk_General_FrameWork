@@ -16,6 +16,7 @@ class PackageAndCompletionTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name)
         entries=observer_files()
+        self.assertIn('run-beta.cmd',entries)
         for name,data in entries.items():
             target=self.root/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
         manifest={'files':{name:{'sha256':sha(data)} for name,data in entries.items()}}
@@ -185,6 +186,16 @@ assert result['execution']=='incomplete'
             suite.finish_world_capture(directory,self.root/'game',0,report,lambda message:None)
         self.assertEqual(report['collection'],'complete')
         self.assertEqual(report['world_normalization'],'pass')
+
+    def test_beta_completion_uses_preview_and_runtime_without_requiring_600_frame_world_analysis(self):
+        directory=self.root/'beta';directory.mkdir();report={'collection':'complete','errors':[],'preview':'collected_requires_review'}
+        with patch.object(suite,'collect_game_logs'),patch.object(suite,'wait_stopped'),patch.object(suite,'archive_result',return_value=directory.with_suffix('.zip')),\
+             patch.object(suite,'review_preview',return_value={'pass':True,'errors':[]}),\
+             patch.object(suite,'analyze_runtime',return_value={'pass':True,'errors':[],'status':'valid_evidence_requires_review'}),\
+             patch.object(suite,'analyze_world') as world:
+            suite.finish_world_capture(directory,self.root/'game',0,report,lambda message:None,beta=True)
+        world.assert_not_called();self.assertEqual(report['collection'],'complete')
+        self.assertEqual(report['beta_session'],'completed_requires_image_review')
 
 
 class InstallTests(unittest.TestCase):

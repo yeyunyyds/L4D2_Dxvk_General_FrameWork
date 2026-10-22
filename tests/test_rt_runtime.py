@@ -83,5 +83,16 @@ class RuntimeEvidenceTests(unittest.TestCase):
             events[3]['skinned_frame_submitted']=17;self.assertIn('gpu_skinning_canary_frame_limit',review()['errors'])
             events[3]['skinned_frame_submitted']=16;events[4].update(skinned_submitted=0,skinned_created=0,skinned_reused=0)
             self.assertIn('gpu_skinning_canary_not_exercised',review()['errors'])
+    def test_v29_promotes_the_same_bound_to_a_safety_limit(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);events=[dict(event='pilot_delivery_revision',value='29'),
+                dict(event='runtime_timing_window',wall_ms=1,segment='preview_no_aa',scopes={}),
+                dict(event='native_taa_requested',scale_code=0,taa_code=0,resolution_scale=1,upscaler_type=3),
+                dict(event='api_mesh_frame',skinned_submitted=16,skinned_created=2,skinned_reused=14,skinned_frame_submitted=16,skinned_frame_limit=16),
+                dict(event='preview_end',skinned_submitted=16,skinned_created=2,skinned_reused=14)]
+            for mode in ('no-aa','taa'):
+                file=f'native-{mode}.bgra8';(root/file).write_bytes(bytes(16));events.append(dict(event='native_edge_readback',mode=mode,file=file,width=2,height=2,source_width=2,source_height=2,x=0,y=0,resampled=False,copy_code=0,hresult=0,written=True))
+            (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+            result=analyze(root);self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['gpu_skinning']['status'],'safety_limit_requires_image_review')
 
 if __name__=='__main__':unittest.main()

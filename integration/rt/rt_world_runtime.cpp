@@ -287,6 +287,7 @@ bool scene(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
 }
 std::array<SceneCounts,4> modelCounts{};
 constexpr unsigned kGpuSkinCanaryPerFrame=16;
+constexpr uint64_t kBetaPreviewDurationMs=5ull*60*1000;
 std::array<unsigned,world_diagnostics::kModelStages> modelSampleCounts{},modelStateCounts{},modelSampleOmitted{};
 std::array<unsigned,world_diagnostics::kModelStages> modelPreviousSampleCounts{},modelPreviousSampleOmitted{};
 void modelState(IDirect3DDevice9* device,const draw_observe::Snapshot& s) {
@@ -795,15 +796,15 @@ void startPreview(IDirect3DDevice9* device) noexcept {
     if(device!=registered||apiMeshes.entries()||!meshFences.empty()) { return; }
     events.close();events.open(launch.output/"preview-runtime.jsonl",std::ios::binary);events<<std::setprecision(9);
     if(!events) { return; }
-    std::ofstream marker(draw_observe::previewRunningFile(launch));marker<<"{\"session\":"<<launch.session<<",\"duration_ms\":60000}\n";marker.close();
+    std::ofstream marker(draw_observe::previewRunningFile(launch));marker<<"{\"session\":"<<launch.session<<",\"duration_ms\":"<<(launch.beta?kBetaPreviewDurationMs:60000ull)<<"}\n";marker.close();
     if(!marker) { return; }
     runtime_profile::reset();sourceShaderCensus.clear();sourceCensusOmitted=0;previewTaa=false;
     state().preview=true;state().active=true;previewStarted=GetTickCount64();previewRecoverAt=0;previewFrames=0;
     previewRecover=false;previewReadFailed=false;previewReadbacks=0;previewBindingRows=0;previewBindingOmitted=0;previewFirstRead=0;previewStartSubmitted=apiMeshes.submitted;
     previewStartSkinnedSubmitted=apiMeshes.skinnedSubmitted;previewStartSkinnedCreated=apiMeshes.skinnedCreated;previewStartSkinnedReused=apiMeshes.skinnedReused;
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"28");
-    event("preview_begin",0,"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
+    event("pilot_delivery_revision",0,"29");
+    event("preview_begin",0,launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
     if(!raytracing(true)) { endPreview(false,"rt_enable_failed"); }
   } catch(...) { endPreview(false,"start_exception"); }
 }
@@ -815,7 +816,8 @@ void previewStep(IDirect3DDevice9* device,bool successful) noexcept {
     if(!state().active) { endPreview(false,"maintenance_failed");return; }
     const auto elapsed=GetTickCount64()-previewStarted;
     if(!previewRecover) {
-      if((previewReadbacks==0&&previewFrames>=60)||(previewReadbacks==1&&elapsed>=30000)||(previewReadbacks==2&&elapsed>=60000)) { previewColor(device); }
+      const auto duration=launch.beta?kBetaPreviewDurationMs:60000ull;
+      if((previewReadbacks==0&&previewFrames>=60)||(previewReadbacks==1&&elapsed>=30000)||(previewReadbacks==2&&elapsed>=duration)) { previewColor(device); }
       if(elapsed>=30000&&!previewTaa) {
         nativeColor(device,"no-aa");runtime_profile::emit(events,state().presents,"preview_no_aa_final");
         const auto scale=api.SetConfigVariable("rtx.resolutionScale","1.0"),taa=api.SetConfigVariable("rtx.upscalerType","3");
@@ -823,7 +825,7 @@ void previewStep(IDirect3DDevice9* device,bool successful) noexcept {
           <<",\"scale_code\":"<<uint32_t(scale)<<",\"taa_code\":"<<uint32_t(taa)<<",\"resolution_scale\":1,\"upscaler_type\":3}\n"<<std::flush;
         if(scale!=REMIXAPI_ERROR_CODE_SUCCESS||taa!=REMIXAPI_ERROR_CODE_SUCCESS) { endPreview(false,"taa_configuration_failed");return; }previewTaa=true;
       }
-      if(elapsed>=60000) { nativeColor(device,"taa");previewRecover=true;previewRecoverAt=GetTickCount64();event("preview_recovery_requested",0); }
+      if(elapsed>=duration) { nativeColor(device,"taa");previewRecover=true;previewRecoverAt=GetTickCount64();event("preview_recovery_requested",0); }
     } else {
       if(apiMeshes.entries()==0&&meshFences.empty()) { endPreview(true,"duration_complete"); }
       else if(GetTickCount64()-previewRecoverAt>5000) { endPreview(false,"recovery_timeout"); }
@@ -871,9 +873,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy",0,"v23_display_4GiB_priority_spool_no_rejected_rereads_standard_alpha_models");
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"28");
+    event("pilot_delivery_revision",0,"29");
     event("runtime_timing_policy",0,"QPC_elapsed_nested_scopes_not_GPU_busy;source_geometry_skin_texture_hash_API_original_Draw_Present_readback");
-    event("api_mesh_policy",0,"persistent_gpu_skin_bounded_canary_max16_successful_submissions_per_frame_excess_CPU_pose_fallback_after_v26_B580_burst_device_loss_early_fence_retirement_soft_budget_original_draw_ignored");
+    event("api_mesh_policy",0,"B580_verified_gpu_skin_safety_limit_max16_successful_submissions_per_frame_excess_CPU_pose_fallback_after_v26_high_density_device_loss_early_fence_retirement_soft_budget_original_draw_ignored");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");

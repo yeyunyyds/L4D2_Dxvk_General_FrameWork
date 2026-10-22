@@ -298,7 +298,7 @@ def finish_capture(directory,root,pid,report,notify):
     report['result_scope']='consumer state / RPC ordering only; no Source producer queue or RT image acceptance'
 
 
-def finish_world_capture(directory,game,since,report,notify):
+def finish_world_capture(directory,game,since,report,notify,beta=False):
     # A Host may have exited while the game remains alive. Retain its errors
     # before the potentially long normal-exit wait, including in manual copies
     # of the result directory. The final pass refreshes these logs after exit.
@@ -325,6 +325,10 @@ def finish_world_capture(directory,game,since,report,notify):
     runtime=analyze_runtime(directory);save(directory/'runtime-analysis.json',runtime)
     report['runtime_profile']=runtime['status']
     if not runtime['pass']:report['errors'].extend(runtime['errors']);report['collection']='incomplete'
+    if beta:
+        report['beta_session']='completed_requires_image_review' if report.get('preview')=='completed_requires_image_review' and runtime['pass'] else 'incomplete'
+        report['result_scope']='five-minute complete-coverage gameplay beta; visual correctness and long-term stability still require review'
+        return
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
     report['infected_evidence']=infected['status']
@@ -364,7 +368,7 @@ def finish_world_capture(directory,game,since,report,notify):
 
 def review_preview(directory):
     directory=Path(directory);errors=[];path=directory/'preview-runtime.jsonl'
-    if not path.is_file() or path.stat().st_size>8*1024*1024:return {'pass':False,'errors':['missing_or_oversized_preview_log']}
+    if not path.is_file() or path.stat().st_size>32*1024*1024:return {'pass':False,'errors':['missing_or_oversized_preview_log']}
     events=[json.loads(s) for s in path.read_text(encoding='utf-8').splitlines() if s.strip()]
     v23=any(e.get('event')=='world_coverage_revision' and e.get('value')=='23' for e in events)
     ends=[e for e in events if e.get('event')=='preview_end'];reads=[e for e in events if e.get('event')=='preview_readback']
@@ -415,7 +419,7 @@ def startup_modules(directory,pid,notify):
     notify('Startup module inventory saved. This does not mean the F9 capture is complete.')
 
 
-def run(root=ROOT,game=None,restore_only=False,verify_only=False):
+def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
     if verify_only:
         verify_package(root);print('Package files and collector configuration verified.');return
     if os.name!='nt':raise OSError('This launcher requires Windows x64')
@@ -423,7 +427,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         wait_stopped(print);location=restore(root);print('Original client/Host restored:',location);return
     manifest=verify_package(root)
     world=manifest.get('profile')=='world_pilot'
-    name=('rt-world-' if world else 'rt-draw-')+time.strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(4)
+    if beta and not world:raise ValueError('Beta mode requires the world runtime package')
+    name=('rt-beta-' if beta else 'rt-world-' if world else 'rt-draw-')+time.strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(4)
     directory=root/'results'/name;directory.mkdir(parents=True)
     report={'schema':1,'scope':'actual_draw_consumer_observation','build_commit':manifest['build_commit'],
             'collection':'incomplete','errors':[],'game_rt':'unrun','source_queue_execution':'unrun',
@@ -440,7 +445,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if world or not matches:wait_stopped(notify)
         receipt=install(root,location,manifest);save(directory/'installation.json',receipt)
         session=secrets.randbits(63) or 1;request=location/'bin/ldb-rt-draw.request'
-        content=(f'LDB_RT_WORLD_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n' if world else
+        content=((f'LDB_RT_BETA_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n' if beta else
+                  f'LDB_RT_WORLD_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n') if world else
                  f'LDB_RT_DRAW_1\n{session:x}\n{directory.resolve()}\n').encode('utf-8')
         if world:
             config='\n'.join(['rtx.enableRaytracing = False','rtx.useVertexCapture = False','rtx.upscalerType = 0','rtx.resolutionScale = 1.0',
@@ -451,12 +457,13 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
                 'rtx.tonemappingMode = 1','rtx.localtonemap.exposure = 0.75',
                 'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.enableAlphaBlend = True','rtx.bloom.enable = False','rtx.postfx.enable = False'])+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='selected_static_world_runtime_pilot'
+            report['scope']='five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
-        notify('Enter a map, return to the game, and press F9 once. The '+('600' if world else '120')+'-Present capture stops automatically.')
-        if world:notify('World Pilot v28: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. The 600-frame diagnostic and 60-second live preview run automatically. Check animation, stretching, missing parts and edge blocks; first 30s has no AA, last 30s requests native TAA. Persistent GPU skinning is a bounded canary of at most 16 successful submissions per frame; every excess model uses the verified CPU path. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
+        notify('Enter a map, return to the game, and press F9 once. The '+('30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
+        if beta:notify('RT Beta v29: after the 30-frame safety gate, play normally for five minutes. Complete scene/model coverage stays active; GPU skinning is capped at the B580-verified 16 submissions per frame and excess models use the stable CPU path. Do not press F9 again. Exit only when this window asks.')
+        elif world:notify('World Pilot v29: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. The 600-frame diagnostic and 60-second live preview run automatically. GPU skinning uses the B580-verified maximum of 16 successful submissions per frame; every excess model uses the stable CPU path. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
         deadline=time.monotonic()+900;last=0;pid=None;last_alive=time.monotonic();startup_saved=False;first_alive=None
@@ -493,27 +500,27 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
         if not done.is_file():raise TimeoutError('No completed capture; partial logs are retained')
         marker=json.loads(done.read_text(encoding='utf-8'))
         report['capture_marker']=marker
-        expected=600 if world else 120
+        expected=30 if beta else 600 if world else 120
         marker_ok=marker.get('session')==session and marker.get('reason')==0 and marker.get('presents')==expected
         if not marker_ok:
             notify('INCOMPLETE: capture stopped before the required '+str(expected)+' Presents. Collecting available evidence.')
         preview_running=directory/f'rt-preview-running-{session}.json'
         if world and manifest.get('pilot_revision',0)>=20:report['preview']='incomplete'
         if world and preview_running.is_file():
-            notify('600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
-            preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+90
+            notify('30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
+            preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+(330 if beta else 90)
             while not preview_done.is_file() and time.monotonic()<preview_deadline:
                 if pid not in game_pids():break
                 time.sleep(.5)
             report['preview']='collected_requires_review' if preview_done.is_file() else 'incomplete'
-            if preview_done.is_file():notify('Preview segment finished. Collecting final evidence; exit only when requested below.')
+            if preview_done.is_file():notify(('Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
         if gpu_sampler:
             report['gpu_sampler_stopped']=gpu_sampler.stop();gpu_sampler=None
         finish_capture(directory,root,pid,report,notify)
         if not marker_ok:
             report['collection']='incomplete';report['errors'].append('Capture completion marker identity/count/reason mismatch')
         if world:
-            finish_world_capture(directory,location,started_at,report,notify)
+            finish_world_capture(directory,location,started_at,report,notify,beta=beta)
     except Exception as error:
         report['collection']='incomplete'
         report['errors'].append(f'{type(error).__name__}: {error}');notify(report['errors'][-1])
@@ -541,8 +548,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--game',type=Path)
-    mode=p.add_mutually_exclusive_group();mode.add_argument('--restore',action='store_true');mode.add_argument('--verify-only',action='store_true')
-    a=p.parse_args();output=run(game=a.game,restore_only=a.restore,verify_only=a.verify_only)
+    mode=p.add_mutually_exclusive_group();mode.add_argument('--restore',action='store_true');mode.add_argument('--verify-only',action='store_true');mode.add_argument('--beta',action='store_true')
+    a=p.parse_args();output=run(game=a.game,restore_only=a.restore,verify_only=a.verify_only,beta=a.beta)
     if output:
         summary=json.loads((output.with_suffix('')/'summary.json').read_text(encoding='utf-8'))
         raise SystemExit(3 if summary.get('exit_status')=='abnormal' else 0 if summary['collection']=='complete' else 2)

@@ -18,6 +18,21 @@ class V23DisplayEvidence(unittest.TestCase):
         self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['header']['coverage_revision'],23)
         self.assertEqual(result['footer']['draws'],1200)
 
+    def test_trace21_beta_profile_stops_after_30_control_presents(self):
+        h,source=self.trace_events();events=[];presents=0
+        for event in source:
+            if event[0]==8:break
+            events.append(event)
+            if event[0]==3:
+                presents+=1
+                if presents==30:break
+        kind,uid,header=events[0];events[0]=(kind,uid,struct.pack('<I',21)+header[4:-8]+struct.pack('<2I',30,30))
+        draws=sum(kind==1 for kind,uid,payload in events);events.append((8,0,struct.pack('<6QI',draws,draws,30,0,0,0,0)))
+        result=test_rt_draw.DrawObservation().inspect(events);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['header']['profile'],'world_beta');self.assertEqual(result['header']['target_presents'],30)
+        kind,uid,header=events[0];events[0]=(kind,uid,header[:-8]+struct.pack('<2I',600,30))
+        self.assertIn('invalid_world_profile_boundaries',test_rt_draw.DrawObservation().inspect(events)['errors'])
+
     def test_alpha_conversion_requires_complete_blend_and_depth_proof(self):
         h,events=self.trace_events();i=next(i for i,(kind,uid,raw) in enumerate(events) if kind==1 and uid>=241*4+1)
         kind,uid,raw=events[i];source=next(p for k,u,p in events if k==1 and test_rt_draw.check.MATERIAL.unpack_from(p,test_rt_draw.check.SNAPSHOT.size)[3].startswith(b'VertexLitGeneric'));data=bytearray(source);struct.pack_into('<Q',data,16,struct.unpack_from('<Q',raw,16)[0]);at=test_rt_draw.check.SNAPSHOT.size+test_rt_draw.check.MATERIAL.size+32

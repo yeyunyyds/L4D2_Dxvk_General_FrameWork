@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "build_commit": "df465301e4ffce5cf123ae7bc6223aa819bca534",
+  "pilot_revision": 28,
+  "archive_sha256": "31d3f3b554ca159180f135677af867d01cb708ed6966ad5a9174fe613f78a0f3",
+  "diagnostic_presents": 600,
+  "preview": {
+    "complete": true,
+    "elapsed_ms": 60296,
+    "frames": 340,
+    "approx_fps": 5.64,
+    "readbacks": 3,
+    "finite_color": true
+  },
+  "gpu_skinning": {
+    "successful_submissions": 5580,
+    "created": 35,
+    "reused": 5545,
+    "configured_per_frame_limit": 16,
+    "maximum_observed_per_frame": 16,
+    "exercised_frames": 360,
+    "device_loss": false,
+    "fence_failure": false,
+    "status": "accepted_as_arc_b580_safety_limit"
+  },
+  "final_resources": {
+    "mesh_entries": 0,
+    "mesh_bytes": 0,
+    "pending_fences": 0,
+    "budget_omissions": 0,
+    "backend_objects_remaining": 0
+  },
+  "visual_review": "pass_complete_animated_models_no_fragmentation_or_freeze",
+  "collection_note": "Runtime and preview completed; summary was incomplete only because game/Host remained open past the normal-exit wait timeout."
+}

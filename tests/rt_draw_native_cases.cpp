@@ -78,8 +78,10 @@ int main(int argc, char** argv) {
     require(fs::exists(doneFile(parsed)),"complete marker");
     const auto fakeRuntime=output/"fixture-runtime";fs::create_directory(fakeRuntime);
     { std::ofstream file(fakeRuntime/"d3d9.dll");file << "not a DLL; request parser fixture only"; }
+    { std::ofstream file(request,std::ios::binary);file << "LDB_RT_BETA_1\n2b\n" << output.u8string() << '\n' << fakeRuntime.u8string() << '\n'; }
+    require(readRequest(parsed) && parsed.world && parsed.beta && parsed.session==43,"beta launch request without private calls");
     { std::ofstream file(request,std::ios::binary);file << "LDB_RT_WORLD_1\n2b\n" << output.u8string() << '\n' << fakeRuntime.u8string() << '\n'; }
-    require(readRequest(parsed) && parsed.world && parsed.session==43,"world launch request without private calls");
+    require(readRequest(parsed) && parsed.world && !parsed.beta && parsed.session==43,"world launch request without private calls");
     ldb_rt::world_runtime::state().active=true; // Simulated-device conversion, never a GPU/runtime claim.
     ldb_rt::world_runtime::state().raytracing=&raytracingRequest;
     device.surface.format=D3DFMT_A16B16G16R16F;device.stride=48;

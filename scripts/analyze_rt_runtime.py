@@ -14,7 +14,7 @@ def analyze(directory):
             events.extend(json.loads(line) for line in p.read_text(encoding='utf-8').splitlines() if line.strip())
     revisions=[int(e['value']) for e in events if e.get('event')=='pilot_delivery_revision' and str(e.get('value','')).isdigit()]
     requested=any(value>=24 for value in revisions);gpu_pilot=any(25<=value<27 for value in revisions)
-    cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value>=28 for value in revisions)
+    cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value==28 for value in revisions);safety_limit=any(value>=29 for value in revisions)
     if not requested:return {'schema':1,'status':'not_requested','pass':True}
     windows=[e for e in events if e.get('event')=='runtime_timing_window'];totals=defaultdict(lambda:defaultdict(lambda:{'calls':0,'elapsed_ms':0.,'max_ms':0.}))
     for e in windows:
@@ -42,7 +42,7 @@ def analyze(directory):
     gpu_status=root/'gpu-engine-status.json'
     gpu=json.loads(gpu_status.read_text(encoding='utf-8')) if gpu_status.is_file() else {'status':'unavailable','error':'missing_sampler_status'}
     skin={'status':'not_requested'}
-    if gpu_pilot or cpu_rollback or bounded_canary:
+    if gpu_pilot or cpu_rollback or bounded_canary or safety_limit:
         frames=[e for e in events if e.get('event')=='api_mesh_frame'];ends=[e for e in events if e.get('event')=='preview_end']
         keys=('skinned_submitted','skinned_created','skinned_reused')
         valid=all(all(isinstance(e.get(k),int) and e[k]>=0 for k in keys) for e in frames+ends)
@@ -52,17 +52,18 @@ def analyze(directory):
             elif ends[0]['skinned_created']+ends[0]['skinned_reused']!=ends[0]['skinned_submitted'] or ends[0]['skinned_created']>ends[0]['skinned_submitted']:
                 errors.append('invalid_gpu_skinning_accounting')
         elif cpu_rollback and any(e[k] for e in frames+ends for k in keys):errors.append('gpu_skinning_safety_rollback_not_effective')
-        elif bounded_canary:
+        elif bounded_canary or safety_limit:
             bounded=all(isinstance(e.get('skinned_frame_submitted'),int) and 0<=e['skinned_frame_submitted']<=16 and e.get('skinned_frame_limit')==16 for e in frames)
             if not bounded:errors.append('gpu_skinning_canary_frame_limit')
             if not ends[0]['skinned_submitted'] or not any(e.get('skinned_frame_submitted',0)>0 for e in frames):errors.append('gpu_skinning_canary_not_exercised')
             if ends[0]['skinned_created']+ends[0]['skinned_reused']!=ends[0]['skinned_submitted']:errors.append('invalid_gpu_skinning_accounting')
-        status=('bounded_canary_requires_image_review' if bounded_canary and valid and frames and len(ends)==1 and ends[0].get('skinned_submitted',0)>0 and all(0<=e.get('skinned_frame_submitted',-1)<=16 and e.get('skinned_frame_limit')==16 for e in frames)
+        bounded_ok=valid and frames and len(ends)==1 and ends[0].get('skinned_submitted',0)>0 and all(0<=e.get('skinned_frame_submitted',-1)<=16 and e.get('skinned_frame_limit')==16 for e in frames)
+        status=('safety_limit_requires_image_review' if safety_limit and bounded_ok else 'bounded_canary_requires_image_review' if bounded_canary and bounded_ok
                 else 'disabled_cpu_fallback' if cpu_rollback and valid and frames and len(ends)==1 and not any(e[k] for e in frames+ends for k in keys)
                 else 'exercised_requires_image_review' if gpu_pilot and valid and ends and ends[0].get('skinned_submitted',0)>0 else 'unexercised_or_incomplete')
         skin={'status':status,
               'preview':{k:ends[0].get(k) for k in keys} if ends else {},
-              'mesh_frames':len(frames),'limits':'v27 requires zero persistent skinning. v28+ permits at most 16 successful canary submissions per frame and keeps excess models on the CPU path; image review remains required.'}
+              'mesh_frames':len(frames),'limits':'v27 requires zero persistent skinning. v28 validates and v29+ enforces at most 16 successful GPU-skinned submissions per frame; excess models stay on the CPU path and image review remains required.'}
     return {'schema':1,'pass':not errors,'status':'valid_evidence_requires_review' if not errors else 'incomplete','errors':sorted(set(errors)),
             'timing_windows':len(windows),'window_timeline':[{k:e.get(k) for k in ('frame','first_after_frame','segment','wall_ms','qpc_begin','qpc_end','qpc_frequency','utc_filetime_100ns')} for e in windows],'elapsed_scopes_by_segment':dict(totals),'native_taa_requests':taa,
             'native_edge_payloads':samples,'native_edge_evidence':'complete_requires_image_review' if edge_complete else 'unavailable_or_incomplete',
