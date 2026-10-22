@@ -302,7 +302,7 @@ def finish_capture(directory,root,pid,report,notify):
     report['result_scope']='consumer state / RPC ordering only; no Source producer queue or RT image acceptance'
 
 
-def finish_world_capture(directory,game,since,report,notify,beta=False):
+def finish_world_capture(directory,game,since,report,notify,beta=False,performance=False):
     # A Host may have exited while the game remains alive. Retain its errors
     # before the potentially long normal-exit wait, including in manual copies
     # of the result directory. The final pass refreshes these logs after exit.
@@ -322,7 +322,12 @@ def finish_world_capture(directory,game,since,report,notify,beta=False):
     notify('Recovery ZIP saved: '+str(recovery)+'. Exit L4D2 normally and keep this window open; the SAME ZIP will be updated after exit and analysis.')
     wait_stopped(notify)
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
-    if report.get('preview'):
+    if performance:
+        performance_review=review_performance(directory);save(directory/'performance-analysis.json',performance_review)
+        report['performance']='gpu_offload_ramp_collected' if performance_review['pass'] else 'incomplete'
+        report['preview']='completed_performance_ramp' if performance_review['pass'] else 'incomplete'
+        if not performance_review['pass']:report['errors'].extend(performance_review['errors']);report['collection']='incomplete'
+    elif report.get('preview'):
         preview=review_preview(directory);save(directory/'preview-analysis.json',preview)
         report['preview']='completed_requires_image_review' if preview['pass'] else 'incomplete'
         if not preview['pass']:report['errors'].extend(preview['errors']);report['collection']='incomplete'
@@ -332,6 +337,9 @@ def finish_world_capture(directory,game,since,report,notify,beta=False):
     if beta:
         report['beta_session']='completed_requires_image_review' if report.get('preview')=='completed_requires_image_review' and runtime['pass'] else 'incomplete'
         report['result_scope']='five-minute complete-coverage gameplay beta; visual correctness and long-term stability still require review'
+        return
+    if performance:
+        report['result_scope']='240-frame GPU skin offload ramp; four sequential limits; not long-term stability or final image acceptance'
         return
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
@@ -394,6 +402,59 @@ def review_preview(directory):
         if e.get('event')=='api_mesh_frame' and (e.get('bytes',0)>(512 if v23 else 256)*1024*1024 or e.get('texture_resident_bytes',0)>128*1024*1024 or e.get('texture_bytes',0)>(4096 if v23 else 512)*1024*1024 or e.get('pending_fences',0)>8):errors.append('preview_budget')
     return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'end':ends[-1] if ends else None,'color_metrics':metrics,'readbacks':reads,'gpu_image_acceptance':'unrun','limits':'Bounded neutral realtime preview, independent of600-Present diagnostic; no sustained performance or full coverage acceptance.'}
 
+
+def review_performance(directory):
+    directory=Path(directory);errors=[];path=directory/'preview-runtime.jsonl'
+    if not path.is_file() or path.stat().st_size>32*1024*1024:return {'schema':1,'pass':False,'errors':['missing_or_oversized_performance_log']}
+    events=[json.loads(s) for s in path.read_text(encoding='utf-8').splitlines() if s.strip()]
+    ends=[e for e in events if e.get('event')=='preview_end']
+    if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<240 or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
+    for e in events:
+        if e.get('code',0):errors.append('performance_runtime_failure:'+e.get('event','unknown'))
+    mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
+    expected=[4,64,256,1024]
+    if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(4)) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
+        errors.append('performance_phase_sequence')
+    elif any(not isinstance(e.get('skinned_frame_submitted'),int) or not 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] for e in mesh):
+        errors.append('performance_gpu_skin_not_exercised')
+    windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[];previous={}
+    gpu_rows=[];gpu_file=directory/'gpu-engine-samples.jsonl'
+    if gpu_file.is_file() and gpu_file.stat().st_size<=32*1024*1024:
+        try:gpu_rows=[json.loads(line) for line in gpu_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+        except json.JSONDecodeError:gpu_rows=[]
+    for index,limit in enumerate(expected):
+        name='gpu_ramp_'+str(limit);row=windows.get(name);wall=row.get('wall_ms',0) if row else 0
+        if not isinstance(wall,(int,float)) or not math.isfinite(wall) or wall<=0:errors.append('performance_timing:'+name);continue
+        evidence=mesh[index] if len(mesh)>index else {};current={k:evidence.get(k) for k in ('preview_skinned_submitted','preview_skinned_created','preview_skinned_reused')}
+        if not all(isinstance(value,int) and value>=previous.get(key,0) for key,value in current.items()):errors.append('performance_gpu_skin_accounting:'+name)
+        submitted_delta=current.get('preview_skinned_submitted',0)-previous.get('preview_skinned_submitted',0)
+        created_delta=current.get('preview_skinned_created',0)-previous.get('preview_skinned_created',0)
+        reused_delta=current.get('preview_skinned_reused',0)-previous.get('preview_skinned_reused',0)
+        if submitted_delta<=0 or created_delta+reused_delta!=submitted_delta:errors.append('performance_gpu_skin_not_exercised:'+name)
+        phase={'gpu_skin_limit':limit,'frames':60,'wall_ms':wall,'fps':60000/wall,
+                       'skinned_frame_submitted':evidence.get('skinned_frame_submitted',0),
+                       'gpu_skin_submitted_delta':submitted_delta,
+                       'gpu_skin_created_delta':created_delta,
+                       'gpu_skin_reused_delta':reused_delta,
+                       'mesh_created_delta':evidence.get('created',0)-previous.get('created',0),
+                       'mesh_reused_delta':evidence.get('reused',0)-previous.get('reused',0),
+                       'model_ms':row.get('scopes',{}).get('model',{}).get('elapsed_ms',0),
+                       'cpu_skin_ms':row.get('scopes',{}).get('skin',{}).get('elapsed_ms',0),
+                       'mesh_create_ms':row.get('scopes',{}).get('mesh_create',{}).get('elapsed_ms',0),
+                       'present_ms':row.get('scopes',{}).get('present',{}).get('elapsed_ms',0)}
+        if isinstance(row.get('utc_filetime_100ns'),int):
+            end_ns=(row['utc_filetime_100ns']-116444736000000000)*100;start_ns=end_ns-int(wall*1000000);values=[]
+            for sample in gpu_rows:
+                if start_ns<=sample.get('unix_ns',0)<=end_ns:
+                    engines=[e.get('percent',0) for e in sample.get('engines',[]) if e.get('instance','').endswith('engtype_3D') and isinstance(e.get('percent'),(int,float)) and math.isfinite(e['percent'])]
+                    if engines:values.append(max(engines))
+            if values:
+                ordered=sorted(values);phase['gpu_3d_engine']={'samples':len(values),'average_percent':sum(values)/len(values),'p50_percent':ordered[len(ordered)//2],'p95_percent':ordered[int((len(ordered)-1)*.95)],'max_percent':max(values)}
+        phases.append(phase);previous=dict(evidence)
+    best=max((p['fps'] for p in phases),default=0)
+    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'phases':phases,'best_fps':best,'meets_24_fps':best>=24,
+            'end':ends[-1] if ends else None,'limits':'Sequential phases share a changing scene and are directional, not matched A/B. GPU PDH counters remain separate per engine.'}
+
 def startup_modules(directory,pid,notify):
     """Retain bounded module lists even if no F9 trace ever starts."""
     result={'scope':'read_only_startup_module_inventory_not_capture_completion',
@@ -423,7 +484,7 @@ def startup_modules(directory,pid,notify):
     notify('Startup module inventory saved. This does not mean the F9 capture is complete.')
 
 
-def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
+def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,performance=False):
     if verify_only:
         verify_package(root);print('Package files and collector configuration verified.');return
     if os.name!='nt':raise OSError('This launcher requires Windows x64')
@@ -431,8 +492,9 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
         wait_stopped(print);location=restore(root);print('Original client/Host restored:',location);return
     manifest=verify_package(root)
     world=manifest.get('profile')=='world_pilot'
-    if beta and not world:raise ValueError('Beta mode requires the world runtime package')
-    name=('rt-beta-' if beta else 'rt-world-' if world else 'rt-draw-')+time.strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(4)
+    if (beta or performance) and not world:raise ValueError('World runtime mode requires the world runtime package')
+    if beta and performance:raise ValueError('Beta and performance modes are mutually exclusive')
+    name=('rt-performance-' if performance else 'rt-beta-' if beta else 'rt-world-' if world else 'rt-draw-')+time.strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(4)
     directory=root/'results'/name;directory.mkdir(parents=True)
     report={'schema':1,'scope':'actual_draw_consumer_observation','build_commit':manifest['build_commit'],
             'collection':'incomplete','errors':[],'game_rt':'unrun','source_queue_execution':'unrun',
@@ -449,7 +511,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
         if world or not matches:wait_stopped(notify)
         receipt=install(root,location,manifest);save(directory/'installation.json',receipt)
         session=secrets.randbits(63) or 1;request=location/'bin/ldb-rt-draw.request'
-        content=((f'LDB_RT_BETA_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n' if beta else
+        content=((f'LDB_RT_PERF_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n' if performance else
+                  f'LDB_RT_BETA_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n' if beta else
                   f'LDB_RT_WORLD_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n') if world else
                  f'LDB_RT_DRAW_1\n{session:x}\n{directory.resolve()}\n').encode('utf-8')
         if world:
@@ -461,12 +524,13 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
                 'rtx.tonemappingMode = 1','rtx.localtonemap.exposure = 0.75',
                 'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.enableAlphaBlend = True','rtx.bloom.enable = False','rtx.postfx.enable = False'])+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
+            report['scope']='gpu_offload_performance_ramp' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
-        notify('Enter a map, return to the game, and press F9 once. The '+('30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
+        notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
+        if performance:notify('RT Performance v31: one automatic 240-frame run tests GPU-skin limits 4, 64, 256 and 1024 for 60 frames each. Native TAA and image readbacks stay off. Keep the same scene and do not press F9 again.')
+        elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
@@ -504,21 +568,21 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
         if not done.is_file():raise TimeoutError('No completed capture; partial logs are retained')
         marker=json.loads(done.read_text(encoding='utf-8'))
         report['capture_marker']=marker
-        expected=30 if beta else 600 if world else 120
+        expected=30 if (beta or performance) else 600 if world else 120
         marker_ok=marker.get('session')==session and marker.get('reason')==0 and marker.get('presents')==expected
         if not marker_ok:
             notify('INCOMPLETE: capture stopped before the required '+str(expected)+' Presents. Collecting available evidence.')
         preview_running=directory/f'rt-preview-running-{session}.json'
         if world and manifest.get('pilot_revision',0)>=20:report['preview']='incomplete'
         if world and preview_running.is_file():
-            notify('30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
-            preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+(330 if beta else 90)
+            notify('30-frame gate passed. The four-stage GPU offload ramp is active; keep the scene and camera movement representative.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
+            preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+(240 if performance else 330 if beta else 90)
             while not preview_done.is_file() and time.monotonic()<preview_deadline:
                 if pid not in game_pids():break
                 time.sleep(.5)
             preview_complete=completed_preview(preview_done,session)
             report['preview']='collected_requires_review' if preview_complete else 'incomplete'
-            if preview_complete:notify(('Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
+            if preview_complete:notify(('GPU offload ramp finished.' if performance else 'Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
             elif preview_done.is_file():notify('Preview stopped early and retained partial evidence. Collecting final diagnostics; this run has not passed.')
         if gpu_sampler:
             report['gpu_sampler_stopped']=gpu_sampler.stop();gpu_sampler=None
@@ -526,7 +590,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
         if not marker_ok:
             report['collection']='incomplete';report['errors'].append('Capture completion marker identity/count/reason mismatch')
         if world:
-            finish_world_capture(directory,location,started_at,report,notify,beta=beta)
+            finish_world_capture(directory,location,started_at,report,notify,beta=beta,performance=performance)
     except Exception as error:
         report['collection']='incomplete'
         report['errors'].append(f'{type(error).__name__}: {error}');notify(report['errors'][-1])
@@ -554,8 +618,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--game',type=Path)
-    mode=p.add_mutually_exclusive_group();mode.add_argument('--restore',action='store_true');mode.add_argument('--verify-only',action='store_true');mode.add_argument('--beta',action='store_true')
-    a=p.parse_args();output=run(game=a.game,restore_only=a.restore,verify_only=a.verify_only,beta=a.beta)
+    mode=p.add_mutually_exclusive_group();mode.add_argument('--restore',action='store_true');mode.add_argument('--verify-only',action='store_true');mode.add_argument('--beta',action='store_true');mode.add_argument('--performance',action='store_true')
+    a=p.parse_args();output=run(game=a.game,restore_only=a.restore,verify_only=a.verify_only,beta=a.beta,performance=a.performance)
     if output:
         summary=json.loads((output.with_suffix('')/'summary.json').read_text(encoding='utf-8'))
         raise SystemExit(3 if summary.get('exit_status')=='abnormal' else 0 if summary['collection']=='complete' else 2)

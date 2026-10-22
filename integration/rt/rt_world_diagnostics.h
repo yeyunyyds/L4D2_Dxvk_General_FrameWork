@@ -25,6 +25,14 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
+constexpr unsigned kGpuSkinPerformancePhaseFrames=60;
+constexpr std::array<unsigned,4> kGpuSkinPerformanceLimits{{4,64,256,1024}};
+inline unsigned performanceGpuSkinPhase(uint64_t completedFrames) noexcept {
+  return unsigned((std::min)(completedFrames/uint64_t(kGpuSkinPerformancePhaseFrames),uint64_t(kGpuSkinPerformanceLimits.size()-1)));
+}
+inline unsigned performanceGpuSkinLimit(uint64_t completedFrames) noexcept {
+  return kGpuSkinPerformanceLimits[performanceGpuSkinPhase(completedFrames)];
+}
 inline unsigned persistentGpuSkinLimit(unsigned previousModelDraws) noexcept {
   return previousModelDraws==0?0:previousModelDraws<=kGpuSkinModelDensityLimit?
     kGpuSkinSubmissionsPerFrame:kGpuSkinHighDensitySubmissionsPerFrame;

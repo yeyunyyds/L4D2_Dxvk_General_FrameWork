@@ -24,7 +24,7 @@ def observer_files():
                                        'rt_preflight.py','rt_visual.py','rt_suite.py']]
     names+=list(SUPPORT_FILES)
     entries={name:(ROOT/name).read_bytes() for name in names}
-    for target,source in [('run-test.cmd','run-draw-test.cmd'),('run-beta.cmd','run-world-beta.cmd'),('restore.cmd','restore-draw-test.cmd'),
+    for target,source in [('run-test.cmd','run-draw-test.cmd'),('run-performance.cmd','run-world-performance.cmd'),('restore.cmd','restore-draw-test.cmd'),
                           ('README.txt','draw-observer-readme.txt')]:
         entries[target]=(ROOT/'integration/rt'/source).read_bytes()
     return entries
@@ -89,7 +89,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_beta_candidate','profile':'world_pilot','pilot_revision':30,
+    manifest={'schema':1,'scope':'gpu_offload_performance_ramp_candidate','profile':'world_pilot','pilot_revision':31,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':30,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -100,9 +100,9 @@ def package(source,output,python_package):
               'scene_input_samples_per_phase':222,'scene_input_max_vertices':4096,'scene_input_max_indices':16384,'rigid_after_present':180,'rigid_normals':'area_weighted_geometric_fallback_preserving_source_vertex_seams',
               'bulk_static_after_present':180,'bulk_static_families':['LightmappedGeneric','LightmappedGeneric_DX9','UnlitGeneric','VertexLitGeneric','WorldVertexTransition','WorldVertexTransition_DX9','WorldTwoTextureBlend','NekoToon','Infected'],
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
-              'model_rebuild':'audited_full_vs_matrix_proof; density-adaptive persistent GPU skinning with CPU pose geometry for excess animated models',
-              'model_submission':'preceding-frame density selects maximum 16 GPU-skinned submissions at up to 256 model draws or a 4-submission GPU baseline above 256; warm-up and excess models use per-pose CPU meshes; original raster Draw once with Ignore bit3 and exact restore',
-              'gpu_skinning':{'enabled_with_adaptive_limit':True,'low_density_max_successful_submissions_per_frame':16,'model_density_threshold':256,'high_density_max_successful_submissions_per_frame':4,'status':'v29 lost the B580 device after 64 preview frames at about 629 total model submissions per frame and exactly 16 GPU skin submissions per frame; v30 retains a bounded high-density GPU baseline','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'excess_path':'v27_verified_CPU_pose_mesh','image_review_required':True},
+              'model_rebuild':'audited full VS matrix proof; dedicated GPU skin offload ramp avoids duplicate full CPU skin output validation while retaining finite input, weight, index and bone matrix checks',
+              'model_submission':'four sequential 60-frame phases allow 4, 64, 256 and 1024 successful GPU-skinned DrawInstance submissions per frame; ineligible and excess models use CPU pose meshes; original raster Draw once with Ignore bit3 and exact restore',
+              'gpu_skinning':{'performance_ramp':True,'phase_frames':60,'phase_limits':[4,64,256,1024],'full_cpu_skin_output_oracle':False,'input_weight_index_bone_validation':True,'status':'v30 completed 436 frames but averaged about 3 FPS and eventually lost the device; GPU-skinned meshes reused 2695 of 2752 submissions while total CPU-pose mesh creation exceeded 171k, motivating direct offload measurement','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'excess_path':'v27_verified_CPU_pose_mesh','image_review_required':True},
               'model_input_pairs':'canonical_CPU_vertices_and_normalized_indices_at_239_240_299_300; original_input_audit_retained_separately',
               'model_stage_readbacks':{240:'api_neko_textured',300:'api_combined_textured',360:'api_combined_textured_low_light',420:'api_combined_textured_metal',480:'api_combined_textured_alpha',540:'api_combined_textured_emissive',600:'recovery'},
               'preserve_path_default':False,'preserve_path_control_presents':[],
@@ -127,7 +127,7 @@ def package(source,output,python_package):
               'device_cleanup':'before_IDirect3DDevice9Ex_Destroy_safeDestroy;after_command_loop_before_other_teardown;abort_cleanup;final_partial_frame_EVENT;idempotent',
               'actual_model_materials':'neutral_source_alpha_throughout_except_Infected_bright_control;legacy_stage_names_retained_only_as_trace_phase_IDs',
               'bounded_preview':{'after_diagnostic_present':600,'duration_ms':60000,'recovery_timeout_ms':5000,'mode':'neutral;30s_no_AA_then30s_native_TAA;same_one_F9;no_Draw_trace_extension;requires_review'},
-              'beta_session':{'launcher':'run-beta.cmd','control_presents':30,'duration_ms':300000,'mode':'complete_preview_coverage;30s_no_AA_then_native_TAA;GPU_skin_density_adaptive_16_or_4;one_F9','scope':'five_minute_gameplay_candidate_not_long_term_or_performance_acceptance'},
+              'performance_session':{'launcher':'run-performance.cmd','control_presents':30,'target_frames':240,'phase_frames':60,'gpu_skin_limits':[4,64,256,1024],'mode':'no_TAA;no_image_readback;one_F9','scope':'sequential_directional_GPU_offload_measurement_not_long_term_or_matched_AB'},
               'result_archive_policy':'runtime-textures_spool_excluded;64MiB_DDS_evidence_explicit_omissions;INCOMPLETE_recovery_ZIP_before_exit_wait;atomic_replace_same_ZIP_after_final_analysis',
               'pending_material_audit':{'shader':'Infected','samples_per_phase':24,'render_admission':'exact_VS_PS_declaration_rigid48_only'},
               'exit_review':'final_Bridge_log_exceptions_and_backend_cleanup_reported_separately_from_collection',
@@ -151,7 +151,7 @@ def package(source,output,python_package):
               'scene_input_ps_float4_constants':224,'scene_input_complete_morph_positions':True,
               'bulk_static_stride_max':128,'scene_input_family_limits':[6,48,96,48,24],'scene_input_policy':'skinned_materials_v2','scene_input_payload_limits_mib':[3,3,3,16],'scene_input_family_payload_limits_kib':[[128,640,512,768,512]]*3+[[256,4096,1792,6144,4096]],'scene_input_geometry_window':True,'audit_only_families':[],'custom_audit_max_vertices':32768,'custom_audit_max_indices':131072,
               'sky_category_contract':{'render_state':42,'sky_bit':4,'unused':0xfefefefe},
-              'draw_trace_version':20,'beta_draw_trace_version':21,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
+              'draw_trace_version':20,'beta_draw_trace_version':21,'performance_draw_trace_version':22,'original_cull_mode_in_trace':True,'original_scene_states_in_trace':True,'world_material_attribution_limit':256,
               'material_samples_per_phase_limit':64,
               'world_ipc_producer_wait_ms':60000,'normal_ipc_producer_wait_ms':2000,
               'startup_raytracing':False,'rt_activation':'after_control_and_successful_world_scope_then_deferred_by_runtime',

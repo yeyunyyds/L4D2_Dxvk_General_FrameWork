@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "source_archive": "rt-beta-20261022-143959-a6fcff8a.zip",
+  "source_sha256": "790910224ef77369a8a17d47006abc9859a75f2cb05fbd876d6ed316773683b4",
+  "pilot_revision": 30,
+  "verdict": "incomplete_device_lost_and_below_minimum_fps",
+  "preview": {
+    "elapsed_ms": 144609,
+    "frames": 436,
+    "average_fps": 3.015,
+    "submitted": 201996,
+    "readbacks": 2
+  },
+  "failure": {
+    "runtime_event": "api_mesh_fence_failed",
+    "hresult": "0x8876086c",
+    "backend": "VK_ERROR_DEVICE_LOST"
+  },
+  "gpu_skinning": {
+    "submitted": 2752,
+    "created": 57,
+    "reused": 2695,
+    "density_throttle_frames": 348
+  },
+  "frame_420_meshes": {
+    "submitted": 192419,
+    "created": 171352,
+    "reused": 21067,
+    "destroyed": 170976,
+    "live_entries": 376
+  },
+  "host_3d_engine": {
+    "first_30_seconds_average_percent": 18.67,
+    "after_30_seconds_average_percent": 78.37,
+    "interpretation": "per-process per-engine PDH utilization; engines must not be summed as whole-GPU utilization"
+  },
+  "next": {
+    "mode": "240_frame_gpu_offload_ramp",
+    "phase_frames": 60,
+    "gpu_skin_limits": [4, 64, 256, 1024],
+    "native_taa": false,
+    "image_readbacks": false,
+    "minimum_target_fps": 24
+  }
+}

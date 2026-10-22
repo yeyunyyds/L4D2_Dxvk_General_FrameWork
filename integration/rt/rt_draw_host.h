@@ -86,12 +86,12 @@ public:
     trace.open(file, std::ios::binary);
     if (!trace) { throw std::runtime_error("open Draw observation"); }
     LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-    Writer header; header.u32(request.beta ? 21 : request.world ? 20 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
-    if (request.world) { header.u32(uint32_t(request.beta ? 30 : world_diagnostics::kCoveragePresents)); header.u32(30); } record(0, 0, header.data);
+    Writer header; header.u32(request.performance ? 22 : request.beta ? 21 : request.world ? 20 : 1); header.u64(session); header.u64(device); header.u64(uint64_t(frequency.QuadPart));
+    if (request.world) { header.u32(uint32_t((request.beta||request.performance) ? 30 : world_diagnostics::kCoveragePresents)); header.u32(30); } record(0, 0, header.data);
   }
   ~Recorder() { finish(3); if (request.world) { world_runtime::state().active=false; } }
-  bool expanded() const noexcept { return request.world && ((request.beta&&world_runtime::state().preview)||presents >= 120) && (!finished||world_runtime::state().preview); }
-  bool models() const noexcept { return request.world && ((request.beta&&world_runtime::state().preview)||presents >= 180) && (!finished||world_runtime::state().preview); }
+  bool expanded() const noexcept { return request.world && (((request.beta||request.performance)&&world_runtime::state().preview)||presents >= 120) && (!finished||world_runtime::state().preview); }
+  bool models() const noexcept { return request.world && (((request.beta||request.performance)&&world_runtime::state().preview)||presents >= 180) && (!finished||world_runtime::state().preview); }
   bool sceneReady() const noexcept { return request.world && haveConvertedWorld && (!finished||world_runtime::state().preview); }
   template<class Device> void draw(Device* device, uint32_t uid, const Snapshot& snapshot, uint32_t kind,
       D3DPRIMITIVETYPE type, const std::array<uint32_t, 6>& args) {
@@ -164,9 +164,9 @@ public:
     if (request.world && SUCCEEDED(result) && world_runtime::state().active && nativeDevice && world_runtime::state().presented) {
       world_runtime::state().presented(nativeDevice,presents);
     }
-    if (request.world && !request.beta && world_runtime::state().active && world_runtime::state().capture && nativeDevice &&
+    if (request.world && !request.beta && !request.performance && world_runtime::state().active && world_runtime::state().capture && nativeDevice &&
         world_diagnostics::readback(presents)) { world_runtime::state().capture(nativeDevice, presents); }
-    const auto target=request.world?(request.beta?30u:unsigned(world_diagnostics::kCoveragePresents)):120u;
+    const auto target=request.world?((request.beta||request.performance)?30u:unsigned(world_diagnostics::kCoveragePresents)):120u;
     templates.clear();trace.flush(); if (presents >= target) { finish(0); }
   }
   void reset(uint32_t uid, HRESULT result) {

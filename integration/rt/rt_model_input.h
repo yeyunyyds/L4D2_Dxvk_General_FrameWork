@@ -29,7 +29,7 @@ inline bool ownDraw(scene_input::Prepared& out,const scene_input::Data& input,ui
   else { out.reason="model_owned_draw_kind";return false; }
   out.ownedDraw=true;return true;
 }
-inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest,bool allowPersistentGpuSkinning=false) {
+inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true) {
   runtime_profile::Scope timing(runtime_profile::Stage::Skin);
   scene_input::Prepared out;
   if (FAILED(input.result)) {
@@ -133,10 +133,11 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
         matrix[row*4+col]=value;
       } }
     }
-    // Keep malformed palettes away from the runtime/BLAS boundary. This is a
-    // temporary full CPU oracle for the correctness pilot; it can become a
-    // sampled check after the runtime skinning layout is proven in game.
-    for(uint32_t n=0;n<input.count;++n) {
+    // Correctness pilots retain the full CPU oracle. The dedicated performance
+    // ramp has already validated finite weights, indices and referenced bone
+    // matrices above, so it avoids duplicating the GPU skin operation on every
+    // vertex and measures the actual offload path.
+    if(verifyGpuSkinOutput) { for(uint32_t n=0;n<input.count;++n) {
       float positionValue[3]{},skinned[3]{};std::memcpy(positionValue,out.bytes.data()+size_t(input.first+n)*32,12);
       const size_t base=size_t(input.first+n)*3;
       for(unsigned k=0;k<3;++k) {
@@ -144,7 +145,7 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
         for(unsigned row=0;row<3;++row) { skinned[row]+=(positionValue[0]*matrix[row*4]+positionValue[1]*matrix[row*4+1]+positionValue[2]*matrix[row*4+2]+matrix[row*4+3])*weightValue; }
       }
       for(float value:skinned) { if(!std::isfinite(value)||std::abs(value)>1e7f) { out.reason="gpu_skin_output_nonfinite";return out; } }
-    }
+    } }
     model_shader::Result camera;camera.valid=true;camera.world=out.world;
     if(!model_shader::cameraCompatible(camera,input.constants,s.view,s.projection)) { out.reason="model_clip_camera_mismatch";return out; }
     out.reason=profile==model_shader::Profile::Neko3?"original_vs_gpu_neko_three_weight":"original_vs_gpu_three_weight";return out;
@@ -163,7 +164,7 @@ template<class Device> bool standardAlpha(Device* d) {
     SUCCEEDED(d->GetRenderState(D3DRS_BLENDOP,&op))&&SUCCEEDED(d->GetRenderState(D3DRS_SEPARATEALPHABLENDENABLE,&separate))&&
     src==D3DBLEND_SRCALPHA&&dst==D3DBLEND_INVSRCALPHA&&op==D3DBLENDOP_ADD&&!separate;
 }
-inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false,bool allowPersistentGpuSkinning=false) {
+inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true) {
   runtime_profile::Scope timing(runtime_profile::Stage::Prepare);
   DWORD values[7]{};scene_input::Prepared rejected;
   const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
@@ -175,7 +176,7 @@ inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Sna
   auto input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
   const auto digest=ldb_rt_file::bytesSha256(input.vs.data(),input.vs.size()*4);
   if (model_shader::profile(digest)!=model_shader::Profile::Unknown && model_shader::profile(digest)!=model_shader::Profile::InfectedRigid && SUCCEEDED(input.result) && input.constants[13][0]!=0) { scene_input::morphPositions(d,input); }
-  auto out=reconstruct(s,input,digest,allowPersistentGpuSkinning);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && (cpuOnly || scene_input::upload(d,out))) { out.ready=true; }
+  auto out=reconstruct(s,input,digest,allowPersistentGpuSkinning,verifyGpuSkinOutput);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && (cpuOnly || scene_input::upload(d,out))) { out.ready=true; }
   if (evidence && out.ready) { *evidence=std::move(input); }return out;
 }
 } // namespace ldb_rt::model_input

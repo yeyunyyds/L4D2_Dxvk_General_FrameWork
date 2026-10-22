@@ -124,14 +124,14 @@ def analyze(path):
                 if header or counts.total() != 1 or len(payload) not in (28,36):
                     raise ValueError('invalid_header')
                 version, session, device, frequency = struct.unpack_from('<IQQQ', payload);trace_version=version
-                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36),(5,36),(6,36),(7,36),(8,36),(9,36),(10,36),(11,36),(12,36),(13,36),(14,36),(15,36),(16,36),(17,36),(18,36),(19,36),(20,36),(21,36)) or not all((session, device, frequency)):
+                if (version,len(payload)) not in ((1,28),(2,36),(3,36),(4,36),(5,36),(6,36),(7,36),(8,36),(9,36),(10,36),(11,36),(12,36),(13,36),(14,36),(15,36),(16,36),(17,36),(18,36),(19,36),(20,36),(21,36),(22,36)) or not all((session, device, frequency)):
                     raise ValueError('invalid_identity')
                 header = {'session':session,'device':device,'frequency':frequency}
-                if version in (2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21):
+                if version in (2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22):
                     target,control=struct.unpack_from('<2I',payload,28)
-                    expected=30 if version==21 else 600 if version>=12 else 420 if version==11 else 240
+                    expected=30 if version in (21,22) else 600 if version>=12 else 420 if version==11 else 240
                     if (target,control)!=(expected,30):raise ValueError('invalid_world_profile_boundaries')
-                    header.update(profile='world_beta' if version==21 else 'world_pilot',target_presents=target,control_presents=control)
+                    header.update(profile='world_performance' if version==22 else 'world_beta' if version==21 else 'world_pilot',target_presents=target,control_presents=control)
                     if version==3:header['coverage_revision']=6
                     if version==4:header['coverage_revision']=7
                     if version==5:header['coverage_revision']=8
@@ -150,7 +150,7 @@ def analyze(path):
                     if version==18:header['coverage_revision']=21
                     if version==19:header['coverage_revision']=22
                     if version==20:header['coverage_revision']=23
-                    if version==21:header['coverage_revision']=23
+                    if version in (21,22):header['coverage_revision']=23
             elif event == 1:
                 if not header or pending is not None or len(payload) < SNAPSHOT.size + 32 + PIPELINE.size:
                     raise ValueError('unpaired_or_short_draw')
