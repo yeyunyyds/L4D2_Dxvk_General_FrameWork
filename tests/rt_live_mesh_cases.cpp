@@ -101,9 +101,9 @@ int main() {
     }
     require(model_input::ownDraw(prepared,input,2,{0,0,4,0,2,0}),"GPU skinning owned Draw compaction");prepared.ready=true;
     auto skinApi=fixture::table();live_mesh::Scene skins(&skinApi);const auto first=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1);
-    require(first.success&&first.created&&first.skinned&&fixture::lastSkinned&&fixture::lastSkinWeights==12&&fixture::lastBoneCount==3&&fixture::lastBoneX==10,"first persistent skinned mesh payload");
+    require(first.success&&first.created&&first.skinned&&fixture::lastSkinned&&fixture::lastSkinWeights==12&&fixture::lastBoneCount==3&&fixture::lastBoneX==10&&skins.frameSkinnedDraws==1,"first persistent skinned mesh payload/frame accounting");
     prepared.skinning.transforms[1][3]=20;const auto second=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);
-    require(second.success&&!second.created&&second.handle==first.handle&&fixture::lastBoneX==20&&skins.skinnedCreated==1&&skins.skinnedReused==1,"bone update recreated persistent mesh");
+    require(second.success&&!second.created&&second.handle==first.handle&&fixture::lastBoneX==20&&skins.skinnedCreated==1&&skins.skinnedReused==1&&skins.frameSkinnedDraws==1,"bone update recreated persistent mesh or frame counter did not reset");
     require(!skins.retire(2,4,true),"persistent skin cleanup");
     input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,digest,true);
     require(!morphed.skinning.enabled&&std::string(morphed.reason)=="original_vs_three_weight","morph must retain CPU skin fallback");

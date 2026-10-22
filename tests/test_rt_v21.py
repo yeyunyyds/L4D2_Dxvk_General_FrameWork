@@ -50,3 +50,9 @@ class V21Evidence(unittest.TestCase):
                 row[key+'_sha256']=hashlib.sha256(raw).hexdigest();row['payload_bytes']+=len(raw);events[-1]['near_target_payload_bytes']+=len(raw)
             row['skinned']=True;save();result=analyze(root);self.assertTrue(result['pass'],result)
             row['skin_indices_sha256']='0'*64;save();self.assertIn('target_skin_payload',analyze(root)['errors'])
+    def test_v28_canary_retains_skin_payload_validation(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);events,recipe,save=self.fixture(root);events.insert(1,dict(event='pilot_delivery_revision',value='28'));row=events[2]
+            empty=hashlib.sha256(b'').hexdigest();row.update(skinned=False,skin_weight_file='',skin_index_file='',bone_transform_file='',skin_weights_sha256=empty,skin_indices_sha256=empty,bone_transforms_sha256=empty)
+            save();self.assertTrue(analyze(root)['pass'])
+            row['skinned']=True;save();self.assertIn('target_skin_path',analyze(root)['errors'])

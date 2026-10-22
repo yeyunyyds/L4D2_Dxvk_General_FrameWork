@@ -89,7 +89,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':27,
+    manifest={'schema':1,'scope':'selected_world_and_live_model_runtime_pilot','profile':'world_pilot','pilot_revision':28,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':30,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -100,9 +100,9 @@ def package(source,output,python_package):
               'scene_input_samples_per_phase':222,'scene_input_max_vertices':4096,'scene_input_max_indices':16384,'rigid_after_present':180,'rigid_normals':'area_weighted_geometric_fallback_preserving_source_vertex_seams',
               'bulk_static_after_present':180,'bulk_static_families':['LightmappedGeneric','LightmappedGeneric_DX9','UnlitGeneric','VertexLitGeneric','WorldVertexTransition','WorldVertexTransition_DX9','WorldTwoTextureBlend','NekoToon','Infected'],
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
-              'model_rebuild':'audited_full_vs_matrix_proof; CPU_skinned_pose_geometry_for_all_supported_animated_models; persistent_GPU_skinning_isolated_after_B580_device_loss',
-              'model_submission':'per_pose_CPU_skinned_mesh; original_raster_Draw_once_with_Ignore_bit3_and_exact_restore',
-              'gpu_skinning':{'enabled_by_default':False,'status':'disabled_after_v25_v26_B580_fragmentation_and_device_loss','isolated_profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'expected_submission_count':0},
+              'model_rebuild':'audited_full_vs_matrix_proof; bounded_persistent_GPU_skin_canary_then_CPU_skinned_pose_geometry_for_excess_animated_models',
+              'model_submission':'maximum_16_successful_GPU_skinned_DrawInstance_submissions_per_frame_then_per_pose_CPU_skinned_mesh; original_raster_Draw_once_with_Ignore_bit3_and_exact_restore',
+              'gpu_skinning':{'enabled_as_bounded_canary':True,'max_successful_submissions_per_frame':16,'status':'v28_low_load_canary_after_v26_B580_failure_at_combined_model_burst','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'excess_path':'v27_verified_CPU_pose_mesh','image_review_required':True},
               'model_input_pairs':'canonical_CPU_vertices_and_normalized_indices_at_239_240_299_300; original_input_audit_retained_separately',
               'model_stage_readbacks':{240:'api_neko_textured',300:'api_combined_textured',360:'api_combined_textured_low_light',420:'api_combined_textured_metal',480:'api_combined_textured_alpha',540:'api_combined_textured_emissive',600:'recovery'},
               'preserve_path_default':False,'preserve_path_control_presents':[],

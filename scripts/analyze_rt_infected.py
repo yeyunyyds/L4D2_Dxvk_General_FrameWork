@@ -27,7 +27,8 @@ def analyze(directory):
         for name in ('world-runtime.jsonl','preview-runtime.jsonl'):events.extend(rows(name,8*1024*1024))
         if not any(e.get('event')=='world_coverage_revision' and e.get('value') in ('21','22','23') for e in events):return {'schema':1,'pass':True,'status':'not_requested'}
         v23=any(e.get('event')=='world_coverage_revision' and e.get('value')=='23' for e in events)
-        v25=any(e.get('event')=='pilot_delivery_revision' and e.get('value')=='25' for e in events)
+        skin_evidence=any(e.get('event')=='pilot_delivery_revision' and str(e.get('value','')).isdigit() and
+                          (int(e['value']) in (25,26) or int(e['value'])>=28) for e in events)
         recipes=rows('infected-materials.jsonl',1024*1024);check(len(recipes)<=128,'infected_recipe_budget')
         for e in recipes:
             check(e['event']=='infected_diffuse_bake' and type(e['frame']) is int and e['frame']>=241,'infected_recipe_identity')
@@ -65,7 +66,7 @@ def analyze(directory):
                 path=root/name;check(path.is_file() and 0<path.stat().st_size<=1048576,'infected_target_payload');raw=path.read_bytes();used+=len(raw)
                 check(hashlib.sha256(raw).hexdigest()==e[key+'_sha256'],'infected_target_digest')
                 if key=='vertices':check(len(raw)%32==0 and all(math.isfinite(x) and abs(x)<=1e7 for at in range(0,len(raw),32) for x in struct.unpack_from('<8f',raw,at)),'infected_target_vertices')
-            if v25:
+            if skin_evidence:
                 check(type(e.get('skinned')) is bool,'target_skin_flag')
                 skin=[]
                 for key,file_key,suffix in (('skin_weights','skin_weight_file','skin-weights'),('skin_indices','skin_index_file','skin-indices'),('bone_transforms','bone_transform_file','bone-transforms')):

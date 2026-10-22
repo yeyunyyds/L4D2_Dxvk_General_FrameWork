@@ -129,10 +129,10 @@ class Scene {
 public:
   uint64_t bytes=0,peakBytes=0,created=0,reused=0,destroyed=0,submitted=0,materialUpdates=0,skinnedCreated=0,skinnedReused=0,skinnedSubmitted=0;
   static constexpr uint64_t maxBytes=512ull*1024*1024,maxFrameBytes=192ull*1024*1024;
-  uint64_t frame=0,frameBytes=0,omitted=0;unsigned frameDraws=0,frameOmitted=0;
+  uint64_t frame=0,frameBytes=0,omitted=0;unsigned frameDraws=0,frameSkinnedDraws=0,frameOmitted=0;
   std::array<uint64_t,size_t(Budget::Count)> omissionTotals{};
   explicit Scene(remixapi_Interface* table=nullptr,Limits policy={}):api(table),limits(policy) {}
-  void frameAt(uint64_t at) { if(at!=frame) { frame=at;frameDraws=0;frameBytes=0;frameOmitted=0; } }
+  void frameAt(uint64_t at) { if(at!=frame) { frame=at;frameDraws=0;frameSkinnedDraws=0;frameBytes=0;frameOmitted=0; } }
   Submission defer(Budget reason,uint64_t at) {
     frameAt(at);Submission result;result.deferred=true;result.budget=reason;result.operation="budget";
     ++omitted;++frameOmitted;++omissionTotals[size_t(reason)];return result;
@@ -222,7 +222,7 @@ public:
       bones.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_BONE_TRANSFORMS_EXT;bones.boneTransforms_values=transforms.data();bones.boneTransforms_count=uint32_t(transforms.size());instance.pNext=&bones;
     }
     result.operation="draw_instance";{ runtime_profile::Scope timing(runtime_profile::Stage::Instance);result.code=uint32_t(api->DrawInstance(&instance)); }if(result.code) { return result; }
-    material.last=at;++submitted;if(result.skinned) { ++skinnedSubmitted; }++frameDraws;result.success=true;return result;
+    material.last=at;++submitted;if(result.skinned) { ++skinnedSubmitted;++frameSkinnedDraws; }++frameDraws;result.success=true;return result;
   }
   uint32_t retire(uint64_t completed,uint64_t now,bool all=false) {
     runtime_profile::Scope timing(runtime_profile::Stage::Retire);

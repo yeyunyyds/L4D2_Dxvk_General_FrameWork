@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "archive": "rt-world-20261021-200055-18a6e16e",
+  "build_commit": "30701437d08f270e751512a27cf3bb5fd74f8d46",
+  "pilot_revision": 27,
+  "collection": "complete",
+  "diagnostic_presents": 600,
+  "preview": {
+    "complete": true,
+    "elapsed_ms": 60125,
+    "frames": 442,
+    "average_fps": 7.35,
+    "readbacks": 3,
+    "nonfinite_rgb": 0
+  },
+  "gpu_skinning": {
+    "submitted": 0,
+    "created": 0,
+    "reused": 0,
+    "rollback_effective": true
+  },
+  "cpu_pose_meshes": {
+    "submitted": 145761,
+    "created": 139828,
+    "reused": 5933,
+    "destroyed": 139828,
+    "remaining_entries": 0,
+    "remaining_bytes": 0,
+    "pending_fences": 0,
+    "budget_omissions": 0,
+    "peak_bytes": 168362056
+  },
+  "gpu_3d": {
+    "samples": 226,
+    "mean_percent": 15.36,
+    "median_percent": 17.39,
+    "p90_percent": 25.27,
+    "max_percent": 39.34,
+    "late_collection_mean_percent": 22.95
+  },
+  "visual_review": "Complete changing character poses in diagnostic and preview color readbacks; no prior fragmentation or frozen output.",
+  "device_loss": false,
+  "exit_status": "cleanup_warning_without_exception; runtime mesh entries and pending fences were zero before exit",
+  "diagnosis": "Stable full-character baseline accepted. CPU pose preparation and skinning now dominate while GPU utilization remains low.",
+  "pass": true
+}
