@@ -40,7 +40,7 @@ uint64_t targetBytes=0,targetRows=0,targetFrame=0;unsigned targetFrameRows=0;
 std::map<std::string,uint64_t> liveShaderSubmissions,liveShaderFallbacks;
 std::set<std::pair<uintptr_t,uintptr_t>> unknownPrograms;
 uint64_t unknownBytes=0,unknownFrame=0;unsigned unknownRows=0,unknownFrameRows=0;
-uint64_t previewStarted=0,previewRecoverAt=0,previewFrames=0,previewStartSubmitted=0,previewStartSkinnedSubmitted=0,previewStartSkinnedCreated=0,previewStartSkinnedReused=0,previewFirstRead=0;
+uint64_t previewStarted=0,previewRecoverAt=0,previewFrames=0,previewStartSubmitted=0,previewStartSkinnedSubmitted=0,previewStartSkinnedCreated=0,previewStartSkinnedReused=0,previewGpuSkinOnlyOmitted=0,previewFirstRead=0;
 bool previewTaa=false;
 std::map<std::string,uint64_t> sourceShaderCensus;uint64_t sourceCensusOmitted=0;
 unsigned previewReadbacks=0,previewBindingRows=0,previewBindingOmitted=0;bool previewRecover=false,previewReadFailed=false;
@@ -291,7 +291,7 @@ std::array<SceneCounts,4> modelCounts{};
 constexpr uint64_t kBetaPreviewDurationMs=5ull*60*1000;
 constexpr uint64_t kPerformancePreviewFrames=world_diagnostics::kGpuSkinPerformancePhaseFrames*world_diagnostics::kGpuSkinPerformanceLimits.size();
 const char* performanceSegment(uint64_t completedFrames) {
-  static constexpr const char* names[]={"gpu_ramp_4","gpu_ramp_64","gpu_ramp_256","gpu_ramp_1024"};
+  static constexpr const char* names[]={"gpu_ramp_16","gpu_ramp_32","gpu_ramp_64","gpu_ramp_128"};
   return names[world_diagnostics::performanceGpuSkinPhase(completedFrames)];
 }
 std::array<unsigned,world_diagnostics::kModelStages> modelSampleCounts{},modelStateCounts{},modelSampleOmitted{};
@@ -405,14 +405,17 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
     events << "{\"event\":\"api_mesh_frame\",\"frame\":" << frame << ",\"stage\":\"" << world_diagnostics::texturedName(currentModels())
       << "\",\"submitted\":" << apiMeshes.submitted << ",\"created\":" << apiMeshes.created << ",\"reused\":" << apiMeshes.reused
       << ",\"skinned_submitted\":" << apiMeshes.skinnedSubmitted << ",\"skinned_created\":" << apiMeshes.skinnedCreated << ",\"skinned_reused\":" << apiMeshes.skinnedReused
+      << ",\"preview_submitted\":" << (launch.performance?apiMeshes.submitted-previewStartSubmitted:0)
       << ",\"preview_skinned_submitted\":" << (launch.performance?apiMeshes.skinnedSubmitted-previewStartSkinnedSubmitted:0)
       << ",\"preview_skinned_created\":" << (launch.performance?apiMeshes.skinnedCreated-previewStartSkinnedCreated:0)
       << ",\"preview_skinned_reused\":" << (launch.performance?apiMeshes.skinnedReused-previewStartSkinnedReused:0)
       << ",\"skinned_frame_submitted\":" << apiMeshes.frameSkinnedDraws << ",\"skinned_frame_limit\":" << effectiveGpuSkinLimit
+      << ",\"skinned_frame_unique_meshes\":" << apiMeshes.frameSkinnedUniqueMeshes << ",\"skinned_frame_repeat_draws\":" << apiMeshes.frameSkinnedRepeatDraws
       << ",\"skinned_frame_max\":" << (launch.performance?world_diagnostics::kGpuSkinPerformanceLimits.back():world_diagnostics::kGpuSkinSubmissionsPerFrame)
       << ",\"gpu_skin_performance_phase\":" << (launch.performance?int(world_diagnostics::performanceGpuSkinPhase(previewFrames?previewFrames-1:0)):-1)
       << ",\"gpu_skin_previous_frame_draws\":" << gpuSkinDensityInput << ",\"gpu_skin_density_limit\":" << world_diagnostics::kGpuSkinModelDensityLimit
       << ",\"gpu_skin_high_density_limit\":" << world_diagnostics::kGpuSkinHighDensitySubmissionsPerFrame
+      << ",\"gpu_skin_only_omitted\":" << (launch.performance?previewGpuSkinOnlyOmitted:0)
       << ",\"gpu_skin_density_throttle_frames\":" << gpuSkinDensityThrottleFrames
       << ",\"destroyed\":" << apiMeshes.destroyed << ",\"entries\":" << apiMeshes.entries() << ",\"bytes\":" << apiMeshes.bytes
       << ",\"material_updates\":" << apiMeshes.materialUpdates << ",\"textured_submissions\":" << texturedSubmissions << ",\"texture_fallback_submissions\":" << textureFallbackSubmissions << ",\"texture_exports\":" << modelTextures.exported << ",\"texture_bytes\":" << modelTextures.bytes << ",\"texture_held\":" << modelTextures.held() << ",\"texture_read_failures\":" << modelTextures.failed << ",\"texture_budget_deferred\":" << modelTextures.deferred
@@ -573,13 +576,17 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
       if(!launch.performance&&previousModelDraws>world_diagnostics::kGpuSkinModelDensityLimit) { ++gpuSkinDensityThrottleFrames; }
       apiMaintenanceFrame=frame;
     }
-    if(world_diagnostics::readback(frame)) { modelState(device,s); }
+    if(!launch.performance&&world_diagnostics::readback(frame)) { modelState(device,s); }
     operation="prepare_model";
     const auto gpuSkinLimit=launch.performance?world_diagnostics::performanceGpuSkinLimit(previewFrames):world_diagnostics::persistentGpuSkinLimit(previousModelDraws);
     const bool allowGpuSkinCanary=included&&apiMeshes.frameSkinnedDraws<gpuSkinLimit;
-    auto prepared=[&] { if(included) { return model_input::prepare(device,s,kind,type,args,nullptr,true,allowGpuSkinCanary,!launch.performance); }
-      scene_input::Prepared disabled;disabled.reason="api_model_stage_excluded";return disabled; }();
+    auto prepared=[&] {
+      if(launch.performance&&included&&!allowGpuSkinCanary) { scene_input::Prepared omitted;omitted.reason="performance_gpu_skin_only_omitted";omitted.result=S_FALSE;return omitted; }
+      if(included) { return model_input::prepare(device,s,kind,type,args,nullptr,true,allowGpuSkinCanary,!launch.performance,launch.performance); }
+      scene_input::Prepared disabled;disabled.reason="api_model_stage_excluded";return disabled;
+    }();
     ++counts.reasons[prepared.reason];if(prepared.ready) { ++counts.ready; }
+    if(launch.performance&&!std::strcmp(prepared.reason,"performance_gpu_skin_only_omitted")) { ++previewGpuSkinOnlyOmitted; }
     live_mesh::IgnoreScope<IDirect3DDevice9> scope(device);live_mesh::Submission submitted;DWORD cull=0;
     report.capture=scope.capture;report.apply=scope.apply;
     if(scope.ready()&&prepared.ready) {
@@ -621,10 +628,12 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
       FAILED(report.restore)?static_draw::Code::RestoreFailed:submitted.success?static_draw::Code::Applied:static_draw::Code::Layout;
     result=FAILED(report.restore)?report.restore:physical;
     operation="save_model_evidence";
-    if(report.converted&&SUCCEEDED(result)) { ++liveShaderSubmissions[s.materialInfo.shader.data()];++counts.reconstructed;apiPayload(s,prepared,kind,type,cull,submitted,ignored); }
+    if(report.converted&&SUCCEEDED(result)) { ++liveShaderSubmissions[s.materialInfo.shader.data()];++counts.reconstructed;if(!launch.performance) { apiPayload(s,prepared,kind,type,cull,submitted,ignored); } }
     else { ++counts.fallback;++liveShaderFallbacks[std::string(s.materialInfo.shader.data())+":"+prepared.reason]; }
-    if(!prepared.ready) { unknownEvidence(device,s,kind,type,args,prepared.reason,frame); }
-    targetEvidence(s,prepared,submitted,frame);return true;
+    if(!launch.performance) {
+      if(!prepared.ready) { unknownEvidence(device,s,kind,type,args,prepared.reason,frame); }
+      targetEvidence(s,prepared,submitted,frame);
+    }return true;
   } catch(const std::exception& error) { return failed(error.what()); }
     catch(...) { return failed("non_standard_exception"); }
 }
@@ -806,6 +815,7 @@ void endPreview(bool clean,const char* reason) noexcept {
       <<",\"texture_exports\":"<<modelTextures.exported<<",\"texture_bytes\":"<<modelTextures.bytes<<",\"texture_resident_bytes\":"<<modelTextures.residentBytes<<",\"texture_evicted\":"<<modelTextures.evicted
       <<",\"submitted\":"<<apiMeshes.submitted-previewStartSubmitted<<",\"skinned_submitted\":"<<apiMeshes.skinnedSubmitted-previewStartSkinnedSubmitted
       <<",\"skinned_created\":"<<apiMeshes.skinnedCreated-previewStartSkinnedCreated<<",\"skinned_reused\":"<<apiMeshes.skinnedReused-previewStartSkinnedReused
+      <<",\"gpu_skin_only_omitted\":"<<previewGpuSkinOnlyOmitted
       <<",\"gpu_skin_density_throttle_frames\":"<<gpuSkinDensityThrottleFrames
       <<",\"entries\":"<<apiMeshes.entries()<<",\"pending_fences\":"<<meshFences.size()
       <<",\"binding_rows_omitted\":"<<previewBindingOmitted<<",\"held\":"<<modelTextures.held()<<",\"readbacks\":"<<previewReadbacks<<"}\n"<<std::flush;
@@ -823,12 +833,12 @@ void startPreview(IDirect3DDevice9* device) noexcept {
     runtime_profile::reset();sourceShaderCensus.clear();sourceCensusOmitted=0;previewTaa=false;
     state().preview=true;state().active=true;previewStarted=GetTickCount64();previewRecoverAt=0;previewFrames=0;
     previewRecover=false;previewReadFailed=false;previewReadbacks=0;previewBindingRows=0;previewBindingOmitted=0;previewFirstRead=0;previewStartSubmitted=apiMeshes.submitted;
-    previousModelDraws=0;gpuSkinDensityThrottleFrames=0;
+    previousModelDraws=0;gpuSkinDensityThrottleFrames=0;previewGpuSkinOnlyOmitted=0;
     previewStartSkinnedSubmitted=apiMeshes.skinnedSubmitted;previewStartSkinnedCreated=apiMeshes.skinnedCreated;previewStartSkinnedReused=apiMeshes.skinnedReused;
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"31");
-    event("preview_begin",0,launch.performance?"240_frame_gpu_offload_ramp;limits_4_64_256_1024;no_TAA;no_readback;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
-    if(launch.performance) { event("performance_ramp_begin",0,"4_64_256_1024_each_60_frames"); }
+    event("pilot_delivery_revision",0,"32");
+    event("preview_begin",0,launch.performance?"120_frame_gpu_skin_only_stability;limits_16_32_64_128;no_CPU_pose_meshes;no_TAA;no_readback;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
+    if(launch.performance) { event("performance_ramp_begin",0,"16_32_64_128_each_30_frames;persistent_GPU_skin_only;CPU_pose_meshes_omitted"); }
     if(!raytracing(true)) { endPreview(false,"rt_enable_failed"); }
   } catch(...) { endPreview(false,"start_exception"); }
 }
@@ -875,7 +885,7 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     if (!events || !request.world || sizeof(void*) != 8) { return nullptr; }
     events << std::setprecision(9);
     const auto path = request.runtime / "d3d9.dll";
-    if (ldb_rt_file::fileSha256(path) != "9c8571ac417b6fbfde5533b0bf83f1dcb11fbceb10e9431d0c0a73afc1c65d34") {
+    if (ldb_rt_file::fileSha256(path) != "843e63f99d63f64155dc359cb5f2b9aa10058e2f6510358054f83920d8589ca4") {
       event("runtime_sha_mismatch", ERROR_INVALID_DATA); return nullptr;
     }
     for (const auto* name : {L"DXVK_LOG_PATH", L"DXVK_METRICS_PATH"}) { SetEnvironmentVariableW(name, request.output.c_str()); }
@@ -905,9 +915,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy",0,"v23_display_4GiB_priority_spool_no_rejected_rereads_standard_alpha_models");
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"31");
+    event("pilot_delivery_revision",0,"32");
     event("runtime_timing_policy",0,"QPC_elapsed_nested_scopes_not_GPU_busy;source_geometry_skin_texture_hash_API_original_Draw_Present_readback");
-    event("api_mesh_policy",0,"v31_dedicated_performance_ramp_4_64_256_1024_GPU_skin_submissions_each60frames_no_full_CPU_skin_oracle;normal_preview_keeps_v30_density_policy;early_fence_retirement_soft_budget_original_draw_ignored");
+    event("api_mesh_policy",0,"v32_performance_isolates_persistent_GPU_skin_meshes;ineligible_and_excess_CPU_pose_meshes_omitted;limits_16_32_64_128_each30frames;runtime_skin_command_counter_reset_after_flush;per_frame_unique_and_repeated_counts;early_fence_retirement_soft_budget_original_draw_ignored");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");

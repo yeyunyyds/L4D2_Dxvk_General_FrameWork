@@ -54,7 +54,7 @@ def verify_package(root):
         if name not in manifest['files']:raise ValueError('World runtime catalog missing from manifest')
         runtime=json.loads((root/name).read_text(encoding='utf-8'))
         if (runtime.get('scope')!='rt_prerequisites' or runtime['runtime_files']['d3d9.dll']['sha256']!=
-                '9c8571ac417b6fbfde5533b0bf83f1dcb11fbceb10e9431d0c0a73afc1c65d34'):
+                '843e63f99d63f64155dc359cb5f2b9aa10058e2f6510358054f83920d8589ca4'):
             raise ValueError('World runtime pin differs')
     return manifest
 
@@ -339,7 +339,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
         report['result_scope']='five-minute complete-coverage gameplay beta; visual correctness and long-term stability still require review'
         return
     if performance:
-        report['result_scope']='240-frame GPU skin offload ramp; four sequential limits; not long-term stability or final image acceptance'
+        report['result_scope']='120-frame persistent-GPU-skin-only stability validation; four sequential limits; CPU-pose explicit RT meshes omitted; not image acceptance'
         return
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
@@ -408,14 +408,18 @@ def review_performance(directory):
     if not path.is_file() or path.stat().st_size>32*1024*1024:return {'schema':1,'pass':False,'errors':['missing_or_oversized_performance_log']}
     events=[json.loads(s) for s in path.read_text(encoding='utf-8').splitlines() if s.strip()]
     ends=[e for e in events if e.get('event')=='preview_end']
-    if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<240 or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
+    if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<120 or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
+    elif ends[0].get('submitted')!=ends[0].get('skinned_submitted'):errors.append('performance_cpu_pose_submission')
     for e in events:
         if e.get('code',0):errors.append('performance_runtime_failure:'+e.get('event','unknown'))
     mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
-    expected=[4,64,256,1024]
+    expected=[16,32,64,128]
     if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(4)) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
         errors.append('performance_phase_sequence')
-    elif any(not isinstance(e.get('skinned_frame_submitted'),int) or not 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] for e in mesh):
+    elif any(not isinstance(e.get('skinned_frame_submitted'),int) or not 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] or
+             not isinstance(e.get('skinned_frame_unique_meshes'),int) or not isinstance(e.get('skinned_frame_repeat_draws'),int) or
+             e['skinned_frame_unique_meshes']+e['skinned_frame_repeat_draws']!=e['skinned_frame_submitted'] or
+             not isinstance(e.get('preview_submitted'),int) or e['preview_submitted']!=e.get('preview_skinned_submitted') for e in mesh):
         errors.append('performance_gpu_skin_not_exercised')
     windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[];previous={}
     gpu_rows=[];gpu_file=directory/'gpu-engine-samples.jsonl'
@@ -431,8 +435,10 @@ def review_performance(directory):
         created_delta=current.get('preview_skinned_created',0)-previous.get('preview_skinned_created',0)
         reused_delta=current.get('preview_skinned_reused',0)-previous.get('preview_skinned_reused',0)
         if submitted_delta<=0 or created_delta+reused_delta!=submitted_delta:errors.append('performance_gpu_skin_not_exercised:'+name)
-        phase={'gpu_skin_limit':limit,'frames':60,'wall_ms':wall,'fps':60000/wall,
+        phase={'gpu_skin_limit':limit,'frames':30,'wall_ms':wall,'fps':30000/wall,
                        'skinned_frame_submitted':evidence.get('skinned_frame_submitted',0),
+                       'skinned_frame_unique_meshes':evidence.get('skinned_frame_unique_meshes',0),
+                       'skinned_frame_repeat_draws':evidence.get('skinned_frame_repeat_draws',0),
                        'gpu_skin_submitted_delta':submitted_delta,
                        'gpu_skin_created_delta':created_delta,
                        'gpu_skin_reused_delta':reused_delta,
@@ -451,9 +457,9 @@ def review_performance(directory):
             if values:
                 ordered=sorted(values);phase['gpu_3d_engine']={'samples':len(values),'average_percent':sum(values)/len(values),'p50_percent':ordered[len(ordered)//2],'p95_percent':ordered[int((len(ordered)-1)*.95)],'max_percent':max(values)}
         phases.append(phase);previous=dict(evidence)
-    best=max((p['fps'] for p in phases),default=0)
-    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'phases':phases,'best_fps':best,'meets_24_fps':best>=24,
-            'end':ends[-1] if ends else None,'limits':'Sequential phases share a changing scene and are directional, not matched A/B. GPU PDH counters remain separate per engine.'}
+    best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
+    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'phases':phases,'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
+            'end':ends[-1] if ends else None,'limits':'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
 
 def startup_modules(directory,pid,notify):
     """Retain bounded module lists even if no F9 trace ever starts."""
@@ -529,7 +535,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v31: one automatic 240-frame run tests GPU-skin limits 4, 64, 256 and 1024 for 60 frames each. Native TAA and image readbacks stay off. Keep the same scene and do not press F9 again.')
+        if performance:notify('RT Performance v32: one automatic 120-frame run isolates persistent GPU skinning at limits 16, 32, 64 and 128 for 30 frames each. Unsupported and excess CPU-pose models are intentionally omitted from the RT view. Native TAA and image readbacks stay off. Keep the same scene and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

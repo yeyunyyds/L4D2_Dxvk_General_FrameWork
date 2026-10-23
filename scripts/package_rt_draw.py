@@ -89,7 +89,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'gpu_offload_performance_ramp_candidate','profile':'world_pilot','pilot_revision':31,
+    manifest={'schema':1,'scope':'gpu_skin_only_stability_candidate','profile':'world_pilot','pilot_revision':32,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':30,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -101,8 +101,8 @@ def package(source,output,python_package):
               'bulk_static_after_present':180,'bulk_static_families':['LightmappedGeneric','LightmappedGeneric_DX9','UnlitGeneric','VertexLitGeneric','WorldVertexTransition','WorldVertexTransition_DX9','WorldTwoTextureBlend','NekoToon','Infected'],
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
               'model_rebuild':'audited full VS matrix proof; dedicated GPU skin offload ramp avoids duplicate full CPU skin output validation while retaining finite input, weight, index and bone matrix checks',
-              'model_submission':'four sequential 60-frame phases allow 4, 64, 256 and 1024 successful GPU-skinned DrawInstance submissions per frame; ineligible and excess models use CPU pose meshes; original raster Draw once with Ignore bit3 and exact restore',
-              'gpu_skinning':{'performance_ramp':True,'phase_frames':60,'phase_limits':[4,64,256,1024],'full_cpu_skin_output_oracle':False,'input_weight_index_bone_validation':True,'status':'v30 completed 436 frames but averaged about 3 FPS and eventually lost the device; GPU-skinned meshes reused 2695 of 2752 submissions while total CPU-pose mesh creation exceeded 171k, motivating direct offload measurement','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'excess_path':'v27_verified_CPU_pose_mesh','image_review_required':True},
+              'model_submission':'four sequential 30-frame phases allow 16, 32, 64 and 128 successful persistent GPU-skinned DrawInstance submissions per frame; performance mode omits ineligible and excess CPU-pose meshes from the explicit RT scene; original raster Draw once with Ignore bit3 and exact restore',
+              'gpu_skinning':{'performance_ramp':True,'phase_frames':30,'phase_limits':[16,32,64,128],'full_cpu_skin_output_oracle':False,'input_weight_index_bone_validation':True,'status':'v31 completed 60 frames at 3.75 FPS but still created about 39k total meshes before device loss; v32 isolates persistent GPU skinning by omitting all CPU-pose explicit RT meshes and resets the runtime skin command counter after a real flush','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'runtime_skinning_command_counter_reset':True,'per_frame_mesh_identity_counts':True,'performance_excess_path':'omitted_before_geometry_capture_after_frame_limit','image_review_required':False},
               'model_input_pairs':'canonical_CPU_vertices_and_normalized_indices_at_239_240_299_300; original_input_audit_retained_separately',
               'model_stage_readbacks':{240:'api_neko_textured',300:'api_combined_textured',360:'api_combined_textured_low_light',420:'api_combined_textured_metal',480:'api_combined_textured_alpha',540:'api_combined_textured_emissive',600:'recovery'},
               'preserve_path_default':False,'preserve_path_control_presents':[],
@@ -127,7 +127,7 @@ def package(source,output,python_package):
               'device_cleanup':'before_IDirect3DDevice9Ex_Destroy_safeDestroy;after_command_loop_before_other_teardown;abort_cleanup;final_partial_frame_EVENT;idempotent',
               'actual_model_materials':'neutral_source_alpha_throughout_except_Infected_bright_control;legacy_stage_names_retained_only_as_trace_phase_IDs',
               'bounded_preview':{'after_diagnostic_present':600,'duration_ms':60000,'recovery_timeout_ms':5000,'mode':'neutral;30s_no_AA_then30s_native_TAA;same_one_F9;no_Draw_trace_extension;requires_review'},
-              'performance_session':{'launcher':'run-performance.cmd','control_presents':30,'target_frames':240,'phase_frames':60,'gpu_skin_limits':[4,64,256,1024],'mode':'no_TAA;no_image_readback;one_F9','scope':'sequential_directional_GPU_offload_measurement_not_long_term_or_matched_AB'},
+              'performance_session':{'launcher':'run-performance.cmd','control_presents':30,'target_frames':120,'phase_frames':30,'gpu_skin_limits':[16,32,64,128],'mode':'no_TAA;no_image_readback;one_F9','scope':'persistent_GPU_skin_only_stability_and_directional_offload_measurement_not_long_term_or_image_acceptance'},
               'result_archive_policy':'runtime-textures_spool_excluded;64MiB_DDS_evidence_explicit_omissions;INCOMPLETE_recovery_ZIP_before_exit_wait;atomic_replace_same_ZIP_after_final_analysis',
               'pending_material_audit':{'shader':'Infected','samples_per_phase':24,'render_admission':'exact_VS_PS_declaration_rigid48_only'},
               'exit_review':'final_Bridge_log_exceptions_and_backend_cleanup_reported_separately_from_collection',

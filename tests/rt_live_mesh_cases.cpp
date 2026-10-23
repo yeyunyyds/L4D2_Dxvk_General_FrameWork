@@ -91,7 +91,9 @@ int main() {
     const auto digest="21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b";
     auto cpuPrepared=model_input::reconstruct(snapshot,input,digest);
     require(!cpuPrepared.skinning.enabled&&std::string(cpuPrepared.reason)=="original_vs_three_weight","default path must retain stable CPU skinning after device loss");
-    auto prepared=model_input::reconstruct(snapshot,input,digest,true);
+    auto isolatedLimit=model_input::reconstruct(snapshot,input,digest,false,true,true);
+    require(isolatedLimit.bytes.empty()&&isolatedLimit.result==S_FALSE&&std::string(isolatedLimit.reason)=="performance_gpu_skin_only_omitted","performance limit unexpectedly built a CPU-pose mesh");
+    auto prepared=model_input::reconstruct(snapshot,input,digest,true,true,true);
     require(prepared.skinning.enabled&&prepared.skinning.weights.size()==12&&prepared.skinning.transforms.size()==3,"audited three-weight bind pose did not select GPU skinning");
     for(size_t vertex=0;vertex<4;++vertex) {
       float bind[3]{},skinned[3]{};std::memcpy(bind,prepared.bytes.data()+vertex*32,12);const size_t base=vertex*prepared.skinning.bonesPerVertex;
@@ -101,12 +103,16 @@ int main() {
     }
     require(model_input::ownDraw(prepared,input,2,{0,0,4,0,2,0}),"GPU skinning owned Draw compaction");prepared.ready=true;
     auto skinApi=fixture::table();live_mesh::Scene skins(&skinApi);const auto first=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1);
-    require(first.success&&first.created&&first.skinned&&fixture::lastSkinned&&fixture::lastSkinWeights==12&&fixture::lastBoneCount==3&&fixture::lastBoneX==10&&skins.frameSkinnedDraws==1,"first persistent skinned mesh payload/frame accounting");
+    require(first.success&&first.created&&first.skinned&&fixture::lastSkinned&&fixture::lastSkinWeights==12&&fixture::lastBoneCount==3&&fixture::lastBoneX==10&&skins.frameSkinnedDraws==1&&skins.frameSkinnedUniqueMeshes==1&&!skins.frameSkinnedRepeatDraws,"first persistent skinned mesh payload/frame accounting");
     prepared.skinning.transforms[1][3]=20;const auto second=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);
-    require(second.success&&!second.created&&second.handle==first.handle&&fixture::lastBoneX==20&&skins.skinnedCreated==1&&skins.skinnedReused==1&&skins.frameSkinnedDraws==1,"bone update recreated persistent mesh or frame counter did not reset");
+    require(second.success&&!second.created&&second.handle==first.handle&&fixture::lastBoneX==20&&skins.skinnedCreated==1&&skins.skinnedReused==1&&skins.frameSkinnedDraws==1&&skins.frameSkinnedUniqueMeshes==1&&!skins.frameSkinnedRepeatDraws,"bone update recreated persistent mesh or frame counter did not reset");
+    const auto repeated=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);
+    require(repeated.success&&repeated.handle==first.handle&&skins.skinnedReused==2&&skins.frameSkinnedDraws==2&&skins.frameSkinnedUniqueMeshes==1&&skins.frameSkinnedRepeatDraws==1,"same-frame skinned mesh identity accounting");
     require(!skins.retire(2,4,true),"persistent skin cleanup");
     input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,digest,true);
     require(!morphed.skinning.enabled&&std::string(morphed.reason)=="original_vs_three_weight","morph must retain CPU skin fallback");
+    auto isolatedMorph=model_input::reconstruct(snapshot,input,digest,true,true,true);
+    require(isolatedMorph.bytes.empty()&&isolatedMorph.result==S_FALSE&&std::string(isolatedMorph.reason)=="performance_gpu_skin_only_omitted","performance mode reconstructed a morphed CPU-pose mesh");
     std::cout<<"RT default CPU skin safety path/isolated GPU skin fixture/persistent mesh/bone update/morph fallback: PASS\n";
   }
   {

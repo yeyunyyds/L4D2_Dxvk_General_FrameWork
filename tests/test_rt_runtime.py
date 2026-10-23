@@ -109,21 +109,24 @@ class RuntimeEvidenceTests(unittest.TestCase):
             result=review();self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['gpu_skinning']['status'],'density_adaptive_requires_image_review')
             events[3]['skinned_frame_submitted']=5
             self.assertIn('invalid_gpu_skinning_density_policy',review()['errors'])
-    def test_v31_performance_ramp_requires_all_four_exercised_limits_without_taa(self):
+    def test_v32_performance_ramp_requires_all_four_exercised_limits_without_taa(self):
         with tempfile.TemporaryDirectory() as d:
-            root=Path(d);events=[dict(event='pilot_delivery_revision',value='31'),dict(event='performance_ramp_begin',code=0)]
+            root=Path(d);events=[dict(event='pilot_delivery_revision',value='32'),dict(event='performance_ramp_begin',code=0)]
             total=created=reused=0
-            for phase,limit in enumerate((4,64,256,1024)):
+            for phase,limit in enumerate((16,32,64,128)):
                 submitted=min(limit,500);total+=submitted;created+=1;reused+=submitted-1
                 events += [dict(event='runtime_timing_window',wall_ms=2500,segment='gpu_ramp_'+str(limit),scopes={}),
                     dict(event='api_mesh_frame',skinned_submitted=total,skinned_created=created,skinned_reused=reused,
-                         preview_skinned_submitted=total,preview_skinned_created=created,preview_skinned_reused=reused,
-                         skinned_frame_submitted=0,skinned_frame_limit=limit,skinned_frame_max=1024,gpu_skin_performance_phase=phase)]
-            events.append(dict(event='preview_end',skinned_submitted=total,skinned_created=created,skinned_reused=reused,gpu_skin_density_throttle_frames=0))
+                         preview_submitted=total,preview_skinned_submitted=total,preview_skinned_created=created,preview_skinned_reused=reused,
+                         skinned_frame_submitted=0,skinned_frame_unique_meshes=0,skinned_frame_repeat_draws=0,
+                         skinned_frame_limit=limit,skinned_frame_max=128,gpu_skin_performance_phase=phase)]
+            events.append(dict(event='preview_end',submitted=total,skinned_submitted=total,skinned_created=created,skinned_reused=reused,gpu_skin_only_omitted=100,gpu_skin_density_throttle_frames=0))
             def review():
                 (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events));return analyze(root)
             result=review();self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['gpu_skinning']['status'],'performance_ramp_requires_review')
-            events[7]['skinned_frame_limit']=255
+            events[7]['skinned_frame_limit']=63
             self.assertIn('invalid_gpu_skinning_performance_ramp',review()['errors'])
+            events[7]['skinned_frame_limit']=64;events[-1]['submitted']=total+1
+            self.assertIn('performance_cpu_pose_submission',review()['errors'])
 
 if __name__=='__main__':unittest.main()

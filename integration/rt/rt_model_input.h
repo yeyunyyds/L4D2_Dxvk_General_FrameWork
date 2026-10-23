@@ -29,7 +29,7 @@ inline bool ownDraw(scene_input::Prepared& out,const scene_input::Data& input,ui
   else { out.reason="model_owned_draw_kind";return false; }
   out.ownedDraw=true;return true;
 }
-inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true) {
+inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const scene_input::Data& input,const std::string& digest,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true,bool gpuSkinOnly=false) {
   runtime_profile::Scope timing(runtime_profile::Stage::Skin);
   scene_input::Prepared out;
   if (FAILED(input.result)) {
@@ -49,6 +49,13 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
   }
   const bool infected=!std::strcmp(s.materialInfo.shader.data(),"Infected");
   if(infected!=(profile==model_shader::Profile::InfectedRigid)) { out.reason="infected_material_program_mismatch";return out; }
+  // Performance validation must isolate persistent GPU skinning. Unsupported,
+  // morphed and over-limit models remain excluded from the explicit RT scene
+  // instead of creating a new CPU-pose mesh every Draw.
+  if(gpuSkinOnly&&(!allowPersistentGpuSkinning||
+      (profile!=model_shader::Profile::Skin3&&profile!=model_shader::Profile::Neko3)||input.constants[13][0]!=0)) {
+    out.reason="performance_gpu_skin_only_omitted";out.result=S_FALSE;return out;
+  }
   if(infected) {
     const D3DVERTEXELEMENT9 exact[]={
       {0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_NORMAL,0},
@@ -164,7 +171,7 @@ template<class Device> bool standardAlpha(Device* d) {
     SUCCEEDED(d->GetRenderState(D3DRS_BLENDOP,&op))&&SUCCEEDED(d->GetRenderState(D3DRS_SEPARATEALPHABLENDENABLE,&separate))&&
     src==D3DBLEND_SRCALPHA&&dst==D3DBLEND_INVSRCALPHA&&op==D3DBLENDOP_ADD&&!separate;
 }
-inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true) {
+inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true,bool gpuSkinOnly=false) {
   runtime_profile::Scope timing(runtime_profile::Stage::Prepare);
   DWORD values[7]{};scene_input::Prepared rejected;
   const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
@@ -175,8 +182,8 @@ inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Sna
   if (values[3] || values[4] || (values[5]&7)!=7 || (values[5]&~15u) || (values[6]!=D3DCMP_LESS && values[6]!=D3DCMP_LESSEQUAL)) { rejected.reason="model_pipeline_special_pass";return rejected; }
   auto input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
   const auto digest=ldb_rt_file::bytesSha256(input.vs.data(),input.vs.size()*4);
-  if (model_shader::profile(digest)!=model_shader::Profile::Unknown && model_shader::profile(digest)!=model_shader::Profile::InfectedRigid && SUCCEEDED(input.result) && input.constants[13][0]!=0) { scene_input::morphPositions(d,input); }
-  auto out=reconstruct(s,input,digest,allowPersistentGpuSkinning,verifyGpuSkinOutput);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && (cpuOnly || scene_input::upload(d,out))) { out.ready=true; }
+  if (!gpuSkinOnly && model_shader::profile(digest)!=model_shader::Profile::Unknown && model_shader::profile(digest)!=model_shader::Profile::InfectedRigid && SUCCEEDED(input.result) && input.constants[13][0]!=0) { scene_input::morphPositions(d,input); }
+  auto out=reconstruct(s,input,digest,allowPersistentGpuSkinning,verifyGpuSkinOutput,gpuSkinOnly);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && (cpuOnly || scene_input::upload(d,out))) { out.ready=true; }
   if (evidence && out.ready) { *evidence=std::move(input); }return out;
 }
 } // namespace ldb_rt::model_input

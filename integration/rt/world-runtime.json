@@ -1,14 +1,16 @@
 {
   "schema": 1,
   "scope": "rt_prerequisites",
-  "build_commit": "ddb9596e1fb427ff0da3ce24ebbef19ca1072686",
+  "build_commit": "4a706fa0736bc1d7c123cfd5a2aa331dca1993cd",
   "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
   "runtime_execution": "unrun",
   "runtime_patches": {
     "skinning": {
-      "sha256": "a07c39f7b32fad2d2c1b6d2996fa67736eaed1c239469cb5ff9b5ea2e1b99690",
+      "sha256": "5df7b5d723a027056623e7dd7448e955454021fbfe778d3597948446e83d0080",
       "source_sha256": "157894bad010f7a1f8bf21077a99b7d09a45ea5894d4bf43e3801a33e4c577dd",
-      "weight_stride": "sizeof(float)*bonesPerVertex"
+      "geometry_source_sha256": "8ec3814b35cbbbb1bed29e1b449c7f3ffd428ef0efde261c84c93473fb52f360",
+      "weight_stride": "sizeof(float)*bonesPerVertex",
+      "command_counter": "reset_after_flush"
     }
   },
   "vulkan_loader": {
@@ -22,22 +24,22 @@
   "source_threading": "unrun",
   "payloads": [
     {
-      "name": "rt-prereq-payload-e57babdd4676a42857181ec3.zip",
-      "sha256": "e57babdd4676a42857181ec3cb206cdadd921877f47ce88756bd1a6a947d70f2",
-      "size": 78275935,
-      "ref": "36f8209d5f5359bd30611a028c6241dc7f78bcac"
+      "name": "rt-prereq-payload-f977a6089277dc47c8802244.zip",
+      "sha256": "f977a6089277dc47c88022447eaab519bdc07c2c2993eb7f28ff0e2b77f23ae7",
+      "size": 78275924,
+      "ref": "1d1c3dda1e62bb5fb108dbf3dcb144837831c325"
     },
     {
-      "name": "rt-prereq-payload-01ef47c5e9fff20e44f017cb.zip",
-      "sha256": "01ef47c5e9fff20e44f017cb5a11feb4a04089f53c6cb7a4dbde1393f2a2e11a",
+      "name": "rt-prereq-payload-a0a9bad8fd73d7df8308a795.zip",
+      "sha256": "a0a9bad8fd73d7df8308a795bb04e859243b42e2901ac92eb29a0a8164d9ee93",
       "size": 95644514,
-      "ref": "36f8209d5f5359bd30611a028c6241dc7f78bcac"
+      "ref": "1d1c3dda1e62bb5fb108dbf3dcb144837831c325"
     },
     {
-      "name": "rt-prereq-payload-416d899bbb490aa72e5b86cb.zip",
-      "sha256": "416d899bbb490aa72e5b86cbda1b562cbb7180c1238b91d10d18b82dec49f403",
-      "size": 89310528,
-      "ref": "36f8209d5f5359bd30611a028c6241dc7f78bcac"
+      "name": "rt-prereq-payload-6f313907dae81304555442de.zip",
+      "sha256": "6f313907dae81304555442de61af424a5baf1c4e1f575332aaa1bfbd733da052",
+      "size": 89310529,
+      "ref": "1d1c3dda1e62bb5fb108dbf3dcb144837831c325"
     }
   ],
   "runtime_files": {
@@ -79,7 +81,7 @@
     },
     "d3d9.dll": {
       "size": 210378240,
-      "sha256": "9c8571ac417b6fbfde5533b0bf83f1dcb11fbceb10e9431d0c0a73afc1c65d34"
+      "sha256": "843e63f99d63f64155dc359cb5f2b9aa10058e2f6510358054f83920d8589ca4"
     },
     "gf.dll": {
       "size": 587800,
@@ -155,7 +157,7 @@
     },
     "rt-runtime-smoke.exe": {
       "size": 321536,
-      "sha256": "6d2d2f5d3b4d5314753990dab07c8692bc8b48a25ff425654fdbd3499806d04d"
+      "sha256": "32f80bb07065e08fde68255af51d443d7b59c28b0b88d0b80e124a80976e88d3"
     },
     "rtxio.dll": {
       "size": 2622976,
@@ -423,7 +425,7 @@
     },
     "usd/plugins/RemixCategories/RemixCategories.dll": {
       "size": 69120,
-      "sha256": "3132e5d7430596a86422e11f06bff51b403e93cb0800c3931df16c152cd08102"
+      "sha256": "122237e15f264b194d5b70519b79e3044ddc4e51373a592161481d9ff0272839"
     },
     "usd/plugins/RemixCategories/generatedSchema.usda": {
       "size": 13073,
@@ -435,7 +437,7 @@
     },
     "usd/plugins/RemixParticleSystem/RemixParticleSystem.dll": {
       "size": 200192,
-      "sha256": "7d8d781f41c57cb78bc64492a1f8c880e2ef73ee2680017b1495f0d73ee18138"
+      "sha256": "7d89b13aea766f3635cc58ecfe76a1314b7beb2c583afe5d73d14971f850f3b2"
     },
     "usd/plugins/RemixParticleSystem/generatedSchema.usda": {
       "size": 49208,
@@ -739,7 +741,7 @@
     "url": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
     "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8"
   },
-  "native_build_commit": "ddb9596e1fb427ff0da3ce24ebbef19ca1072686",
-  "code_commit": "ddb9596e1fb427ff0da3ce24ebbef19ca1072686",
-  "world_use": "v31 pauses the gameplay beta and runs a 240-frame GPU-skin offload ramp at limits 4, 64, 256 and 1024 with no TAA switch or image readback; the performance path removes the duplicate full CPU skin output oracle while retaining bounded input validation"
+  "native_build_commit": "4a706fa0736bc1d7c123cfd5a2aa331dca1993cd",
+  "code_commit": "4a706fa0736bc1d7c123cfd5a2aa331dca1993cd",
+  "world_use": "v32 keeps the gameplay beta paused and runs a 120-frame persistent-GPU-skin-only stability ramp at limits 16, 32, 64 and 128; performance mode omits ineligible and excess CPU-pose meshes, while the runtime resets its skin command counter after each real flush"
 }

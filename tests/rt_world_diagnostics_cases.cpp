@@ -12,8 +12,8 @@ int main() {
     require(allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame-1)&&
       !allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame)&&
       !allowPersistentGpuSkin(1,kGpuSkinSubmissionsPerFrame),"adaptive GPU skin density or submission bound exceeded");
-    require(performanceGpuSkinLimit(0)==4&&performanceGpuSkinLimit(59)==4&&performanceGpuSkinLimit(60)==64&&
-      performanceGpuSkinLimit(120)==256&&performanceGpuSkinLimit(180)==1024&&performanceGpuSkinLimit(999)==1024,
+    require(performanceGpuSkinLimit(0)==16&&performanceGpuSkinLimit(29)==16&&performanceGpuSkinLimit(30)==32&&
+      performanceGpuSkinLimit(60)==64&&performanceGpuSkinLimit(90)==128&&performanceGpuSkinLimit(999)==128,
       "GPU performance ramp phase limits differ");
     std::cout << "RT GPU skin previous-frame density and submission limits: PASS\n";
     CoverageComparison coverage;

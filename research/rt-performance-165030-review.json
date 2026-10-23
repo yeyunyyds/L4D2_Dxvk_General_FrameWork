@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "source": {
+    "file": "rt-performance-20261022-165030-fae76934.zip",
+    "size": 13593160,
+    "sha256": "4af31ca0b8ea6570038da88ba00d04cfb3e7dd1d8f944a68812a7507dbeb49b4"
+  },
+  "build_commit": "3f384537fd09b3d7b333337523b03ea50a24629f",
+  "result": "device_lost_after_mixed_cpu_pose_and_gpu_skin_workload",
+  "control_presents": 30,
+  "completed_phase": {
+    "gpu_skin_limit": 4,
+    "frames": 60,
+    "wall_ms": 16011.0334,
+    "fps": 3.7474158288870973,
+    "gpu_skin_submitted": 240,
+    "gpu_skin_created": 6,
+    "gpu_skin_reused": 234,
+    "model_ms": 13180.7558,
+    "cpu_skin_ms": 5723.0637,
+    "mesh_create_ms": 684.1755,
+    "present_ms": 1226.4759,
+    "gpu_3d_average_percent": 13.061372192660002,
+    "gpu_3d_max_percent": 21.20137658145509
+  },
+  "last_complete_frame": {
+    "global_frame": 90,
+    "frame_draws": 694,
+    "mesh_created_total": 39414,
+    "mesh_reused_total": 1313,
+    "frame_new_geometry_bytes": 95961540,
+    "live_mesh_entries": 1341,
+    "live_mesh_bytes": 198560036,
+    "destroyed_meshes": 38073,
+    "pending_fences": 1
+  },
+  "failure": {
+    "last_runtime_frame_with_output": 96,
+    "frames_observed_after_64_phase_started": 6,
+    "dxvk_time": "16:58:46.276",
+    "vulkan": "VK_ERROR_DEVICE_LOST",
+    "bridge_followup": "IPC command 148 aborted after 60000 ms producer wait",
+    "user_visible": "video frozen and temporarily unresponsive while game audio continued"
+  },
+  "runtime_source_finding": {
+    "submission_order_review": "intentional_geometry_upload_then_skin_write_then_BLAS_recording;do_not_reverse",
+    "confirmed_overhead": "m_skinningCommands was not reset after a real dedicated-context flush",
+    "corrective_change": "reset m_skinningCommands after flush",
+    "remaining_attribution": "mixed workload cannot distinguish GPU-skin failure from extreme CPU-pose mesh churn and allocator pressure"
+  },
+  "next_validation": {
+    "pilot_revision": 32,
+    "frames": 120,
+    "phase_frames": 30,
+    "gpu_skin_limits": [16, 32, 64, 128],
+    "single_f9": true,
+    "beta_paused": true,
+    "explicit_rt_model_policy": "persistent_gpu_skin_only;omit_ineligible_morphed_and_excess_cpu_pose_meshes",
+    "primary_acceptance": [
+      "no VK_ERROR_DEVICE_LOST",
+      "all four phases and cleanup complete",
+      "every explicit RT model submission is GPU skinned",
+      "persistent mesh reuse and phase timing are reported"
+    ]
+  }
+}

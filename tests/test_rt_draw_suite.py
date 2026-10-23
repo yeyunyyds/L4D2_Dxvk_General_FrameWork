@@ -209,15 +209,18 @@ assert result['execution']=='incomplete'
     def test_performance_review_accepts_four_exercised_phases_and_reports_fps(self):
         directory=self.root/'performance';directory.mkdir();events=[dict(event='performance_ramp_begin',code=0)]
         total=created=reused=0
-        for phase,limit in enumerate((4,64,256,1024)):
+        for phase,limit in enumerate((16,32,64,128)):
             submitted=min(limit,500);total+=submitted;created+=1;reused+=submitted-1
             events += [dict(event='runtime_timing_window',segment='gpu_ramp_'+str(limit),wall_ms=3000,scopes={'model':{'elapsed_ms':1000},'skin':{'elapsed_ms':500},'mesh_create':{'elapsed_ms':50},'present':{'elapsed_ms':200}}),
                        dict(event='api_mesh_frame',gpu_skin_performance_phase=phase,skinned_frame_limit=limit,skinned_frame_submitted=0,
-                            preview_skinned_submitted=total,preview_skinned_created=created,preview_skinned_reused=reused,created=created,reused=reused)]
-        events.append(dict(event='preview_end',complete=True,frames=241,entries=0,pending_fences=0,held=0))
+                            skinned_frame_unique_meshes=0,skinned_frame_repeat_draws=0,
+                            preview_submitted=total,preview_skinned_submitted=total,preview_skinned_created=created,preview_skinned_reused=reused,created=created,reused=reused)]
+        events.append(dict(event='preview_end',complete=True,frames=121,entries=0,pending_fences=0,held=0,submitted=total,skinned_submitted=total,gpu_skin_only_omitted=100))
         (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
-        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['best_fps'],20)
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors']);self.assertEqual(result['best_fps'],10);self.assertEqual(result['worst_fps'],10)
         self.assertFalse(result['meets_24_fps'])
+        events[-1]['submitted']=total+1;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        self.assertIn('performance_cpu_pose_submission',suite.review_performance(directory)['errors'])
 
 
 class InstallTests(unittest.TestCase):
