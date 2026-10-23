@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "source": {
+    "file": "rt-performance-20261023-163442-0f7e659b.zip",
+    "size": 6899910,
+    "sha256": "d519af9ce0a66318c50f6d1dbd558813feb7363355e3558ecc6bdc56b59c31ed"
+  },
+  "build_commit": "23e1e4c45f8f5c9313cef344e5ba3a4f62101fbe",
+  "result": "device_lost_after_two_limit_64_frames",
+  "preview_frames": 62,
+  "gpu_skin_submitted": 1568,
+  "gpu_skin_created": 22,
+  "gpu_skin_reused": 1546,
+  "cpu_pose_explicit_submissions": 0,
+  "gpu_skin_only_omitted": 37210,
+  "completed_phases": [
+    {
+      "gpu_skin_limit": 16,
+      "frames": 30,
+      "wall_ms": 3574.0454,
+      "fps": 8.393849725579871,
+      "frame_unique_base_meshes": 10,
+      "frame_repeat_draws": 6,
+      "api_mesh_created_delta": 10,
+      "api_mesh_reused_delta": 470,
+      "model_ms": 151.426,
+      "cpu_skin_validation_ms": 12.0185,
+      "mesh_create_ms": 0.4977,
+      "present_ms": 1441.4821,
+      "present_max_ms": 1438.2375,
+      "gpu_3d_average_percent": 10.576865470096367,
+      "gpu_3d_max_percent": 23.502867159476555
+    },
+    {
+      "gpu_skin_limit": 32,
+      "frames": 30,
+      "wall_ms": 2188.4005,
+      "fps": 13.708642453700772,
+      "frame_unique_base_meshes": 10,
+      "frame_repeat_draws": 22,
+      "api_mesh_created_delta": 7,
+      "api_mesh_reused_delta": 953,
+      "model_ms": 272.0709,
+      "cpu_skin_validation_ms": 46.5743,
+      "mesh_create_ms": 0.7402,
+      "present_ms": 3.3906,
+      "gpu_3d_average_percent": 39.29832268016017,
+      "gpu_3d_max_percent": 44.95121224785489
+    }
+  ],
+  "failure": {
+    "phase_limit": 64,
+    "completed_frames_in_phase": 2,
+    "runtime_event": "api_mesh_fence_failed",
+    "hresult": "0x8876086C",
+    "vulkan": "VK_ERROR_DEVICE_LOST",
+    "dxvk_time": "16:47:46.884"
+  },
+  "attribution": {
+    "cpu_pose_mesh_churn": "removed_as_primary_cause",
+    "remaining_risk": "simultaneous bone poses reused one mutable skinned mesh handle; dense dedicated skin command list",
+    "limit": "logs do not identify the exact failing Vulkan instruction"
+  },
+  "next_validation": {
+    "pilot_revision": 33,
+    "frames": 120,
+    "phase_frames": 30,
+    "gpu_skin_limits": [16, 32, 48, 64],
+    "simultaneous_pose_mesh_slots": "distinct_and_persistent_by_per_frame_draw_ordinal",
+    "runtime_skinning_submission_batch": 16,
+    "single_f9": true,
+    "beta_paused": true,
+    "primary_acceptance": [
+      "no VK_ERROR_DEVICE_LOST",
+      "all four phases and cleanup complete",
+      "zero same-frame skinned mesh repeats",
+      "every explicit RT model submission is GPU skinned"
+    ]
+  }
+}

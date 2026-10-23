@@ -16,7 +16,7 @@ def analyze(directory):
     performance=any(e.get('event')=='performance_ramp_begin' and e.get('code')==0 for e in events)
     requested=any(value>=24 for value in revisions);gpu_pilot=any(25<=value<27 for value in revisions)
     cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value==28 for value in revisions)
-    safety_limit=any(value==29 for value in revisions);density_limit=any(value>=30 for value in revisions)
+    safety_limit=any(value==29 for value in revisions);density_limit=any(value>=30 for value in revisions);pose_slots=any(value>=33 for value in revisions)
     if not requested:return {'schema':1,'status':'not_requested','pass':True}
     windows=[e for e in events if e.get('event')=='runtime_timing_window'];totals=defaultdict(lambda:defaultdict(lambda:{'calls':0,'elapsed_ms':0.,'max_ms':0.}))
     for e in windows:
@@ -60,12 +60,13 @@ def analyze(directory):
             if not ends[0]['skinned_submitted'] or not any(e.get('skinned_frame_submitted',0)>0 for e in frames):errors.append('gpu_skinning_canary_not_exercised')
             if ends[0]['skinned_created']+ends[0]['skinned_reused']!=ends[0]['skinned_submitted']:errors.append('invalid_gpu_skinning_accounting')
         elif performance:
-            expected=[16,32,64,128]
+            expected=[16,32,48,64]
             preview_keys=('preview_skinned_submitted','preview_skinned_created','preview_skinned_reused')
             ramp_valid=len(frames)==4 and [e.get('gpu_skin_performance_phase') for e in frames]==list(range(4)) and [e.get('skinned_frame_limit') for e in frames]==expected and all(
-                isinstance(e.get('skinned_frame_submitted'),int) and 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] and e.get('skinned_frame_max')==128 and
+                isinstance(e.get('skinned_frame_submitted'),int) and 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] and e.get('skinned_frame_max')==64 and
                 isinstance(e.get('skinned_frame_unique_meshes'),int) and isinstance(e.get('skinned_frame_repeat_draws'),int) and
                 e['skinned_frame_unique_meshes']+e['skinned_frame_repeat_draws']==e['skinned_frame_submitted'] and
+                (not pose_slots or (e['skinned_frame_unique_meshes']==e['skinned_frame_submitted'] and e['skinned_frame_repeat_draws']==0)) and
                 isinstance(e.get('preview_submitted'),int) and e['preview_submitted']==e.get('preview_skinned_submitted') and
                 all(isinstance(e.get(k),int) and e[k]>=0 for k in preview_keys) for e in frames)
             previous={k:0 for k in preview_keys}
@@ -98,7 +99,7 @@ def analyze(directory):
                 else 'exercised_requires_image_review' if gpu_pilot and valid and ends and ends[0].get('skinned_submitted',0)>0 else 'unexercised_or_incomplete')
         skin={'status':status,
               'preview':{k:ends[0].get(k) for k in keys} if ends else {},
-              'mesh_frames':len(frames),'limits':'v32 performance mode isolates persistent GPU skinning at limits 16, 32, 64 and 128 for 30 frames each. Ineligible and excess CPU-pose meshes are omitted from the explicit RT scene; every submitted model mesh must therefore be GPU-skinned. This is a stability and supply-cost test, not image acceptance.' if performance else 'v27 requires zero persistent skinning. v28-v29 enforce at most 16 successful GPU-skinned submissions per frame. v30 keeps 16 at up to 256 preceding-frame model submissions and a 4-submission GPU baseline above that density; the warm-up frame and excess models use CPU poses. Image review remains required.'}
+              'mesh_frames':len(frames),'limits':'v33 performance mode isolates persistent GPU skinning at limits 16, 32, 48 and 64 for 30 frames each. Ineligible and excess CPU-pose meshes are omitted from the explicit RT scene; every submitted model mesh must therefore be GPU-skinned. This is a stability and supply-cost test, not image acceptance.' if performance else 'v27 requires zero persistent skinning. v28-v29 enforce at most 16 successful GPU-skinned submissions per frame. v30 keeps 16 at up to 256 preceding-frame model submissions and a 4-submission GPU baseline above that density; the warm-up frame and excess models use CPU poses. Image review remains required.'}
     return {'schema':1,'pass':not errors,'status':'valid_evidence_requires_review' if not errors else 'incomplete','errors':sorted(set(errors)),
             'timing_windows':len(windows),'window_timeline':[{k:e.get(k) for k in ('frame','first_after_frame','segment','wall_ms','qpc_begin','qpc_end','qpc_frequency','utc_filetime_100ns')} for e in windows],'elapsed_scopes_by_segment':dict(totals),'native_taa_requests':taa,
             'native_edge_payloads':samples,'native_edge_evidence':'not_requested_performance_ramp' if performance else 'complete_requires_image_review' if edge_complete else 'unavailable_or_incomplete',

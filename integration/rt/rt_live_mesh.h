@@ -127,13 +127,19 @@ class Scene {
   Limits limits;
   std::map<std::string,MaterialRecord> materials;
   std::set<std::string> frameSkinnedKeys;
+  // A skinned Remix mesh owns one mutable deformed vertex buffer. Source may
+  // draw the same bind-pose geometry several times in a frame for different
+  // characters or model parts, so those simultaneous poses must not share a
+  // mesh handle. Draw order is stable for Source studio models and gives each
+  // occurrence a persistent slot that is reused on the following frame.
+  std::map<std::string,unsigned> frameSkinnedSlots;
 public:
   uint64_t bytes=0,peakBytes=0,created=0,reused=0,destroyed=0,submitted=0,materialUpdates=0,skinnedCreated=0,skinnedReused=0,skinnedSubmitted=0;
   static constexpr uint64_t maxBytes=512ull*1024*1024,maxFrameBytes=192ull*1024*1024;
   uint64_t frame=0,frameBytes=0,omitted=0;unsigned frameDraws=0,frameSkinnedDraws=0,frameSkinnedUniqueMeshes=0,frameSkinnedRepeatDraws=0,frameOmitted=0;
   std::array<uint64_t,size_t(Budget::Count)> omissionTotals{};
   explicit Scene(remixapi_Interface* table=nullptr,Limits policy={}):api(table),limits(policy) {}
-  void frameAt(uint64_t at) { if(at!=frame) { frame=at;frameDraws=0;frameSkinnedDraws=0;frameSkinnedUniqueMeshes=0;frameSkinnedRepeatDraws=0;frameBytes=0;frameOmitted=0;frameSkinnedKeys.clear(); } }
+  void frameAt(uint64_t at) { if(at!=frame) { frame=at;frameDraws=0;frameSkinnedDraws=0;frameSkinnedUniqueMeshes=0;frameSkinnedRepeatDraws=0;frameBytes=0;frameOmitted=0;frameSkinnedKeys.clear();frameSkinnedSlots.clear(); } }
   Submission defer(Budget reason,uint64_t at) {
     frameAt(at);Submission result;result.deferred=true;result.budget=reason;result.operation="budget";
     ++omitted;++frameOmitted;++omissionTotals[size_t(reason)];return result;
@@ -169,6 +175,10 @@ public:
       if(wh.empty()||bh.empty()) { result.code=ERROR_INVALID_DATA;return result; }skinKey=":skin3:"+wh+bh;result.skinned=true;
     }
     result.key=vh+ih+skinKey+":"+std::to_string(kind)+":"+std::to_string(unsigned(topology))+":"+std::to_string(cull)+":"+materialKey;
+    if(source.skinning.enabled) {
+      const auto baseKey=result.key;
+      result.key+=":pose-slot:"+std::to_string(frameSkinnedSlots[baseKey]++);
+    }
     auto found=meshes.find(result.key);
     Geometry geometry;
     if(found==meshes.end()) {

@@ -25,11 +25,11 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v32 isolates persistent GPU skinning with one short run. CPU-pose model
+// v33 isolates persistent GPU skinning with one short run. CPU-pose model
 // meshes are omitted by performance mode so host-side mesh churn cannot hide
-// the GPU path or exhaust the runtime before the 64/128 submission phases.
+// the GPU path or exhaust the runtime before the 48/64 submission phases.
 constexpr unsigned kGpuSkinPerformancePhaseFrames=30;
-constexpr std::array<unsigned,4> kGpuSkinPerformanceLimits{{16,32,64,128}};
+constexpr std::array<unsigned,4> kGpuSkinPerformanceLimits{{16,32,48,64}};
 inline unsigned performanceGpuSkinPhase(uint64_t completedFrames) noexcept {
   return unsigned((std::min)(completedFrames/uint64_t(kGpuSkinPerformancePhaseFrames),uint64_t(kGpuSkinPerformanceLimits.size()-1)));
 }

@@ -9,6 +9,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_SKINNING_SOURCE = Path('src/dxvk/rtx_render/rtx_remix_api.cpp')
 RUNTIME_GEOMETRY_SOURCE = Path('src/dxvk/rtx_render/rtx_geometry_utils.h')
+RUNTIME_GEOMETRY_IMPLEMENTATION = Path('src/dxvk/rtx_render/rtx_geometry_utils.cpp')
 RUNTIME_SKINNING_PATCH = ROOT / 'integration/rt/remix-runtime-skinning.patch'
 
 
@@ -29,9 +30,13 @@ def validate_runtime_skinning_source(data):
         raise RuntimeError('Runtime still uses the invalid one-float skinning vertex stride')
 
 
-def validate_runtime_skinning_flush(geometry):
+def validate_runtime_skinning_flush(geometry, implementation=b''):
     if b'm_skinningContext->flushCommandList();\n        m_skinningCommands = 0;' not in geometry:
         raise RuntimeError('GPU skinning command count is not reset after submission')
+    if (b'kSkinningCommandsPerSubmission = 16' not in implementation or
+            b'm_skinningCommands >= kSkinningCommandsPerSubmission' not in implementation or
+            b'm_skinningContext->flushCommandList();\n      m_skinningCommands = 0;' not in implementation):
+        raise RuntimeError('GPU skinning command list is not bounded')
 
 
 def prepare(output):
@@ -52,7 +57,8 @@ def prepare(output):
     runtime_skinning_source = output / RUNTIME_SKINNING_SOURCE
     validate_runtime_skinning_source(runtime_skinning_source.read_bytes())
     runtime_geometry_source = output / RUNTIME_GEOMETRY_SOURCE
-    validate_runtime_skinning_flush(runtime_geometry_source.read_bytes())
+    runtime_geometry_implementation = output / RUNTIME_GEOMETRY_IMPLEMENTATION
+    validate_runtime_skinning_flush(runtime_geometry_source.read_bytes(), runtime_geometry_implementation.read_bytes())
     api = output / 'public/include/remix/remix_c.h'
     receipt = {'schema': 2, 'repository': baseline['runtime_repository'],
                'commit': baseline['runtime_commit'], 'branch_reference': baseline['runtime_branch_reference'],
@@ -61,8 +67,10 @@ def prepare(output):
                'runtime_skinning_patch_sha256': digest(RUNTIME_SKINNING_PATCH),
                'runtime_skinning_source_sha256': digest(runtime_skinning_source),
                'runtime_geometry_source_sha256': digest(runtime_geometry_source),
+               'runtime_geometry_implementation_sha256': digest(runtime_geometry_implementation),
                'runtime_skinning_weight_stride': 'sizeof(float)*bonesPerVertex',
                'runtime_skinning_command_counter': 'reset_after_flush',
+               'runtime_skinning_submission_batch': 16,
                'submodules': 'pending', 'runtime_execution': 'unrun', 'b580_rt': 'unrun'}
     def save():
         (output / 'rt-runtime-source.json').write_text(json.dumps(receipt, indent=2) + '\n')

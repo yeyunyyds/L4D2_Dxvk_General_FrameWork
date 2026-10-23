@@ -1,5 +1,36 @@
+diff --git a/src/dxvk/rtx_render/rtx_geometry_utils.cpp b/src/dxvk/rtx_render/rtx_geometry_utils.cpp
+index 88de3c94..88db823a 100644
+--- a/src/dxvk/rtx_render/rtx_geometry_utils.cpp
++++ b/src/dxvk/rtx_render/rtx_geometry_utils.cpp
+@@ -369,6 +369,14 @@ namespace dxvk {
+       }
+     }
+     ++m_skinningCommands;
++    // Keep the dedicated skinning queue bounded on drivers that become
++    // unstable when a dense animated scene records one very large command
++    // list. Queue submission order preserves the skin-to-BLAS dependency.
++    constexpr uint32_t kSkinningCommandsPerSubmission = 16;
++    if (m_skinningCommands >= kSkinningCommandsPerSubmission) {
++      m_skinningContext->flushCommandList();
++      m_skinningCommands = 0;
++    }
+   }
+
+   void RtxGeometryUtils::dispatchViewModelCorrection(
+diff --git a/src/dxvk/rtx_render/rtx_geometry_utils.h b/src/dxvk/rtx_render/rtx_geometry_utils.h
+index 862d9059..9ae77dfe 100644
+--- a/src/dxvk/rtx_render/rtx_geometry_utils.h
++++ b/src/dxvk/rtx_render/rtx_geometry_utils.h
+@@ -201,6 +201,7 @@ namespace dxvk {
+     inline void flushCommandList() {
+       if (m_skinningContext->getCommandList() != nullptr && m_skinningCommands > 0) {
+         m_skinningContext->flushCommandList();
++        m_skinningCommands = 0;
+       }
+     }
+
 diff --git a/src/dxvk/rtx_render/rtx_remix_api.cpp b/src/dxvk/rtx_render/rtx_remix_api.cpp
-index 3113fe2..cf24862 100644
+index 3113fe2b..cf248628 100644
 --- a/src/dxvk/rtx_render/rtx_remix_api.cpp
 +++ b/src/dxvk/rtx_render/rtx_remix_api.cpp
 @@ -919,7 +919,8 @@ namespace {
@@ -15,7 +46,7 @@ index 3113fe2..cf24862 100644
 @@ -933,6 +934,28 @@ namespace {
      for (size_t i = 0; i < info->surfaces_count; i++) {
        const remixapi_MeshInfoSurfaceTriangles& src = info->surfaces_values[i];
- 
+
 +      if ((src.vertices_count > 0 && src.vertices_values == nullptr) ||
 +          (src.indices_count > 0 && src.indices_values == nullptr)) {
 +        return REMIXAPI_ERROR_CODE_INVALID_ARGUMENTS;
@@ -40,8 +71,8 @@ index 3113fe2..cf24862 100644
 +
        const size_t vertexDataSize = sizeInBytes(src.vertices_values, src.vertices_count);
        const size_t indexDataSize = sizeInBytes(src.indices_values, src.indices_count);
- 
-@@ -1014,7 +1037,7 @@ namespace {
+
+@@ -1014,6 +1037,6 @@ namespace {
          dst.color0Buffer = dxvk::RasterBuffer { vertexSlice, offsetof(remixapi_HardcodedVertex, color), sizeof(remixapi_HardcodedVertex), VK_FORMAT_B8G8R8A8_UNORM };
          if (src.skinning_hasvalue) {
            dst.numBonesPerVertex = src.skinning_value.bonesPerVertex;
@@ -49,15 +80,3 @@ index 3113fe2..cf24862 100644
 +          dst.blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, uint32_t(sizeof(float) * src.skinning_value.bonesPerVertex), VK_FORMAT_R32_SFLOAT };
            dst.blendIndicesBuffer = dxvk::RasterBuffer { blendIndicesSlice, 0, sizeof(uint32_t), VK_FORMAT_R8G8B8A8_USCALED };
          }
- 
-diff --git a/src/dxvk/rtx_render/rtx_geometry_utils.h b/src/dxvk/rtx_render/rtx_geometry_utils.h
-index 862d9059..9ae77dfe 100644
---- a/src/dxvk/rtx_render/rtx_geometry_utils.h
-+++ b/src/dxvk/rtx_render/rtx_geometry_utils.h
-@@ -201,5 +201,6 @@ namespace dxvk {
-     inline void flushCommandList() {
-       if (m_skinningContext->getCommandList() != nullptr && m_skinningCommands > 0) {
-         m_skinningContext->flushCommandList();
-+        m_skinningCommands = 0;
-       }
-     }

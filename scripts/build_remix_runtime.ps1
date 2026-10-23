@@ -8,13 +8,16 @@ $smoke = Join-Path $repo 'integration/rt/rt_runtime_smoke.cpp'
 $runtimeSkinningPatch = Join-Path $repo 'integration/rt/remix-runtime-skinning.patch'
 $runtimeSkinningSource = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_remix_api.cpp'
 $runtimeGeometrySource = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_geometry_utils.h'
+$runtimeGeometryImplementation = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_geometry_utils.cpp'
 if ((Get-FileHash $api -Algorithm SHA256).Hash.ToLower() -ne $receipt.api_sha256 -or
     (Get-FileHash $smoke -Algorithm SHA256).Hash.ToLower() -ne $receipt.smoke_source_sha256 -or
     (Get-FileHash $runtimeSkinningPatch -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_skinning_patch_sha256 -or
     (Get-FileHash $runtimeSkinningSource -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_skinning_source_sha256 -or
     (Get-FileHash $runtimeGeometrySource -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_geometry_source_sha256 -or
+    (Get-FileHash $runtimeGeometryImplementation -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_geometry_implementation_sha256 -or
     $receipt.runtime_skinning_weight_stride -ne 'sizeof(float)*bonesPerVertex' -or
-    $receipt.runtime_skinning_command_counter -ne 'reset_after_flush') {
+    $receipt.runtime_skinning_command_counter -ne 'reset_after_flush' -or
+    $receipt.runtime_skinning_submission_batch -ne 16) {
   throw 'Runtime API/smoke/skinning input changed after preparation'
 }
 $head = & git -C $sourcePath rev-parse HEAD

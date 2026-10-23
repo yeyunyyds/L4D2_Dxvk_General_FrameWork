@@ -107,7 +107,10 @@ int main() {
     prepared.skinning.transforms[1][3]=20;const auto second=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);
     require(second.success&&!second.created&&second.handle==first.handle&&fixture::lastBoneX==20&&skins.skinnedCreated==1&&skins.skinnedReused==1&&skins.frameSkinnedDraws==1&&skins.frameSkinnedUniqueMeshes==1&&!skins.frameSkinnedRepeatDraws,"bone update recreated persistent mesh or frame counter did not reset");
     const auto repeated=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,2);
-    require(repeated.success&&repeated.handle==first.handle&&skins.skinnedReused==2&&skins.frameSkinnedDraws==2&&skins.frameSkinnedUniqueMeshes==1&&skins.frameSkinnedRepeatDraws==1,"same-frame skinned mesh identity accounting");
+    require(repeated.success&&repeated.created&&repeated.handle!=first.handle&&skins.skinnedCreated==2&&skins.skinnedReused==1&&skins.frameSkinnedDraws==2&&skins.frameSkinnedUniqueMeshes==2&&!skins.frameSkinnedRepeatDraws,"simultaneous skinned poses shared a mutable mesh handle");
+    const auto firstNextFrame=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3);
+    const auto secondNextFrame=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3);
+    require(firstNextFrame.success&&secondNextFrame.success&&!firstNextFrame.created&&!secondNextFrame.created&&firstNextFrame.handle==first.handle&&secondNextFrame.handle==repeated.handle&&skins.skinnedCreated==2&&skins.skinnedReused==3&&skins.frameSkinnedUniqueMeshes==2,"skinned pose slots were not persistent across frames");
     require(!skins.retire(2,4,true),"persistent skin cleanup");
     input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,digest,true);
     require(!morphed.skinning.enabled&&std::string(morphed.reason)=="original_vs_three_weight","morph must retain CPU skin fallback");

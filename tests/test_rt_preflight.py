@@ -51,6 +51,7 @@ class PreflightCases(unittest.TestCase):
         self.assertIn('skinning.blendWeights_count != expectedSkinningValues', patch_text)
         self.assertIn('skinning.blendIndices_count != expectedSkinningValues', patch_text)
         self.assertIn('+        m_skinningCommands = 0;', patch_text)
+        self.assertIn('kSkinningCommandsPerSubmission = 16', patch_text)
         corrected = b' '.join((
             b'expectedSkinningValues',
             b'skinning.blendWeights_count != expectedSkinningValues',
@@ -61,9 +62,12 @@ class PreflightCases(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'one-float'):
             validate_runtime_skinning_source(corrected + b' blendWeightBuffer = dxvk::RasterBuffer { blendWeightsSlice, 0, sizeof(float),')
         geometry = b'm_skinningContext->flushCommandList();\n        m_skinningCommands = 0;'
-        validate_runtime_skinning_flush(geometry)
+        implementation = b'kSkinningCommandsPerSubmission = 16; m_skinningCommands >= kSkinningCommandsPerSubmission; m_skinningContext->flushCommandList();\n      m_skinningCommands = 0;'
+        validate_runtime_skinning_flush(geometry, implementation)
         with self.assertRaisesRegex(RuntimeError, 'not reset'):
-            validate_runtime_skinning_flush(b'm_skinningContext->flushCommandList();')
+            validate_runtime_skinning_flush(b'm_skinningContext->flushCommandList();', implementation)
+        with self.assertRaisesRegex(RuntimeError, 'not bounded'):
+            validate_runtime_skinning_flush(geometry, b'')
         build_script = (Path(__file__).resolve().parents[1] / 'scripts/build_remix_runtime.ps1').read_text()
         self.assertIn('dbghelp.lib', build_script)
         packager = (Path(__file__).resolve().parents[1] / 'scripts/package_rt_preflight.py').read_text()

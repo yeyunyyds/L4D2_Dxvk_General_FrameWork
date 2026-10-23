@@ -413,12 +413,12 @@ def review_performance(directory):
     for e in events:
         if e.get('code',0):errors.append('performance_runtime_failure:'+e.get('event','unknown'))
     mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
-    expected=[16,32,64,128]
+    expected=[16,32,48,64]
     if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(4)) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
         errors.append('performance_phase_sequence')
     elif any(not isinstance(e.get('skinned_frame_submitted'),int) or not 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] or
              not isinstance(e.get('skinned_frame_unique_meshes'),int) or not isinstance(e.get('skinned_frame_repeat_draws'),int) or
-             e['skinned_frame_unique_meshes']+e['skinned_frame_repeat_draws']!=e['skinned_frame_submitted'] or
+             e['skinned_frame_unique_meshes']!=e['skinned_frame_submitted'] or e['skinned_frame_repeat_draws']!=0 or
              not isinstance(e.get('preview_submitted'),int) or e['preview_submitted']!=e.get('preview_skinned_submitted') for e in mesh):
         errors.append('performance_gpu_skin_not_exercised')
     windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[];previous={}
@@ -535,7 +535,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v32: one automatic 120-frame run isolates persistent GPU skinning at limits 16, 32, 64 and 128 for 30 frames each. Unsupported and excess CPU-pose models are intentionally omitted from the RT view. Native TAA and image readbacks stay off. Keep the same scene and do not press F9 again.')
+        if performance:notify('RT Performance v33: one automatic 120-frame run isolates persistent GPU skinning at limits 16, 32, 48 and 64 for 30 frames each. Unsupported and excess CPU-pose models are intentionally omitted from the RT view. Native TAA and image readbacks stay off. Keep the same scene and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
