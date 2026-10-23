@@ -50,3 +50,14 @@ index 3113fe2..cf24862 100644
            dst.blendIndicesBuffer = dxvk::RasterBuffer { blendIndicesSlice, 0, sizeof(uint32_t), VK_FORMAT_R8G8B8A8_USCALED };
          }
  
+diff --git a/src/dxvk/rtx_render/rtx_geometry_utils.h b/src/dxvk/rtx_render/rtx_geometry_utils.h
+index 862d9059..9ae77dfe 100644
+--- a/src/dxvk/rtx_render/rtx_geometry_utils.h
++++ b/src/dxvk/rtx_render/rtx_geometry_utils.h
+@@ -201,5 +201,6 @@ namespace dxvk {
+     inline void flushCommandList() {
+       if (m_skinningContext->getCommandList() != nullptr && m_skinningCommands > 0) {
+         m_skinningContext->flushCommandList();
++        m_skinningCommands = 0;
+       }
+     }
