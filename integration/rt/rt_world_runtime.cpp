@@ -31,6 +31,7 @@ std::ofstream events;
 IDirect3DDevice9* registered = nullptr;
 bool initialized = false;
 bool raytracingRequested = false;
+bool performanceProfileConfigured = false;
 uint64_t physicalDraws = 0;
 world_diagnostics::LiveCoverageComparison comparison;
 live_mesh::Scene apiMeshes(&api);
@@ -87,6 +88,21 @@ bool configure() {
   for (const auto& option : options) {
     const auto code = api.SetConfigVariable(option.first, option.second); event(option.first, uint32_t(code), option.second);
     if (code != REMIXAPI_ERROR_CODE_SUCCESS) { return false; }
+  }
+  if (launch.performance) {
+    // Keep this fixed for the complete run. Changing these options while RT is
+    // active reallocates render targets and makes a device-loss result
+    // ambiguous. TAAU at 0.75 traces 56.25% of the native-resolution pixels.
+    const std::pair<const char*, const char*> profile[] = {
+      {"rtx.upscalerType", "3"}, {"rtx.resolutionScale", "0.75"},
+      {"rtx.enableDirectLighting", "True"}, {"rtx.enableSecondaryBounces", "False"},
+      {"rtx.useRTXDI", "False"}, {"rtx.integrateIndirectMode", "0"}
+    };
+    for (const auto& option : profile) {
+      const auto code=api.SetConfigVariable(option.first,option.second);event(option.first,uint32_t(code),option.second);
+      if(code!=REMIXAPI_ERROR_CODE_SUCCESS) { return false; }
+    }
+    performanceProfileConfigured=true;
   }
   return true;
 }
@@ -289,10 +305,11 @@ bool scene(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
 }
 std::array<SceneCounts,4> modelCounts{};
 constexpr uint64_t kBetaPreviewDurationMs=5ull*60*1000;
-constexpr uint64_t kPerformancePreviewFrames=world_diagnostics::kGpuSkinPerformancePhaseFrames*world_diagnostics::kGpuSkinPerformanceLimits.size();
+constexpr uint64_t kPerformancePreviewFrames=world_diagnostics::kGpuSkinPerformanceFrames;
 const char* performanceSegment(uint64_t completedFrames) {
-  static constexpr const char* names[]={"gpu_ramp_16","gpu_ramp_32","gpu_ramp_48","gpu_ramp_64"};
-  return names[world_diagnostics::performanceGpuSkinPhase(completedFrames)];
+  static constexpr const char* names[]={"gpu_stability_1","gpu_stability_2","gpu_stability_3","gpu_stability_4"};
+  const auto phase=world_diagnostics::performanceGpuSkinPhase(completedFrames);
+  return phase<0?"gpu_stability_warmup":names[phase];
 }
 std::array<unsigned,world_diagnostics::kModelStages> modelSampleCounts{},modelStateCounts{},modelSampleOmitted{};
 std::array<unsigned,world_diagnostics::kModelStages> modelPreviousSampleCounts{},modelPreviousSampleOmitted{};
@@ -388,7 +405,7 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
       meshFences.push_back(std::move(fence));
     }
     if(currentModels()==world_diagnostics::ModelStage::Recovery&&!apiMeshes.entries()) { modelTextures.clear(); }
-    const bool reportFrame=launch.performance&&state().preview?previewFrames&&previewFrames%world_diagnostics::kGpuSkinPerformancePhaseFrames==0:frame%60==0;
+    const bool reportFrame=launch.performance&&state().preview?world_diagnostics::performanceGpuSkinReport(previewFrames):frame%60==0;
     if(reportFrame) {
       runtime_profile::emit(events,frame,launch.performance&&state().preview?performanceSegment(previewFrames-1):state().preview?(previewTaa?"preview_native_taa":"preview_no_aa"):"diagnostic");
       events<<"{\"event\":\"source_shader_census\",\"frame\":"<<frame<<",\"omitted_draws\":"<<sourceCensusOmitted<<",\"counts\":{";
@@ -411,8 +428,8 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
       << ",\"preview_skinned_reused\":" << (launch.performance?apiMeshes.skinnedReused-previewStartSkinnedReused:0)
       << ",\"skinned_frame_submitted\":" << apiMeshes.frameSkinnedDraws << ",\"skinned_frame_limit\":" << effectiveGpuSkinLimit
       << ",\"skinned_frame_unique_meshes\":" << apiMeshes.frameSkinnedUniqueMeshes << ",\"skinned_frame_repeat_draws\":" << apiMeshes.frameSkinnedRepeatDraws
-      << ",\"skinned_frame_max\":" << (launch.performance?world_diagnostics::kGpuSkinPerformanceLimits.back():world_diagnostics::kGpuSkinSubmissionsPerFrame)
-      << ",\"gpu_skin_performance_phase\":" << (launch.performance?int(world_diagnostics::performanceGpuSkinPhase(previewFrames?previewFrames-1:0)):-1)
+      << ",\"skinned_frame_max\":" << (launch.performance?world_diagnostics::kGpuSkinPerformanceLimit:world_diagnostics::kGpuSkinSubmissionsPerFrame)
+      << ",\"gpu_skin_performance_phase\":" << (launch.performance?world_diagnostics::performanceGpuSkinPhase(previewFrames?previewFrames-1:0):-1)
       << ",\"gpu_skin_previous_frame_draws\":" << gpuSkinDensityInput << ",\"gpu_skin_density_limit\":" << world_diagnostics::kGpuSkinModelDensityLimit
       << ",\"gpu_skin_high_density_limit\":" << world_diagnostics::kGpuSkinHighDensitySubmissionsPerFrame
       << ",\"gpu_skin_only_omitted\":" << (launch.performance?previewGpuSkinOnlyOmitted:0)
@@ -808,7 +825,7 @@ void endPreview(bool clean,const char* reason) noexcept {
     (void)raytracing(false);state().active=false;
     const bool complete=clean&&!previewReadFailed&&previewReadbacks==(launch.performance?0u:3u)&&apiMeshes.entries()==0&&meshFences.empty();
     if(complete) { modelTextures.clear(); }
-    runtime_profile::emit(events,state().presents,launch.performance?"gpu_ramp_final":previewTaa?"preview_native_taa_final":"preview_no_aa_final");
+    runtime_profile::emit(events,state().presents,launch.performance?"gpu_stability_final":previewTaa?"preview_native_taa_final":"preview_no_aa_final");
     shaderSummary();
     events<<"{\"event\":\"preview_end\",\"complete\":"<<(complete?"true":"false")<<",\"reason\":\""<<reason
       <<"\",\"elapsed_ms\":"<<GetTickCount64()-previewStarted<<",\"frames\":"<<previewFrames
@@ -836,9 +853,13 @@ void startPreview(IDirect3DDevice9* device) noexcept {
     previousModelDraws=0;gpuSkinDensityThrottleFrames=0;previewGpuSkinOnlyOmitted=0;
     previewStartSkinnedSubmitted=apiMeshes.skinnedSubmitted;previewStartSkinnedCreated=apiMeshes.skinnedCreated;previewStartSkinnedReused=apiMeshes.skinnedReused;
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"34");
-    event("preview_begin",0,launch.performance?"120_frame_gpu_skin_only_stability;limits_16_32_48_64;no_CPU_pose_meshes;no_TAA;no_readback;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
-    if(launch.performance) { event("performance_ramp_begin",0,"16_32_48_64_each_30_frames;persistent_GPU_skin_only;CPU_pose_meshes_omitted"); }
+    event("pilot_delivery_revision",0,"35");
+    event("preview_begin",0,launch.performance?"128_frame_Arc_stability;8_frame_4_to_32_warmup;120_frames_fixed_32;direct_only;TAAU_0.75;no_CPU_pose_meshes;no_readback;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
+    if(launch.performance) {
+      event("performance_stability_begin",performanceProfileConfigured?0:ERROR_INVALID_DATA,
+        "warmup_4_8_12_16_20_24_28_32;fixed_32_for_120;TAAU_0.75;direct_light;secondary_off;RTXDI_off;importance_sampled");
+      if(!performanceProfileConfigured) { endPreview(false,"performance_profile_failed");return; }
+    }
     if(!raytracing(true)) { endPreview(false,"rt_enable_failed"); }
   } catch(...) { endPreview(false,"start_exception"); }
 }
@@ -849,9 +870,9 @@ void previewStep(IDirect3DDevice9* device,bool successful) noexcept {
     ++previewFrames;presented(device,state().presents);
     if(!state().active) { endPreview(false,"maintenance_failed");return; }
     if(launch.performance) {
-      if(!previewRecover&&previewFrames>=kPerformancePreviewFrames) { previewRecover=true;previewRecoverAt=GetTickCount64();event("performance_ramp_recovery_requested",0); }
+      if(!previewRecover&&previewFrames>=kPerformancePreviewFrames) { previewRecover=true;previewRecoverAt=GetTickCount64();event("performance_stability_recovery_requested",0); }
       else if(previewRecover) {
-        if(apiMeshes.entries()==0&&meshFences.empty()) { endPreview(true,"performance_ramp_complete"); }
+        if(apiMeshes.entries()==0&&meshFences.empty()) { endPreview(true,"performance_stability_complete"); }
         else if(GetTickCount64()-previewRecoverAt>5000) { endPreview(false,"recovery_timeout"); }
       }
       return;
@@ -878,7 +899,7 @@ void previewStep(IDirect3DDevice9* device,bool successful) noexcept {
 HMODULE load(const draw_observe::Request& request) noexcept {
   try {
     state() = {};runtime_profile::reset();sourceShaderCensus.clear();sourceCensusOmitted=0;
-    initialized = false; registered = nullptr; raytracingRequested = false; physicalDraws = 0;
+    initialized = false; registered = nullptr; raytracingRequested = false; performanceProfileConfigured=false; physicalDraws = 0;
     comparison = {}; audited.clear(); auditCounts = {}; modelCounts={};apiPayloadBytes={};modelSampleCounts={};modelStateCounts={};modelSampleOmitted={};modelPreviousSampleCounts={};modelPreviousSampleOmitted={}; haveWorldCamera = false; lastView = {}; lastProjection = {};previousModelDraws=0;gpuSkinDensityThrottleFrames=0;
     launch = request;
     events.open(request.output / "world-runtime.jsonl", std::ios::binary);
@@ -915,9 +936,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy",0,"v23_display_4GiB_priority_spool_no_rejected_rereads_standard_alpha_models");
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"34");
+    event("pilot_delivery_revision",0,"35");
     event("runtime_timing_policy",0,"QPC_elapsed_nested_scopes_not_GPU_busy;source_geometry_skin_texture_hash_API_original_Draw_Present_readback");
-    event("api_mesh_policy",0,"v34_unique_persistent_pose_slot_per_simultaneous_GPU_skin_draw;reusable_thread_local_SHA256_handles;performance_isolates_persistent_GPU_skin_meshes;ineligible_and_excess_CPU_pose_meshes_omitted;limits_16_32_48_64_each30frames;runtime_skin_command_counter_reset_after_frame_flush;per_frame_unique_and_repeated_counts;early_fence_retirement_soft_budget_original_draw_ignored");
+    event("api_mesh_policy",0,"v35_unique_persistent_pose_slot_per_simultaneous_GPU_skin_draw;reusable_thread_local_SHA256_handles;performance_isolates_persistent_GPU_skin_meshes;ineligible_and_excess_CPU_pose_meshes_omitted;8_frame_ramp_4_to_32_then_fixed32_for120;TAAU_0.75_direct_only_secondary_off_RTXDI_off;runtime_skin_command_counter_reset_after_frame_flush;per_frame_unique_and_repeated_counts;early_fence_retirement_soft_budget_original_draw_ignored");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");

@@ -148,4 +148,30 @@ class RuntimeEvidenceTests(unittest.TestCase):
             result=analyze(root);self.assertTrue(result['pass'],result['errors'])
             self.assertEqual(result['gpu_skinning']['mesh_frames'],4)
 
+    def test_v35_arc_stability_requires_warmup_and_four_fixed_32_windows(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);events=[dict(event='pilot_delivery_revision',value='35'),
+                dict(event='performance_stability_begin',code=0),
+                dict(event='runtime_timing_window',wall_ms=1000,segment='gpu_stability_warmup',scopes={}),
+                dict(event='api_mesh_frame',gpu_skin_performance_phase=-1,skinned_frame_limit=32,
+                     preview_submitted=144,preview_skinned_submitted=144,preview_skinned_created=32,
+                     preview_skinned_reused=112,skinned_submitted=144,skinned_created=32,skinned_reused=112)]
+            total=144;created=32;reused=112
+            for phase in range(4):
+                total+=960;reused+=960
+                events += [dict(event='runtime_timing_window',wall_ms=1200,segment='gpu_stability_'+str(phase+1),scopes={}),
+                    dict(event='api_mesh_frame',gpu_skin_performance_phase=phase,skinned_frame_limit=32,
+                         skinned_frame_submitted=32,skinned_frame_unique_meshes=32,skinned_frame_repeat_draws=0,
+                         skinned_frame_max=32,preview_submitted=total,preview_skinned_submitted=total,
+                         preview_skinned_created=created,preview_skinned_reused=reused,skinned_submitted=total,
+                         skinned_created=created,skinned_reused=reused)]
+            events.append(dict(event='preview_end',submitted=total,skinned_submitted=total,
+                               skinned_created=created,skinned_reused=reused))
+            (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+            result=analyze(root);self.assertTrue(result['pass'],result['errors'])
+            self.assertEqual(result['gpu_skinning']['status'],'performance_stability_requires_review')
+            events[5]['skinned_frame_max']=64
+            (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+            self.assertIn('invalid_gpu_skinning_performance_ramp',analyze(root)['errors'])
+
 if __name__=='__main__':unittest.main()

@@ -743,5 +743,5 @@
   },
   "native_build_commit": "4a706fa0736bc1d7c123cfd5a2aa331dca1993cd",
   "code_commit": "4a706fa0736bc1d7c123cfd5a2aa331dca1993cd",
-  "world_use": "v34 keeps the gameplay beta paused and repeats the 120-frame persistent-GPU-skin-only ramp at limits 16, 32, 48 and 64; v33 pose-slot isolation remains active while reusable thread-local SHA-256 handles reduce CPU supply overhead without changing exact mesh identity"
+  "world_use": "v35 keeps the gameplay beta paused and runs an Arc stability profile: 8 warm-up frames stage 4 to 32 persistent GPU-skinned meshes, followed by 120 frames fixed at 32 under TAAU 0.75, direct light, secondary bounces off and RTXDI off; CPU-pose meshes remain omitted and exact pose-slot identities remain active"
 }

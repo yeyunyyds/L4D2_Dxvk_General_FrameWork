@@ -25,17 +25,28 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v34 retains v33's persistent GPU skinning isolation and measures the CPU
-// supply reduction from reusable exact geometry hash handles. CPU-pose model
-// meshes are omitted by performance mode so host-side mesh churn cannot hide
-// the GPU path or exhaust the runtime before the 48/64 submission phases.
+// v35 establishes a sustained Arc baseline instead of increasing dynamic BLAS
+// pressure in four abrupt jumps. Create at most four new pose slots per frame
+// for eight warm-up frames, then hold 32 slots for four measured 30-frame
+// windows. CPU-pose model meshes remain omitted in performance mode.
+constexpr unsigned kGpuSkinPerformanceWarmupFrames=8;
 constexpr unsigned kGpuSkinPerformancePhaseFrames=30;
-constexpr std::array<unsigned,4> kGpuSkinPerformanceLimits{{16,32,48,64}};
-inline unsigned performanceGpuSkinPhase(uint64_t completedFrames) noexcept {
-  return unsigned((std::min)(completedFrames/uint64_t(kGpuSkinPerformancePhaseFrames),uint64_t(kGpuSkinPerformanceLimits.size()-1)));
+constexpr unsigned kGpuSkinPerformancePhases=4;
+constexpr unsigned kGpuSkinPerformanceLimit=32;
+constexpr unsigned kGpuSkinPerformanceFrames=kGpuSkinPerformanceWarmupFrames+
+  kGpuSkinPerformancePhaseFrames*kGpuSkinPerformancePhases;
+inline int performanceGpuSkinPhase(uint64_t completedFrames) noexcept {
+  return completedFrames<kGpuSkinPerformanceWarmupFrames?-1:
+    int((std::min)((completedFrames-kGpuSkinPerformanceWarmupFrames)/uint64_t(kGpuSkinPerformancePhaseFrames),
+                   uint64_t(kGpuSkinPerformancePhases-1)));
 }
 inline unsigned performanceGpuSkinLimit(uint64_t completedFrames) noexcept {
-  return kGpuSkinPerformanceLimits[performanceGpuSkinPhase(completedFrames)];
+  return completedFrames<kGpuSkinPerformanceWarmupFrames?unsigned((completedFrames+1)*4):kGpuSkinPerformanceLimit;
+}
+inline bool performanceGpuSkinReport(uint64_t completedFrames) noexcept {
+  return completedFrames==kGpuSkinPerformanceWarmupFrames ||
+    (completedFrames>kGpuSkinPerformanceWarmupFrames &&
+     (completedFrames-kGpuSkinPerformanceWarmupFrames)%kGpuSkinPerformancePhaseFrames==0);
 }
 inline unsigned persistentGpuSkinLimit(unsigned previousModelDraws) noexcept {
   return previousModelDraws==0?0:previousModelDraws<=kGpuSkinModelDensityLimit?

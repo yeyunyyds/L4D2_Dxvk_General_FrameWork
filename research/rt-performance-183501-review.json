@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "archive": "rt-performance-20261023-183501-b76e2df5.zip",
+  "archive_sha256": "f59652d018359092720f57f5d3b7b626ddc655bfe0dbd8b2c8f4fd42745dc85b",
+  "archive_size": 4783408,
+  "build_commit": "712105bdc0eaeef175f50c965da5a542c8d49014",
+  "collection": "incomplete",
+  "completed_frames": 33,
+  "completed_fixed_limit_windows": [
+    {
+      "gpu_skin_limit": 16,
+      "frames": 30,
+      "wall_ms": 3447.3836,
+      "reported_fps_including_first_use_compile": 8.702251759856374,
+      "skinned_submitted": 480,
+      "skinned_created": 16,
+      "skinned_reused": 464,
+      "gpu_3d_average_percent": 12.055078416899876,
+      "gpu_3d_max_percent": 21.674885305417313
+    }
+  ],
+  "failure": {
+    "event": "api_mesh_fence_failed",
+    "hresult": "0x8876086c",
+    "vulkan": "VK_ERROR_DEVICE_LOST",
+    "phase": "32 mesh limit, third frame",
+    "pending_fences": 1,
+    "live_mesh_entries": 32
+  },
+  "identity_evidence": {
+    "created": 32,
+    "reused": 544,
+    "submitted": 576,
+    "same_frame_duplicate_pose_slots": 0,
+    "conclusion": "exact hash reuse preserved distinct stable pose identities before device loss"
+  },
+  "visual_scope": "GPU-skin-only isolation intentionally omits unsupported and excess CPU-pose models; incomplete characters are expected and are not image acceptance evidence",
+  "next_profile": {
+    "revision": 35,
+    "warmup_frames": 8,
+    "warmup_limits": [4, 8, 12, 16, 20, 24, 28, 32],
+    "measured_windows": 4,
+    "frames_per_window": 30,
+    "fixed_gpu_skin_limit": 32,
+    "upscaler": "TAAU",
+    "resolution_scale": 0.75,
+    "direct_lighting": true,
+    "secondary_bounces": false,
+    "rtxdi": false,
+    "indirect_mode": "importance_sampled"
+  }
+}

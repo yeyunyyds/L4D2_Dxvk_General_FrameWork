@@ -324,8 +324,8 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
     if performance:
         performance_review=review_performance(directory);save(directory/'performance-analysis.json',performance_review)
-        report['performance']='gpu_offload_ramp_collected' if performance_review['pass'] else 'incomplete'
-        report['preview']='completed_performance_ramp' if performance_review['pass'] else 'incomplete'
+        report['performance']='arc_stability_collected' if performance_review['pass'] else 'incomplete'
+        report['preview']='completed_performance_stability' if performance_review['pass'] else 'incomplete'
         if not performance_review['pass']:report['errors'].extend(performance_review['errors']);report['collection']='incomplete'
     elif report.get('preview'):
         preview=review_preview(directory);save(directory/'preview-analysis.json',preview)
@@ -339,7 +339,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
         report['result_scope']='five-minute complete-coverage gameplay beta; visual correctness and long-term stability still require review'
         return
     if performance:
-        report['result_scope']='120-frame persistent-GPU-skin-only stability validation; four sequential limits; CPU-pose explicit RT meshes omitted; not image acceptance'
+        report['result_scope']='128-frame Arc direct-light stability validation; 8-frame staged warm-up then 120 frames fixed at 32 GPU-skinned meshes; CPU-pose explicit RT meshes omitted; not image acceptance'
         return
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
@@ -407,21 +407,25 @@ def review_performance(directory):
     directory=Path(directory);errors=[];path=directory/'preview-runtime.jsonl'
     if not path.is_file() or path.stat().st_size>32*1024*1024:return {'schema':1,'pass':False,'errors':['missing_or_oversized_performance_log']}
     events=[json.loads(s) for s in path.read_text(encoding='utf-8').splitlines() if s.strip()]
+    stability=any(e.get('event')=='performance_stability_begin' for e in events)
     ends=[e for e in events if e.get('event')=='preview_end']
-    if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<120 or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
+    if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<(128 if stability else 120) or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
     elif ends[0].get('submitted')!=ends[0].get('skinned_submitted'):errors.append('performance_cpu_pose_submission')
     for e in events:
         if e.get('code',0):errors.append('performance_runtime_failure:'+e.get('event','unknown'))
     mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
-    expected=[16,32,48,64]
+    expected=[32]*4 if stability else [16,32,48,64]
     if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(4)) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
         errors.append('performance_phase_sequence')
     elif any(not isinstance(e.get('skinned_frame_submitted'),int) or not 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] or
              not isinstance(e.get('skinned_frame_unique_meshes'),int) or not isinstance(e.get('skinned_frame_repeat_draws'),int) or
              e['skinned_frame_unique_meshes']!=e['skinned_frame_submitted'] or e['skinned_frame_repeat_draws']!=0 or
+             e.get('skinned_frame_max')!=(32 if stability else e.get('skinned_frame_max')) or
              not isinstance(e.get('preview_submitted'),int) or e['preview_submitted']!=e.get('preview_skinned_submitted') for e in mesh):
         errors.append('performance_gpu_skin_not_exercised')
-    windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[];previous={}
+    windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[]
+    warmup=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase')==-1 and e.get('preview_submitted',0)>0]
+    previous=dict(warmup[-1]) if stability and warmup else {}
     # v33 executed the correct 48/64 limits but inherited v32's final two
     # timing labels. Prefer v34 labels while preserving archived v33 evidence.
     legacy_timing='gpu_ramp_48' not in windows and 'gpu_ramp_128' in windows
@@ -430,8 +434,8 @@ def review_performance(directory):
         try:gpu_rows=[json.loads(line) for line in gpu_file.read_text(encoding='utf-8').splitlines() if line.strip()]
         except json.JSONDecodeError:gpu_rows=[]
     for index,limit in enumerate(expected):
-        name='gpu_ramp_'+str(limit)
-        timing_name=('gpu_ramp_64' if limit==48 else 'gpu_ramp_128' if limit==64 else name) if legacy_timing else name
+        name='gpu_stability_'+str(index+1) if stability else 'gpu_ramp_'+str(limit)
+        timing_name=name if stability else ('gpu_ramp_64' if limit==48 else 'gpu_ramp_128' if limit==64 else name) if legacy_timing else name
         row=windows.get(timing_name);wall=row.get('wall_ms',0) if row else 0
         if not isinstance(wall,(int,float)) or not math.isfinite(wall) or wall<=0:errors.append('performance_timing:'+name);continue
         evidence=mesh[index] if len(mesh)>index else {};current={k:evidence.get(k) for k in ('preview_skinned_submitted','preview_skinned_created','preview_skinned_reused')}
@@ -463,8 +467,8 @@ def review_performance(directory):
                 ordered=sorted(values);phase['gpu_3d_engine']={'samples':len(values),'average_percent':sum(values)/len(values),'p50_percent':ordered[len(ordered)//2],'p95_percent':ordered[int((len(ordered)-1)*.95)],'max_percent':max(values)}
         phases.append(phase);previous=dict(evidence)
     best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
-    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'phases':phases,'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
-            'end':ends[-1] if ends else None,'limits':'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
+    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_direct_stability' if stability else 'legacy_gpu_skin_ramp','phases':phases,'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
+            'end':ends[-1] if ends else None,'limits':'v35 uses an 8-frame staged warm-up followed by four fixed-32 30-frame windows under a fixed direct-light TAAU profile. Performance mode omits unsupported/excess CPU-pose models, so image completeness is not evaluated. GPU PDH counters remain separate per engine.' if stability else 'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
 
 def startup_modules(directory,pid,notify):
     """Retain bounded module lists even if no F9 trace ever starts."""
@@ -527,20 +531,23 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
                   f'LDB_RT_WORLD_1\n{session:x}\n{directory.resolve()}\n{runtime.resolve()}\n') if world else
                  f'LDB_RT_DRAW_1\n{session:x}\n{directory.resolve()}\n').encode('utf-8')
         if world:
-            config='\n'.join(['rtx.enableRaytracing = False','rtx.useVertexCapture = False','rtx.upscalerType = 0','rtx.resolutionScale = 1.0',
+            config_options=['rtx.enableRaytracing = False','rtx.useVertexCapture = False','rtx.upscalerType = 0','rtx.resolutionScale = 1.0',
                 'rtx.enableRayReconstruction = False','rtx.sceneScale = 0.3937007874',
                 'rtx.fallbackLightMode = 2','rtx.fallbackLightType = 1','rtx.fallbackLightRadiance = 30,30,30','rtx.fallbackLightRadius = 5',
                 'rtx.fallbackLightPositionOffset = 0,0,0','rtx.enableFallbackLightShaping = False','rtx.fallbackLightDirection = 0,0,-1',
                 'rtx.autoExposure.enabled = True','rtx.autoExposure.evMinValue = -2','rtx.autoExposure.evMaxValue = 5',
                 'rtx.tonemappingMode = 1','rtx.localtonemap.exposure = 0.75',
-                'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.enableAlphaBlend = True','rtx.bloom.enable = False','rtx.postfx.enable = False'])+'\n'
+                'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.enableAlphaBlend = True','rtx.bloom.enable = False','rtx.postfx.enable = False']
+            if performance:config_options += ['rtx.upscalerType = 3','rtx.resolutionScale = 0.75','rtx.enableDirectLighting = True',
+                'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 0']
+            config='\n'.join(config_options)+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='gpu_offload_performance_ramp' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
+            report['scope']='arc_direct_light_performance_stability' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v34: one automatic 120-frame run verifies v33 pose-slot stability and measures reusable exact-hash supply cost at limits 16, 32, 48 and 64 for 30 frames each. Unsupported and excess CPU-pose models are intentionally omitted from the RT view. Native TAA and image readbacks stay off. Keep the same scene and do not press F9 again.')
+        if performance:notify('RT Performance v35: one automatic 128-frame Arc stability run. It warms from 4 to 32 GPU-skinned meshes over 8 frames, then holds 32 for four measured 30-frame windows. The fixed profile uses TAAU at 0.75 resolution, direct light only, secondary bounces off and RTXDI off. Unsupported and excess CPU-pose models are intentionally omitted. Keep the same scene and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
@@ -586,14 +593,14 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         preview_running=directory/f'rt-preview-running-{session}.json'
         if world and manifest.get('pilot_revision',0)>=20:report['preview']='incomplete'
         if world and preview_running.is_file():
-            notify('30-frame gate passed. The four-stage GPU offload ramp is active; keep the scene and camera movement representative.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
+            notify('30-frame gate passed. The 8-frame warm-up and fixed-32 Arc stability run are active; keep the scene and camera movement representative.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
             preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+(240 if performance else 330 if beta else 90)
             while not preview_done.is_file() and time.monotonic()<preview_deadline:
                 if pid not in game_pids():break
                 time.sleep(.5)
             preview_complete=completed_preview(preview_done,session)
             report['preview']='collected_requires_review' if preview_complete else 'incomplete'
-            if preview_complete:notify(('GPU offload ramp finished.' if performance else 'Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
+            if preview_complete:notify(('Arc stability run finished.' if performance else 'Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
             elif preview_done.is_file():notify('Preview stopped early and retained partial evidence. Collecting final diagnostics; this run has not passed.')
         if gpu_sampler:
             report['gpu_sampler_stopped']=gpu_sampler.stop();gpu_sampler=None
