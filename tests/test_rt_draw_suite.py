@@ -281,7 +281,8 @@ assert result['execution']=='incomplete'
         events.append(dict(event='preview_end',complete=True,frames=128,entries=0,pending_fences=0,held=0,
                            submitted=total,skinned_submitted=total,gpu_skin_only_omitted=100))
         path=directory/'preview-runtime.jsonl';path.write_text('\n'.join(json.dumps(e) for e in events))
-        (directory/'world-runtime.jsonl').write_text(json.dumps(dict(event='rtx.graphicsPreset',code=0,value='4'))+'\n')
+        (directory/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in
+            [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='0')])+'\n')
         (directory/'gpu-engine-samples.jsonl').write_text('\n'.join(json.dumps({'unix_ns':(phase+2)*1_000_000_000,'engines':[],
             'process_cpu':[{'pid':7,'role':'host','interval_begin_unix_ns':(phase+1)*1_000_000_000,'cpu_ms':100}]}) for phase in range(4)))
         (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: Importance Sampled - activated\n')
@@ -290,6 +291,33 @@ assert result['execution']=='incomplete'
         self.assertEqual(result['phases'][0]['process_cpu'][0]['one_core_percent'],10)
         (directory/'remix-dxvk.log').write_text('[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
         self.assertIn('effective_indirect_mode_not_importance_sampled',suite.review_performance(directory)['errors'])
+
+    def test_performance_review_v37_requires_restir_resource_recovery_and_raster_survival(self):
+        directory=self.root/'performance-v37';directory.mkdir();total=created=reused=0
+        events=[dict(event='pilot_delivery_revision',code=0,value='37'),dict(event='performance_lifecycle_begin',code=0)]
+        for phase,(limit,frames,name) in enumerate(((0,30,'gpu_lifecycle_static'),(8,60,'gpu_lifecycle_8'),(16,120,'gpu_lifecycle_16'))):
+            submitted=limit*frames;total+=submitted
+            if submitted:created+=limit;reused+=submitted-limit
+            events += [dict(event='runtime_timing_window',segment=name,wall_ms=frames*50,
+                            thread_times_available=True,thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
+                       dict(event='api_mesh_frame',gpu_skin_performance_phase=phase,skinned_frame_limit=limit,
+                            skinned_frame_submitted=limit,skinned_frame_unique_meshes=limit,skinned_frame_repeat_draws=0,
+                            skinned_frame_max=16,preview_submitted=total,preview_skinned_submitted=total,
+                            preview_skinned_created=created,preview_skinned_reused=reused,created=created,reused=reused)]
+        events += [dict(event='performance_rt_recovery_requested',code=0),dict(event='performance_resources_recovered',code=0),
+                   dict(event='performance_raster_survival_complete',code=0),
+                   dict(event='runtime_timing_window',segment='gpu_lifecycle_raster',wall_ms=1000,
+                        thread_times_available=True,thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
+                   dict(event='preview_end',complete=True,frames=271,rt_frames=210,raster_survival_frames=60,
+                        resources_recovered=True,entries=0,pending_fences=0,held=0,submitted=total,skinned_submitted=total)]
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        (directory/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in
+            [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1')])+'\n')
+        (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['profile'],'arc_restir_lifecycle');self.assertEqual([p['gpu_skin_limit'] for p in result['phases']],[0,8,16])
+        events[-1]['raster_survival_frames']=59;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        self.assertIn('performance_lifecycle_recovery',suite.review_performance(directory)['errors'])
 
 
 class InstallTests(unittest.TestCase):

@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "input": {
+    "name": "rt-performance-20261024-000156-1b3319f8.zip",
+    "bytes": 7874039,
+    "sha256": "5ad7ba0611c4ff79ab75d321d4730aa3e131147dd01f209483880f7d3234f1f8",
+    "zip_members": 550,
+    "crc": "pass",
+    "build_commit": "b1d7bf8ebbdc2e9c5e6b9d547fc871dde3dd30e8"
+  },
+  "verdict": "failed_device_lost",
+  "configuration": {
+    "graphics_preset": "Custom",
+    "requested_indirect_mode": "Importance Sampled",
+    "effective_importance_sampled": true,
+    "effective_restir_gi": false
+  },
+  "failure": {
+    "preview_rt_presents": 60,
+    "global_present": 91,
+    "event": "api_mesh_fence_failed",
+    "hresult_hex": "0x8876086c",
+    "hresult_name": "D3DERR_DEVICELOST",
+    "vulkan": "VK_ERROR_DEVICE_LOST",
+    "entries_remaining": 32,
+    "pending_fences": 1,
+    "held_texture_refs": 6,
+    "exit_status": "unverified"
+  },
+  "completed_window": {
+    "frames": 30,
+    "gpu_skin_limit": 32,
+    "wall_ms": 2161.8949,
+    "fps": 13.876715283430292,
+    "model_ms": 251.431,
+    "cpu_skin_ms": 44.0519,
+    "present_ms": 3.2755,
+    "host_device_thread_cpu_ms": 78.125,
+    "host_device_thread_non_cpu_ms": 2083.7699,
+    "gpu_3d_average_percent": 35.98991903209887,
+    "game_one_core_percent": 32.21189488494372,
+    "host_one_core_percent": 16.113263092843283
+  },
+  "v37_correction": {
+    "indirect_mode": "explicit ReSTIR GI",
+    "rt_phase_frames": [30, 60, 120],
+    "gpu_skin_limits": [0, 8, 16],
+    "rt_frames": 210,
+    "requires_resource_zero": true,
+    "raster_survival_frames": 60,
+    "requires_clean_game_and_host_exit": true
+  }
+}

@@ -12,15 +12,16 @@ int main() {
     require(allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame-1)&&
       !allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame)&&
       !allowPersistentGpuSkin(1,kGpuSkinSubmissionsPerFrame),"adaptive GPU skin density or submission bound exceeded");
-    require(performanceGpuSkinLimit(0)==4&&performanceGpuSkinLimit(1)==8&&performanceGpuSkinLimit(7)==32&&
-      performanceGpuSkinLimit(8)==32&&performanceGpuSkinLimit(127)==32&&performanceGpuSkinLimit(999)==32,
-      "GPU performance stability warm-up or fixed limit differs");
-    require(performanceGpuSkinPhase(7)==-1&&performanceGpuSkinPhase(8)==0&&performanceGpuSkinPhase(37)==0&&
-      performanceGpuSkinPhase(38)==1&&performanceGpuSkinPhase(127)==3,
-      "GPU performance measured phases must begin after warm-up");
-    require(performanceGpuSkinReport(8)&&performanceGpuSkinReport(38)&&performanceGpuSkinReport(68)&&
-      performanceGpuSkinReport(98)&&performanceGpuSkinReport(128)&&!performanceGpuSkinReport(7)&&!performanceGpuSkinReport(37),
-      "GPU performance reports must delimit warm-up and four measured windows");
+    require(performanceGpuSkinLimit(0)==0&&performanceGpuSkinLimit(29)==0&&performanceGpuSkinLimit(30)==8&&
+      performanceGpuSkinLimit(89)==8&&performanceGpuSkinLimit(90)==16&&performanceGpuSkinLimit(209)==16&&
+      performanceGpuSkinLimit(210)==0&&performanceGpuSkinLimit(999)==0,
+      "GPU performance lifecycle limits differ");
+    require(performanceGpuSkinPhase(29)==0&&performanceGpuSkinPhase(30)==1&&performanceGpuSkinPhase(89)==1&&
+      performanceGpuSkinPhase(90)==2&&performanceGpuSkinPhase(209)==2&&performanceGpuSkinPhase(210)==3,
+      "GPU performance lifecycle phase differs");
+    require(performanceGpuSkinReport(30)&&performanceGpuSkinReport(90)&&performanceGpuSkinReport(210)&&
+      !performanceGpuSkinReport(29)&&!performanceGpuSkinReport(31)&&!performanceGpuSkinReport(270),
+      "GPU performance lifecycle reports differ");
     std::cout << "RT GPU skin previous-frame density and submission limits: PASS\n";
     CoverageComparison coverage;
     require(coverage.phase()==CoveragePhase::Raster && !coverage.afterCapture(120), "coverage must wait for raster control");

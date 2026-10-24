@@ -25,28 +25,33 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v35 establishes a sustained Arc baseline instead of increasing dynamic BLAS
-// pressure in four abrupt jumps. Create at most four new pose slots per frame
-// for eight warm-up frames, then hold 32 slots for four measured 30-frame
-// windows. CPU-pose model meshes remain omitted in performance mode.
-constexpr unsigned kGpuSkinPerformanceWarmupFrames=8;
-constexpr unsigned kGpuSkinPerformancePhaseFrames=30;
-constexpr unsigned kGpuSkinPerformancePhases=4;
-constexpr unsigned kGpuSkinPerformanceLimit=32;
-constexpr unsigned kGpuSkinPerformanceFrames=kGpuSkinPerformanceWarmupFrames+
-  kGpuSkinPerformancePhaseFrames*kGpuSkinPerformancePhases;
+// v37 is a lifecycle baseline for Arc. The explicit v36 importance-sampled
+// path lost the device at 32 dynamic meshes. Keep RT enabled while moving from
+// a static control to the already bounded 8- and 16-mesh loads, then turn RT
+// off, retire every API mesh/fence and prove that ordinary Present survives.
+// CPU-pose model meshes remain omitted in performance mode.
+constexpr unsigned kGpuSkinPerformanceStaticFrames=30;
+constexpr unsigned kGpuSkinPerformanceEightFrames=60;
+constexpr unsigned kGpuSkinPerformanceSixteenFrames=120;
+constexpr unsigned kGpuSkinPerformanceRtFrames=kGpuSkinPerformanceStaticFrames+
+  kGpuSkinPerformanceEightFrames+kGpuSkinPerformanceSixteenFrames;
+constexpr unsigned kGpuSkinPerformanceRasterFrames=60;
+constexpr unsigned kGpuSkinPerformanceFrames=kGpuSkinPerformanceRtFrames+kGpuSkinPerformanceRasterFrames;
+constexpr unsigned kGpuSkinPerformanceLimit=16;
 inline int performanceGpuSkinPhase(uint64_t completedFrames) noexcept {
-  return completedFrames<kGpuSkinPerformanceWarmupFrames?-1:
-    int((std::min)((completedFrames-kGpuSkinPerformanceWarmupFrames)/uint64_t(kGpuSkinPerformancePhaseFrames),
-                   uint64_t(kGpuSkinPerformancePhases-1)));
+  return completedFrames<kGpuSkinPerformanceStaticFrames?0:
+    completedFrames<kGpuSkinPerformanceStaticFrames+kGpuSkinPerformanceEightFrames?1:
+    completedFrames<kGpuSkinPerformanceRtFrames?2:3;
 }
 inline unsigned performanceGpuSkinLimit(uint64_t completedFrames) noexcept {
-  return completedFrames<kGpuSkinPerformanceWarmupFrames?unsigned((completedFrames+1)*4):kGpuSkinPerformanceLimit;
+  return completedFrames<kGpuSkinPerformanceStaticFrames?0:
+    completedFrames<kGpuSkinPerformanceStaticFrames+kGpuSkinPerformanceEightFrames?8:
+    completedFrames<kGpuSkinPerformanceRtFrames?16:0;
 }
 inline bool performanceGpuSkinReport(uint64_t completedFrames) noexcept {
-  return completedFrames==kGpuSkinPerformanceWarmupFrames ||
-    (completedFrames>kGpuSkinPerformanceWarmupFrames &&
-     (completedFrames-kGpuSkinPerformanceWarmupFrames)%kGpuSkinPerformancePhaseFrames==0);
+  return completedFrames==kGpuSkinPerformanceStaticFrames ||
+    completedFrames==kGpuSkinPerformanceStaticFrames+kGpuSkinPerformanceEightFrames ||
+    completedFrames==kGpuSkinPerformanceRtFrames;
 }
 inline unsigned persistentGpuSkinLimit(unsigned previousModelDraws) noexcept {
   return previousModelDraws==0?0:previousModelDraws<=kGpuSkinModelDensityLimit?

@@ -324,8 +324,8 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
     if performance:
         performance_review=review_performance(directory);save(directory/'performance-analysis.json',performance_review)
-        report['performance']='arc_custom_profile_diagnosis_collected' if performance_review['pass'] else 'incomplete'
-        report['preview']='completed_performance_stability' if performance_review['pass'] else 'incomplete'
+        report['performance']='arc_restir_lifecycle_collected' if performance_review['pass'] else 'incomplete'
+        report['preview']='completed_performance_lifecycle' if performance_review['pass'] else 'incomplete'
         if not performance_review['pass']:report['errors'].extend(performance_review['errors']);report['collection']='incomplete'
     elif report.get('preview'):
         preview=review_preview(directory);save(directory/'preview-analysis.json',preview)
@@ -339,7 +339,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
         report['result_scope']='five-minute complete-coverage gameplay beta; visual correctness and long-term stability still require review'
         return
     if performance:
-        report['result_scope']='128-frame Arc direct-light stability validation; 8-frame staged warm-up then 120 frames fixed at 32 GPU-skinned meshes; CPU-pose explicit RT meshes omitted; not image acceptance'
+        report['result_scope']='Arc lifecycle validation: 30 static RT frames, 60 at 8 and 120 at 16 GPU-skinned meshes, complete RT resource retirement, then 60 surviving raster Presents; CPU-pose explicit RT meshes omitted; not image acceptance'
         return
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
@@ -408,11 +408,18 @@ def review_performance(directory):
     if not path.is_file() or path.stat().st_size>32*1024*1024:return {'schema':1,'pass':False,'errors':['missing_or_oversized_performance_log']}
     events=[json.loads(s) for s in path.read_text(encoding='utf-8').splitlines() if s.strip()]
     stability=any(e.get('event')=='performance_stability_begin' for e in events)
+    lifecycle=any(e.get('event')=='performance_lifecycle_begin' for e in events)
     revision=max((int(e.get('value')) for e in events if e.get('event')=='pilot_delivery_revision' and str(e.get('value','')).isdigit()),default=0)
     custom_profile=revision>=36
     ends=[e for e in events if e.get('event')=='preview_end']
-    if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<(128 if stability else 120) or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
+    minimum_frames=270 if lifecycle else 128 if stability else 120
+    if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<minimum_frames or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
     elif ends[0].get('submitted')!=ends[0].get('skinned_submitted'):errors.append('performance_cpu_pose_submission')
+    if lifecycle:
+        recovery=[e for e in events if e.get('event')=='performance_resources_recovered' and e.get('code')==0]
+        raster=[e for e in events if e.get('event')=='performance_raster_survival_complete' and e.get('code')==0]
+        if len(recovery)!=1 or len(raster)!=1 or len(ends)!=1 or ends[0].get('rt_frames')!=210 or ends[0].get('raster_survival_frames',0)<60 or ends[0].get('resources_recovered') is not True:
+            errors.append('performance_lifecycle_recovery')
     for e in events:
         if e.get('code',0):errors.append('performance_runtime_failure:'+e.get('event','unknown'))
     remix_mode={'importance_sampled_activated':False,'restir_gi_activated':False,'graphics_preset_custom_read':False,'lines':[]}
@@ -423,7 +430,9 @@ def review_performance(directory):
             try:config_events.extend(json.loads(line) for line in world_log.read_text(encoding='utf-8').splitlines() if line.strip())
             except json.JSONDecodeError:errors.append('invalid_world_runtime_config_log')
         configured=any(e.get('event')=='rtx.graphicsPreset' and e.get('code')==0 and e.get('value')=='4' for e in config_events)
+        indirect=any(e.get('event')=='rtx.integrateIndirectMode' and e.get('code')==0 and e.get('value')==('1' if lifecycle else '0') for e in config_events)
         if not configured:errors.append('custom_graphics_preset_not_requested')
+        if not indirect:errors.append('explicit_indirect_mode_not_requested')
         if not remix_log.is_file() or remix_log.stat().st_size>64*1024*1024:errors.append('missing_or_oversized_remix_log')
         else:
             for line in remix_log.read_text(encoding='utf-8',errors='replace').splitlines():
@@ -432,15 +441,17 @@ def review_performance(directory):
                 if 'Integrate Indirect Mode: Importance Sampled - activated' in line:remix_mode['importance_sampled_activated']=True
                 if 'Integrate Indirect Mode: ReSTIR GI - activated' in line:remix_mode['restir_gi_activated']=True
                 if 'rtx.graphicsPreset = 4' in line:remix_mode['graphics_preset_custom_read']=True
-            if not remix_mode['importance_sampled_activated'] or remix_mode['restir_gi_activated']:errors.append('effective_indirect_mode_not_importance_sampled')
+            if lifecycle:
+                if not remix_mode['restir_gi_activated'] or remix_mode['importance_sampled_activated']:errors.append('effective_indirect_mode_not_restir_gi')
+            elif not remix_mode['importance_sampled_activated'] or remix_mode['restir_gi_activated']:errors.append('effective_indirect_mode_not_importance_sampled')
     mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
-    expected=[32]*4 if stability else [16,32,48,64]
-    if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(4)) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
+    expected=[0,8,16] if lifecycle else [32]*4 if stability else [16,32,48,64]
+    if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(len(expected))) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
         errors.append('performance_phase_sequence')
     elif any(not isinstance(e.get('skinned_frame_submitted'),int) or not 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] or
              not isinstance(e.get('skinned_frame_unique_meshes'),int) or not isinstance(e.get('skinned_frame_repeat_draws'),int) or
              e['skinned_frame_unique_meshes']!=e['skinned_frame_submitted'] or e['skinned_frame_repeat_draws']!=0 or
-             e.get('skinned_frame_max')!=(32 if stability else e.get('skinned_frame_max')) or
+             e.get('skinned_frame_max')!=(16 if lifecycle else 32 if stability else e.get('skinned_frame_max')) or
              not isinstance(e.get('preview_submitted'),int) or e['preview_submitted']!=e.get('preview_skinned_submitted') for e in mesh):
         errors.append('performance_gpu_skin_not_exercised')
     windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[]
@@ -453,9 +464,11 @@ def review_performance(directory):
     if gpu_file.is_file() and gpu_file.stat().st_size<=32*1024*1024:
         try:gpu_rows=[json.loads(line) for line in gpu_file.read_text(encoding='utf-8').splitlines() if line.strip()]
         except json.JSONDecodeError:gpu_rows=[]
+    phase_frames=[30,60,120] if lifecycle else [30]*len(expected)
+    lifecycle_names=['gpu_lifecycle_static','gpu_lifecycle_8','gpu_lifecycle_16']
     for index,limit in enumerate(expected):
-        name='gpu_stability_'+str(index+1) if stability else 'gpu_ramp_'+str(limit)
-        timing_name=name if stability else ('gpu_ramp_64' if limit==48 else 'gpu_ramp_128' if limit==64 else name) if legacy_timing else name
+        name=lifecycle_names[index] if lifecycle else 'gpu_stability_'+str(index+1) if stability else 'gpu_ramp_'+str(limit)
+        timing_name=name if stability or lifecycle else ('gpu_ramp_64' if limit==48 else 'gpu_ramp_128' if limit==64 else name) if legacy_timing else name
         row=windows.get(timing_name);wall=row.get('wall_ms',0) if row else 0
         if not isinstance(wall,(int,float)) or not math.isfinite(wall) or wall<=0:errors.append('performance_timing:'+name);continue
         evidence=mesh[index] if len(mesh)>index else {};current={k:evidence.get(k) for k in ('preview_skinned_submitted','preview_skinned_created','preview_skinned_reused')}
@@ -463,8 +476,8 @@ def review_performance(directory):
         submitted_delta=current.get('preview_skinned_submitted',0)-previous.get('preview_skinned_submitted',0)
         created_delta=current.get('preview_skinned_created',0)-previous.get('preview_skinned_created',0)
         reused_delta=current.get('preview_skinned_reused',0)-previous.get('preview_skinned_reused',0)
-        if submitted_delta<=0 or created_delta+reused_delta!=submitted_delta:errors.append('performance_gpu_skin_not_exercised:'+name)
-        phase={'gpu_skin_limit':limit,'frames':30,'wall_ms':wall,'fps':30000/wall,
+        if (index==0 and lifecycle and (submitted_delta!=0 or created_delta!=0 or reused_delta!=0)) or (not (index==0 and lifecycle) and submitted_delta<=0) or created_delta+reused_delta!=submitted_delta:errors.append('performance_gpu_skin_not_exercised:'+name)
+        phase={'gpu_skin_limit':limit,'frames':phase_frames[index],'wall_ms':wall,'fps':phase_frames[index]*1000/wall,
                        'skinned_frame_submitted':evidence.get('skinned_frame_submitted',0),
                        'skinned_frame_unique_meshes':evidence.get('skinned_frame_unique_meshes',0),
                        'skinned_frame_repeat_draws':evidence.get('skinned_frame_repeat_draws',0),
@@ -503,10 +516,13 @@ def review_performance(directory):
             if cpu_by_pid:
                 phase['process_cpu']=[{'pid':key[0],'role':key[1],**value,'one_core_percent':100*value['cpu_ms']/value['covered_wall_ms']} for key,value in sorted(cpu_by_pid.items()) if value['covered_wall_ms']>0]
         phases.append(phase);previous=dict(evidence)
+    raster_window=windows.get('gpu_lifecycle_raster') if lifecycle else None
+    if lifecycle and (not raster_window or not isinstance(raster_window.get('wall_ms'),(int,float)) or not math.isfinite(raster_window['wall_ms']) or raster_window['wall_ms']<=0):errors.append('performance_raster_timing')
     best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
-    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_direct_custom_stability' if custom_profile else 'arc_direct_stability' if stability else 'legacy_gpu_skin_ramp','phases':phases,'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
+    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_restir_lifecycle' if lifecycle else 'arc_direct_custom_stability' if custom_profile else 'arc_direct_stability' if stability else 'legacy_gpu_skin_ramp','phases':phases,'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
             'effective_indirect_mode':remix_mode if custom_profile else {'status':'not_enforced_before_v36'},
-            'end':ends[-1] if ends else None,'limits':'v36 uses the v35 fixed-32 stability load, forces the Custom preset so Arc cannot replace importance-sampled indirect mode with ReSTIR GI, and records Host device-thread plus per-process CPU time. Performance mode omits unsupported/excess CPU-pose models; image completeness is not evaluated.' if custom_profile else 'v35 uses an 8-frame staged warm-up followed by four fixed-32 30-frame windows under a fixed direct-light TAAU profile. Performance mode omits unsupported/excess CPU-pose models, so image completeness is not evaluated. GPU PDH counters remain separate per engine.' if stability else 'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
+            'raster_survival':{'frames':ends[-1].get('raster_survival_frames',0) if ends else 0,'timing':raster_window},
+            'end':ends[-1] if ends else None,'limits':'v37 uses explicit ReSTIR GI, measures 30 static RT frames, 60 frames at 8 and 120 frames at 16 GPU-skinned meshes, then requires all RT resources to retire and 60 ordinary Presents to survive. A pass is lifecycle evidence, not image acceptance.' if lifecycle else 'v36 uses the v35 fixed-32 stability load, forces the Custom preset so Arc cannot replace importance-sampled indirect mode with ReSTIR GI, and records Host device-thread plus per-process CPU time. Performance mode omits unsupported/excess CPU-pose models; image completeness is not evaluated.' if custom_profile else 'v35 uses an 8-frame staged warm-up followed by four fixed-32 30-frame windows under a fixed direct-light TAAU profile. Performance mode omits unsupported/excess CPU-pose models, so image completeness is not evaluated. GPU PDH counters remain separate per engine.' if stability else 'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
 
 def startup_modules(directory,pid,notify):
     """Retain bounded module lists even if no F9 trace ever starts."""
@@ -577,15 +593,15 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
                 'rtx.tonemappingMode = 1','rtx.localtonemap.exposure = 0.75',
                 'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.enableAlphaBlend = True','rtx.bloom.enable = False','rtx.postfx.enable = False']
             if performance:config_options += ['rtx.graphicsPreset = 4','rtx.upscalerType = 3','rtx.resolutionScale = 0.75','rtx.enableDirectLighting = True',
-                'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 0']
+                'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 1']
             config='\n'.join(config_options)+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='arc_direct_light_custom_profile_diagnosis' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
+            report['scope']='arc_restir_lifecycle_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v36: one automatic 128-frame Arc stability run. It warms from 4 to 32 GPU-skinned meshes over 8 frames, then holds 32 for four measured 30-frame windows. The Custom preset keeps the fixed TAAU 0.75 direct-light profile from being replaced by Arc Auto/Low ReSTIR GI. Host thread and game/Host process CPU timing are collected. Unsupported and excess CPU-pose models are intentionally omitted. Keep the same scene and do not press F9 again.')
+        if performance:notify('RT Performance v37: one automatic lifecycle run. It measures 30 static RT frames, 60 frames at 8 and 120 frames at 16 GPU-skinned meshes using the explicit ReSTIR GI path that survived v35. It then disables RT, retires every API mesh and fence, and requires 60 successful raster Presents. Unsupported and excess CPU-pose models are intentionally omitted. Keep the same scene and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
@@ -632,14 +648,14 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         preview_running=directory/f'rt-preview-running-{session}.json'
         if world and manifest.get('pilot_revision',0)>=20:report['preview']='incomplete'
         if world and preview_running.is_file():
-            notify('30-frame gate passed. The 8-frame warm-up and fixed-32 Arc stability run are active; keep the scene and camera movement representative.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
+            notify('30-frame gate passed. The 0-to-8-to-16 Arc lifecycle run is active; keep the scene and camera movement representative. RT will turn off automatically for the final raster survival check.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
             preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+(240 if performance else 330 if beta else 90)
             while not preview_done.is_file() and time.monotonic()<preview_deadline:
                 if pid not in game_pids():break
                 time.sleep(.5)
             preview_complete=completed_preview(preview_done,session)
             report['preview']='collected_requires_review' if preview_complete else 'incomplete'
-            if preview_complete:notify(('Arc stability run finished.' if performance else 'Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
+            if preview_complete:notify(('Arc lifecycle run finished.' if performance else 'Five-minute Beta segment finished.' if beta else 'Preview segment finished.')+' Collecting final evidence; exit only when requested below.')
             elif preview_done.is_file():notify('Preview stopped early and retained partial evidence. Collecting final diagnostics; this run has not passed.')
         if gpu_sampler:
             report['gpu_sampler_stopped']=gpu_sampler.stop();gpu_sampler=None
@@ -665,10 +681,16 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
                 notify('Exit status: '+report['exit_status'].upper()+'. Capture completeness and process-exit acceptance are separate; see exit-analysis.json.')
             except (OSError,ValueError,KeyError) as error:
                 report['exit_status']='unverified';report['exit_review_error']=str(error)
+        report['overall_acceptance']='pass' if report.get('collection')=='complete' and (not world or report.get('exit_status')=='clean_reported') else 'failed'
+        if world and report.get('collection')=='complete' and report.get('exit_status')!='clean_reported':
+            report['acceptance_reason']='Evidence collection completed, but the game/Host lifecycle did not produce a verified clean exit.'
+        elif report['overall_acceptance']=='pass':report['acceptance_reason']='Evidence collection and process-exit lifecycle both passed.'
+        else:report['acceptance_reason']='Evidence collection is incomplete.'
         report['collection_phase']='finalized'
         output=archive_result(directory,report)
-        print('Collection: '+report['collection'].upper()+('. RT images still require review.' if report['collection']=='complete' else
-              '. Partial evidence only; the test has NOT passed.'),flush=True)
+        print('Evidence collection: '+report['collection'].upper()+('. Analysis artifacts were written.' if report['collection']=='complete' else
+              '. Partial evidence only.'),flush=True)
+        print('Test acceptance: '+report['overall_acceptance'].upper()+'. '+report['acceptance_reason'],flush=True)
         print('Upload this ONE ZIP:',output,flush=True)
     return output
 
@@ -679,4 +701,4 @@ if __name__=='__main__':
     a=p.parse_args();output=run(game=a.game,restore_only=a.restore,verify_only=a.verify_only,beta=a.beta,performance=a.performance)
     if output:
         summary=json.loads((output.with_suffix('')/'summary.json').read_text(encoding='utf-8'))
-        raise SystemExit(3 if summary.get('exit_status')=='abnormal' else 0 if summary['collection']=='complete' else 2)
+        raise SystemExit(0 if summary.get('overall_acceptance')=='pass' else 3 if summary.get('exit_status')=='abnormal' else 2)
