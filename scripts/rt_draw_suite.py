@@ -411,17 +411,20 @@ def review_performance(directory):
     lifecycle=any(e.get('event')=='performance_lifecycle_begin' for e in events)
     revision=max((int(e.get('value')) for e in events if e.get('event')=='pilot_delivery_revision' and str(e.get('value','')).isdigit()),default=0)
     custom_profile=revision>=36
-    hybrid_fallback=revision>=38
+    native_fallback=revision==38
+    complete_fallback=revision>=39
     ends=[e for e in events if e.get('event')=='preview_end']
-    minimum_frames=270 if lifecycle else 128 if stability else 120
+    minimum_frames=(150 if complete_fallback else 270) if lifecycle else 128 if stability else 120
     if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<minimum_frames or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
+    elif complete_fallback:
+        if ends[0].get('cpu_pose_submitted',0)<=0 or ends[0].get('cpu_pose_created',-1)+ends[0].get('cpu_pose_reused',-1)!=ends[0].get('cpu_pose_submitted') or ends[0].get('submitted')!=ends[0].get('skinned_submitted',0)+ends[0].get('cpu_pose_submitted',0) or ends[0].get('budget_omitted')!=0:errors.append('performance_complete_cpu_pose_fallback')
     elif ends[0].get('submitted')!=ends[0].get('skinned_submitted'):errors.append('performance_cpu_pose_submission')
     if lifecycle:
         recovery=[e for e in events if e.get('event')=='performance_resources_recovered' and e.get('code')==0]
         raster=[e for e in events if e.get('event')=='performance_raster_survival_complete' and e.get('code')==0]
-        if len(recovery)!=1 or len(raster)!=1 or len(ends)!=1 or ends[0].get('rt_frames')!=210 or ends[0].get('raster_survival_frames',0)<60 or ends[0].get('resources_recovered') is not True:
+        if len(recovery)!=1 or len(raster)!=1 or len(ends)!=1 or ends[0].get('rt_frames')!=(90 if complete_fallback else 210) or ends[0].get('raster_survival_frames',0)<60 or ends[0].get('resources_recovered') is not True:
             errors.append('performance_lifecycle_recovery')
-        if hybrid_fallback and (not isinstance(ends[0].get('original_fallback_draws'),int) or ends[0]['original_fallback_draws']<=0):errors.append('performance_original_fallback_not_exercised')
+        if native_fallback and (not isinstance(ends[0].get('original_fallback_draws'),int) or ends[0]['original_fallback_draws']<=0):errors.append('performance_original_fallback_not_exercised')
     for e in events:
         if e.get('code',0):errors.append('performance_runtime_failure:'+e.get('event','unknown'))
     remix_mode={'importance_sampled_activated':False,'restir_gi_activated':False,'graphics_preset_custom_read':False,'lines':[]}
@@ -436,7 +439,8 @@ def review_performance(directory):
         vertex_capture=any(e.get('event')=='rtx.useVertexCapture' and e.get('code')==0 and e.get('value')=='True' for e in config_events)
         if not configured:errors.append('custom_graphics_preset_not_requested')
         if not indirect:errors.append('explicit_indirect_mode_not_requested')
-        if hybrid_fallback and not vertex_capture:errors.append('native_vertex_capture_fallback_not_requested')
+        if native_fallback and not vertex_capture:errors.append('native_vertex_capture_fallback_not_requested')
+        if complete_fallback and vertex_capture:errors.append('global_vertex_capture_not_disabled')
         if not remix_log.is_file() or remix_log.stat().st_size>64*1024*1024:errors.append('missing_or_oversized_remix_log')
         else:
             for line in remix_log.read_text(encoding='utf-8',errors='replace').splitlines():
@@ -448,7 +452,7 @@ def review_performance(directory):
                 if 'Skipping draw call with shader usage as vertex capture is not enabled.' in line:remix_mode['vertex_capture_disabled_skip']=True
             if lifecycle:
                 if not remix_mode['restir_gi_activated'] or remix_mode['importance_sampled_activated']:errors.append('effective_indirect_mode_not_restir_gi')
-                if hybrid_fallback and remix_mode.get('vertex_capture_disabled_skip'):errors.append('native_vertex_capture_fallback_not_effective')
+                if native_fallback and remix_mode.get('vertex_capture_disabled_skip'):errors.append('native_vertex_capture_fallback_not_effective')
             elif not remix_mode['importance_sampled_activated'] or remix_mode['restir_gi_activated']:errors.append('effective_indirect_mode_not_importance_sampled')
     mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
     expected=[0,8,16] if lifecycle else [32]*4 if stability else [16,32,48,64]
@@ -458,7 +462,11 @@ def review_performance(directory):
              not isinstance(e.get('skinned_frame_unique_meshes'),int) or not isinstance(e.get('skinned_frame_repeat_draws'),int) or
              e['skinned_frame_unique_meshes']!=e['skinned_frame_submitted'] or e['skinned_frame_repeat_draws']!=0 or
              e.get('skinned_frame_max')!=(16 if lifecycle else 32 if stability else e.get('skinned_frame_max')) or
-             not isinstance(e.get('preview_submitted'),int) or e['preview_submitted']!=e.get('preview_skinned_submitted') for e in mesh):
+             not isinstance(e.get('preview_submitted'),int) or
+             (e['preview_submitted']!=e.get('preview_skinned_submitted') if not complete_fallback else
+              not all(isinstance(e.get(k),int) and e[k]>=0 for k in ('preview_cpu_pose_submitted','preview_cpu_pose_created','preview_cpu_pose_reused')) or
+              e['preview_cpu_pose_submitted']<=0 or e['preview_cpu_pose_created']+e['preview_cpu_pose_reused']!=e['preview_cpu_pose_submitted'] or
+              e['preview_submitted']!=e.get('preview_skinned_submitted',0)+e['preview_cpu_pose_submitted']) for e in mesh):
         errors.append('performance_gpu_skin_not_exercised')
     windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[]
     warmup=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase')==-1 and e.get('preview_submitted',0)>0]
@@ -470,8 +478,8 @@ def review_performance(directory):
     if gpu_file.is_file() and gpu_file.stat().st_size<=32*1024*1024:
         try:gpu_rows=[json.loads(line) for line in gpu_file.read_text(encoding='utf-8').splitlines() if line.strip()]
         except json.JSONDecodeError:gpu_rows=[]
-    phase_frames=[30,60,120] if lifecycle else [30]*len(expected)
-    lifecycle_names=['gpu_lifecycle_native_fallback' if hybrid_fallback else 'gpu_lifecycle_static','gpu_lifecycle_8','gpu_lifecycle_16']
+    phase_frames=([30,30,30] if complete_fallback else [30,60,120]) if lifecycle else [30]*len(expected)
+    lifecycle_names=['gpu_lifecycle_cpu_complete' if complete_fallback else 'gpu_lifecycle_native_fallback' if native_fallback else 'gpu_lifecycle_static','gpu_lifecycle_8','gpu_lifecycle_16']
     for index,limit in enumerate(expected):
         name=lifecycle_names[index] if lifecycle else 'gpu_stability_'+str(index+1) if stability else 'gpu_ramp_'+str(limit)
         timing_name=name if stability or lifecycle else ('gpu_ramp_64' if limit==48 else 'gpu_ramp_128' if limit==64 else name) if legacy_timing else name
@@ -482,7 +490,9 @@ def review_performance(directory):
         submitted_delta=current.get('preview_skinned_submitted',0)-previous.get('preview_skinned_submitted',0)
         created_delta=current.get('preview_skinned_created',0)-previous.get('preview_skinned_created',0)
         reused_delta=current.get('preview_skinned_reused',0)-previous.get('preview_skinned_reused',0)
+        cpu_pose_delta=(evidence.get('preview_submitted',0)-evidence.get('preview_skinned_submitted',0))-(previous.get('preview_submitted',0)-previous.get('preview_skinned_submitted',0))
         if (index==0 and lifecycle and (submitted_delta!=0 or created_delta!=0 or reused_delta!=0)) or (not (index==0 and lifecycle) and submitted_delta<=0) or created_delta+reused_delta!=submitted_delta:errors.append('performance_gpu_skin_not_exercised:'+name)
+        if complete_fallback and cpu_pose_delta<=0:errors.append('performance_cpu_pose_fallback_not_exercised:'+name)
         phase={'gpu_skin_limit':limit,'frames':phase_frames[index],'wall_ms':wall,'fps':phase_frames[index]*1000/wall,
                        'skinned_frame_submitted':evidence.get('skinned_frame_submitted',0),
                        'skinned_frame_unique_meshes':evidence.get('skinned_frame_unique_meshes',0),
@@ -490,6 +500,7 @@ def review_performance(directory):
                        'gpu_skin_submitted_delta':submitted_delta,
                        'gpu_skin_created_delta':created_delta,
                        'gpu_skin_reused_delta':reused_delta,
+                       'cpu_pose_submitted_delta':cpu_pose_delta,
                        'mesh_created_delta':evidence.get('created',0)-previous.get('created',0),
                        'mesh_reused_delta':evidence.get('reused',0)-previous.get('reused',0),
                        'model_ms':row.get('scopes',{}).get('model',{}).get('elapsed_ms',0),
@@ -525,10 +536,10 @@ def review_performance(directory):
     raster_window=windows.get('gpu_lifecycle_raster') if lifecycle else None
     if lifecycle and (not raster_window or not isinstance(raster_window.get('wall_ms'),(int,float)) or not math.isfinite(raster_window['wall_ms']) or raster_window['wall_ms']<=0):errors.append('performance_raster_timing')
     best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
-    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_restir_hybrid_lifecycle' if lifecycle and hybrid_fallback else 'arc_restir_lifecycle' if lifecycle else 'arc_direct_custom_stability' if custom_profile else 'arc_direct_stability' if stability else 'legacy_gpu_skin_ramp','phases':phases,'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
+    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_restir_complete_lifecycle' if lifecycle and complete_fallback else 'arc_restir_hybrid_lifecycle' if lifecycle and native_fallback else 'arc_restir_lifecycle' if lifecycle else 'arc_direct_custom_stability' if custom_profile else 'arc_direct_stability' if stability else 'legacy_gpu_skin_ramp','phases':phases,'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
             'effective_indirect_mode':remix_mode if custom_profile else {'status':'not_enforced_before_v36'},
             'raster_survival':{'frames':ends[-1].get('raster_survival_frames',0) if ends else 0,'timing':raster_window},
-            'end':ends[-1] if ends else None,'limits':'v38 keeps native vertex-captured programmable draws for unsupported and over-budget parts, and applies Remix Ignore only after an explicit replacement succeeds. The 0/8/16 explicit-instance lifecycle and raster recovery checks remain; visible completeness still requires user review.' if lifecycle and hybrid_fallback else 'v37 uses explicit ReSTIR GI, measures 30 static RT frames, 60 frames at 8 and 120 frames at 16 GPU-skinned meshes, then requires all RT resources to retire and 60 ordinary Presents to survive. A pass is lifecycle evidence, not image acceptance.' if lifecycle else 'v36 uses the v35 fixed-32 stability load, forces the Custom preset so Arc cannot replace importance-sampled indirect mode with ReSTIR GI, and records Host device-thread plus per-process CPU time. Performance mode omits unsupported/excess CPU-pose models; image completeness is not evaluated.' if custom_profile else 'v35 uses an 8-frame staged warm-up followed by four fixed-32 30-frame windows under a fixed direct-light TAAU profile. Performance mode omits unsupported/excess CPU-pose models, so image completeness is not evaluated. GPU PDH counters remain separate per engine.' if stability else 'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
+            'end':ends[-1] if ends else None,'limits':'v39 disables global vertex capture and restores explicit CPU-pose meshes for all accepted parts outside the 0/8/16 persistent GPU-skin budget. Each complete scene runs for 30 frames before resource retirement and raster recovery; visible completeness still requires user review.' if lifecycle and complete_fallback else 'v38 keeps native vertex-captured programmable draws for unsupported and over-budget parts, and applies Remix Ignore only after an explicit replacement succeeds. The 0/8/16 explicit-instance lifecycle and raster recovery checks remain; visible completeness still requires user review.' if lifecycle and native_fallback else 'v37 uses explicit ReSTIR GI, measures 30 static RT frames, 60 frames at 8 and 120 frames at 16 GPU-skinned meshes, then requires all RT resources to retire and 60 ordinary Presents to survive. A pass is lifecycle evidence, not image acceptance.' if lifecycle else 'v36 uses the v35 fixed-32 stability load, forces the Custom preset so Arc cannot replace importance-sampled indirect mode with ReSTIR GI, and records Host device-thread plus per-process CPU time. Performance mode omits unsupported/excess CPU-pose models; image completeness is not evaluated.' if custom_profile else 'v35 uses an 8-frame staged warm-up followed by four fixed-32 30-frame windows under a fixed direct-light TAAU profile. Performance mode omits unsupported/excess CPU-pose models, so image completeness is not evaluated. GPU PDH counters remain separate per engine.' if stability else 'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
 
 def startup_modules(directory,pid,notify):
     """Retain bounded module lists even if no F9 trace ever starts."""
@@ -599,15 +610,15 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
                 'rtx.tonemappingMode = 1','rtx.localtonemap.exposure = 0.75',
                 'rtx.orthographicIsUI = True','rtx.skipDrawCallsPostRTXInjection = False','rtx.enableAlphaBlend = True','rtx.bloom.enable = False','rtx.postfx.enable = False']
             if performance:config_options += ['rtx.graphicsPreset = 4','rtx.upscalerType = 3','rtx.resolutionScale = 0.75','rtx.enableDirectLighting = True',
-                'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 1','rtx.useVertexCapture = True']
+                'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 1','rtx.useVertexCapture = False']
             config='\n'.join(config_options)+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='arc_restir_hybrid_lifecycle_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
+            report['scope']='arc_restir_complete_explicit_lifecycle_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v38: one automatic hybrid lifecycle run. Unsupported and over-budget model parts now stay on Remix native vertex capture; only a successfully submitted explicit replacement hides its original Draw. The explicit GPU-skinned limits remain 0, 8 and 16, followed by RT resource retirement and 60 raster Presents. Keep characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v39: one complete explicit-model run. Global vertex capture is disabled. All accepted parts use explicit meshes; the 0, 8 and 16 limits only choose how many parts use persistent GPU skinning while the rest use CPU-pose meshes. Each RT phase lasts 30 frames, followed by resource retirement and 60 raster Presents. Keep characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
@@ -654,7 +665,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         preview_running=directory/f'rt-preview-running-{session}.json'
         if world and manifest.get('pilot_revision',0)>=20:report['preview']='incomplete'
         if world and preview_running.is_file():
-            notify('30-frame gate passed. Native vertex-capture fallback plus the 0-to-8-to-16 explicit Arc lifecycle run is active. Keep characters visible and check whether their full bodies remain present; RT turns off automatically for the final raster survival check.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
+            notify('30-frame gate passed. The complete explicit CPU / GPU-8 / GPU-16 comparison is active. Keep characters visible and check whether their full bodies remain present; RT turns off automatically for the final raster survival check.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
             preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+(240 if performance else 330 if beta else 90)
             while not preview_done.is_file() and time.monotonic()<preview_deadline:
                 if pid not in game_pids():break

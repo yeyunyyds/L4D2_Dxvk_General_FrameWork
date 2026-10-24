@@ -213,4 +213,28 @@ class RuntimeEvidenceTests(unittest.TestCase):
             events[-1]['resources_recovered']=False
             self.assertIn('invalid_gpu_skinning_performance_ramp',review()['errors'])
 
+    def test_v39_lifecycle_requires_complete_explicit_cpu_pose_fallback(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);events=[dict(event='pilot_delivery_revision',value='39'),dict(event='performance_lifecycle_begin',code=0)]
+            total=skinned=created=reused=cpu=0
+            for phase,(limit,name) in enumerate(((0,'gpu_lifecycle_cpu_complete'),(8,'gpu_lifecycle_8'),(16,'gpu_lifecycle_16'))):
+                gpu=limit*30;cpu_phase=600;skinned+=gpu;cpu+=cpu_phase;total+=gpu+cpu_phase
+                if gpu:created+=limit;reused+=gpu-limit
+                events += [dict(event='runtime_timing_window',wall_ms=1500,segment=name,scopes={},thread_times_available=True,thread_cpu_ms=10),
+                    dict(event='api_mesh_frame',stage='api_continuous_preview',gpu_skin_performance_phase=phase,skinned_frame_limit=limit,
+                         skinned_frame_submitted=limit,skinned_frame_unique_meshes=limit,skinned_frame_repeat_draws=0,
+                         skinned_frame_max=16,preview_submitted=total,preview_cpu_pose_submitted=cpu,preview_cpu_pose_created=cpu,preview_cpu_pose_reused=0,
+                         preview_skinned_submitted=skinned,preview_skinned_created=created,preview_skinned_reused=reused,
+                         skinned_submitted=skinned,skinned_created=created,skinned_reused=reused)]
+            events += [dict(event='performance_resources_recovered',code=0),dict(event='performance_raster_survival_complete',code=0),
+                dict(event='runtime_timing_window',wall_ms=1000,segment='gpu_lifecycle_raster',scopes={},thread_times_available=True,thread_cpu_ms=10),
+                dict(event='preview_end',complete=True,rt_frames=90,raster_survival_frames=60,resources_recovered=True,
+                     cpu_pose_submitted=cpu,cpu_pose_created=cpu,cpu_pose_reused=0,budget_omitted=0,entries=0,pending_fences=0,held=0,submitted=total,skinned_submitted=skinned,skinned_created=created,skinned_reused=reused)]
+            def review():
+                (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events));return analyze(root)
+            result=review();self.assertTrue(result['pass'],result['errors'])
+            self.assertEqual(result['gpu_skinning']['status'],'performance_complete_lifecycle_requires_visual_review')
+            events[-1]['cpu_pose_submitted']=0
+            self.assertIn('performance_complete_cpu_pose_fallback',review()['errors'])
+
 if __name__=='__main__':unittest.main()

@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "input": {
+    "name": "rt-performance-20261024-155942-0fa790eb.zip",
+    "bytes": 1547717,
+    "sha256": "f304feaad7ce960678489a1b14c90d50c895b8e5068bd024e9378170d649998f",
+    "zip_members": 523,
+    "expanded_bytes": 13217882,
+    "crc": "pass",
+    "omitted_files": 0,
+    "build_commit": "e08e602a9af23b6cb6c1d62d0fcb7278bd6be8b7"
+  },
+  "result": {
+    "complete": false,
+    "rt_frames": 58,
+    "first_phase_frames": 30,
+    "first_phase_wall_ms": 96742.7207,
+    "first_phase_fps": 0.31010085082298083,
+    "present_ms": 94773.2437,
+    "max_present_ms": 9914.7126,
+    "host_device_thread_cpu_ms": 62.5,
+    "gpu_3d_average_percent": 86.24959846312576,
+    "gpu_3d_p50_percent": 97.30270974986726,
+    "gpu_3d_max_percent": 100.0,
+    "original_fallback_draws": 30558,
+    "device_lost": false,
+    "fence_failure": false,
+    "user_terminated": true
+  },
+  "cause": "Global shader vertex capture intercepted roughly 558 complex Source model draws per frame, saturating the GPU and producing unsuitable captured geometry.",
+  "v39": {
+    "global_vertex_capture": false,
+    "complete_explicit_cpu_pose_fallback": true,
+    "persistent_gpu_skin_limits": [0, 8, 16],
+    "phase_frames": [30, 30, 30],
+    "raster_survival_frames": 60,
+    "budget_omission_allowed": false,
+    "visual_review_required": true
+  }
+}

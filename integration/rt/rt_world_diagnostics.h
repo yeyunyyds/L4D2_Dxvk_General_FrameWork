@@ -25,14 +25,14 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v38 retains the v37 Arc lifecycle bounds, while native vertex capture keeps
-// original programmable draws visible whenever no explicit replacement was
-// submitted. Move from native-only fallback to the bounded 8- and 16-mesh
-// explicit loads, then turn RT off, retire every API mesh/fence and prove that
-// ordinary Present survives.
+// v39 restores the complete explicit model path that survived the v23 visual
+// pilot. The limits select persistent GPU-skinned submissions; every other
+// supported part uses an explicit CPU-pose mesh instead of global shader vertex
+// capture. Compare complete CPU, 8-GPU and 16-GPU loads for 30 frames each,
+// then retire every API mesh/fence and prove that ordinary Present survives.
 constexpr unsigned kGpuSkinPerformanceStaticFrames=30;
-constexpr unsigned kGpuSkinPerformanceEightFrames=60;
-constexpr unsigned kGpuSkinPerformanceSixteenFrames=120;
+constexpr unsigned kGpuSkinPerformanceEightFrames=30;
+constexpr unsigned kGpuSkinPerformanceSixteenFrames=30;
 constexpr unsigned kGpuSkinPerformanceRtFrames=kGpuSkinPerformanceStaticFrames+
   kGpuSkinPerformanceEightFrames+kGpuSkinPerformanceSixteenFrames;
 constexpr unsigned kGpuSkinPerformanceRasterFrames=60;

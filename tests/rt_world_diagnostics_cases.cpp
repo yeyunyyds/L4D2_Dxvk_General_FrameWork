@@ -13,14 +13,14 @@ int main() {
       !allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame)&&
       !allowPersistentGpuSkin(1,kGpuSkinSubmissionsPerFrame),"adaptive GPU skin density or submission bound exceeded");
     require(performanceGpuSkinLimit(0)==0&&performanceGpuSkinLimit(29)==0&&performanceGpuSkinLimit(30)==8&&
-      performanceGpuSkinLimit(89)==8&&performanceGpuSkinLimit(90)==16&&performanceGpuSkinLimit(209)==16&&
-      performanceGpuSkinLimit(210)==0&&performanceGpuSkinLimit(999)==0,
+      performanceGpuSkinLimit(59)==8&&performanceGpuSkinLimit(60)==16&&performanceGpuSkinLimit(89)==16&&
+      performanceGpuSkinLimit(90)==0&&performanceGpuSkinLimit(999)==0,
       "GPU performance lifecycle limits differ");
-    require(performanceGpuSkinPhase(29)==0&&performanceGpuSkinPhase(30)==1&&performanceGpuSkinPhase(89)==1&&
-      performanceGpuSkinPhase(90)==2&&performanceGpuSkinPhase(209)==2&&performanceGpuSkinPhase(210)==3,
+    require(performanceGpuSkinPhase(29)==0&&performanceGpuSkinPhase(30)==1&&performanceGpuSkinPhase(59)==1&&
+      performanceGpuSkinPhase(60)==2&&performanceGpuSkinPhase(89)==2&&performanceGpuSkinPhase(90)==3,
       "GPU performance lifecycle phase differs");
-    require(performanceGpuSkinReport(30)&&performanceGpuSkinReport(90)&&performanceGpuSkinReport(210)&&
-      !performanceGpuSkinReport(29)&&!performanceGpuSkinReport(31)&&!performanceGpuSkinReport(270),
+    require(performanceGpuSkinReport(30)&&performanceGpuSkinReport(60)&&performanceGpuSkinReport(90)&&
+      !performanceGpuSkinReport(29)&&!performanceGpuSkinReport(31)&&!performanceGpuSkinReport(150),
       "GPU performance lifecycle reports differ");
     std::cout << "RT GPU skin previous-frame density and submission limits: PASS\n";
     CoverageComparison coverage;

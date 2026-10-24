@@ -17,7 +17,8 @@ def analyze(directory):
     lifecycle=any(e.get('event')=='performance_lifecycle_begin' for e in events)
     performance=stability or lifecycle or any(e.get('event')=='performance_ramp_begin' and e.get('code')==0 for e in events)
     requested=any(value>=24 for value in revisions);gpu_pilot=any(25<=value<27 for value in revisions)
-    cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value==28 for value in revisions);custom_profile=any(value>=36 for value in revisions);hybrid_fallback=any(value>=38 for value in revisions)
+    cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value==28 for value in revisions);custom_profile=any(value>=36 for value in revisions)
+    native_fallback=any(value==38 for value in revisions);complete_fallback=any(value>=39 for value in revisions)
     safety_limit=any(value==29 for value in revisions);density_limit=any(value>=30 for value in revisions);pose_slots=any(value>=33 for value in revisions)
     if not requested:return {'schema':1,'status':'not_requested','pass':True}
     windows=[e for e in events if e.get('event')=='runtime_timing_window'];totals=defaultdict(lambda:defaultdict(lambda:{'calls':0,'elapsed_ms':0.,'max_ms':0.}))
@@ -77,7 +78,11 @@ def analyze(directory):
                 isinstance(e.get('skinned_frame_unique_meshes'),int) and isinstance(e.get('skinned_frame_repeat_draws'),int) and
                 e['skinned_frame_unique_meshes']+e['skinned_frame_repeat_draws']==e['skinned_frame_submitted'] and
                 (not pose_slots or (e['skinned_frame_unique_meshes']==e['skinned_frame_submitted'] and e['skinned_frame_repeat_draws']==0)) and
-                isinstance(e.get('preview_submitted'),int) and e['preview_submitted']==e.get('preview_skinned_submitted') and
+                isinstance(e.get('preview_submitted'),int) and
+                (e['preview_submitted']==e.get('preview_skinned_submitted') if not complete_fallback else
+                 all(isinstance(e.get(k),int) and e[k]>=0 for k in ('preview_cpu_pose_submitted','preview_cpu_pose_created','preview_cpu_pose_reused')) and
+                 e['preview_cpu_pose_submitted']>0 and e['preview_cpu_pose_created']+e['preview_cpu_pose_reused']==e['preview_cpu_pose_submitted'] and
+                 e['preview_submitted']==e.get('preview_skinned_submitted',0)+e['preview_cpu_pose_submitted']) and
                 all(isinstance(e.get(k),int) and e[k]>=0 for k in preview_keys) for e in frames)
             if stability:
                 profile=[e for e in events if e.get('event')=='performance_stability_begin']
@@ -87,9 +92,12 @@ def analyze(directory):
                 ends_lifecycle=[e for e in events if e.get('event')=='preview_end']
                 recovered=[e for e in events if e.get('event')=='performance_resources_recovered' and e.get('code')==0]
                 survived=[e for e in events if e.get('event')=='performance_raster_survival_complete' and e.get('code')==0]
-                ramp_valid=ramp_valid and len(profile)==1 and profile[0].get('code')==0 and len(recovered)==1 and len(survived)==1 and len(ends_lifecycle)==1 and ends_lifecycle[0].get('complete') is True and ends_lifecycle[0].get('rt_frames')==210 and ends_lifecycle[0].get('raster_survival_frames',0)>=60 and ends_lifecycle[0].get('resources_recovered') is True and all(ends_lifecycle[0].get(k)==0 for k in ('entries','pending_fences','held'))
-                if hybrid_fallback:
+                target_rt_frames=90 if complete_fallback else 210
+                ramp_valid=ramp_valid and len(profile)==1 and profile[0].get('code')==0 and len(recovered)==1 and len(survived)==1 and len(ends_lifecycle)==1 and ends_lifecycle[0].get('complete') is True and ends_lifecycle[0].get('rt_frames')==target_rt_frames and ends_lifecycle[0].get('raster_survival_frames',0)>=60 and ends_lifecycle[0].get('resources_recovered') is True and all(ends_lifecycle[0].get(k)==0 for k in ('entries','pending_fences','held'))
+                if native_fallback:
                     ramp_valid=ramp_valid and isinstance(ends_lifecycle[0].get('original_fallback_draws'),int) and ends_lifecycle[0]['original_fallback_draws']>0
+                if complete_fallback:
+                    ramp_valid=ramp_valid and all(isinstance(ends_lifecycle[0].get(k),int) and ends_lifecycle[0][k]>=0 for k in ('cpu_pose_submitted','cpu_pose_created','cpu_pose_reused')) and ends_lifecycle[0]['cpu_pose_submitted']>0 and ends_lifecycle[0]['cpu_pose_created']+ends_lifecycle[0]['cpu_pose_reused']==ends_lifecycle[0]['cpu_pose_submitted'] and ends_lifecycle[0].get('submitted')==ends_lifecycle[0].get('skinned_submitted',0)+ends_lifecycle[0]['cpu_pose_submitted'] and ends_lifecycle[0].get('budget_omitted')==0
             warmup=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase')==-1 and e.get('preview_submitted',0)>0]
             previous={k:(warmup[-1].get(k,0) if stability and warmup else 0) for k in preview_keys}
             for index,e in enumerate(frames):
@@ -100,7 +108,8 @@ def analyze(directory):
                 previous={k:e.get(k,0) for k in preview_keys}
             if not ramp_valid:errors.append('invalid_gpu_skinning_performance_ramp')
             if ends[0]['skinned_created']+ends[0]['skinned_reused']!=ends[0]['skinned_submitted']:errors.append('invalid_gpu_skinning_accounting')
-            if ends[0].get('submitted')!=ends[0].get('skinned_submitted'):errors.append('performance_cpu_pose_submission')
+            if not complete_fallback and ends[0].get('submitted')!=ends[0].get('skinned_submitted'):errors.append('performance_cpu_pose_submission')
+            if complete_fallback and (ends[0].get('cpu_pose_submitted',0)<=0 or ends[0].get('cpu_pose_created',-1)+ends[0].get('cpu_pose_reused',-1)!=ends[0].get('cpu_pose_submitted') or ends[0].get('submitted')!=ends[0].get('skinned_submitted',0)+ends[0].get('cpu_pose_submitted',0) or ends[0].get('budget_omitted')!=0):errors.append('performance_complete_cpu_pose_fallback')
         elif density_limit:
             density_valid=all(isinstance(e.get('gpu_skin_previous_frame_draws'),int) and e['gpu_skin_previous_frame_draws']>=0 and
                               e.get('gpu_skin_density_limit')==256 and e.get('gpu_skin_high_density_limit')==4 and
@@ -115,14 +124,14 @@ def analyze(directory):
             if ends[0]['skinned_created']+ends[0]['skinned_reused']!=ends[0]['skinned_submitted']:errors.append('invalid_gpu_skinning_accounting')
         bounded_ok=valid and frames and len(ends)==1 and ends[0].get('skinned_submitted',0)>0 and all(0<=e.get('skinned_frame_submitted',-1)<=16 and e.get('skinned_frame_limit')==16 for e in frames)
         density_ok=density_limit and not performance and valid and frames and len(ends)==1 and ends[0].get('skinned_submitted',0)>0 and not any(error in errors for error in ('invalid_gpu_skinning_density_policy','invalid_gpu_skinning_density_throttle_count','gpu_skinning_density_policy_not_exercised','invalid_gpu_skinning_accounting'))
-        performance_ok=performance and valid and frames and len(ends)==1 and not any(error in errors for error in ('invalid_gpu_skinning_performance_ramp','invalid_gpu_skinning_accounting','performance_cpu_pose_submission'))
-        status=('performance_hybrid_lifecycle_requires_visual_review' if performance_ok and lifecycle and hybrid_fallback else 'performance_lifecycle_requires_review' if performance_ok and lifecycle else 'performance_stability_requires_review' if performance_ok and stability else 'performance_ramp_requires_review' if performance_ok else 'density_adaptive_requires_image_review' if density_ok else 'safety_limit_requires_image_review' if safety_limit and bounded_ok else 'bounded_canary_requires_image_review' if bounded_canary and bounded_ok
+        performance_ok=performance and valid and frames and len(ends)==1 and not any(error in errors for error in ('invalid_gpu_skinning_performance_ramp','invalid_gpu_skinning_accounting','performance_cpu_pose_submission','performance_complete_cpu_pose_fallback'))
+        status=('performance_complete_lifecycle_requires_visual_review' if performance_ok and lifecycle and complete_fallback else 'performance_hybrid_lifecycle_requires_visual_review' if performance_ok and lifecycle and native_fallback else 'performance_lifecycle_requires_review' if performance_ok and lifecycle else 'performance_stability_requires_review' if performance_ok and stability else 'performance_ramp_requires_review' if performance_ok else 'density_adaptive_requires_image_review' if density_ok else 'safety_limit_requires_image_review' if safety_limit and bounded_ok else 'bounded_canary_requires_image_review' if bounded_canary and bounded_ok
                 else 'disabled_cpu_fallback' if cpu_rollback and valid and frames and len(ends)==1 and not any(e[k] for e in frames+ends for k in keys)
                 else 'exercised_requires_image_review' if gpu_pilot and valid and ends and ends[0].get('skinned_submitted',0)>0 else 'unexercised_or_incomplete')
         if not performance:
             skin_limits='v27 requires zero persistent skinning. v28-v29 enforce at most 16 successful GPU-skinned submissions per frame. v30 keeps 16 at up to 256 preceding-frame model submissions and a 4-submission GPU baseline above that density; the warm-up frame and excess models use CPU poses. Image review remains required.'
         elif lifecycle:
-            skin_limits='v38 hybrid lifecycle keeps native vertex-captured programmable draws when an explicit replacement is unsupported or outside the 0/8/16 budget; only successfully replaced draws receive the Remix Ignore category. It still requires full RT resource retirement and 60 surviving raster Presents. Visual completeness requires review.' if hybrid_fallback else 'v37 lifecycle mode uses explicit ReSTIR GI, 30 static RT frames, 60 RT frames at 8, 120 RT frames at 16, full RT resource retirement and 60 surviving raster Presents. CPU-pose meshes remain omitted; this is lifecycle evidence, not image acceptance.'
+            skin_limits='v39 disables global shader vertex capture and restores explicit CPU-pose meshes for every accepted part outside the persistent GPU-skin budget. It compares complete CPU, GPU-8 and GPU-16 scenes for 30 frames each, then requires resource retirement and 60 raster Presents. Visual completeness requires review.' if complete_fallback else 'v38 hybrid lifecycle keeps native vertex-captured programmable draws when an explicit replacement is unsupported or outside the 0/8/16 budget; only successfully replaced draws receive the Remix Ignore category. It still requires full RT resource retirement and 60 surviving raster Presents. Visual completeness requires review.' if native_fallback else 'v37 lifecycle mode uses explicit ReSTIR GI, 30 static RT frames, 60 RT frames at 8, 120 RT frames at 16, full RT resource retirement and 60 surviving raster Presents. CPU-pose meshes remain omitted; this is lifecycle evidence, not image acceptance.'
         elif stability:
             skin_limits=('v36 retains the v35 fixed-32 Arc stability load, locks the Custom graphics preset and records Host device-thread CPU time.' if custom_profile else 'v35 performance mode warms from 4 to 32 GPU-skinned pose meshes over 8 frames, then measures four 30-frame windows at a fixed limit of 32 with TAAU 0.75, direct light only, secondary bounces off and RTXDI off.')+' CPU-pose meshes remain omitted; this is stability and throughput evidence, not image acceptance.'
         else:

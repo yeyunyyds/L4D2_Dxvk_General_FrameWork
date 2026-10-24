@@ -322,6 +322,36 @@ assert result['execution']=='incomplete'
         events[-1]['raster_survival_frames']=60;events[-1]['original_fallback_draws']=0;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         self.assertIn('performance_original_fallback_not_exercised',suite.review_performance(directory)['errors'])
 
+    def test_performance_review_v39_requires_complete_cpu_pose_fallback_in_every_phase(self):
+        directory=self.root/'performance-v39';directory.mkdir();total=skinned=created=reused=cpu=0
+        events=[dict(event='pilot_delivery_revision',code=0,value='39'),dict(event='performance_lifecycle_begin',code=0)]
+        for phase,(limit,name) in enumerate(((0,'gpu_lifecycle_cpu_complete'),(8,'gpu_lifecycle_8'),(16,'gpu_lifecycle_16'))):
+            gpu=limit*30;cpu_phase=20*30;skinned+=gpu;cpu+=cpu_phase;total+=gpu+cpu_phase
+            if gpu:created+=limit;reused+=gpu-limit
+            events += [dict(event='runtime_timing_window',segment=name,wall_ms=1500,
+                            thread_times_available=True,thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
+                       dict(event='api_mesh_frame',gpu_skin_performance_phase=phase,skinned_frame_limit=limit,
+                            skinned_frame_submitted=limit,skinned_frame_unique_meshes=limit,skinned_frame_repeat_draws=0,
+                            skinned_frame_max=16,preview_submitted=total,preview_cpu_pose_submitted=cpu,preview_cpu_pose_created=cpu,preview_cpu_pose_reused=0,
+                            preview_skinned_submitted=skinned,preview_skinned_created=created,preview_skinned_reused=reused,
+                            created=total,reused=0)]
+        events += [dict(event='performance_resources_recovered',code=0),dict(event='performance_raster_survival_complete',code=0),
+                   dict(event='runtime_timing_window',segment='gpu_lifecycle_raster',wall_ms=1000,
+                        thread_times_available=True,thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
+                   dict(event='preview_end',complete=True,frames=150,rt_frames=90,raster_survival_frames=60,
+                        resources_recovered=True,cpu_pose_submitted=cpu,cpu_pose_created=cpu,cpu_pose_reused=0,budget_omitted=0,entries=0,pending_fences=0,held=0,
+                        submitted=total,skinned_submitted=skinned)]
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        (directory/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in
+            [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1'),
+             dict(event='rtx.useVertexCapture',code=0,value='False')])+'\n')
+        (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n[RTX-Compatibility-Info] Skipping draw call with shader usage as vertex capture is not enabled.\n')
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['profile'],'arc_restir_complete_lifecycle')
+        self.assertEqual([p['cpu_pose_submitted_delta'] for p in result['phases']],[600,600,600])
+        events[-1]['cpu_pose_submitted']=0;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        self.assertIn('performance_complete_cpu_pose_fallback',suite.review_performance(directory)['errors'])
+
 
 class InstallTests(unittest.TestCase):
     def setUp(self):
