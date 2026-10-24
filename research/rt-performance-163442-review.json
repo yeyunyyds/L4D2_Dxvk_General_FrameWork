@@ -67,7 +67,7 @@
     "phase_frames": 30,
     "gpu_skin_limits": [16, 32, 48, 64],
     "simultaneous_pose_mesh_slots": "distinct_and_persistent_by_per_frame_draw_ordinal",
-    "runtime_skinning_submission_batch": 16,
+    "runtime_submission_order": "validated_frame_flush_order_unchanged",
     "single_f9": true,
     "beta_paused": true,
     "primary_acceptance": [
