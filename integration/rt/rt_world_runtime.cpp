@@ -41,7 +41,7 @@ uint64_t targetBytes=0,targetRows=0,targetFrame=0;unsigned targetFrameRows=0;
 std::map<std::string,uint64_t> liveShaderSubmissions,liveShaderFallbacks;
 std::set<std::pair<uintptr_t,uintptr_t>> unknownPrograms;
 uint64_t unknownBytes=0,unknownFrame=0;unsigned unknownRows=0,unknownFrameRows=0;
-uint64_t previewStarted=0,previewRecoverAt=0,previewFrames=0,previewRasterFrames=0,previewStartSubmitted=0,previewStartSkinnedSubmitted=0,previewStartSkinnedCreated=0,previewStartSkinnedReused=0,previewGpuSkinOnlyOmitted=0,previewFirstRead=0;
+uint64_t previewStarted=0,previewRecoverAt=0,previewFrames=0,previewRasterFrames=0,previewStartSubmitted=0,previewStartSkinnedSubmitted=0,previewStartSkinnedCreated=0,previewStartSkinnedReused=0,previewGpuSkinOnlyOmitted=0,previewOriginalFallbackDraws=0,previewFirstRead=0;
 bool previewTaa=false;
 std::map<std::string,uint64_t> sourceShaderCensus;uint64_t sourceCensusOmitted=0;
 unsigned previewReadbacks=0,previewBindingRows=0,previewBindingOmitted=0;bool previewRecover=false,previewResourcesRecovered=false,previewMaintenanceFailed=false,previewReadFailed=false;
@@ -100,7 +100,11 @@ bool configure() {
       // is explicit, and select the mode with surviving device evidence.
       {"rtx.graphicsPreset", "4"}, {"rtx.upscalerType", "3"}, {"rtx.resolutionScale", "0.75"},
       {"rtx.enableDirectLighting", "True"}, {"rtx.enableSecondaryBounces", "False"},
-      {"rtx.useRTXDI", "False"}, {"rtx.integrateIndirectMode", "1"}
+      {"rtx.useRTXDI", "False"}, {"rtx.integrateIndirectMode", "1"},
+      // Explicit API instances remain the audited path. Vertex capture keeps
+      // the original programmable draw visible when a part is unsupported or
+      // outside the bounded 8/16 explicit-instance budget.
+      {"rtx.useVertexCapture", "True"}
     };
     for (const auto& option : profile) {
       const auto code=api.SetConfigVariable(option.first,option.second);event(option.first,uint32_t(code),option.second);
@@ -311,7 +315,7 @@ std::array<SceneCounts,4> modelCounts{};
 constexpr uint64_t kBetaPreviewDurationMs=5ull*60*1000;
 constexpr uint64_t kPerformancePreviewFrames=world_diagnostics::kGpuSkinPerformanceFrames;
 const char* performanceSegment(uint64_t completedFrames) {
-  static constexpr const char* names[]={"gpu_lifecycle_static","gpu_lifecycle_8","gpu_lifecycle_16","gpu_lifecycle_raster"};
+  static constexpr const char* names[]={"gpu_lifecycle_native_fallback","gpu_lifecycle_8","gpu_lifecycle_16","gpu_lifecycle_raster"};
   return names[world_diagnostics::performanceGpuSkinPhase(completedFrames)];
 }
 std::array<unsigned,world_diagnostics::kModelStages> modelSampleCounts{},modelStateCounts{},modelSampleOmitted{};
@@ -436,6 +440,7 @@ void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
       << ",\"gpu_skin_previous_frame_draws\":" << gpuSkinDensityInput << ",\"gpu_skin_density_limit\":" << world_diagnostics::kGpuSkinModelDensityLimit
       << ",\"gpu_skin_high_density_limit\":" << world_diagnostics::kGpuSkinHighDensitySubmissionsPerFrame
       << ",\"gpu_skin_only_omitted\":" << (launch.performance?previewGpuSkinOnlyOmitted:0)
+      << ",\"original_fallback_draws\":" << (launch.performance?previewOriginalFallbackDraws:0)
       << ",\"gpu_skin_density_throttle_frames\":" << gpuSkinDensityThrottleFrames
       << ",\"destroyed\":" << apiMeshes.destroyed << ",\"entries\":" << apiMeshes.entries() << ",\"bytes\":" << apiMeshes.bytes
       << ",\"material_updates\":" << apiMeshes.materialUpdates << ",\"textured_submissions\":" << texturedSubmissions << ",\"texture_fallback_submissions\":" << textureFallbackSubmissions << ",\"texture_exports\":" << modelTextures.exported << ",\"texture_bytes\":" << modelTextures.bytes << ",\"texture_held\":" << modelTextures.held() << ",\"texture_read_failures\":" << modelTextures.failed << ",\"texture_budget_deferred\":" << modelTextures.deferred
@@ -607,9 +612,8 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
     }();
     ++counts.reasons[prepared.reason];if(prepared.ready) { ++counts.ready; }
     if(launch.performance&&!std::strcmp(prepared.reason,"performance_gpu_skin_only_omitted")) { ++previewGpuSkinOnlyOmitted; }
-    live_mesh::IgnoreScope<IDirect3DDevice9> scope(device);live_mesh::Submission submitted;DWORD cull=0;
-    report.capture=scope.capture;report.apply=scope.apply;
-    if(scope.ready()&&prepared.ready) {
+    live_mesh::Submission submitted;DWORD cull=0;
+    if(prepared.ready) {
       auto hr=device->GetRenderState(D3DRS_CULLMODE,&cull);
       if(SUCCEEDED(hr)&&apiCameraFrame!=frame) {
         remixapi_CameraInfo camera{};camera.sType=REMIXAPI_STRUCT_TYPE_CAMERA_INFO;camera.type=REMIXAPI_CAMERA_TYPE_WORLD;
@@ -634,15 +638,24 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
       else { submitted.code=ERROR_INVALID_DATA;submitted.operation="camera_or_cull"; }
       if(submitted.deferred) { if(apiMeshes.frameOmitted<=8) { submissionEvent(s,submitted,frame); } }
       else if(!submitted.success) { submissionEvent(s,submitted,frame);(void)raytracing(false);state().active=false; }
-    } else if(!scope.ready()) { event("api_model_ignore_failed",uint32_t(FAILED(scope.capture)?scope.capture:scope.apply));(void)raytracing(false);state().active=false; }
-    DWORD ignored=0;if(scope.ready()) { const auto q=device->GetRenderState(live_mesh::kCategory,&ignored);
+    }
+    // Never hide a draw that has no successful explicit replacement. With
+    // vertex capture enabled, Remix can retain these original programmable
+    // draws instead of reducing a character to the first 8/16 submitted parts.
+    std::unique_ptr<live_mesh::IgnoreScope<IDirect3DDevice9>> scope;
+    if(submitted.success) {
+      scope=std::make_unique<live_mesh::IgnoreScope<IDirect3DDevice9>>(device);
+      report.capture=scope->capture;report.apply=scope->apply;
+      if(!scope->ready()) { event("api_model_ignore_failed",uint32_t(FAILED(scope->capture)?scope->capture:scope->apply));(void)raytracing(false);state().active=false; }
+    } else if(launch.performance&&included) { ++previewOriginalFallbackDraws; }
+    DWORD ignored=0;if(scope&&scope->ready()) { const auto q=device->GetRenderState(live_mesh::kCategory,&ignored);
       if(FAILED(q)||!(ignored&live_mesh::kIgnore)) { event("api_model_ignore_binding_failed",uint32_t(E_FAIL));(void)raytracing(false);state().active=false;report.apply=E_FAIL; } }
     operation="original_draw_and_restore";
     { runtime_profile::Scope originalTiming(runtime_profile::Stage::OriginalDraw);
     called=true;physical=kind==1?device->DrawPrimitive(type,args[0],args[1]):device->DrawIndexedPrimitive(type,INT(int32_t(args[0])),args[1],args[2],args[3],args[4]);
     }
-    scope.finish();report.restore=scope.restore;
-    if(FAILED(scope.restore)) { event("api_model_ignore_restore_failed",uint32_t(scope.restore));(void)raytracing(false);state().active=false; }
+    if(scope) { scope->finish();report.restore=scope->restore; }
+    if(FAILED(report.restore)) { event("api_model_ignore_restore_failed",uint32_t(report.restore));(void)raytracing(false);state().active=false; }
     report.converted=submitted.success&&SUCCEEDED(report.restore)&&SUCCEEDED(report.apply);
     report.code=FAILED(report.capture)?static_draw::Code::CaptureFailed:FAILED(report.apply)?static_draw::Code::ApplyFailed:
       FAILED(report.restore)?static_draw::Code::RestoreFailed:submitted.success?static_draw::Code::Applied:static_draw::Code::Layout;
@@ -840,6 +853,7 @@ void endPreview(bool clean,const char* reason) noexcept {
       <<",\"submitted\":"<<apiMeshes.submitted-previewStartSubmitted<<",\"skinned_submitted\":"<<apiMeshes.skinnedSubmitted-previewStartSkinnedSubmitted
       <<",\"skinned_created\":"<<apiMeshes.skinnedCreated-previewStartSkinnedCreated<<",\"skinned_reused\":"<<apiMeshes.skinnedReused-previewStartSkinnedReused
       <<",\"gpu_skin_only_omitted\":"<<previewGpuSkinOnlyOmitted
+      <<",\"original_fallback_draws\":"<<previewOriginalFallbackDraws
       <<",\"gpu_skin_density_throttle_frames\":"<<gpuSkinDensityThrottleFrames
       <<",\"entries\":"<<apiMeshes.entries()<<",\"pending_fences\":"<<meshFences.size()
       <<",\"binding_rows_omitted\":"<<previewBindingOmitted<<",\"held\":"<<modelTextures.held()<<",\"readbacks\":"<<previewReadbacks<<"}\n"<<std::flush;
@@ -857,14 +871,14 @@ void startPreview(IDirect3DDevice9* device) noexcept {
     runtime_profile::reset();sourceShaderCensus.clear();sourceCensusOmitted=0;previewTaa=false;
     state().preview=true;state().active=true;previewStarted=GetTickCount64();previewRecoverAt=0;previewFrames=0;previewRasterFrames=0;
     previewRecover=false;previewResourcesRecovered=false;previewMaintenanceFailed=false;previewReadFailed=false;previewReadbacks=0;previewBindingRows=0;previewBindingOmitted=0;previewFirstRead=0;previewStartSubmitted=apiMeshes.submitted;
-    previousModelDraws=0;gpuSkinDensityThrottleFrames=0;previewGpuSkinOnlyOmitted=0;
+    previousModelDraws=0;gpuSkinDensityThrottleFrames=0;previewGpuSkinOnlyOmitted=0;previewOriginalFallbackDraws=0;
     previewStartSkinnedSubmitted=apiMeshes.skinnedSubmitted;previewStartSkinnedCreated=apiMeshes.skinnedCreated;previewStartSkinnedReused=apiMeshes.skinnedReused;
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"37");
-    event("preview_begin",0,launch.performance?"Arc_lifecycle;30_RT_static;60_RT_GPU_skin_8;120_RT_GPU_skin_16;RT_off;resources_zero;60_raster_Presents;custom_preset;ReSTIR_GI;TAAU_0.75;thread_CPU_timing;no_CPU_pose_meshes;no_readback;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
+    event("pilot_delivery_revision",0,"38");
+    event("preview_begin",0,launch.performance?"Arc_hybrid_lifecycle;native_vertex_capture_fallback;30_RT_explicit_0;60_RT_GPU_skin_8;120_RT_GPU_skin_16;ignore_original_only_after_explicit_success;RT_off;resources_zero;60_raster_Presents;custom_preset;ReSTIR_GI;TAAU_0.75;thread_CPU_timing;no_readback;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
     if(launch.performance) {
       event("performance_lifecycle_begin",performanceProfileConfigured?0:ERROR_INVALID_DATA,
-        "RT_static_30;GPU_skin_8_for_60;GPU_skin_16_for_120;RT_off;resources_zero;raster_survival_60;graphics_preset_custom;TAAU_0.75;direct_light;secondary_off;RTXDI_off;ReSTIR_GI;thread_CPU_timing");
+        "native_vertex_capture_fallback;explicit_0_for_30;GPU_skin_8_for_60;GPU_skin_16_for_120;ignore_original_only_after_explicit_success;RT_off;resources_zero;raster_survival_60;graphics_preset_custom;TAAU_0.75;direct_light;secondary_off;RTXDI_off;ReSTIR_GI;thread_CPU_timing");
       if(!performanceProfileConfigured) { endPreview(false,"performance_profile_failed");return; }
     }
     if(!raytracing(true)) { endPreview(false,"rt_enable_failed"); }
@@ -958,9 +972,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy",0,"v23_display_4GiB_priority_spool_no_rejected_rereads_standard_alpha_models");
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"37");
+    event("pilot_delivery_revision",0,"38");
     event("runtime_timing_policy",0,"QPC_elapsed_nested_scopes_plus_device_thread_kernel_user_CPU;not_GPU_duration;source_geometry_skin_texture_hash_API_original_Draw_Present_readback");
-    event("api_mesh_policy",0,"v37_custom_explicit_ReSTIR_GI_matches_surviving_v35_device_path;unique_persistent_pose_slot_per_simultaneous_GPU_skin_draw;reusable_thread_local_SHA256_handles;performance_isolates_persistent_GPU_skin_meshes;ineligible_and_excess_CPU_pose_meshes_omitted;30_static_then60_limit8_then120_limit16;RT_off_resource_zero_then60_raster_Presents;TAAU_0.75_direct_only_secondary_off_RTXDI_off;runtime_skin_command_counter_reset_after_frame_flush;per_frame_unique_and_repeated_counts;early_fence_retirement_soft_budget_original_draw_ignored");
+    event("api_mesh_policy",0,"v38_custom_explicit_ReSTIR_GI_with_native_vertex_capture_fallback;ignore_original_only_after_successful_explicit_instance;unique_persistent_pose_slot_per_simultaneous_GPU_skin_draw;reusable_thread_local_SHA256_handles;performance_bounds_explicit_GPU_skin_meshes_0_then8_then16;unsupported_and_excess_parts_keep_original_programmable_draw;RT_off_resource_zero_then60_raster_Presents;TAAU_0.75_secondary_off_RTXDI_off;runtime_skin_command_counter_reset_after_frame_flush;per_frame_unique_and_repeated_counts;early_fence_retirement_soft_budget");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");

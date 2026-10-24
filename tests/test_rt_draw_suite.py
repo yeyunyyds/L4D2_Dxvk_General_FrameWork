@@ -292,10 +292,10 @@ assert result['execution']=='incomplete'
         (directory/'remix-dxvk.log').write_text('[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
         self.assertIn('effective_indirect_mode_not_importance_sampled',suite.review_performance(directory)['errors'])
 
-    def test_performance_review_v37_requires_restir_resource_recovery_and_raster_survival(self):
-        directory=self.root/'performance-v37';directory.mkdir();total=created=reused=0
-        events=[dict(event='pilot_delivery_revision',code=0,value='37'),dict(event='performance_lifecycle_begin',code=0)]
-        for phase,(limit,frames,name) in enumerate(((0,30,'gpu_lifecycle_static'),(8,60,'gpu_lifecycle_8'),(16,120,'gpu_lifecycle_16'))):
+    def test_performance_review_v38_requires_hybrid_fallback_recovery_and_raster_survival(self):
+        directory=self.root/'performance-v38';directory.mkdir();total=created=reused=0
+        events=[dict(event='pilot_delivery_revision',code=0,value='38'),dict(event='performance_lifecycle_begin',code=0)]
+        for phase,(limit,frames,name) in enumerate(((0,30,'gpu_lifecycle_native_fallback'),(8,60,'gpu_lifecycle_8'),(16,120,'gpu_lifecycle_16'))):
             submitted=limit*frames;total+=submitted
             if submitted:created+=limit;reused+=submitted-limit
             events += [dict(event='runtime_timing_window',segment=name,wall_ms=frames*50,
@@ -309,15 +309,18 @@ assert result['execution']=='incomplete'
                    dict(event='runtime_timing_window',segment='gpu_lifecycle_raster',wall_ms=1000,
                         thread_times_available=True,thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
                    dict(event='preview_end',complete=True,frames=271,rt_frames=210,raster_survival_frames=60,
-                        resources_recovered=True,entries=0,pending_fences=0,held=0,submitted=total,skinned_submitted=total)]
+                        resources_recovered=True,original_fallback_draws=1000,entries=0,pending_fences=0,held=0,submitted=total,skinned_submitted=total)]
         (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         (directory/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in
-            [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1')])+'\n')
+            [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1'),
+             dict(event='rtx.useVertexCapture',code=0,value='True')])+'\n')
         (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
         result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
-        self.assertEqual(result['profile'],'arc_restir_lifecycle');self.assertEqual([p['gpu_skin_limit'] for p in result['phases']],[0,8,16])
+        self.assertEqual(result['profile'],'arc_restir_hybrid_lifecycle');self.assertEqual([p['gpu_skin_limit'] for p in result['phases']],[0,8,16])
         events[-1]['raster_survival_frames']=59;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         self.assertIn('performance_lifecycle_recovery',suite.review_performance(directory)['errors'])
+        events[-1]['raster_survival_frames']=60;events[-1]['original_fallback_draws']=0;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        self.assertIn('performance_original_fallback_not_exercised',suite.review_performance(directory)['errors'])
 
 
 class InstallTests(unittest.TestCase):

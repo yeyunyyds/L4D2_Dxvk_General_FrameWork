@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "input": {
+    "name": "rt-performance-20261024-145832-2244a65b.zip",
+    "bytes": 4181305,
+    "sha256": "145ae33a996d46dc3be1c133ac324fd55e974cd7329e6551337fb0feba63cd96",
+    "zip_members": 525,
+    "expanded_bytes": 21102776,
+    "crc": "pass",
+    "omitted_files": 0,
+    "build_commit": "7617f9ddfd3cdd977493f151c6f8fac41b0f2e12"
+  },
+  "lifecycle": {
+    "rt_frames": 210,
+    "raster_survival_frames": 60,
+    "resources_recovered": true,
+    "mesh_entries": 0,
+    "pending_fences": 0,
+    "held_texture_refs": 0,
+    "resident_texture_bytes": 0,
+    "device_lost": false,
+    "bridge_exceptions": 0,
+    "bridge_cleanup_logs": ["bridge32.log", "bridge64.log"],
+    "remix_backend_objects_warning": 40
+  },
+  "phases": [
+    {"explicit_gpu_skin_limit": 0, "frames": 30, "fps": 8.55271864412269, "gpu_3d_average_percent": 17.96794859465096},
+    {"explicit_gpu_skin_limit": 8, "frames": 60, "fps": 14.57091355208128, "gpu_3d_average_percent": 39.18891433263438},
+    {"explicit_gpu_skin_limit": 16, "frames": 120, "fps": 15.776613253364836, "gpu_3d_average_percent": 43.244872010971}
+  ],
+  "visual_failure": {
+    "user_observation": "model body missing; head visible",
+    "gpu_skin_only_omitted_draws": 122753,
+    "native_vertex_capture_enabled": false,
+    "original_draws_marked_ignore_when_no_explicit_replacement": true,
+    "cause": "omitted parts had neither an explicit API instance nor a native Remix capture path"
+  },
+  "analysis_bug": {
+    "old_error": "invalid_gpu_skinning_performance_ramp",
+    "cause": "30 pre-preview stage=off diagnostic mesh rows were mixed with the three preview rows",
+    "corrected_filter": "stage=api_continuous_preview",
+    "reanalyzed_runtime_pass": true
+  },
+  "v38": {
+    "native_vertex_capture_fallback": true,
+    "ignore_original_only_after_explicit_success": true,
+    "explicit_gpu_skin_limits": [0, 8, 16],
+    "visual_review_required": true
+  }
+}

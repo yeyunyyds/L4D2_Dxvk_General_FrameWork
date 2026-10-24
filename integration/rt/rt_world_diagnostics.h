@@ -25,11 +25,11 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v37 is a lifecycle baseline for Arc. The explicit v36 importance-sampled
-// path lost the device at 32 dynamic meshes. Keep RT enabled while moving from
-// a static control to the already bounded 8- and 16-mesh loads, then turn RT
-// off, retire every API mesh/fence and prove that ordinary Present survives.
-// CPU-pose model meshes remain omitted in performance mode.
+// v38 retains the v37 Arc lifecycle bounds, while native vertex capture keeps
+// original programmable draws visible whenever no explicit replacement was
+// submitted. Move from native-only fallback to the bounded 8- and 16-mesh
+// explicit loads, then turn RT off, retire every API mesh/fence and prove that
+// ordinary Present survives.
 constexpr unsigned kGpuSkinPerformanceStaticFrames=30;
 constexpr unsigned kGpuSkinPerformanceEightFrames=60;
 constexpr unsigned kGpuSkinPerformanceSixteenFrames=120;

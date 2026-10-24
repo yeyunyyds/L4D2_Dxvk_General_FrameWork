@@ -188,11 +188,11 @@ class RuntimeEvidenceTests(unittest.TestCase):
             (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
             self.assertIn('invalid_gpu_skinning_performance_ramp',analyze(root)['errors'])
 
-    def test_v37_lifecycle_requires_static_bounded_load_recovery_and_raster_survival(self):
+    def test_v38_lifecycle_requires_bounded_explicit_load_native_fallback_and_raster_survival(self):
         with tempfile.TemporaryDirectory() as d:
-            root=Path(d);events=[dict(event='pilot_delivery_revision',value='37'),dict(event='performance_lifecycle_begin',code=0)]
+            root=Path(d);events=[dict(event='pilot_delivery_revision',value='38'),dict(event='performance_lifecycle_begin',code=0)]
             total=created=reused=0
-            for phase,(limit,frames,name) in enumerate(((0,30,'gpu_lifecycle_static'),(8,60,'gpu_lifecycle_8'),(16,120,'gpu_lifecycle_16'))):
+            for phase,(limit,frames,name) in enumerate(((0,30,'gpu_lifecycle_native_fallback'),(8,60,'gpu_lifecycle_8'),(16,120,'gpu_lifecycle_16'))):
                 submitted=limit*frames;total+=submitted
                 if submitted:created+=limit;reused+=submitted-limit
                 events += [dict(event='runtime_timing_window',wall_ms=frames*50,segment=name,scopes={},
@@ -205,11 +205,11 @@ class RuntimeEvidenceTests(unittest.TestCase):
             events += [dict(event='performance_resources_recovered',code=0),dict(event='performance_raster_survival_complete',code=0),
                 dict(event='runtime_timing_window',wall_ms=1000,segment='gpu_lifecycle_raster',scopes={},thread_times_available=True,thread_cpu_ms=10),
                 dict(event='preview_end',complete=True,rt_frames=210,raster_survival_frames=60,resources_recovered=True,
-                     entries=0,pending_fences=0,held=0,submitted=total,skinned_submitted=total,skinned_created=created,skinned_reused=reused)]
+                     original_fallback_draws=1000,entries=0,pending_fences=0,held=0,submitted=total,skinned_submitted=total,skinned_created=created,skinned_reused=reused)]
             def review():
                 (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events));return analyze(root)
             result=review();self.assertTrue(result['pass'],result['errors'])
-            self.assertEqual(result['gpu_skinning']['status'],'performance_lifecycle_requires_review')
+            self.assertEqual(result['gpu_skinning']['status'],'performance_hybrid_lifecycle_requires_visual_review')
             events[-1]['resources_recovered']=False
             self.assertIn('invalid_gpu_skinning_performance_ramp',review()['errors'])
 
