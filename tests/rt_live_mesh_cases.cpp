@@ -111,7 +111,7 @@ int main() {
     const auto firstNextFrame=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3);
     const auto secondNextFrame=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3);
     require(firstNextFrame.success&&secondNextFrame.success&&!firstNextFrame.created&&!secondNextFrame.created&&firstNextFrame.handle==first.handle&&secondNextFrame.handle==repeated.handle&&skins.skinnedCreated==2&&skins.skinnedReused==3&&skins.frameSkinnedUniqueMeshes==2,"skinned pose slots were not persistent across frames");
-    require(!skins.retire(2,4,true),"persistent skin cleanup");
+    require(!skins.retire(3,5,true)&&skins.entries()==0,"persistent skin cleanup");
     input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,digest,true);
     require(!morphed.skinning.enabled&&std::string(morphed.reason)=="original_vs_three_weight","morph must retain CPU skin fallback");
     auto isolatedMorph=model_input::reconstruct(snapshot,input,digest,true,true,true);
