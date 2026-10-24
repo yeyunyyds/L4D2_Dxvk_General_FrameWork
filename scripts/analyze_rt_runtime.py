@@ -16,12 +16,15 @@ def analyze(directory):
     stability=any(e.get('event')=='performance_stability_begin' for e in events)
     performance=stability or any(e.get('event')=='performance_ramp_begin' and e.get('code')==0 for e in events)
     requested=any(value>=24 for value in revisions);gpu_pilot=any(25<=value<27 for value in revisions)
-    cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value==28 for value in revisions)
+    cpu_rollback=any(value==27 for value in revisions);bounded_canary=any(value==28 for value in revisions);custom_profile=any(value>=36 for value in revisions)
     safety_limit=any(value==29 for value in revisions);density_limit=any(value>=30 for value in revisions);pose_slots=any(value>=33 for value in revisions)
     if not requested:return {'schema':1,'status':'not_requested','pass':True}
     windows=[e for e in events if e.get('event')=='runtime_timing_window'];totals=defaultdict(lambda:defaultdict(lambda:{'calls':0,'elapsed_ms':0.,'max_ms':0.}))
     for e in windows:
         if not math.isfinite(e.get('wall_ms',-1)) or e['wall_ms']<0:errors.append('invalid_timing_wall');continue
+        if custom_profile:
+            thread_cpu=e.get('thread_cpu_ms',-1)
+            if e.get('thread_times_available') is not True or not isinstance(thread_cpu,(int,float)) or not math.isfinite(thread_cpu) or not 0<=thread_cpu<=e['wall_ms']+1:errors.append('invalid_thread_cpu_timing')
         for name,counter in e.get('scopes',{}).items():
             calls=counter.get('calls',-1);elapsed=counter.get('elapsed_ms',-1);maximum=counter.get('max_ms',-1)
             if not isinstance(calls,int) or calls<0 or not all(isinstance(v,(int,float)) and math.isfinite(v) and v>=0 for v in (elapsed,maximum)) or maximum>elapsed+0.001:
@@ -108,9 +111,9 @@ def analyze(directory):
                 else 'exercised_requires_image_review' if gpu_pilot and valid and ends and ends[0].get('skinned_submitted',0)>0 else 'unexercised_or_incomplete')
         skin={'status':status,
               'preview':{k:ends[0].get(k) for k in keys} if ends else {},
-              'mesh_frames':len(frames),'limits':('v35 performance mode warms from 4 to 32 GPU-skinned pose meshes over 8 frames, then measures four 30-frame windows at a fixed limit of 32 with TAAU 0.75, direct light only, secondary bounces off and RTXDI off. CPU-pose meshes remain omitted; this is stability and throughput evidence, not image acceptance.' if stability else 'v34 performance mode retains v33 pose-slot isolation and measures reusable exact-hash supply cost at limits 16, 32, 48 and 64 for 30 frames each. Ineligible and excess CPU-pose meshes are omitted from the explicit RT scene; every submitted model mesh must therefore be GPU-skinned. This is a stability and supply-cost test, not image acceptance.') if performance else 'v27 requires zero persistent skinning. v28-v29 enforce at most 16 successful GPU-skinned submissions per frame. v30 keeps 16 at up to 256 preceding-frame model submissions and a 4-submission GPU baseline above that density; the warm-up frame and excess models use CPU poses. Image review remains required.'}
+              'mesh_frames':len(frames),'limits':((('v36 retains the v35 fixed-32 Arc stability load, locks the Custom graphics preset and records Host device-thread CPU time.' if custom_profile else 'v35 performance mode warms from 4 to 32 GPU-skinned pose meshes over 8 frames, then measures four 30-frame windows at a fixed limit of 32 with TAAU 0.75, direct light only, secondary bounces off and RTXDI off.')+' CPU-pose meshes remain omitted; this is stability and throughput evidence, not image acceptance.') if stability else 'v34 performance mode retains v33 pose-slot isolation and measures reusable exact-hash supply cost at limits 16, 32, 48 and 64 for 30 frames each. Ineligible and excess CPU-pose meshes are omitted from the explicit RT scene; every submitted model mesh must therefore be GPU-skinned. This is a stability and supply-cost test, not image acceptance.') if performance else 'v27 requires zero persistent skinning. v28-v29 enforce at most 16 successful GPU-skinned submissions per frame. v30 keeps 16 at up to 256 preceding-frame model submissions and a 4-submission GPU baseline above that density; the warm-up frame and excess models use CPU poses. Image review remains required.'}
     return {'schema':1,'pass':not errors,'status':'valid_evidence_requires_review' if not errors else 'incomplete','errors':sorted(set(errors)),
-            'timing_windows':len(windows),'window_timeline':[{k:e.get(k) for k in ('frame','first_after_frame','segment','wall_ms','qpc_begin','qpc_end','qpc_frequency','utc_filetime_100ns')} for e in windows],'elapsed_scopes_by_segment':dict(totals),'native_taa_requests':taa,
+            'timing_windows':len(windows),'window_timeline':[{k:e.get(k) for k in ('frame','first_after_frame','segment','wall_ms','thread_times_available','thread_kernel_ms','thread_user_ms','thread_cpu_ms','qpc_begin','qpc_end','qpc_frequency','utc_filetime_100ns')} for e in windows],'elapsed_scopes_by_segment':dict(totals),'native_taa_requests':taa,
             'native_edge_payloads':samples,'native_edge_evidence':'not_requested_performance_ramp' if performance else 'complete_requires_image_review' if edge_complete else 'unavailable_or_incomplete',
             'source_shader_census':[e for e in events if e.get('event')=='source_shader_census'],'gpu_skinning':skin,
             'gpu_engine_collection':gpu,'limits':'Nested QPC scopes include blocking and overlap; do not sum. PDH engines overlap; do not sum as whole-GPU utilization. Sequential dynamic scenes are not matched A/B. Queued TAA request is not proof of effective image quality; motion-history/ghosting requires review.'}

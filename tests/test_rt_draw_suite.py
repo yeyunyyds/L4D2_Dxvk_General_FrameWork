@@ -262,6 +262,35 @@ assert result['execution']=='incomplete'
         events[-1]['frames']=127;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         self.assertIn('performance_completion',suite.review_performance(directory)['errors'])
 
+    def test_performance_review_v36_requires_effective_custom_importance_profile_and_thread_cpu(self):
+        directory=self.root/'performance-v36';directory.mkdir();total=144;created=32;reused=112
+        events=[dict(event='pilot_delivery_revision',code=0,value='36'),dict(event='performance_stability_begin',code=0),
+                dict(event='runtime_timing_window',segment='gpu_stability_warmup',wall_ms=2000,
+                     thread_times_available=True,thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
+                dict(event='api_mesh_frame',gpu_skin_performance_phase=-1,skinned_frame_limit=32,
+                     preview_submitted=total,preview_skinned_submitted=total,preview_skinned_created=created,preview_skinned_reused=reused)]
+        for phase in range(4):
+            total+=960;reused+=960
+            events += [dict(event='runtime_timing_window',segment='gpu_stability_'+str(phase+1),wall_ms=1000,
+                            thread_times_available=True,thread_kernel_ms=50,thread_user_ms=150,thread_cpu_ms=200,
+                            utc_filetime_100ns=116444736000000000+(phase+2)*10_000_000,scopes={}),
+                       dict(event='api_mesh_frame',gpu_skin_performance_phase=phase,skinned_frame_limit=32,
+                            skinned_frame_submitted=32,skinned_frame_unique_meshes=32,skinned_frame_repeat_draws=0,
+                            skinned_frame_max=32,preview_submitted=total,preview_skinned_submitted=total,
+                            preview_skinned_created=created,preview_skinned_reused=reused,created=created,reused=reused)]
+        events.append(dict(event='preview_end',complete=True,frames=128,entries=0,pending_fences=0,held=0,
+                           submitted=total,skinned_submitted=total,gpu_skin_only_omitted=100))
+        path=directory/'preview-runtime.jsonl';path.write_text('\n'.join(json.dumps(e) for e in events))
+        (directory/'world-runtime.jsonl').write_text(json.dumps(dict(event='rtx.graphicsPreset',code=0,value='4'))+'\n')
+        (directory/'gpu-engine-samples.jsonl').write_text('\n'.join(json.dumps({'unix_ns':(phase+2)*1_000_000_000,'engines':[],
+            'process_cpu':[{'pid':7,'role':'host','interval_begin_unix_ns':(phase+1)*1_000_000_000,'cpu_ms':100}]}) for phase in range(4)))
+        (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: Importance Sampled - activated\n')
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['profile'],'arc_direct_custom_stability');self.assertEqual(result['phases'][0]['host_device_thread_non_cpu_ms'],800)
+        self.assertEqual(result['phases'][0]['process_cpu'][0]['one_core_percent'],10)
+        (directory/'remix-dxvk.log').write_text('[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
+        self.assertIn('effective_indirect_mode_not_importance_sampled',suite.review_performance(directory)['errors'])
+
 
 class InstallTests(unittest.TestCase):
     def setUp(self):

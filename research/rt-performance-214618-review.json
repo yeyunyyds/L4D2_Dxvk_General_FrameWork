@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "input": {
+    "name": "rt-performance-20261023-214618-6aeefb26.zip",
+    "size": 4444174,
+    "sha256": "b8df00e9070c2276b706d56f61279cc786577e5b24658c35771654da4b8fe676",
+    "crc": "pass",
+    "build_commit": "a58f3bde0d902e0f583e14dd99ddd48946889f33"
+  },
+  "collection": "complete",
+  "performance": {
+    "frames": 129,
+    "reason": "performance_stability_complete",
+    "submitted": 3984,
+    "skinned_created": 34,
+    "skinned_reused": 3950,
+    "end_entries": 0,
+    "end_pending_fences": 0,
+    "windows": [
+      {"wall_ms": 2137.2273, "fps": 14.0368785295, "model_ms": 194.4342, "skin_ms": 27.6338, "present_ms": 3.8448, "gpu_3d_average_percent": 17.3170023579},
+      {"wall_ms": 2086.6599, "fps": 14.3770434272, "model_ms": 193.2432, "skin_ms": 29.7824, "present_ms": 3.5105, "gpu_3d_average_percent": 18.6174274182},
+      {"wall_ms": 2094.1503, "fps": 14.3256193216, "model_ms": 206.6543, "skin_ms": 34.3998, "present_ms": 2.8502, "gpu_3d_average_percent": 18.3469496232},
+      {"wall_ms": 2040.2603, "fps": 14.7040061506, "model_ms": 194.6914, "skin_ms": 29.3485, "present_ms": 3.5872, "gpu_3d_average_percent": 18.9555431544}
+    ],
+    "meets_24_fps": false,
+    "device_lost": false
+  },
+  "configuration": {
+    "requested_integrate_indirect_mode": 0,
+    "automatic_graphics_preset_logged": true,
+    "effective_integrate_indirect_mode": "ReSTIR GI",
+    "target_profile_valid": false,
+    "cause": "non_NVIDIA_Auto_to_Low_derived_preset_overrode_lower_layer_option"
+  },
+  "exit": {
+    "status": "abnormal_after_cleanup",
+    "exception_module": "necola.dll",
+    "exception_code": "0xc0000005",
+    "rt_performance_completion_affected": false
+  },
+  "next": {
+    "pilot_revision": 36,
+    "graphics_preset": "Custom",
+    "effective_mode_gate": "Importance Sampled activated and ReSTIR GI not activated",
+    "telemetry": ["Host device-thread CPU", "game process CPU", "Host process CPU", "per-engine GPU PDH"]
+  },
+  "limits": "PDH engine samples are per engine and must not be summed as whole-GPU utilization. Nested Host elapsed scopes overlap. The uninstrumented interval is not yet uniquely attributed to Source, IPC or waiting."
+}

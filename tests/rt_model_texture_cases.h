@@ -12,7 +12,7 @@ inline void textureHashCases() {
   for(auto& worker:workers) { worker.join(); }for(bool okay:valid) { require(okay,"concurrent SHA256 mixed hash state"); }
   runtime_profile::reset();{ runtime_profile::Scope outer(runtime_profile::Stage::Texture);require(ldb_rt_file::bytesSha256("abc",3)==known,"timed hash changed bytes"); }
   auto& window=runtime_profile::window();require(window.values[unsigned(runtime_profile::Stage::Hash)].calls==1&&window.values[unsigned(runtime_profile::Stage::Texture)].calls==1,"timing scopes not independently counted");
-  std::ostringstream evidence;runtime_profile::emit(evidence,60,"native_fixture");require(evidence.str().find("runtime_timing_window")!=std::string::npos&&window.values[unsigned(runtime_profile::Stage::Hash)].calls==0&&window.first==60,"timing window not reset");window.enabled=false;
+  std::ostringstream evidence;runtime_profile::emit(evidence,60,"native_fixture");require(evidence.str().find("runtime_timing_window")!=std::string::npos&&evidence.str().find("thread_cpu_ms")!=std::string::npos&&window.values[unsigned(runtime_profile::Stage::Hash)].calls==0&&window.first==60,"timing window not reset");window.enabled=false;
   std::cout<<"RT shared SHA256 independent concurrent state and nested timing windows: PASS\n";
   struct Case { UINT width,height;D3DFORMAT format;const char* expected; };
   const Case cases[]={

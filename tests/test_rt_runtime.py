@@ -5,7 +5,7 @@ import tempfile
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from analyze_rt_runtime import analyze
-from rt_gpu_telemetry import select_rows,Sampler
+from rt_gpu_telemetry import select_rows,process_cpu_delta,Sampler
 
 class RuntimeEvidenceTests(unittest.TestCase):
     def test_process_and_status_binding_preserves_separate_engines(self):
@@ -14,6 +14,11 @@ class RuntimeEvidenceTests(unittest.TestCase):
         result=select_rows(rows,{12})
         self.assertEqual([x['percent'] for x in result],[70.,65.]);self.assertEqual(sum(x['percent'] for x in result),135.)
         self.assertEqual(len(select_rows(rows*200,{12})),128)
+    def test_process_cpu_delta_keeps_one_core_and_machine_scales_distinct(self):
+        result=process_cpu_delta((10,100,200),(10,100100,100200),1_000_000_000,8)
+        self.assertEqual(result['cpu_ms'],20);self.assertEqual(result['one_core_percent'],2)
+        self.assertEqual(result['machine_percent'],.25)
+        self.assertIsNone(process_cpu_delta((10,100,200),(11,100100,200100),1_000_000_000,8))
     @unittest.skipIf(sys.platform=='win32','Non-Windows unavailable path only')
     def test_optional_counter_failure_records_status_and_stops(self):
         with tempfile.TemporaryDirectory() as d:
@@ -167,9 +172,18 @@ class RuntimeEvidenceTests(unittest.TestCase):
                          skinned_created=created,skinned_reused=reused)]
             events.append(dict(event='preview_end',submitted=total,skinned_submitted=total,
                                skinned_created=created,skinned_reused=reused))
-            (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
-            result=analyze(root);self.assertTrue(result['pass'],result['errors'])
+            def review():
+                (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events));return analyze(root)
+            result=review();self.assertTrue(result['pass'],result['errors'])
             self.assertEqual(result['gpu_skinning']['status'],'performance_stability_requires_review')
+            events[0]['value']='36'
+            for event in events:
+                if event.get('event')=='runtime_timing_window':event.update(thread_times_available=True,thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30)
+            result=review();self.assertTrue(result['pass'],result['errors'])
+            self.assertEqual(result['window_timeline'][0]['thread_cpu_ms'],30)
+            events[2]['thread_times_available']=False
+            self.assertIn('invalid_thread_cpu_timing',review()['errors'])
+            events[0]['value']='35';events[2]['thread_times_available']=True
             events[5]['skinned_frame_max']=64
             (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
             self.assertIn('invalid_gpu_skinning_performance_ramp',analyze(root)['errors'])
