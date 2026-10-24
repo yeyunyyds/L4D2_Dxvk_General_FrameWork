@@ -22,15 +22,41 @@ struct Sha256Provider {
   Sha256Provider(const Sha256Provider&)=delete;Sha256Provider& operator=(const Sha256Provider&)=delete;
 };
 inline const Sha256Provider& sha256Provider() { static const Sha256Provider value;return value; }
+// Geometry identity is evaluated several times for every persistent skinned
+// Draw.  A reusable BCrypt handle keeps the exact SHA-256 identity while
+// avoiding a heap allocation and CreateHash/DestroyHash pair for every input.
+// The handle is thread-local: BCrypt hash handles are mutable and must never be
+// shared by future parallel preparation workers.
+struct ReusableSha256 {
+  BCRYPT_HASH_HANDLE hash=nullptr;std::vector<unsigned char> object;
+  ReusableSha256() {
+    const auto& provider=sha256Provider();if(!provider.algorithm) { return; }
+    object.resize(provider.objectBytes);
+    if(BCryptCreateHash(provider.algorithm,&hash,object.data(),provider.objectBytes,nullptr,0,BCRYPT_HASH_REUSABLE_FLAG)<0) { hash=nullptr;object.clear(); }
+  }
+  ~ReusableSha256() { if(hash) { BCryptDestroyHash(hash); } }
+  ReusableSha256(const ReusableSha256&)=delete;ReusableSha256& operator=(const ReusableSha256&)=delete;
+};
+inline ReusableSha256& reusableSha256() { thread_local ReusableSha256 value;return value; }
 inline std::string bytesSha256(const void* data,size_t size,size_t limit=65536) {
   if (!data || !size || size>limit) { return {}; }
   ldb_rt::runtime_profile::Scope timing(ldb_rt::runtime_profile::Stage::Hash);
-  const auto& provider=sha256Provider();if(!provider.algorithm) { return {}; }BCRYPT_HASH_HANDLE hash=nullptr;
-  struct Cleanup { BCRYPT_HASH_HANDLE& h;~Cleanup() { if(h) { BCryptDestroyHash(h); } } } cleanup{hash};
-  std::vector<unsigned char> object(provider.objectBytes);
-  if (BCryptCreateHash(provider.algorithm,&hash,object.data(),provider.objectBytes,nullptr,0,0)<0 ||
-      BCryptHashData(hash,static_cast<PUCHAR>(const_cast<void*>(data)),ULONG(size),0)<0) { return {}; }
-  unsigned char bytes[32]{};if (BCryptFinishHash(hash,bytes,sizeof(bytes),0)<0) { return {}; }
+  unsigned char bytes[32]{};auto& reusable=reusableSha256();bool complete=false;
+  if(reusable.hash) {
+    complete=BCryptHashData(reusable.hash,static_cast<PUCHAR>(const_cast<void*>(data)),ULONG(size),0)>=0&&
+      BCryptFinishHash(reusable.hash,bytes,sizeof(bytes),0)>=0;
+  }
+  // Windows 11 supports reusable hashes. Keep the original independent-handle
+  // path as a correctness fallback for an older CNG provider or a failed
+  // reusable operation.
+  if(!complete) {
+    const auto& provider=sha256Provider();if(!provider.algorithm) { return {}; }BCRYPT_HASH_HANDLE hash=nullptr;
+    struct Cleanup { BCRYPT_HASH_HANDLE& h;~Cleanup() { if(h) { BCryptDestroyHash(h); } } } cleanup{hash};
+    std::vector<unsigned char> object(provider.objectBytes);
+    if(BCryptCreateHash(provider.algorithm,&hash,object.data(),provider.objectBytes,nullptr,0,0)<0||
+       BCryptHashData(hash,static_cast<PUCHAR>(const_cast<void*>(data)),ULONG(size),0)<0||
+       BCryptFinishHash(hash,bytes,sizeof(bytes),0)<0) { return {}; }
+  }
   static const char hex[]="0123456789abcdef";std::string result;
   for (auto c:bytes) { result+=hex[c>>4];result+=hex[c&15]; }return result;
 }

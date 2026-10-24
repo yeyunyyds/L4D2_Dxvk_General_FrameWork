@@ -222,6 +222,22 @@ assert result['execution']=='incomplete'
         events[-1]['submitted']=total+1;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         self.assertIn('performance_cpu_pose_submission',suite.review_performance(directory)['errors'])
 
+    def test_performance_review_maps_v33_stale_timing_labels(self):
+        directory=self.root/'performance-v33';directory.mkdir();events=[]
+        total=created=reused=0
+        for phase,(limit,timing) in enumerate(zip((16,32,48,64),(16,32,64,128))):
+            total+=limit;created+=1;reused+=limit-1
+            events += [dict(event='runtime_timing_window',segment='gpu_ramp_'+str(timing),wall_ms=3000,scopes={}),
+                       dict(event='api_mesh_frame',gpu_skin_performance_phase=phase,skinned_frame_limit=limit,
+                            skinned_frame_submitted=limit,skinned_frame_unique_meshes=limit,skinned_frame_repeat_draws=0,
+                            preview_submitted=total,preview_skinned_submitted=total,preview_skinned_created=created,
+                            preview_skinned_reused=reused,created=created,reused=reused)]
+        events.append(dict(event='preview_end',complete=True,frames=120,submitted=total,skinned_submitted=total,
+                           entries=0,pending_fences=0,held=0))
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual([p['gpu_skin_limit'] for p in result['phases']],[16,32,48,64])
+
 
 class InstallTests(unittest.TestCase):
     def setUp(self):

@@ -422,12 +422,17 @@ def review_performance(directory):
              not isinstance(e.get('preview_submitted'),int) or e['preview_submitted']!=e.get('preview_skinned_submitted') for e in mesh):
         errors.append('performance_gpu_skin_not_exercised')
     windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[];previous={}
+    # v33 executed the correct 48/64 limits but inherited v32's final two
+    # timing labels. Prefer v34 labels while preserving archived v33 evidence.
+    legacy_timing='gpu_ramp_48' not in windows and 'gpu_ramp_128' in windows
     gpu_rows=[];gpu_file=directory/'gpu-engine-samples.jsonl'
     if gpu_file.is_file() and gpu_file.stat().st_size<=32*1024*1024:
         try:gpu_rows=[json.loads(line) for line in gpu_file.read_text(encoding='utf-8').splitlines() if line.strip()]
         except json.JSONDecodeError:gpu_rows=[]
     for index,limit in enumerate(expected):
-        name='gpu_ramp_'+str(limit);row=windows.get(name);wall=row.get('wall_ms',0) if row else 0
+        name='gpu_ramp_'+str(limit)
+        timing_name=('gpu_ramp_64' if limit==48 else 'gpu_ramp_128' if limit==64 else name) if legacy_timing else name
+        row=windows.get(timing_name);wall=row.get('wall_ms',0) if row else 0
         if not isinstance(wall,(int,float)) or not math.isfinite(wall) or wall<=0:errors.append('performance_timing:'+name);continue
         evidence=mesh[index] if len(mesh)>index else {};current={k:evidence.get(k) for k in ('preview_skinned_submitted','preview_skinned_created','preview_skinned_reused')}
         if not all(isinstance(value,int) and value>=previous.get(key,0) for key,value in current.items()):errors.append('performance_gpu_skin_accounting:'+name)
@@ -535,7 +540,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v33: one automatic 120-frame run isolates persistent GPU skinning at limits 16, 32, 48 and 64 for 30 frames each. Unsupported and excess CPU-pose models are intentionally omitted from the RT view. Native TAA and image readbacks stay off. Keep the same scene and do not press F9 again.')
+        if performance:notify('RT Performance v34: one automatic 120-frame run verifies v33 pose-slot stability and measures reusable exact-hash supply cost at limits 16, 32, 48 and 64 for 30 frames each. Unsupported and excess CPU-pose models are intentionally omitted from the RT view. Native TAA and image readbacks stay off. Keep the same scene and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

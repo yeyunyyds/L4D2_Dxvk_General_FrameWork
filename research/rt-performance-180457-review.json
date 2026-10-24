@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "upload": "rt-performance-20261023-180457-4ef1df6d.zip",
+  "upload_size": 5272319,
+  "upload_sha256": "1bbb270da1c114841d556a72145337a86a59399180607b320d98bf30cecd8685",
+  "build_commit": "2f1f8df56c584c66d688d70cb7fd92878e9953e5",
+  "pilot_revision": 33,
+  "rt_stability": {
+    "performance_frames": 120,
+    "gpu_skinned_submissions": 4800,
+    "gpu_skinned_created": 66,
+    "gpu_skinned_reused": 4734,
+    "vk_error_device_lost": false,
+    "api_mesh_fence_failed": false,
+    "recovery_entries": 0,
+    "recovery_pending_fences": 0,
+    "recovery_held_textures": 0,
+    "pose_slot_isolation_pass": true
+  },
+  "phases": [
+    {
+      "gpu_skin_limit": 16,
+      "frames": 30,
+      "fps": 8.909833200794614,
+      "host_model_ms_per_frame": 4.17456,
+      "hash_ms_per_frame": 1.0300433333333332,
+      "gpu_3d_average_percent": 10.54127498793796,
+      "gpu_3d_max_percent": 22.300266201655763,
+      "unique_pose_meshes": 16,
+      "repeat_pose_meshes": 0,
+      "note": "contains one 1308.3655 ms first-use Present stall"
+    },
+    {
+      "gpu_skin_limit": 32,
+      "frames": 30,
+      "fps": 14.041881690781102,
+      "host_model_ms_per_frame": 8.968726666666667,
+      "hash_ms_per_frame": 3.1621033333333335,
+      "gpu_3d_average_percent": 27.753762926195726,
+      "gpu_3d_max_percent": 28.036728169801535,
+      "unique_pose_meshes": 32,
+      "repeat_pose_meshes": 0
+    },
+    {
+      "gpu_skin_limit": 48,
+      "frames": 30,
+      "fps": 13.496269900924782,
+      "host_model_ms_per_frame": 12.974053333333334,
+      "hash_ms_per_frame": 4.93664,
+      "gpu_3d_average_percent": 42.510921656575775,
+      "gpu_3d_max_percent": 48.64573392463347,
+      "unique_pose_meshes": 48,
+      "repeat_pose_meshes": 0,
+      "raw_timing_segment": "gpu_ramp_64"
+    },
+    {
+      "gpu_skin_limit": 64,
+      "frames": 30,
+      "fps": 13.53889344999166,
+      "host_model_ms_per_frame": 15.957366666666667,
+      "hash_ms_per_frame": 6.29952,
+      "gpu_3d_average_percent": 50.68868759408488,
+      "gpu_3d_max_percent": 52.02426144385067,
+      "unique_pose_meshes": 64,
+      "repeat_pose_meshes": 0,
+      "raw_timing_segment": "gpu_ramp_128"
+    }
+  ],
+  "collector_defect": {
+    "actual_limits": [16, 32, 48, 64],
+    "raw_timing_names": ["gpu_ramp_16", "gpu_ramp_32", "gpu_ramp_64", "gpu_ramp_128"],
+    "effect": "automatic analyzer falsely reported a missing gpu_ramp_48 window",
+    "fixed_in": "v34"
+  },
+  "exit": {
+    "status": "abnormal_after_rt_recovery",
+    "exception": "0xc0000005 execute 0x104b0",
+    "first_named_frame": "necola.dll+0x1447fc",
+    "active_bridge_command": false,
+    "host_cleanup_success_before_exception": true
+  },
+  "next": {
+    "revision": 34,
+    "change": "thread-local reusable BCrypt SHA-256 handle with exact-digest semantics and independent-handle fallback",
+    "beta_paused": true,
+    "target_fps": 24
+  }
+}

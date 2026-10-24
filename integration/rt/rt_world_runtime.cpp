@@ -291,7 +291,7 @@ std::array<SceneCounts,4> modelCounts{};
 constexpr uint64_t kBetaPreviewDurationMs=5ull*60*1000;
 constexpr uint64_t kPerformancePreviewFrames=world_diagnostics::kGpuSkinPerformancePhaseFrames*world_diagnostics::kGpuSkinPerformanceLimits.size();
 const char* performanceSegment(uint64_t completedFrames) {
-  static constexpr const char* names[]={"gpu_ramp_16","gpu_ramp_32","gpu_ramp_64","gpu_ramp_128"};
+  static constexpr const char* names[]={"gpu_ramp_16","gpu_ramp_32","gpu_ramp_48","gpu_ramp_64"};
   return names[world_diagnostics::performanceGpuSkinPhase(completedFrames)];
 }
 std::array<unsigned,world_diagnostics::kModelStages> modelSampleCounts{},modelStateCounts{},modelSampleOmitted{};
@@ -836,7 +836,7 @@ void startPreview(IDirect3DDevice9* device) noexcept {
     previousModelDraws=0;gpuSkinDensityThrottleFrames=0;previewGpuSkinOnlyOmitted=0;
     previewStartSkinnedSubmitted=apiMeshes.skinnedSubmitted;previewStartSkinnedCreated=apiMeshes.skinnedCreated;previewStartSkinnedReused=apiMeshes.skinnedReused;
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"33");
+    event("pilot_delivery_revision",0,"34");
     event("preview_begin",0,launch.performance?"120_frame_gpu_skin_only_stability;limits_16_32_48_64;no_CPU_pose_meshes;no_TAA;no_readback;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
     if(launch.performance) { event("performance_ramp_begin",0,"16_32_48_64_each_30_frames;persistent_GPU_skin_only;CPU_pose_meshes_omitted"); }
     if(!raytracing(true)) { endPreview(false,"rt_enable_failed"); }
@@ -915,9 +915,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy",0,"v23_display_4GiB_priority_spool_no_rejected_rereads_standard_alpha_models");
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"33");
+    event("pilot_delivery_revision",0,"34");
     event("runtime_timing_policy",0,"QPC_elapsed_nested_scopes_not_GPU_busy;source_geometry_skin_texture_hash_API_original_Draw_Present_readback");
-    event("api_mesh_policy",0,"v33_unique_persistent_pose_slot_per_simultaneous_GPU_skin_draw;performance_isolates_persistent_GPU_skin_meshes;ineligible_and_excess_CPU_pose_meshes_omitted;limits_16_32_48_64_each30frames;runtime_skin_command_counter_reset_after_frame_flush;per_frame_unique_and_repeated_counts;early_fence_retirement_soft_budget_original_draw_ignored");
+    event("api_mesh_policy",0,"v34_unique_persistent_pose_slot_per_simultaneous_GPU_skin_draw;reusable_thread_local_SHA256_handles;performance_isolates_persistent_GPU_skin_meshes;ineligible_and_excess_CPU_pose_meshes_omitted;limits_16_32_48_64_each30frames;runtime_skin_command_counter_reset_after_frame_flush;per_frame_unique_and_repeated_counts;early_fence_retirement_soft_budget_original_draw_ignored");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");

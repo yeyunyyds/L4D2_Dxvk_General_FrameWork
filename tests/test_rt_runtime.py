@@ -129,4 +129,23 @@ class RuntimeEvidenceTests(unittest.TestCase):
             events[7]['skinned_frame_limit']=48;events[-1]['submitted']=total+1
             self.assertIn('performance_cpu_pose_submission',review()['errors'])
 
+    def test_performance_ignores_diagnostic_api_mesh_frames(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);events=[dict(event='pilot_delivery_revision',value='34'),dict(event='performance_ramp_begin',code=0),
+                dict(event='api_mesh_frame',frame=30,skinned_submitted=0,skinned_created=0,skinned_reused=0)]
+            total=created=reused=0
+            for phase,limit in enumerate((16,32,48,64)):
+                total+=limit;created+=1;reused+=limit-1
+                events += [dict(event='runtime_timing_window',wall_ms=2500,segment='gpu_ramp_'+str(limit),scopes={}),
+                    dict(event='api_mesh_frame',gpu_skin_performance_phase=phase,skinned_frame_limit=limit,
+                         skinned_frame_submitted=limit,skinned_frame_unique_meshes=limit,skinned_frame_repeat_draws=0,
+                         skinned_frame_max=64,preview_submitted=total,preview_skinned_submitted=total,
+                         preview_skinned_created=created,preview_skinned_reused=reused,skinned_submitted=total,
+                         skinned_created=created,skinned_reused=reused)]
+            events.append(dict(event='preview_end',submitted=total,skinned_submitted=total,
+                               skinned_created=created,skinned_reused=reused))
+            (root/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+            result=analyze(root);self.assertTrue(result['pass'],result['errors'])
+            self.assertEqual(result['gpu_skinning']['mesh_frames'],4)
+
 if __name__=='__main__':unittest.main()

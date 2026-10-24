@@ -46,6 +46,10 @@ def analyze(directory):
     skin={'status':'not_requested'}
     if gpu_pilot or cpu_rollback or bounded_canary or safety_limit or density_limit:
         frames=[e for e in events if e.get('event')=='api_mesh_frame'];ends=[e for e in events if e.get('event')=='preview_end']
+        # The same F9 session emits diagnostic mesh counters before the
+        # dedicated performance preview. Only explicitly numbered ramp frames
+        # belong to the four-phase performance contract.
+        if performance:frames=[e for e in frames if e.get('gpu_skin_performance_phase',-1)>=0 and e.get('preview_submitted',0)>0]
         keys=('skinned_submitted','skinned_created','skinned_reused')
         valid=all(all(isinstance(e.get(k),int) and e[k]>=0 for k in keys) for e in frames+ends)
         if not frames or len(ends)!=1 or not valid:errors.append('missing_or_invalid_gpu_skinning_counters')
@@ -99,7 +103,7 @@ def analyze(directory):
                 else 'exercised_requires_image_review' if gpu_pilot and valid and ends and ends[0].get('skinned_submitted',0)>0 else 'unexercised_or_incomplete')
         skin={'status':status,
               'preview':{k:ends[0].get(k) for k in keys} if ends else {},
-              'mesh_frames':len(frames),'limits':'v33 performance mode isolates persistent GPU skinning at limits 16, 32, 48 and 64 for 30 frames each. Ineligible and excess CPU-pose meshes are omitted from the explicit RT scene; every submitted model mesh must therefore be GPU-skinned. This is a stability and supply-cost test, not image acceptance.' if performance else 'v27 requires zero persistent skinning. v28-v29 enforce at most 16 successful GPU-skinned submissions per frame. v30 keeps 16 at up to 256 preceding-frame model submissions and a 4-submission GPU baseline above that density; the warm-up frame and excess models use CPU poses. Image review remains required.'}
+              'mesh_frames':len(frames),'limits':'v34 performance mode retains v33 pose-slot isolation and measures reusable exact-hash supply cost at limits 16, 32, 48 and 64 for 30 frames each. Ineligible and excess CPU-pose meshes are omitted from the explicit RT scene; every submitted model mesh must therefore be GPU-skinned. This is a stability and supply-cost test, not image acceptance.' if performance else 'v27 requires zero persistent skinning. v28-v29 enforce at most 16 successful GPU-skinned submissions per frame. v30 keeps 16 at up to 256 preceding-frame model submissions and a 4-submission GPU baseline above that density; the warm-up frame and excess models use CPU poses. Image review remains required.'}
     return {'schema':1,'pass':not errors,'status':'valid_evidence_requires_review' if not errors else 'incomplete','errors':sorted(set(errors)),
             'timing_windows':len(windows),'window_timeline':[{k:e.get(k) for k in ('frame','first_after_frame','segment','wall_ms','qpc_begin','qpc_end','qpc_frequency','utc_filetime_100ns')} for e in windows],'elapsed_scopes_by_segment':dict(totals),'native_taa_requests':taa,
             'native_edge_payloads':samples,'native_edge_evidence':'not_requested_performance_ramp' if performance else 'complete_requires_image_review' if edge_complete else 'unavailable_or_incomplete',

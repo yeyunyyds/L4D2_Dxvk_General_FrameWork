@@ -89,7 +89,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'gpu_skin_only_stability_candidate','profile':'world_pilot','pilot_revision':32,
+    manifest={'schema':1,'scope':'gpu_skin_supply_optimization_candidate','profile':'world_pilot','pilot_revision':34,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':30,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -102,7 +102,7 @@ def package(source,output,python_package):
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
               'model_rebuild':'audited full VS matrix proof; dedicated GPU skin offload ramp avoids duplicate full CPU skin output validation while retaining finite input, weight, index and bone matrix checks',
               'model_submission':'four sequential 30-frame phases allow 16, 32, 48 and 64 successful persistent GPU-skinned DrawInstance submissions per frame; performance mode omits ineligible and excess CPU-pose meshes from the explicit RT scene; original raster Draw once with Ignore bit3 and exact restore',
-              'gpu_skinning':{'performance_ramp':True,'phase_frames':30,'phase_limits':[16,32,48,64],'full_cpu_skin_output_oracle':False,'input_weight_index_bone_validation':True,'status':'v32 removed CPU-pose mesh churn and reached 13.7 FPS with about 39 percent GPU 3D at limit 32, then lost the device after two limit-64 frames; v33 assigns a distinct persistent mesh handle to every simultaneous pose so separate bone palettes cannot overwrite one mutable deformation buffer','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'runtime_skinning_command_counter_reset':True,'simultaneous_pose_mesh_slots':True,'per_frame_mesh_identity_counts':True,'performance_excess_path':'omitted_before_geometry_capture_after_frame_limit','image_review_required':False},
+              'gpu_skinning':{'performance_ramp':True,'phase_frames':30,'phase_limits':[16,32,48,64],'full_cpu_skin_output_oracle':False,'input_weight_index_bone_validation':True,'status':'v33 completed all four phases without VK_ERROR_DEVICE_LOST; every simultaneous pose used a distinct persistent mesh handle; v34 retains exact SHA-256 identities while reusing one mutable hash handle per preparation thread to reduce Host supply cost','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'runtime_skinning_command_counter_reset':True,'simultaneous_pose_mesh_slots':True,'per_frame_mesh_identity_counts':True,'performance_excess_path':'omitted_before_geometry_capture_after_frame_limit','image_review_required':False},
               'model_input_pairs':'canonical_CPU_vertices_and_normalized_indices_at_239_240_299_300; original_input_audit_retained_separately',
               'model_stage_readbacks':{240:'api_neko_textured',300:'api_combined_textured',360:'api_combined_textured_low_light',420:'api_combined_textured_metal',480:'api_combined_textured_alpha',540:'api_combined_textured_emissive',600:'recovery'},
               'preserve_path_default':False,'preserve_path_control_presents':[],
@@ -134,7 +134,7 @@ def package(source,output,python_package):
               'diagnostic_coverage_revision':23,'preview_edge_comparison':{'first_seconds':30,'baseline_upscaler':0,'second_upscaler':3,'resolution_scale':1.0,'native_bgra8_max_bytes_per_sample':16777216,'crop_if_larger':[1024,768],'sequential_not_matched_AB':True},
               'runtime_profiling':'nested_QPC_elapsed_scopes_not_CPU_usage_or_GPU_duration;optional_bounded_one_second_PDH_per_process_engine_samples;do_not_sum_engines',
               'shader_census':'up_to128_source_shader_names_cumulative_per_segment;not_entity_or_image_coverage',
-              'hash_optimization':'immutable_shared_SHA256_algorithm_provider;independent_hash_object_every_call;no_mutable_geometry_or_texture_cache',
+              'hash_optimization':'immutable_shared_SHA256_algorithm_provider;thread_local_reusable_exact_SHA256_hash_handle_with_independent_handle_fallback;no_mutable_geometry_or_texture_cache',
               'exposure_changed':False,'model_samples_per_readback_limit':64,
               'model_payload_limits_kib':{'api_neko_textured':16384,'api_combined_textured':16384,'api_combined_textured_low_light':0,'api_combined_textured_metal':0,'api_combined_textured_alpha':0,'api_combined_textured_emissive':0},
               'model_special_passes':'reject_stencil_user_clip_partial_rgb_and_non_less_depth',

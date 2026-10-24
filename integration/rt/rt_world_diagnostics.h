@@ -25,7 +25,8 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v33 isolates persistent GPU skinning with one short run. CPU-pose model
+// v34 retains v33's persistent GPU skinning isolation and measures the CPU
+// supply reduction from reusable exact geometry hash handles. CPU-pose model
 // meshes are omitted by performance mode so host-side mesh churn cannot hide
 // the GPU path or exhaust the runtime before the 48/64 submission phases.
 constexpr unsigned kGpuSkinPerformancePhaseFrames=30;
