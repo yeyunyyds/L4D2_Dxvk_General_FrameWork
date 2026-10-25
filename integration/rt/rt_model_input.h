@@ -162,6 +162,7 @@ inline scene_input::Prepared reconstruct(const draw_observe::Snapshot& s,const s
   if (!model_shader::cameraCompatible(transformed,input.constants,s.view,s.projection)) { out.reason="model_clip_camera_mismatch";return out; }
   if (!input.count || input.vertices.size()!=size_t(input.count)*32 || uint64_t(input.first)+input.count>model_shader::kMaxVertices) { out.reason="model_vertex_range";return out; }
   out.stride=32;out.world=transformed.world;out.sourceDeclaration=input.declaration;
+  out.dynamicPose=profile==model_shader::Profile::Skin3||profile==model_shader::Profile::Neko3;
   out.elements={{0,0,D3DDECLTYPE_FLOAT3,0,D3DDECLUSAGE_POSITION,0},{0,12,D3DDECLTYPE_FLOAT2,0,D3DDECLUSAGE_TEXCOORD,0},D3DDECL_END()};
   out.bytes.resize(size_t(input.first+input.count)*32);std::memcpy(out.bytes.data()+size_t(input.first)*32,transformed.vertices.data(),transformed.vertices.size());return out;
 }

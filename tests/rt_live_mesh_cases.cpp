@@ -90,11 +90,19 @@ int main() {
     for(unsigned bone=0;bone<3;++bone) { input.constants[58+bone*3]={1,0,0,float(bone*10)};input.constants[59+bone*3]={0,1,0,0};input.constants[60+bone*3]={0,0,1,0}; }
     const auto digest="21a836464d57307495a547b937729a9a197b4a210864605bf7acdb16aa03931b";
     auto cpuPrepared=model_input::reconstruct(snapshot,input,digest);
-    require(!cpuPrepared.skinning.enabled&&std::string(cpuPrepared.reason)=="original_vs_three_weight","default path must retain stable CPU skinning after device loss");
+    require(!cpuPrepared.skinning.enabled&&cpuPrepared.dynamicPose&&std::string(cpuPrepared.reason)=="original_vs_three_weight","default path must identify dynamic CPU skinning after device loss");
+    require(model_input::ownDraw(cpuPrepared,input,2,{0,0,4,0,2,0}),"CPU pose owned Draw compaction");cpuPrepared.ready=true;
+    auto dynamicApi=fixture::table();live_mesh::Scene dynamic(&dynamicApi);
+    const auto dynamicFirst=dynamic.draw(cpuPrepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1);
+    const auto dynamicSecond=dynamic.draw(cpuPrepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,1);
+    require(dynamicFirst.success&&dynamicSecond.success&&dynamicFirst.created&&dynamicSecond.created&&dynamicFirst.handle!=dynamicSecond.handle&&
+      dynamicFirst.key.find("dynamic-pose-frame-1-draw-0")==0&&dynamicSecond.key.find("dynamic-pose-frame-1-draw-1")==0,
+      "dynamic CPU poses performed hash reuse or shared a simultaneous mesh");
+    require(!dynamic.retire(1,3,true)&&dynamic.entries()==0,"dynamic CPU pose cleanup");
     auto isolatedLimit=model_input::reconstruct(snapshot,input,digest,false,true,true);
     require(isolatedLimit.bytes.empty()&&isolatedLimit.result==S_FALSE&&std::string(isolatedLimit.reason)=="performance_gpu_skin_only_omitted","performance limit unexpectedly built a CPU-pose mesh");
     auto prepared=model_input::reconstruct(snapshot,input,digest,true,true,true);
-    require(prepared.skinning.enabled&&prepared.skinning.weights.size()==12&&prepared.skinning.transforms.size()==3,"audited three-weight bind pose did not select GPU skinning");
+    require(prepared.skinning.enabled&&!prepared.dynamicPose&&prepared.skinning.weights.size()==12&&prepared.skinning.transforms.size()==3,"audited three-weight bind pose did not select GPU skinning");
     for(size_t vertex=0;vertex<4;++vertex) {
       float bind[3]{},skinned[3]{};std::memcpy(bind,prepared.bytes.data()+vertex*32,12);const size_t base=vertex*prepared.skinning.bonesPerVertex;
       for(uint32_t k=0;k<prepared.skinning.bonesPerVertex;++k) { const auto& m=prepared.skinning.transforms[prepared.skinning.indices[base+k]];const float w=prepared.skinning.weights[base+k];

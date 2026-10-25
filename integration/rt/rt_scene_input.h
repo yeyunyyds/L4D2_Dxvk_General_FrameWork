@@ -166,7 +166,7 @@ struct Prepared {
   std::vector<uint8_t> bytes;
   std::vector<uint8_t> indices;
   std::array<uint32_t,6> drawArgs{};
-  UINT indexBytes=0;bool ownedDraw=false,uploadVerified=false;
+  UINT indexBytes=0;bool ownedDraw=false,uploadVerified=false,dynamicPose=false;
   struct Skinning {
     bool enabled=false;uint32_t bonesPerVertex=0;
     std::vector<float> weights;
@@ -179,7 +179,7 @@ struct Prepared {
   Prepared(Prepared&& other) noexcept:stride(other.stride),world(other.world),sourceDeclaration(std::move(other.sourceDeclaration)),elements(std::move(other.elements)),ready(other.ready),reason(other.reason),result(other.result),bytes(std::move(other.bytes)) {
     buffer.value=other.buffer.value;other.buffer.value=nullptr;declaration.value=other.declaration.value;other.declaration.value=nullptr;
     indexBuffer.value=other.indexBuffer.value;other.indexBuffer.value=nullptr;indices=std::move(other.indices);
-    drawArgs=other.drawArgs;indexBytes=other.indexBytes;ownedDraw=other.ownedDraw;uploadVerified=other.uploadVerified;skinning=std::move(other.skinning);
+    drawArgs=other.drawArgs;indexBytes=other.indexBytes;ownedDraw=other.ownedDraw;uploadVerified=other.uploadVerified;dynamicPose=other.dynamicPose;skinning=std::move(other.skinning);
   }
 };
 // Only our own readable buffers are checked here; never relock a WRITEONLY game

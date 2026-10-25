@@ -15,6 +15,7 @@ CONFIG=('rtx.enablePreservePath','rtx.useBuffersDirectly','rtx.bloom.enable','rt
 
 def analyze(directory,events):
     errors=[];directory=Path(directory);samples=[];payload_bytes=0
+    v41=any(e.get('event')=='pilot_delivery_revision' and e.get('value')=='41' for e in events)
     v23=any(e.get('event')=='world_coverage_revision' and e.get('value')=='23' for e in events)
     v20=any(e.get('event')=='world_coverage_revision' and e.get('value') in ('20','21','22','23') and e.get('code')==0 for e in events)
     v19=v20 or any(e.get('event')=='world_coverage_revision' and e.get('value')=='19' and e.get('code')==0 for e in events)
@@ -42,7 +43,7 @@ def analyze(directory,events):
                 check(type(e.get(k)) is int and e[k]>=0,'invalid_live_counter')
             for k in ('submitted','created','reused','destroyed','peak_bytes','completed_through'):
                 check(e[k]>=previous.get(k,0),'regressing_live_counter')
-            check(e['created']-e['destroyed']==e['entries'] and e['entries']<=(2048 if any(x.get('event')=='world_coverage_revision' and x.get('value') in ('22','23') for x in events) else 512),'live_resource_accounting')
+            check(e['created']-e['destroyed']==e['entries'] and e['entries']<=(3072 if v41 else 2048 if any(x.get('event')=='world_coverage_revision' and x.get('value') in ('22','23') for x in events) else 512),'live_resource_accounting')
             check(e['bytes']<=e['peak_bytes']<=(512 if v23 else 256)*1024*1024 and e['pending_fences']<=8,'live_resource_budget')
             check(e['completed_through']<=e['frame'],'invalid_live_completion')
             if e['destroyed']>previous.get('destroyed',0):check(e['completed_through']>0,'retirement_without_completion')

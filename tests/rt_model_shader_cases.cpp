@@ -94,6 +94,11 @@ int main() {
         check(!model_shader::reconstruct(p,pc,bad,32,0,24,12,16).valid,"invalid skin palette/weight/control accepted");
       }
     }
+    auto zeroWeight=skinned;const int16_t rigidWeights[]={32767,-1};const uint8_t threeAddresses[]={0,1,2,255};
+    for(unsigned i=0;i<3;++i) { std::memcpy(zeroWeight.data()+i*32+12,rigidWeights,4);std::memcpy(zeroWeight.data()+i*32+16,threeAddresses,4); }
+    auto zeroWeightPalette=palette;zeroWeightPalette[61][0]=NAN;
+    check(!model_shader::reconstruct(model_shader::Profile::Skin3,zeroWeightPalette,zeroWeight,32,0,24,12,16).valid,
+      "zero-weight shader matrix address escaped finite validation");
     palette[12][3]=.01f;
     check(!model_shader::reconstruct(model_shader::Profile::Neko3,palette,skinned,32,0,24,12,16).valid,"Neko clip depth bias silently lost");
     // 004208 VP coefficients: direct per-vertex relative clip testing is

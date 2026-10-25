@@ -52,6 +52,7 @@ inline Result reconstruct(Profile p,const sky_shader::Constants& c,const std::ve
   else if (!positiveAffine(out.world)) { out.reason="model_matrix_nonfinite_or_mirrored";return out; }
   for (unsigned r:{48u,49u}) { for (float v:c[r]) { if (!std::isfinite(v)) { out.reason="model_uv_nonfinite";return out; } } }
   out.vertices.resize(bytes.size());
+  std::array<bool,256> validatedBones{};
   for (size_t at=0;at<bytes.size();at+=stride) {
     if (p==Profile::Bone0) {
       int16_t w[2]{};uint32_t bone=0;std::memcpy(w,bytes.data()+at+weight,4);std::memcpy(&bone,bytes.data()+at+indices,4);
@@ -74,14 +75,21 @@ inline Result reconstruct(Profile p,const sky_shader::Constants& c,const std::ve
       for (unsigned k=0;k<3;++k) {
         // All three addresses are read by the original VS, even for zero weight.
         if (w[k]<0 || w[k]>1 || unsigned(bone[k])*3+60>=c.size()) { out.reason="model_bone_weight_or_palette_range";out.vertices.clear();return out; }
+        if(!validatedBones[bone[k]]) {
+          for(unsigned row=0;row<3;++row) { for(float value:c[58+unsigned(bone[k])*3+row]) {
+            if(!std::isfinite(value)) { out.reason="model_bone_matrix_nonfinite";out.vertices.clear();return out; }
+          } }
+          validatedBones[bone[k]]=true;
+        }
       }
       float world[3]{};
       for (unsigned j=0;j<3;++j) {
         float row[4]{};
         for (unsigned i=0;i<4;++i) {
           const float a=c[58+unsigned(bone[0])*3+j][i],b=c[58+unsigned(bone[1])*3+j][i],z=c[58+unsigned(bone[2])*3+j][i];
-          if (!std::isfinite(a) || !std::isfinite(b) || !std::isfinite(z)) { out.reason="model_bone_matrix_nonfinite";out.vertices.clear();return out; }
-          row[i]=a*w[0]+b*w[1];row[i]=z*w[2]+row[i];
+          if(w[0]!=0) { row[i]=a*w[0]; }
+          if(w[1]!=0) { row[i]+=b*w[1]; }
+          if(w[2]!=0) { row[i]=z*w[2]+row[i]; }
         }
         world[j]=v[0]*row[0]+v[1]*row[1]+v[2]*row[2]+row[3];
       }

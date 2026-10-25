@@ -116,7 +116,7 @@ inline const char* name(Budget reason) {
     case Budget::LiveBytes:return "live_geometry_bytes";case Budget::Entries:return "mesh_entries";
     case Budget::GpuBacklog:return "gpu_backlog";default:return "none"; }
 }
-struct Limits { uint64_t bytes=512ull*1024*1024,frameBytes=192ull*1024*1024;unsigned draws=1024,entries=2048; };
+struct Limits { uint64_t bytes=512ull*1024*1024,frameBytes=192ull*1024*1024;unsigned draws=1024,entries=3072; };
 struct Submission {
   bool success=false,created=false,deferred=false;Budget budget=Budget::None;
   uint64_t handle=0,triangles=0,materialHandle=0;bool materialUpdated=false,textured=false,skinned=false;uint32_t code=0;const char* operation="input";std::string key;
@@ -164,10 +164,17 @@ public:
     }
     auto& material=materialFound->second;
     if(material.handle&&material.variant!=variant&&material.last>completed) { return defer(Budget::GpuBacklog,at); }
-    result.operation="hash";
-    const auto vh=ldb_rt_file::geometrySha256(source.bytes.data(),source.bytes.size());
-    const auto ih=ldb_rt_file::geometrySha256(source.indices.data(),source.indices.size());
-    if(vh.empty()||ih.empty()) { result.code=ERROR_INVALID_DATA;return result; }
+    result.operation="hash";std::string vh,ih;
+    if(source.dynamicPose) {
+      // CPU-skinned positions normally change every frame. v40 observed only
+      // 2.1% reuse, so two SHA256 passes per pose cost far more than the rare
+      // hit. Frame/draw identity is exact and retirement remains fence-gated.
+      vh="dynamic-pose-frame-"+std::to_string(at)+"-draw-"+std::to_string(frameDraws);
+    } else {
+      vh=ldb_rt_file::geometrySha256(source.bytes.data(),source.bytes.size());
+      ih=ldb_rt_file::geometrySha256(source.indices.data(),source.indices.size());
+      if(vh.empty()||ih.empty()) { result.code=ERROR_INVALID_DATA;return result; }
+    }
     std::string skinKey;
     if(source.skinning.enabled) {
       const auto wh=ldb_rt_file::geometrySha256(source.skinning.weights.data(),source.skinning.weights.size()*sizeof(float));
