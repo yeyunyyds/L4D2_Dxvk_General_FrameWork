@@ -2,6 +2,8 @@
 
 目标：在 L4D2 + DXVK + Intel Arc B580 环境研究光追与插帧。当前优先大量复用 l4d2-rtx，保留 Source 的多线程渲染能力。
 
+[v42 后的 RT 架构重审](docs/research/rt-architecture-reassessment-v42.md)：实机已经证明逐 Draw `CreateMesh/DrawInstance` 同时触及 CPU 重建和 GPU 动态几何上限。现有路线冻结为正确性 oracle；主线改为带稳定身份的帧事务、Host worker 帧组装和 Remix 持久动态几何批次，不再继续调整 64/80/96 的显式 GPU 蒙皮额度。[v42 实测结果](docs/research/rt-performance-232019-result.md)记录了 6.14 FPS 最佳点、每帧约 580.5 个新 Mesh 及结构性预算结论。
+
 [多线程光追完整实施计划](docs/research/multithreaded-rt-implementation-plan.md)：重构有序帧／绘制数据和线程相关 Hook，沿用匹配 Remix 后端；默认把用户采集合并为 A（兼容性／静态 RT／队列）与 B（动态／画面／生命周期／性能）两批，每批一个入口、一个结果 ZIP。
 
 [RT 接入基础进展](docs/research/rt-foundation.md)：已固定 LDB 1.3.2 和自定义 Remix 源码候选，实现有序协议、Device 通道观察与开发采集协调器；x86 client／x64 Host 原生构建和两种架构的执行用例通过。Source 队列 Hook、游戏 RT 和综合包 A 尚未完成。
