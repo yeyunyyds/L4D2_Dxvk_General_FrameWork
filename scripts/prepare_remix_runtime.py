@@ -9,6 +9,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_SKINNING_SOURCE = Path('src/dxvk/rtx_render/rtx_remix_api.cpp')
 RUNTIME_GEOMETRY_SOURCE = Path('src/dxvk/rtx_render/rtx_geometry_utils.h')
+RUNTIME_ASSET_SOURCE = Path('src/dxvk/rtx_render/rtx_asset_replacer.cpp')
+RUNTIME_ASSET_HEADER = Path('src/dxvk/rtx_render/rtx_asset_replacer.h')
 RUNTIME_SKINNING_PATCH = ROOT / 'integration/rt/remix-runtime-skinning.patch'
 
 
@@ -34,6 +36,17 @@ def validate_runtime_skinning_flush(geometry):
         raise RuntimeError('GPU skinning command count is not reset after submission')
 
 
+def validate_runtime_persistent_mesh(api, asset, header):
+    required_api = [b'remixapi_LdbUpdateMesh', b'remixapi_CreateOrUpdateMesh',
+                    b'assets->updateExternalMesh']
+    if any(marker not in api for marker in required_api):
+        raise RuntimeError('Persistent external mesh update export is incomplete')
+    if b'void AssetReplacer::updateExternalMesh' not in asset or b'*found->second = std::move(submeshes);' not in asset:
+        raise RuntimeError('Persistent external mesh registry update is incomplete')
+    if b'void updateExternalMesh' not in header:
+        raise RuntimeError('Persistent external mesh declaration is missing')
+
+
 def prepare(output):
     if output.exists():
         raise RuntimeError('Preserve existing runtime output; choose a new --output')
@@ -53,16 +66,23 @@ def prepare(output):
     validate_runtime_skinning_source(runtime_skinning_source.read_bytes())
     runtime_geometry_source = output / RUNTIME_GEOMETRY_SOURCE
     validate_runtime_skinning_flush(runtime_geometry_source.read_bytes())
+    runtime_asset_source = output / RUNTIME_ASSET_SOURCE
+    runtime_asset_header = output / RUNTIME_ASSET_HEADER
+    validate_runtime_persistent_mesh(runtime_skinning_source.read_bytes(), runtime_asset_source.read_bytes(),
+                                     runtime_asset_header.read_bytes())
     api = output / 'public/include/remix/remix_c.h'
-    receipt = {'schema': 2, 'repository': baseline['runtime_repository'],
+    receipt = {'schema': 3, 'repository': baseline['runtime_repository'],
                'commit': baseline['runtime_commit'], 'branch_reference': baseline['runtime_branch_reference'],
                'api_sha256': digest(api),
                'smoke_source_sha256': digest(ROOT / 'integration/rt/rt_runtime_smoke.cpp'),
                'runtime_skinning_patch_sha256': digest(RUNTIME_SKINNING_PATCH),
                'runtime_skinning_source_sha256': digest(runtime_skinning_source),
                'runtime_geometry_source_sha256': digest(runtime_geometry_source),
+               'runtime_asset_source_sha256': digest(runtime_asset_source),
+               'runtime_asset_header_sha256': digest(runtime_asset_header),
                'runtime_skinning_weight_stride': 'sizeof(float)*bonesPerVertex',
                'runtime_skinning_command_counter': 'reset_after_flush',
+               'runtime_persistent_mesh_update': 'remixapi_LdbUpdateMesh',
                'submodules': 'pending', 'runtime_execution': 'unrun', 'b580_rt': 'unrun'}
     def save():
         (output / 'rt-runtime-source.json').write_text(json.dumps(receipt, indent=2) + '\n')

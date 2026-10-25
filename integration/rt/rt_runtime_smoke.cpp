@@ -325,6 +325,9 @@ int wmain(int argc, wchar_t** argv) {
     init.sType = REMIXAPI_STRUCT_TYPE_INITIALIZE_LIBRARY_INFO;
     init.version = REMIXAPI_VERSION_MAKE(0, 6, 4);
     log.result("initialize_api_0_6_4", uint32_t(initialize(&init, &runtime.api)));
+    const auto updateMeshProcedure = GetProcAddress(runtime.module, "remixapi_LdbUpdateMesh");
+    log.result("find_ldb_update_mesh", updateMeshProcedure ? 0 : ERROR_PROC_NOT_FOUND);
+    if (!updateMeshProcedure) { throw std::runtime_error("missing persistent mesh update export"); }
     if (!runtime.api.Shutdown || !runtime.api.CreateMaterial || !runtime.api.DestroyMaterial ||
         !runtime.api.CreateMesh || !runtime.api.DestroyMesh || !runtime.api.SetupCamera ||
         !runtime.api.DrawInstance || !runtime.api.CreateLight || !runtime.api.DestroyLight ||

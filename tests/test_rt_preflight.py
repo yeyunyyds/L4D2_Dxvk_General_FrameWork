@@ -19,7 +19,7 @@ import rt_preflight as runner
 import rt_visual as visual
 from package_rt_preflight import payloads, pinned_vulkan_loader
 from prepare_remix_runtime import (RUNTIME_SKINNING_PATCH, validate_runtime_skinning_source,
-                                   validate_runtime_skinning_flush)
+                                   validate_runtime_skinning_flush, validate_runtime_persistent_mesh)
 
 
 class PreflightCases(unittest.TestCase):
@@ -64,6 +64,12 @@ class PreflightCases(unittest.TestCase):
         validate_runtime_skinning_flush(geometry)
         with self.assertRaisesRegex(RuntimeError, 'not reset'):
             validate_runtime_skinning_flush(b'm_skinningContext->flushCommandList();')
+        api = b'remixapi_LdbUpdateMesh remixapi_CreateOrUpdateMesh assets->updateExternalMesh'
+        asset = b'void AssetReplacer::updateExternalMesh *found->second = std::move(submeshes);'
+        header = b'void updateExternalMesh'
+        validate_runtime_persistent_mesh(api, asset, header)
+        with self.assertRaisesRegex(RuntimeError, 'export'):
+            validate_runtime_persistent_mesh(b'remixapi_CreateOrUpdateMesh', asset, header)
         build_script = (Path(__file__).resolve().parents[1] / 'scripts/build_remix_runtime.ps1').read_text()
         self.assertIn('dbghelp.lib', build_script)
         packager = (Path(__file__).resolve().parents[1] / 'scripts/package_rt_preflight.py').read_text()
