@@ -35,7 +35,7 @@ struct Result {
   DWORD cull=D3DCULL_NONE;
   live_mesh::Material variant=live_mesh::Material::Neutral;
   model_texture::Source material;
-  bool success=false;
+  bool success=false,dynamicPose=false;
 };
 
 struct Statistics {
@@ -88,7 +88,7 @@ public:
       auto prepared=model_input::finish(job.snapshot,std::move(job.captured),job.kind,job.args,false,false,false);
       result.reason=prepared.reason;
       if(prepared.ready&&live_mesh::build(prepared,job.kind,job.topology,job.cull,result.geometry)) {
-        result.world=prepared.world;result.success=true;completed.fetch_add(1,std::memory_order_relaxed);
+        result.world=prepared.world;result.dynamicPose=prepared.dynamicPose;result.success=true;completed.fetch_add(1,std::memory_order_relaxed);
       } else { failed.fetch_add(1,std::memory_order_relaxed); }
       return result;
     });
@@ -113,10 +113,11 @@ struct Key {
   unsigned variant=0;
   uint32_t width=0,height=0,format=0,levels=0;
   uint8_t alphaBlend=0,alphaTest=0,alphaRef=0,wrapU=0,wrapV=0,filter=0;
+  bool dynamicPose=false;
   bool operator<(const Key& other) const {
-    return std::tie(material,path,world,cull,variant,width,height,format,levels,alphaBlend,alphaTest,alphaRef,wrapU,wrapV,filter)<
+    return std::tie(material,path,world,cull,variant,width,height,format,levels,alphaBlend,alphaTest,alphaRef,wrapU,wrapV,filter,dynamicPose)<
       std::tie(other.material,other.path,other.world,other.cull,other.variant,other.width,other.height,other.format,other.levels,
-        other.alphaBlend,other.alphaTest,other.alphaRef,other.wrapU,other.wrapV,other.filter);
+        other.alphaBlend,other.alphaTest,other.alphaRef,other.wrapU,other.wrapV,other.filter,other.dynamicPose);
   }
 };
 
@@ -127,6 +128,8 @@ struct Batch {
   live_mesh::Material variant=live_mesh::Material::Neutral;
   model_texture::Source material;
   uint64_t sourceDraws=0;
+  bool persistent=false;
+  std::string persistentKey;
 };
 
 struct Assembly {
@@ -139,6 +142,7 @@ inline Key key(const Result& result) {
   out.width=result.material.width;out.height=result.material.height;out.format=result.material.format;out.levels=result.material.levels;
   out.alphaBlend=result.material.alphaBlend;out.alphaTest=result.material.alphaTest;out.alphaRef=result.material.alphaRef;
   out.wrapU=result.material.wrapU;out.wrapV=result.material.wrapV;out.filter=result.material.filter;
+  out.dynamicPose=result.dynamicPose;
   static_assert(sizeof(out.world)==sizeof(result.world),"batch transform identity size");
   std::memcpy(out.world.data(),result.world.data(),sizeof(out.world));return out;
 }
@@ -152,7 +156,8 @@ inline Assembly assemble(std::vector<Result>&& results) {
     auto& chunks=groups[key(result)];
     if(chunks.empty()||result.geometry.vertices.size()>kMaxVertices-chunks.back().geometry.vertices.size()||
        result.geometry.indices.size()>kMaxIndices-chunks.back().geometry.indices.size()) {
-      Batch batch;batch.world=result.world;batch.cull=result.cull;batch.variant=result.variant;batch.material=result.material;chunks.push_back(std::move(batch));
+      Batch batch;batch.world=result.world;batch.cull=result.cull;batch.variant=result.variant;batch.material=result.material;
+      batch.persistent=result.dynamicPose;chunks.push_back(std::move(batch));
     }
     auto& batch=chunks.back();const auto base=uint32_t(batch.geometry.vertices.size());
     batch.geometry.vertices.insert(batch.geometry.vertices.end(),result.geometry.vertices.begin(),result.geometry.vertices.end());
@@ -160,7 +165,19 @@ inline Assembly assemble(std::vector<Result>&& results) {
     for(const auto index:result.geometry.indices) { batch.geometry.indices.push_back(base+index); }
     ++batch.sourceDraws;
   }
-  for(auto& group:groups) { for(auto& batch:group.second) { out.batches.push_back(std::move(batch)); } }
+  std::map<std::string,unsigned> persistentSlots;
+  for(auto& group:groups) { for(auto& batch:group.second) {
+    if(batch.persistent) {
+      const auto family=group.first.material+"\n"+group.first.path+"\n"+std::to_string(group.first.cull)+":"+
+        std::to_string(group.first.variant)+":"+std::to_string(group.first.width)+":"+std::to_string(group.first.height)+":"+
+        std::to_string(group.first.format)+":"+std::to_string(group.first.levels)+":"+std::to_string(group.first.alphaBlend)+":"+
+        std::to_string(group.first.alphaTest)+":"+std::to_string(group.first.alphaRef)+":"+std::to_string(group.first.wrapU)+":"+
+        std::to_string(group.first.wrapV)+":"+std::to_string(group.first.filter);
+      const auto slot=persistentSlots[family]++;
+      batch.persistentKey=family+":"+std::to_string(slot);
+    }
+    out.batches.push_back(std::move(batch));
+  } }
   return out;
 }
 

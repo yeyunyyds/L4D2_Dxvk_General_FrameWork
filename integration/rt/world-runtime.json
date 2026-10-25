@@ -1,16 +1,21 @@
 {
   "schema": 1,
   "scope": "rt_prerequisites",
-  "build_commit": "4a706fa0736bc1d7c123cfd5a2aa331dca1993cd",
+  "build_commit": "a1c900632243528211e50ce6994a29197262dbc0",
   "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
   "runtime_execution": "unrun",
   "runtime_patches": {
     "skinning": {
-      "sha256": "5df7b5d723a027056623e7dd7448e955454021fbfe778d3597948446e83d0080",
-      "source_sha256": "157894bad010f7a1f8bf21077a99b7d09a45ea5894d4bf43e3801a33e4c577dd",
+      "sha256": "5640576bcd5ce14665c031f9a44ff77974af94dc6300ca19bb4d22a297a713b8",
+      "source_sha256": "40dbcb96899985df954ced304271b733bcc5bf169945159793115a399fed8196",
       "geometry_source_sha256": "8ec3814b35cbbbb1bed29e1b449c7f3ffd428ef0efde261c84c93473fb52f360",
       "weight_stride": "sizeof(float)*bonesPerVertex",
       "command_counter": "reset_after_flush"
+    },
+    "persistent_mesh": {
+      "export": "remixapi_LdbUpdateMesh",
+      "asset_source_sha256": "cdd01a66f4ff6eb73c4cc39accd01fd7af9d5ac71a7fb23166b4be5a52a726ae",
+      "asset_header_sha256": "22ef2bd94ed745075d4164abc0cd320549ab6afcaccb6e46f30d47f03ed4bda7"
     }
   },
   "vulkan_loader": {
@@ -24,22 +29,22 @@
   "source_threading": "unrun",
   "payloads": [
     {
-      "name": "rt-prereq-payload-f977a6089277dc47c8802244.zip",
-      "sha256": "f977a6089277dc47c88022447eaab519bdc07c2c2993eb7f28ff0e2b77f23ae7",
-      "size": 78275924,
-      "ref": "1d1c3dda1e62bb5fb108dbf3dcb144837831c325"
+      "name": "rt-prereq-payload-4ae87b0441f30f6fb20e7509.zip",
+      "sha256": "4ae87b0441f30f6fb20e7509e431f0d757670ac778f4c3c9d4668a0015c4833f",
+      "size": 78276826,
+      "ref": "6de283b56a7f30bfb1e79f9ae945e4fce1e7711c"
     },
     {
-      "name": "rt-prereq-payload-a0a9bad8fd73d7df8308a795.zip",
-      "sha256": "a0a9bad8fd73d7df8308a795bb04e859243b42e2901ac92eb29a0a8164d9ee93",
+      "name": "rt-prereq-payload-df48a419f679e12c93742f5e.zip",
+      "sha256": "df48a419f679e12c93742f5e72da644f526e57f475cdd282f790c9789d59b402",
       "size": 95644514,
-      "ref": "1d1c3dda1e62bb5fb108dbf3dcb144837831c325"
+      "ref": "6de283b56a7f30bfb1e79f9ae945e4fce1e7711c"
     },
     {
-      "name": "rt-prereq-payload-6f313907dae81304555442de.zip",
-      "sha256": "6f313907dae81304555442de61af424a5baf1c4e1f575332aaa1bfbd733da052",
-      "size": 89310529,
-      "ref": "1d1c3dda1e62bb5fb108dbf3dcb144837831c325"
+      "name": "rt-prereq-payload-6a5d1c04e2055b4123c6dc82.zip",
+      "sha256": "6a5d1c04e2055b4123c6dc82d1d082f2d1baafb1c092e1401edd173586ffbf40",
+      "size": 89310655,
+      "ref": "6de283b56a7f30bfb1e79f9ae945e4fce1e7711c"
     }
   ],
   "runtime_files": {
@@ -80,8 +85,8 @@
       "sha256": "c2c9a9c22a9bcba90e261825968836787b331038047a26770cffb7a583c28344"
     },
     "d3d9.dll": {
-      "size": 210378240,
-      "sha256": "843e63f99d63f64155dc359cb5f2b9aa10058e2f6510358054f83920d8589ca4"
+      "size": 210379264,
+      "sha256": "5ef73ba7e13d46e0e13649eaec8cf74b5877682dd87718c016a37f8dcab238e8"
     },
     "gf.dll": {
       "size": 587800,
@@ -156,8 +161,8 @@
       "sha256": "8ca6c5ae3bea150892db021bb3267f9e01e5e4d5da40b3f75f1de7646cecdff1"
     },
     "rt-runtime-smoke.exe": {
-      "size": 321536,
-      "sha256": "32f80bb07065e08fde68255af51d443d7b59c28b0b88d0b80e124a80976e88d3"
+      "size": 322048,
+      "sha256": "9aebaa6990bdfb97e10616ea7271c50e46494201ed770cb6bd86f0a90411efec"
     },
     "rtxio.dll": {
       "size": 2622976,
@@ -425,7 +430,7 @@
     },
     "usd/plugins/RemixCategories/RemixCategories.dll": {
       "size": 69120,
-      "sha256": "122237e15f264b194d5b70519b79e3044ddc4e51373a592161481d9ff0272839"
+      "sha256": "903f35e5fc02b2643b06339ef3670be36d8dd7b7fff993230751cc0de8be7644"
     },
     "usd/plugins/RemixCategories/generatedSchema.usda": {
       "size": 13073,
@@ -437,7 +442,7 @@
     },
     "usd/plugins/RemixParticleSystem/RemixParticleSystem.dll": {
       "size": 200192,
-      "sha256": "7d89b13aea766f3635cc58ecfe76a1314b7beb2c583afe5d73d14971f850f3b2"
+      "sha256": "e7c2a193300d7892c300e24f684c2b4e223650636b7239744379b97d93e42006"
     },
     "usd/plugins/RemixParticleSystem/generatedSchema.usda": {
       "size": 49208,
@@ -740,8 +745,5 @@
     "version": "3.12.10",
     "url": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
     "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8"
-  },
-  "native_build_commit": "4a706fa0736bc1d7c123cfd5a2aa331dca1993cd",
-  "code_commit": "4a706fa0736bc1d7c123cfd5a2aa331dca1993cd",
-  "world_use": "v36 keeps the v35 stable fixed-32 load, locks graphicsPreset Custom before RT activation so Arc Auto/Low cannot restore ReSTIR GI, and records Host device-thread plus game/Host process CPU time to locate the uninstrumented frame interval"
+  }
 }

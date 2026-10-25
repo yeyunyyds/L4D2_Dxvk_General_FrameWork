@@ -118,11 +118,14 @@ inline const char* name(Budget reason) {
 }
 struct Limits { uint64_t bytes=512ull*1024*1024,frameBytes=192ull*1024*1024;unsigned draws=1024,entries=3072; };
 struct Submission {
-  bool success=false,created=false,deferred=false;Budget budget=Budget::None;
+  bool success=false,created=false,updated=false,deferred=false;Budget budget=Budget::None;
   uint64_t handle=0,triangles=0,materialHandle=0;bool materialUpdated=false,textured=false,skinned=false;uint32_t code=0;const char* operation="input";std::string key;
 };
 class Scene {
-  remixapi_Interface* api=nullptr;uint64_t next=1,nextMaterial=1;
+public:
+  using UpdateMesh=remixapi_ErrorCode (REMIXAPI_CALL *)(const remixapi_MeshInfo*);
+private:
+  remixapi_Interface* api=nullptr;UpdateMesh updateMesh=nullptr;uint64_t next=1,nextMaterial=1;
   std::map<std::string,Record> meshes;
   Limits limits;
   std::map<std::string,MaterialRecord> materials;
@@ -134,11 +137,11 @@ class Scene {
   // occurrence a persistent slot that is reused on the following frame.
   std::map<std::string,unsigned> frameSkinnedSlots;
 public:
-  uint64_t bytes=0,peakBytes=0,created=0,reused=0,destroyed=0,submitted=0,materialUpdates=0,skinnedCreated=0,skinnedReused=0,skinnedSubmitted=0;
+  uint64_t bytes=0,peakBytes=0,created=0,reused=0,updated=0,destroyed=0,submitted=0,materialUpdates=0,skinnedCreated=0,skinnedReused=0,skinnedSubmitted=0;
   static constexpr uint64_t maxBytes=512ull*1024*1024,maxFrameBytes=192ull*1024*1024;
   uint64_t frame=0,frameBytes=0,omitted=0;unsigned frameDraws=0,frameSkinnedDraws=0,frameSkinnedUniqueMeshes=0,frameSkinnedRepeatDraws=0,frameOmitted=0;
   std::array<uint64_t,size_t(Budget::Count)> omissionTotals{};
-  explicit Scene(remixapi_Interface* table=nullptr,Limits policy={}):api(table),limits(policy) {}
+  explicit Scene(remixapi_Interface* table=nullptr,Limits policy={},UpdateMesh update=nullptr):api(table),updateMesh(update),limits(policy) {}
   void frameAt(uint64_t at) { if(at!=frame) { frame=at;frameDraws=0;frameSkinnedDraws=0;frameSkinnedUniqueMeshes=0;frameSkinnedRepeatDraws=0;frameBytes=0;frameOmitted=0;frameSkinnedKeys.clear();frameSkinnedSlots.clear(); } }
   Submission defer(Budget reason,uint64_t at) {
     frameAt(at);Submission result;result.deferred=true;result.budget=reason;result.operation="budget";
@@ -147,7 +150,7 @@ public:
   uint32_t begin(uint64_t completed,uint64_t at) { frameAt(at);return retire(completed,at); }
 
   size_t entries() const { return meshes.size(); }
-  void bind(remixapi_Interface* table) { api=table; }
+  void bind(remixapi_Interface* table,UpdateMesh update=nullptr) { api=table;updateMesh=update; }
   Submission draw(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,Material variant,uint64_t at,size_t pending=0,const model_texture::Source& sourceMaterial={},uint64_t completed=0) {
     Submission result;
     if(!api || !api->CreateMaterial||!api->DestroyMaterial||!api->CreateMesh||!api->DrawInstance || unsigned(variant)>=unsigned(Material::Count) ||
@@ -250,19 +253,23 @@ public:
   // raster class. The API still copies the arrays synchronously, but the Host
   // registers one RT geometry instead of one mesh for every Source Draw.
   Submission drawBatch(const Geometry& geometry,const std::array<float,16>& world,DWORD cull,Material variant,
-      uint64_t at,size_t pending=0,const model_texture::Source& sourceMaterial={},uint64_t completed=0) {
+      uint64_t at,size_t pending=0,const model_texture::Source& sourceMaterial={},uint64_t completed=0,
+      const std::string& persistentKey={}) {
     Submission result;
     if(!api||!api->CreateMaterial||!api->DestroyMaterial||!api->CreateMesh||!api->DrawInstance||
        unsigned(variant)>=unsigned(Material::Count)||geometry.vertices.empty()||geometry.indices.empty()||
        geometry.indices.size()%3||geometry.bonesPerVertex||!bulk_static::affine(world)||
-       (cull!=D3DCULL_NONE&&cull!=D3DCULL_CW&&cull!=D3DCULL_CCW)) { result.code=ERROR_INVALID_DATA;return result; }
+       (cull!=D3DCULL_NONE&&cull!=D3DCULL_CW&&cull!=D3DCULL_CCW)||(!persistentKey.empty()&&!updateMesh)) { result.code=ERROR_INVALID_DATA;return result; }
     frameAt(at);
     if(pending>=8) { return defer(Budget::GpuBacklog,at); }
     if(frameDraws>=limits.draws) { return defer(Budget::Draws,at); }
     const auto cost=geometry.bytes();
     if(cost>limits.frameBytes-frameBytes) { return defer(Budget::FrameBytes,at); }
-    if(cost>limits.bytes-bytes) { return defer(Budget::LiveBytes,at); }
-    if(meshes.size()>=limits.entries) { return defer(Budget::Entries,at); }
+    const auto key=persistentKey.empty()?"frame-batch-"+std::to_string(at)+"-"+std::to_string(frameDraws):"persistent-batch-"+persistentKey;
+    auto found=meshes.find(key);
+    const auto previousCost=found==meshes.end()?0:found->second.bytes;
+    if(cost>previousCost&&cost-previousCost>limits.bytes-bytes) { return defer(Budget::LiveBytes,at); }
+    if(found==meshes.end()&&meshes.size()>=limits.entries) { return defer(Budget::Entries,at); }
     const auto materialKey=sourceMaterial.key;
     auto materialFound=materials.find(materialKey);
     if(materialFound==materials.end()) {
@@ -292,15 +299,24 @@ public:
     result.materialHandle=material.hash;result.textured=sourceMaterial.textured();
     remixapi_MeshInfoSurfaceTriangles surface{};surface.vertices_values=geometry.vertices.data();surface.vertices_count=geometry.vertices.size();
     surface.indices_values=geometry.indices.data();surface.indices_count=geometry.indices.size();surface.material=material.handle;
-    remixapi_MeshInfo mesh{};mesh.sType=REMIXAPI_STRUCT_TYPE_MESH_INFO;mesh.hash=0x4c444d5300000000ull+next++;
-    mesh.surfaces_values=&surface;mesh.surfaces_count=1;remixapi_MeshHandle handle=nullptr;
-    { runtime_profile::Scope timing(runtime_profile::Stage::MeshCreate);
-      result.operation="create_batch_mesh";result.code=uint32_t(api->CreateMesh(&mesh,&handle)); }
-    if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
-    const auto key="frame-batch-"+std::to_string(at)+"-"+std::to_string(frameDraws);
-    auto found=meshes.emplace(key,Record{handle,at,cost,materialKey}).first;
-    bytes+=cost;peakBytes=(std::max)(peakBytes,bytes);frameBytes+=cost;++created;result.created=true;result.key=key;
-    result.handle=reinterpret_cast<uint64_t>(handle);result.triangles=geometry.indices.size()/3;
+    remixapi_MeshInfo mesh{};mesh.sType=REMIXAPI_STRUCT_TYPE_MESH_INFO;
+    mesh.surfaces_values=&surface;mesh.surfaces_count=1;
+    if(found==meshes.end()) {
+      mesh.hash=0x4c444d5300000000ull+next++;remixapi_MeshHandle handle=nullptr;
+      { runtime_profile::Scope timing(runtime_profile::Stage::MeshCreate);
+        result.operation=persistentKey.empty()?"create_batch_mesh":"create_persistent_batch_mesh";result.code=uint32_t(api->CreateMesh(&mesh,&handle)); }
+      if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
+      found=meshes.emplace(key,Record{handle,at,cost,materialKey}).first;
+      bytes+=cost;++created;result.created=true;
+    } else {
+      mesh.hash=reinterpret_cast<uint64_t>(found->second.mesh);
+      { runtime_profile::Scope timing(runtime_profile::Stage::MeshCreate);
+        result.operation="update_persistent_batch_mesh";result.code=uint32_t(updateMesh(&mesh)); }
+      if(result.code) { return result; }
+      bytes=bytes-previousCost+cost;found->second.bytes=cost;found->second.materialKey=materialKey;++updated;result.updated=true;
+    }
+    peakBytes=(std::max)(peakBytes,bytes);frameBytes+=cost;result.key=key;
+    auto handle=found->second.mesh;result.handle=reinterpret_cast<uint64_t>(handle);result.triangles=geometry.indices.size()/3;
     remixapi_InstanceInfo instance{};instance.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO;instance.mesh=handle;instance.doubleSided=cull==D3DCULL_NONE;
     for(unsigned row=0;row<3;++row) { for(unsigned col=0;col<4;++col) { instance.transform.matrix[row][col]=world[col*4+row]; } }
     result.operation="draw_batch_instance";{ runtime_profile::Scope timing(runtime_profile::Stage::Instance);result.code=uint32_t(api->DrawInstance(&instance)); }

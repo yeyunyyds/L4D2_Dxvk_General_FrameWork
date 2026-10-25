@@ -53,8 +53,10 @@ def verify_package(root):
         name='integration/rt/world-runtime.json'
         if name not in manifest['files']:raise ValueError('World runtime catalog missing from manifest')
         runtime=json.loads((root/name).read_text(encoding='utf-8'))
+        persistent=runtime.get('runtime_patches',{}).get('persistent_mesh',{})
         if (runtime.get('scope')!='rt_prerequisites' or runtime['runtime_files']['d3d9.dll']['sha256']!=
-                '843e63f99d63f64155dc359cb5f2b9aa10058e2f6510358054f83920d8589ca4'):
+                '5ef73ba7e13d46e0e13649eaec8cf74b5877682dd87718c016a37f8dcab238e8' or
+                persistent.get('export')!='remixapi_LdbUpdateMesh'):
             raise ValueError('World runtime pin differs')
     return manifest
 
@@ -324,7 +326,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
     if performance:
         performance_review=review_performance(directory);save(directory/'performance-analysis.json',performance_review)
-        report['performance']='arc_structural_frame_batch_collected' if performance_review['pass'] else 'incomplete'
+        report['performance']='arc_persistent_mesh_update_collected' if performance_review['pass'] and manifest.get('pilot_revision',0)>=44 else 'arc_structural_frame_batch_collected' if performance_review['pass'] else 'incomplete'
         report['preview']='completed_performance_lifecycle' if performance_review['pass'] else 'incomplete'
         if not performance_review['pass']:report['errors'].extend(performance_review['errors']);report['collection']='incomplete'
     elif report.get('preview'):
@@ -414,6 +416,7 @@ def review_performance(directory):
     native_fallback=revision==38
     complete_fallback=revision>=39
     structural_batch=revision>=43
+    persistent_batch=revision>=44
     ends=[e for e in events if e.get('event')=='preview_end']
     minimum_frames=(150 if complete_fallback else 270) if lifecycle else 128 if stability else 120
     if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<minimum_frames or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
@@ -471,6 +474,15 @@ def review_performance(directory):
             isinstance(e.get('worker_cpu_elapsed_ms'),(int,float)) and math.isfinite(e['worker_cpu_elapsed_ms']) and e['worker_cpu_elapsed_ms']>=0
             for e in flushes)
         if not valid_flushes:errors.append('performance_frame_batch_evidence')
+        if persistent_batch and valid_flushes:
+            warm,persistent=flushes[:30],flushes[30:]
+            persistent_valid=(all(e.get('persistent_phase') is False for e in warm) and
+                all(e.get('persistent_phase') is True and isinstance(e.get('persistent_created'),int) and
+                    isinstance(e.get('persistent_updated'),int) and e['persistent_created']>=0 and e['persistent_updated']>=0 for e in persistent) and
+                bool(persistent) and persistent[0]['persistent_created']>0 and persistent[0]['persistent_updated']>=0 and
+                all(e['persistent_created']==0 and e['persistent_updated']>0 for e in persistent[1:]) and len(ends)==1 and
+                ends[0].get('persistent_mesh_updates')==sum(e['persistent_updated'] for e in persistent))
+            if not persistent_valid:errors.append('performance_persistent_mesh_update')
         total_source=sum(e.get('source_draws',0) for e in flushes);total_batches=sum(e.get('batches',0) for e in flushes)
         end=ends[0] if len(ends)==1 else {}
         if (not valid_flushes or total_batches>=total_source or max((e.get('worker_max_active',0) for e in flushes),default=0)<2 or
@@ -484,7 +496,7 @@ def review_performance(directory):
         if gpu_file.is_file() and gpu_file.stat().st_size<=32*1024*1024:
             try:gpu_rows=[json.loads(line) for line in gpu_file.read_text(encoding='utf-8').splitlines() if line.strip()]
             except json.JSONDecodeError:gpu_rows=[]
-        names=('explicit_oracle_80','frame_batch_warm','frame_batch_steady');phases=[]
+        names=('explicit_oracle_80','frame_batch_warm','persistent_batch_update' if persistent_batch else 'frame_batch_steady');phases=[]
         prior_submitted=0
         for index,name in enumerate(names):
             row=windows.get(name);wall=row.get('wall_ms',0) if row else 0
@@ -520,13 +532,13 @@ def review_performance(directory):
         raster_window=windows.get('gpu_lifecycle_raster')
         if not raster_window or not isinstance(raster_window.get('wall_ms'),(int,float)) or not math.isfinite(raster_window['wall_ms']) or raster_window['wall_ms']<=0:errors.append('performance_raster_timing')
         best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
-        return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_structural_frame_batch','phases':phases,
+        return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_persistent_mesh_update' if persistent_batch else 'arc_structural_frame_batch','phases':phases,
                 'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
                 'frame_batch':{'flushes':len(flushes),'source_draws':total_source,'api_batches':total_batches,
                                'compression_ratio':total_source/total_batches if total_batches else None,
                                'worker_max_active':max((e.get('worker_max_active',0) for e in flushes),default=0)},
                 'effective_indirect_mode':remix_mode,'raster_survival':{'frames':end.get('raster_survival_frames',0),'timing':raster_window},
-                'end':end,'limits':'v43 preserves a 30-frame GPU-80 explicit oracle, then moves CPU pose reconstruction to four Host workers and submits 30 warm plus 30 steady frames as material/transform batches. Source-draw completion and API-batch compression are audited independently; visual completeness still requires user review.'}
+                'end':end,'limits':('v44 preserves GPU-80 and frame-batch controls, then requires dynamic CPU-pose batches to update stable Remix mesh handles with zero steady-state CreateMesh calls. Runtime buffer allocation and BLAS update cost remain measured by this stage.' if persistent_batch else 'v43 preserves a 30-frame GPU-80 explicit oracle, then moves CPU pose reconstruction to four Host workers and submits 30 warm plus 30 steady frames as material/transform batches. Source-draw completion and API-batch compression are audited independently; visual completeness still requires user review.')}
     mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
     expected=([64,80,96] if revision>=42 else [64,64,64] if revision==41 else [16,64,128] if revision==40 else [0,8,16]) if lifecycle else [32]*4 if stability else [16,32,48,64]
     if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(len(expected))) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
@@ -690,12 +702,12 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
                 'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 1','rtx.useVertexCapture = False']
             config='\n'.join(config_options)+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='arc_structural_frame_batch_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
+            report['scope']='arc_persistent_mesh_update_validation' if performance and manifest.get('pilot_revision',0)>=44 else 'arc_structural_frame_batch_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v43: the first 30 frames retain the GPU-80 explicit oracle. The next 60 frames move CPU pose reconstruction to four Host workers and combine compatible Source surfaces before Remix submission. All accepted Source draws must remain accounted for, then resources retire before 60 raster Presents. Keep characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v44: the first 30 frames retain GPU-80, the next 30 use ordinary frame batches, and the final 30 reuse dynamic batch mesh handles through the custom Runtime update export. Steady persistent frames must create no new dynamic meshes. Keep characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

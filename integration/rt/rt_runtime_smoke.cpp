@@ -326,8 +326,12 @@ int wmain(int argc, wchar_t** argv) {
     init.version = REMIXAPI_VERSION_MAKE(0, 6, 4);
     log.result("initialize_api_0_6_4", uint32_t(initialize(&init, &runtime.api)));
     const auto updateMeshProcedure = GetProcAddress(runtime.module, "remixapi_LdbUpdateMesh");
+    using PFN_LdbUpdateMesh = remixapi_ErrorCode (REMIXAPI_CALL *)(const remixapi_MeshInfo*);
+    PFN_LdbUpdateMesh updateMesh = nullptr;
+    static_assert(sizeof(updateMesh) == sizeof(updateMeshProcedure), "Windows function pointer ABI");
+    std::memcpy(&updateMesh, &updateMeshProcedure, sizeof(updateMesh));
     log.result("find_ldb_update_mesh", updateMeshProcedure ? 0 : ERROR_PROC_NOT_FOUND);
-    if (!updateMeshProcedure) { throw std::runtime_error("missing persistent mesh update export"); }
+    if (!updateMesh) { throw std::runtime_error("missing persistent mesh update export"); }
     if (!runtime.api.Shutdown || !runtime.api.CreateMaterial || !runtime.api.DestroyMaterial ||
         !runtime.api.CreateMesh || !runtime.api.DestroyMesh || !runtime.api.SetupCamera ||
         !runtime.api.DrawInstance || !runtime.api.CreateLight || !runtime.api.DestroyLight ||
@@ -402,6 +406,7 @@ int wmain(int argc, wchar_t** argv) {
       remixapi_MeshInfo mesh{}; mesh.sType = REMIXAPI_STRUCT_TYPE_MESH_INFO; mesh.hash = 0x4c445202 + variant * 16;
       mesh.surfaces_values = &surface; mesh.surfaces_count = 1;
       log.result("create_mesh", uint32_t(runtime.api.CreateMesh(&mesh, &meshHandles[variant])));
+      if (variant == 0) { log.result("update_mesh_same_handle", uint32_t(updateMesh(&mesh))); }
     }
     materialInputs << "]}\n";
     materialInputs.close(); if (!materialInputs) { throw std::runtime_error("save material input validation"); }

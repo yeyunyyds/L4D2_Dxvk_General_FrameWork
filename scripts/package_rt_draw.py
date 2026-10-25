@@ -78,9 +78,9 @@ def package(source,output,python_package):
     # native runtime product. The runtime binaries themselves are not rebuilt.
     prerequisite=ROOT/'.research/world-prerequisite.zip'
     if not prerequisite.is_file():
-        prerequisite.write_bytes(subprocess.check_output(['git','show','75e75334074a15f2a912cc91396be2280d3733ec:downloads/rt-preflight-dev.zip'],cwd=ROOT))
-    if sha(prerequisite.read_bytes())!='24867acab96ddae995c68e72b12175d475af2aa08c07900844643a24249e7a34':
-        raise ValueError('Prerequisite notices source differs from verified v6 product')
+        prerequisite.write_bytes(subprocess.check_output(['git','show','6de283b56a7f30bfb1e79f9ae945e4fce1e7711c:downloads/rt-preflight-dev.zip'],cwd=ROOT))
+    if sha(prerequisite.read_bytes())!='dd5d5932740c66377a0357a26dddef0aa8126957b4f20dbed9b90c5217a39498':
+        raise ValueError('Prerequisite notices source differs from verified persistent-mesh runtime product')
     with zipfile.ZipFile(prerequisite) as prior:
         for name in prior.namelist():
             if name.startswith('licenses/') or name.startswith('payloads/'):
@@ -89,7 +89,7 @@ def package(source,output,python_package):
     entries['licenses/Detours-LICENSE']=(source/'submodules/Detours/LICENSE').read_bytes()
     entries['licenses/LDB-LICENSE']=subprocess.check_output(['git','-C',str(ROOT/'.research/sources/bridge-131'),
                                                           'show',receipt['bridge_commit']+':LICENSE'])
-    manifest={'schema':1,'scope':'arc_structural_frame_batch','profile':'world_pilot','pilot_revision':43,
+    manifest={'schema':1,'scope':'arc_persistent_mesh_update','profile':'world_pilot','pilot_revision':44,
               'readback_presents':[30,120,180,240,300,360,420,480,540,600],
               'coverage_comparison':['raster','baseline_world','expanded_sky','expanded_models'],
               'baseline_sphere_radiance':30,'directional_radiance':3,'expanded_coverage_after_present':120,
@@ -101,8 +101,8 @@ def package(source,output,python_package):
               'bulk_static_after_present':180,'bulk_static_families':['LightmappedGeneric','LightmappedGeneric_DX9','UnlitGeneric','VertexLitGeneric','WorldVertexTransition','WorldVertexTransition_DX9','WorldTwoTextureBlend','NekoToon','Infected'],
               'bulk_static_material':'first_diffuse_layer_original_alpha_test; transition_stage7; no complete blend/PBR',
               'model_rebuild':'the D3D owner thread captures owned immutable inputs; four Host workers reconstruct CPU poses and canonical geometry; compatible outputs are grouped by exact material, world transform, cull and material variant before the HUD injection boundary; global shader vertex capture remains disabled',
-              'model_submission':'one complete 30-frame GPU-80 explicit oracle followed by 30 frame-batch warm and 30 frame-batch steady RT frames; Source-draw completion is audited separately from reduced API mesh/instance submissions; only queued explicit output applies Ignore bit3 to its original Draw; then RT is disabled, all API meshes and fences must retire, and 60 ordinary raster Presents must survive',
-              'gpu_skinning':{'performance_ramp':False,'stability_profile':False,'lifecycle_profile':True,'complete_explicit_cpu_pose_fallback':True,'hybrid_native_vertex_capture_fallback':False,'phase_frames':[30,30,30],'phase_limits':[80,0,0],'raster_survival_frames':60,'full_cpu_skin_output_oracle_for_persistent_path':False,'input_weight_index_bone_validation':True,'status':'v42 found the explicit per-surface route capped near 6 FPS and GPU-96 regressed below GPU-80. v43 keeps GPU-80 as an oracle, then changes the submission unit: four Host workers reconstruct CPU poses while the device thread continues, and compatible surfaces become larger per-frame batches','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'runtime_skinning_command_counter_reset':True,'simultaneous_pose_mesh_slots':True,'per_frame_mesh_identity_counts':True,'performance_excess_path':'four_worker_cpu_pose_frame_batch','frame_batch_workers':4,'frame_batch_flush_before_hud_injection':True,'source_draw_and_api_batch_dual_accounting':True,'persistent_runtime_mesh_update':'not_yet_implemented','image_review_required':True},
+              'model_submission':'one 30-frame GPU-80 oracle, one 30-frame ordinary frame-batch control, and one 30-frame persistent same-handle dynamic-batch update window; Source-draw completion is audited separately from API batches and persistent Create/Update counts; only queued explicit output applies Ignore bit3 to its original Draw; then RT is disabled, all API meshes and fences must retire, and 60 ordinary raster Presents must survive',
+              'gpu_skinning':{'performance_ramp':False,'stability_profile':False,'lifecycle_profile':True,'complete_explicit_cpu_pose_fallback':True,'hybrid_native_vertex_capture_fallback':False,'phase_frames':[30,30,30],'phase_limits':[80,0,0],'raster_survival_frames':60,'full_cpu_skin_output_oracle_for_persistent_path':False,'input_weight_index_bone_validation':True,'status':'v44 retains the GPU-80 and ordinary frame-batch controls, then updates CPU dynamic-pose batches through stable Remix mesh handles; the first persistent frame may create slots and later frames must create none','profiles':['Skin3','Neko3'],'bridge_scalar_count_transport_fix_retained':True,'runtime_stride_patch_retained':True,'runtime_skinning_command_counter_reset':True,'simultaneous_pose_mesh_slots':True,'per_frame_mesh_identity_counts':True,'performance_excess_path':'four_worker_cpu_pose_persistent_batch','frame_batch_workers':4,'frame_batch_flush_before_hud_injection':True,'source_draw_and_api_batch_dual_accounting':True,'persistent_runtime_mesh_update':'remixapi_LdbUpdateMesh_same_handle_registry_replace','persistent_scope':'CPU_dynamic_pose_batches_only;rigid_batches_remain_per_frame_without_stable_resource_identity','image_review_required':True},
               'model_input_pairs':'canonical_CPU_vertices_and_normalized_indices_at_239_240_299_300; original_input_audit_retained_separately',
               'model_stage_readbacks':{240:'api_neko_textured',300:'api_combined_textured',360:'api_combined_textured_low_light',420:'api_combined_textured_metal',480:'api_combined_textured_alpha',540:'api_combined_textured_emissive',600:'recovery'},
               'preserve_path_default':False,'preserve_path_control_presents':[],
@@ -127,7 +127,7 @@ def package(source,output,python_package):
               'device_cleanup':'before_IDirect3DDevice9Ex_Destroy_safeDestroy;after_command_loop_before_other_teardown;abort_cleanup;final_partial_frame_EVENT;idempotent',
               'actual_model_materials':'neutral_source_alpha_throughout_except_Infected_bright_control;legacy_stage_names_retained_only_as_trace_phase_IDs',
               'bounded_preview':{'after_diagnostic_present':600,'duration_ms':60000,'recovery_timeout_ms':5000,'mode':'neutral;30s_no_AA_then30s_native_TAA;same_one_F9;no_Draw_trace_extension;requires_review'},
-              'performance_session':{'launcher':'run-performance.cmd','control_presents':30,'target_rt_frames':90,'minimum_total_frames':150,'phase_frames':[30,30,30],'gpu_skin_limits':[80,0,0],'raster_survival_frames':60,'mode':'graphics_preset_Custom;TAAU_0.75;direct_light;secondary_bounces_off;RTXDI_off;ReSTIR_GI;global_vertex_capture_off;GPU80_explicit_oracle_then_four_worker_CPU_pose_frame_batch;RT_off_resource_zero_then_raster_survival;no_image_readback;one_F9','scope':'Arc_structural_frame_batch_and_lifecycle_validation'},
+              'performance_session':{'launcher':'run-performance.cmd','control_presents':30,'target_rt_frames':90,'minimum_total_frames':150,'phase_frames':[30,30,30],'gpu_skin_limits':[80,0,0],'raster_survival_frames':60,'mode':'graphics_preset_Custom;TAAU_0.75;direct_light;secondary_bounces_off;RTXDI_off;ReSTIR_GI;global_vertex_capture_off;GPU80_then_frame_batch_control_then_persistent_same_handle_update;RT_off_resource_zero_then_raster_survival;no_image_readback;one_F9','scope':'Arc_persistent_mesh_update_and_lifecycle_validation'},
               'result_archive_policy':'runtime-textures_spool_excluded;64MiB_DDS_evidence_explicit_omissions;INCOMPLETE_recovery_ZIP_before_exit_wait;atomic_replace_same_ZIP_after_final_analysis;evidence_collection_and_test_acceptance_reported_separately',
               'pending_material_audit':{'shader':'Infected','samples_per_phase':24,'render_admission':'exact_VS_PS_declaration_rigid48_only'},
               'exit_review':'final_Bridge_log_exceptions_and_backend_cleanup_reported_separately_from_collection;known_40_object_Remix_warning_with_two_clean_Bridge_logs_is_pass_with_warning;exceptions_or_unverified_exit_fail',
@@ -156,9 +156,9 @@ def package(source,output,python_package):
               'world_ipc_producer_wait_ms':60000,'normal_ipc_producer_wait_ms':2000,
               'startup_raytracing':False,'rt_activation':'after_control_and_successful_world_scope_then_deferred_by_runtime',
               'build_commit':commit,'bridge_baseline':'1.3.2',
-              'build_id':build_id.decode(),'binaries':binaries,'runtime_dll_replaced':False,
+              'build_id':build_id.decode(),'binaries':binaries,'runtime_dll_replaced':True,
               'private_game_methods_called':False,'game_rt':'unrun','source_queue_execution':'unrun',
-              'source_parallel_preparation':'v43_four_Host_workers_packaged;actual_game_execution_unrun','performance':'unrun',
+              'source_parallel_preparation':'v44_four_Host_workers_plus_custom_runtime_persistent_mesh_export_packaged;actual_game_execution_unrun','performance':'unrun',
               'files':{name:{'sha256':sha(data),'size':len(data)} for name,data in entries.items()}}
     entries['draw-observer-manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()
     primary=output/'rt-world-pilot-dev.zip'

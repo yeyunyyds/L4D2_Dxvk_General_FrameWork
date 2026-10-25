@@ -467,7 +467,7 @@ assert result['execution']=='incomplete'
                         entries=0,pending_fences=0,held=0,submitted=3600,skinned_submitted=2400,skinned_created=80,skinned_reused=2320,
                         budget_omitted=0,frame_batch_flushes=60,frame_batch_source_draws=6000,frame_batch_submitted_source_draws=6000,
                         frame_batch_failures=0,frame_batch_worker_submitted=6000,frame_batch_worker_completed=6000,
-                        frame_batch_worker_failed=0,frame_batch_worker_threads=4,frame_batch_worker_max_active=4)]
+                        frame_batch_worker_failed=0,frame_batch_worker_threads=4,frame_batch_worker_max_active=4,persistent_mesh_updates=0)]
         (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         (directory/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in
             [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1'),
@@ -476,6 +476,20 @@ assert result['execution']=='incomplete'
         result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
         self.assertEqual(result['profile'],'arc_structural_frame_batch');self.assertEqual(result['frame_batch']['compression_ratio'],10)
         self.assertTrue(analyze_runtime(directory)['pass'])
+        events[0]['value']='44'
+        flushes=[e for e in events if e.get('event')=='frame_batch_flush']
+        for index,row in enumerate(flushes):
+            row['persistent_phase']=index>=30
+            row['persistent_created']=10 if index==30 else 0
+            row['persistent_updated']=10 if index>30 else 0
+        events[-1]['persistent_mesh_updates']=290
+        next(e for e in events if e.get('segment')=='frame_batch_steady')['segment']='persistent_batch_update'
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['profile'],'arc_persistent_mesh_update');self.assertTrue(analyze_runtime(directory)['pass'])
+        flushes[31]['persistent_created']=1;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        self.assertIn('performance_persistent_mesh_update',suite.review_performance(directory)['errors'])
+        self.assertIn('invalid_structural_frame_batch',analyze_runtime(directory)['errors']);flushes[31]['persistent_created']=0
         events[-1]['frame_batch_worker_completed']=5999;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         self.assertIn('performance_frame_batch_accounting',suite.review_performance(directory)['errors'])
         self.assertIn('invalid_structural_frame_batch',analyze_runtime(directory)['errors'])
