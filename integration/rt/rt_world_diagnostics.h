@@ -25,32 +25,31 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v39 restores the complete explicit model path that survived the v23 visual
-// pilot. The limits select persistent GPU-skinned submissions; every other
-// supported part uses an explicit CPU-pose mesh instead of global shader vertex
-// capture. Compare complete CPU, 8-GPU and 16-GPU loads for 30 frames each,
-// then retire every API mesh/fence and prove that ordinary Present survives.
-constexpr unsigned kGpuSkinPerformanceStaticFrames=30;
-constexpr unsigned kGpuSkinPerformanceEightFrames=30;
-constexpr unsigned kGpuSkinPerformanceSixteenFrames=30;
-constexpr unsigned kGpuSkinPerformanceRtFrames=kGpuSkinPerformanceStaticFrames+
-  kGpuSkinPerformanceEightFrames+kGpuSkinPerformanceSixteenFrames;
+// v40 keeps v39's visually complete explicit CPU-pose fallback while scaling
+// only the audited persistent GPU-skin path. v33 already completed 64 GPU-skin
+// submissions per frame after pose-slot isolation; 128 is the new bounded
+// canary. Each stage is short and all excess/unsupported parts remain visible.
+constexpr unsigned kGpuSkinPerformanceFirstFrames=30;
+constexpr unsigned kGpuSkinPerformanceSecondFrames=30;
+constexpr unsigned kGpuSkinPerformanceThirdFrames=30;
+constexpr unsigned kGpuSkinPerformanceRtFrames=kGpuSkinPerformanceFirstFrames+
+  kGpuSkinPerformanceSecondFrames+kGpuSkinPerformanceThirdFrames;
 constexpr unsigned kGpuSkinPerformanceRasterFrames=60;
 constexpr unsigned kGpuSkinPerformanceFrames=kGpuSkinPerformanceRtFrames+kGpuSkinPerformanceRasterFrames;
-constexpr unsigned kGpuSkinPerformanceLimit=16;
+constexpr unsigned kGpuSkinPerformanceLimit=128;
 inline int performanceGpuSkinPhase(uint64_t completedFrames) noexcept {
-  return completedFrames<kGpuSkinPerformanceStaticFrames?0:
-    completedFrames<kGpuSkinPerformanceStaticFrames+kGpuSkinPerformanceEightFrames?1:
+  return completedFrames<kGpuSkinPerformanceFirstFrames?0:
+    completedFrames<kGpuSkinPerformanceFirstFrames+kGpuSkinPerformanceSecondFrames?1:
     completedFrames<kGpuSkinPerformanceRtFrames?2:3;
 }
 inline unsigned performanceGpuSkinLimit(uint64_t completedFrames) noexcept {
-  return completedFrames<kGpuSkinPerformanceStaticFrames?0:
-    completedFrames<kGpuSkinPerformanceStaticFrames+kGpuSkinPerformanceEightFrames?8:
-    completedFrames<kGpuSkinPerformanceRtFrames?16:0;
+  return completedFrames<kGpuSkinPerformanceFirstFrames?16:
+    completedFrames<kGpuSkinPerformanceFirstFrames+kGpuSkinPerformanceSecondFrames?64:
+    completedFrames<kGpuSkinPerformanceRtFrames?128:0;
 }
 inline bool performanceGpuSkinReport(uint64_t completedFrames) noexcept {
-  return completedFrames==kGpuSkinPerformanceStaticFrames ||
-    completedFrames==kGpuSkinPerformanceStaticFrames+kGpuSkinPerformanceEightFrames ||
+  return completedFrames==kGpuSkinPerformanceFirstFrames ||
+    completedFrames==kGpuSkinPerformanceFirstFrames+kGpuSkinPerformanceSecondFrames ||
     completedFrames==kGpuSkinPerformanceRtFrames;
 }
 inline unsigned persistentGpuSkinLimit(unsigned previousModelDraws) noexcept {

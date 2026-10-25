@@ -324,7 +324,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
     if performance:
         performance_review=review_performance(directory);save(directory/'performance-analysis.json',performance_review)
-        report['performance']='arc_restir_hybrid_lifecycle_collected' if performance_review['pass'] else 'incomplete'
+        report['performance']='arc_restir_complete_scaling_collected' if performance_review['pass'] else 'incomplete'
         report['preview']='completed_performance_lifecycle' if performance_review['pass'] else 'incomplete'
         if not performance_review['pass']:report['errors'].extend(performance_review['errors']);report['collection']='incomplete'
     elif report.get('preview'):
@@ -339,7 +339,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
         report['result_scope']='five-minute complete-coverage gameplay beta; visual correctness and long-term stability still require review'
         return
     if performance:
-        report['result_scope']='Arc hybrid lifecycle validation: native vertex-capture fallback remains visible outside the 0/8/16 explicit GPU-skinned budget; successful explicit replacements alone hide their original Draw; complete RT resource retirement and 60 surviving raster Presents; visual completeness requires review'
+        report['result_scope']='Arc complete explicit-model scaling: GPU-skin limits 16/64/128 with CPU-pose fallback for every excess or unsupported part; global vertex capture disabled; complete RT resource retirement and 60 surviving raster Presents; visual completeness requires review'
         return
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
@@ -455,13 +455,13 @@ def review_performance(directory):
                 if native_fallback and remix_mode.get('vertex_capture_disabled_skip'):errors.append('native_vertex_capture_fallback_not_effective')
             elif not remix_mode['importance_sampled_activated'] or remix_mode['restir_gi_activated']:errors.append('effective_indirect_mode_not_importance_sampled')
     mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
-    expected=[0,8,16] if lifecycle else [32]*4 if stability else [16,32,48,64]
+    expected=([16,64,128] if revision>=40 else [0,8,16]) if lifecycle else [32]*4 if stability else [16,32,48,64]
     if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(len(expected))) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
         errors.append('performance_phase_sequence')
     elif any(not isinstance(e.get('skinned_frame_submitted'),int) or not 0<=e['skinned_frame_submitted']<=e['skinned_frame_limit'] or
              not isinstance(e.get('skinned_frame_unique_meshes'),int) or not isinstance(e.get('skinned_frame_repeat_draws'),int) or
              e['skinned_frame_unique_meshes']!=e['skinned_frame_submitted'] or e['skinned_frame_repeat_draws']!=0 or
-             e.get('skinned_frame_max')!=(16 if lifecycle else 32 if stability else e.get('skinned_frame_max')) or
+             e.get('skinned_frame_max')!=((128 if revision>=40 else 16) if lifecycle else 32 if stability else e.get('skinned_frame_max')) or
              not isinstance(e.get('preview_submitted'),int) or
              (e['preview_submitted']!=e.get('preview_skinned_submitted') if not complete_fallback else
               not all(isinstance(e.get(k),int) and e[k]>=0 for k in ('preview_cpu_pose_submitted','preview_cpu_pose_created','preview_cpu_pose_reused')) or
@@ -479,7 +479,8 @@ def review_performance(directory):
         try:gpu_rows=[json.loads(line) for line in gpu_file.read_text(encoding='utf-8').splitlines() if line.strip()]
         except json.JSONDecodeError:gpu_rows=[]
     phase_frames=([30,30,30] if complete_fallback else [30,60,120]) if lifecycle else [30]*len(expected)
-    lifecycle_names=['gpu_lifecycle_cpu_complete' if complete_fallback else 'gpu_lifecycle_native_fallback' if native_fallback else 'gpu_lifecycle_static','gpu_lifecycle_8','gpu_lifecycle_16']
+    lifecycle_names=(['gpu_lifecycle_16','gpu_lifecycle_64','gpu_lifecycle_128'] if revision>=40 else
+                     ['gpu_lifecycle_cpu_complete' if complete_fallback else 'gpu_lifecycle_native_fallback' if native_fallback else 'gpu_lifecycle_static','gpu_lifecycle_8','gpu_lifecycle_16'])
     for index,limit in enumerate(expected):
         name=lifecycle_names[index] if lifecycle else 'gpu_stability_'+str(index+1) if stability else 'gpu_ramp_'+str(limit)
         timing_name=name if stability or lifecycle else ('gpu_ramp_64' if limit==48 else 'gpu_ramp_128' if limit==64 else name) if legacy_timing else name
@@ -491,7 +492,8 @@ def review_performance(directory):
         created_delta=current.get('preview_skinned_created',0)-previous.get('preview_skinned_created',0)
         reused_delta=current.get('preview_skinned_reused',0)-previous.get('preview_skinned_reused',0)
         cpu_pose_delta=(evidence.get('preview_submitted',0)-evidence.get('preview_skinned_submitted',0))-(previous.get('preview_submitted',0)-previous.get('preview_skinned_submitted',0))
-        if (index==0 and lifecycle and (submitted_delta!=0 or created_delta!=0 or reused_delta!=0)) or (not (index==0 and lifecycle) and submitted_delta<=0) or created_delta+reused_delta!=submitted_delta:errors.append('performance_gpu_skin_not_exercised:'+name)
+        zero_baseline=index==0 and lifecycle and revision<40
+        if (zero_baseline and (submitted_delta!=0 or created_delta!=0 or reused_delta!=0)) or (not zero_baseline and submitted_delta<=0) or created_delta+reused_delta!=submitted_delta:errors.append('performance_gpu_skin_not_exercised:'+name)
         if complete_fallback and cpu_pose_delta<=0:errors.append('performance_cpu_pose_fallback_not_exercised:'+name)
         phase={'gpu_skin_limit':limit,'frames':phase_frames[index],'wall_ms':wall,'fps':phase_frames[index]*1000/wall,
                        'skinned_frame_submitted':evidence.get('skinned_frame_submitted',0),
@@ -539,7 +541,7 @@ def review_performance(directory):
     return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_restir_complete_lifecycle' if lifecycle and complete_fallback else 'arc_restir_hybrid_lifecycle' if lifecycle and native_fallback else 'arc_restir_lifecycle' if lifecycle else 'arc_direct_custom_stability' if custom_profile else 'arc_direct_stability' if stability else 'legacy_gpu_skin_ramp','phases':phases,'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
             'effective_indirect_mode':remix_mode if custom_profile else {'status':'not_enforced_before_v36'},
             'raster_survival':{'frames':ends[-1].get('raster_survival_frames',0) if ends else 0,'timing':raster_window},
-            'end':ends[-1] if ends else None,'limits':'v39 disables global vertex capture and restores explicit CPU-pose meshes for all accepted parts outside the 0/8/16 persistent GPU-skin budget. Each complete scene runs for 30 frames before resource retirement and raster recovery; visible completeness still requires user review.' if lifecycle and complete_fallback else 'v38 keeps native vertex-captured programmable draws for unsupported and over-budget parts, and applies Remix Ignore only after an explicit replacement succeeds. The 0/8/16 explicit-instance lifecycle and raster recovery checks remain; visible completeness still requires user review.' if lifecycle and native_fallback else 'v37 uses explicit ReSTIR GI, measures 30 static RT frames, 60 frames at 8 and 120 frames at 16 GPU-skinned meshes, then requires all RT resources to retire and 60 ordinary Presents to survive. A pass is lifecycle evidence, not image acceptance.' if lifecycle else 'v36 uses the v35 fixed-32 stability load, forces the Custom preset so Arc cannot replace importance-sampled indirect mode with ReSTIR GI, and records Host device-thread plus per-process CPU time. Performance mode omits unsupported/excess CPU-pose models; image completeness is not evaluated.' if custom_profile else 'v35 uses an 8-frame staged warm-up followed by four fixed-32 30-frame windows under a fixed direct-light TAAU profile. Performance mode omits unsupported/excess CPU-pose models, so image completeness is not evaluated. GPU PDH counters remain separate per engine.' if stability else 'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
+            'end':ends[-1] if ends else None,'limits':'v40 keeps complete explicit CPU-pose fallback while scaling audited persistent GPU skinning through 16/64/128 submissions per frame. Each scene runs for 30 frames before resource retirement and raster recovery; visible completeness still requires user review.' if lifecycle and revision>=40 else 'v39 disables global vertex capture and restores explicit CPU-pose meshes for all accepted parts outside the 0/8/16 persistent GPU-skin budget. Each complete scene runs for 30 frames before resource retirement and raster recovery; visible completeness still requires user review.' if lifecycle and complete_fallback else 'v38 keeps native vertex-captured programmable draws for unsupported and over-budget parts, and applies Remix Ignore only after an explicit replacement succeeds. The 0/8/16 explicit-instance lifecycle and raster recovery checks remain; visible completeness still requires user review.' if lifecycle and native_fallback else 'v37 uses explicit ReSTIR GI, measures 30 static RT frames, 60 frames at 8 and 120 frames at 16 GPU-skinned meshes, then requires all RT resources to retire and 60 ordinary Presents to survive. A pass is lifecycle evidence, not image acceptance.' if lifecycle else 'v36 uses the v35 fixed-32 stability load, forces the Custom preset so Arc cannot replace importance-sampled indirect mode with ReSTIR GI, and records Host device-thread plus per-process CPU time. Performance mode omits unsupported/excess CPU-pose models; image completeness is not evaluated.' if custom_profile else 'v35 uses an 8-frame staged warm-up followed by four fixed-32 30-frame windows under a fixed direct-light TAAU profile. Performance mode omits unsupported/excess CPU-pose models, so image completeness is not evaluated. GPU PDH counters remain separate per engine.' if stability else 'Sequential phases share a changing scene and are directional, not matched A/B. Performance mode omits unsupported/excess CPU-pose models from explicit RT, so image completeness is not evaluated. GPU PDH counters remain separate per engine.'}
 
 def startup_modules(directory,pid,notify):
     """Retain bounded module lists even if no F9 trace ever starts."""
@@ -618,7 +620,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v39: one complete explicit-model run. Global vertex capture is disabled. All accepted parts use explicit meshes; the 0, 8 and 16 limits only choose how many parts use persistent GPU skinning while the rest use CPU-pose meshes. Each RT phase lasts 30 frames, followed by resource retirement and 60 raster Presents. Keep characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v40: one complete explicit-model run. Global vertex capture is disabled. All accepted parts remain visible through explicit meshes while persistent GPU skinning scales through 16, 64 and 128 submissions per frame. Each RT phase lasts 30 frames, followed by resource retirement and 60 raster Presents. Keep characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

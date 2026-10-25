@@ -13,6 +13,8 @@ import time
 
 GPU_PATH=r'\GPU Engine(*)\Utilization Percentage'
 MORE_DATA=0x800007D2
+NO_DATA=0x800007D5
+INVALID_DATA=0xC0000BBA
 PROCESS_QUERY_LIMITED_INFORMATION=0x1000
 
 def select_rows(rows,pids):
@@ -77,20 +79,28 @@ class PdhQuery:
         self.check(self.api.PdhOpenQueryW(None,0,ctypes.byref(self.query)))
         try:
             self.check(self.api.PdhAddEnglishCounterW(self.query,GPU_PATH,0,ctypes.byref(self.counter)))
-            self.check(self.api.PdhCollectQueryData(self.query))
+            collected=self.api.PdhCollectQueryData(self.query)
+            if not self.transient(collected):self.check(collected)
         except Exception:self.close();raise
     @staticmethod
     def check(code):
         if code:raise OSError(f'PDH status 0x{code&0xffffffff:08x}')
+    @staticmethod
+    def transient(code):return code&0xffffffff in (NO_DATA,INVALID_DATA)
     def sample(self):
         from ctypes import wintypes as wt
-        self.check(self.api.PdhCollectQueryData(self.query));size=wt.DWORD();count=wt.DWORD()
+        collected=self.api.PdhCollectQueryData(self.query)
+        if self.transient(collected):return []
+        self.check(collected);size=wt.DWORD();count=wt.DWORD()
         status=self.api.PdhGetFormattedCounterArrayW(self.counter,0x200,ctypes.byref(size),ctypes.byref(count),None)
+        if self.transient(status):return []
         if status&0xffffffff!=MORE_DATA:self.check(status)
         if not size.value:return []
         if size.value>4*1024*1024:raise OSError('PDH counter array exceeds 4MiB')
         memory=ctypes.create_string_buffer(size.value)
-        self.check(self.api.PdhGetFormattedCounterArrayW(self.counter,0x200,ctypes.byref(size),ctypes.byref(count),memory))
+        status=self.api.PdhGetFormattedCounterArrayW(self.counter,0x200,ctypes.byref(size),ctypes.byref(count),memory)
+        if self.transient(status):return []
+        self.check(status)
         if count.value>size.value//ctypes.sizeof(self.Item):raise OSError('PDH counter count exceeds allocation')
         items=ctypes.cast(memory,ctypes.POINTER(self.Item))
         return [(items[i].name or '',items[i].formatted.CStatus,items[i].formatted.value.doubleValue) for i in range(count.value)]

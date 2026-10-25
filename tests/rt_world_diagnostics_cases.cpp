@@ -12,8 +12,8 @@ int main() {
     require(allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame-1)&&
       !allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame)&&
       !allowPersistentGpuSkin(1,kGpuSkinSubmissionsPerFrame),"adaptive GPU skin density or submission bound exceeded");
-    require(performanceGpuSkinLimit(0)==0&&performanceGpuSkinLimit(29)==0&&performanceGpuSkinLimit(30)==8&&
-      performanceGpuSkinLimit(59)==8&&performanceGpuSkinLimit(60)==16&&performanceGpuSkinLimit(89)==16&&
+    require(performanceGpuSkinLimit(0)==16&&performanceGpuSkinLimit(29)==16&&performanceGpuSkinLimit(30)==64&&
+      performanceGpuSkinLimit(59)==64&&performanceGpuSkinLimit(60)==128&&performanceGpuSkinLimit(89)==128&&
       performanceGpuSkinLimit(90)==0&&performanceGpuSkinLimit(999)==0,
       "GPU performance lifecycle limits differ");
     require(performanceGpuSkinPhase(29)==0&&performanceGpuSkinPhase(30)==1&&performanceGpuSkinPhase(59)==1&&
