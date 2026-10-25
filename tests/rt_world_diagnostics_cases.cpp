@@ -12,10 +12,13 @@ int main() {
     require(allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame-1)&&
       !allowPersistentGpuSkin(kGpuSkinModelDensityLimit+1,kGpuSkinHighDensitySubmissionsPerFrame)&&
       !allowPersistentGpuSkin(1,kGpuSkinSubmissionsPerFrame),"adaptive GPU skin density or submission bound exceeded");
-    require(performanceGpuSkinLimit(0)==64&&performanceGpuSkinLimit(29)==64&&performanceGpuSkinLimit(30)==80&&
-      performanceGpuSkinLimit(59)==80&&performanceGpuSkinLimit(60)==96&&performanceGpuSkinLimit(89)==96&&
+    require(performanceGpuSkinLimit(0)==80&&performanceGpuSkinLimit(29)==80&&performanceGpuSkinLimit(30)==0&&
+      performanceGpuSkinLimit(59)==0&&performanceGpuSkinLimit(60)==0&&performanceGpuSkinLimit(89)==0&&
       performanceGpuSkinLimit(90)==0&&performanceGpuSkinLimit(999)==0,
       "GPU performance lifecycle limits differ");
+    require(!performanceFrameBatch(29)&&performanceFrameBatch(30)&&performanceFrameBatch(59)&&
+      performanceFrameBatch(60)&&performanceFrameBatch(89)&&!performanceFrameBatch(90),
+      "CPU worker frame-batch window differs");
     require(performanceGpuSkinPhase(29)==0&&performanceGpuSkinPhase(30)==1&&performanceGpuSkinPhase(59)==1&&
       performanceGpuSkinPhase(60)==2&&performanceGpuSkinPhase(89)==2&&performanceGpuSkinPhase(90)==3,
       "GPU performance lifecycle phase differs");
