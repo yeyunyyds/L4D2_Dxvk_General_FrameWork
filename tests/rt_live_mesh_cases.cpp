@@ -1,7 +1,7 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #define REMIX_WINAPI_NO_LIBRARY_LOADER
-#include "rt_live_mesh.h"
+#include "rt_model_batch.h"
 #include <iostream>
 #include <set>
 #include <thread>
@@ -241,6 +241,27 @@ int main() {
     fixture::fail=0;fixture::failureCode=1;require(!apiFailure.retire(20,22,true),"real API failure cleanup");
   }
   std::cout<<"RT live mesh >128 draws/budget omission/early retirement/backlog: PASS\n";
+  {
+    auto input=fixture::source();live_mesh::Geometry sourceGeometry;
+    require(live_mesh::build(input,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,sourceGeometry),"batch source geometry");
+    auto result=[&](float x) {
+      model_batch::Result value;value.success=true;value.geometry=sourceGeometry;value.cull=D3DCULL_NONE;
+      value.world={1,0,0,0,0,1,0,0,0,0,1,0,x,0,0,1};value.material.key="shared";return value;
+    };
+    std::vector<model_batch::Result> parts;parts.push_back(result(0));parts.push_back(result(0));parts.push_back(result(10));
+    auto assembled=model_batch::assemble(std::move(parts));
+    require(assembled.sourceDraws==3&&assembled.sourceVertices==12&&assembled.sourceIndices==18&&assembled.batches.size()==2,
+      "frame batch did not group exact material/transform classes");
+    const auto grouped=std::find_if(assembled.batches.begin(),assembled.batches.end(),[](const auto& batch) { return batch.sourceDraws==2; });
+    require(grouped!=assembled.batches.end()&&grouped->geometry.vertices.size()==8&&grouped->geometry.indices.size()==12&&
+      grouped->geometry.indices[6]>=4,"frame batch did not rebase merged indices");
+    auto batchApi=fixture::table();live_mesh::Scene batched(&batchApi);const auto before=fixture::created;
+    auto submission=batched.drawBatch(grouped->geometry,grouped->world,grouped->cull,grouped->variant,70,0,grouped->material,69);
+    require(submission.success&&submission.created&&fixture::created==before+1&&batched.submitted==1&&batched.frameDraws==1,
+      "combined Source draws were not one Remix mesh/instance");
+    require(!batched.retire(70,72,true),"frame batch cleanup");
+    std::cout<<"RT frame batch exact-key grouping/index rebasing/one API mesh: PASS\n";
+  }
   require(fixture::live.empty()&&fixture::materialLive.empty(),"fixture left live meshes or materials");
   std::cout<<"RT live mesh CPU pose update/cache/material/fence-gated lifetime/API failures: PASS; actual GPU/game unrun\n";return 0;
  }catch(const std::exception& e) { std::cerr<<e.what()<<'\n';return 1; }

@@ -245,6 +245,68 @@ public:
       if(frameSkinnedKeys.insert(result.key).second) { ++frameSkinnedUniqueMeshes; }else { ++frameSkinnedRepeatDraws; }
     }++frameDraws;result.success=true;return result;
   }
+  // A frame batch is already canonical triangle-list geometry. Unlike draw(),
+  // it represents many Source surfaces that share one material, transform and
+  // raster class. The API still copies the arrays synchronously, but the Host
+  // registers one RT geometry instead of one mesh for every Source Draw.
+  Submission drawBatch(const Geometry& geometry,const std::array<float,16>& world,DWORD cull,Material variant,
+      uint64_t at,size_t pending=0,const model_texture::Source& sourceMaterial={},uint64_t completed=0) {
+    Submission result;
+    if(!api||!api->CreateMaterial||!api->DestroyMaterial||!api->CreateMesh||!api->DrawInstance||
+       unsigned(variant)>=unsigned(Material::Count)||geometry.vertices.empty()||geometry.indices.empty()||
+       geometry.indices.size()%3||geometry.bonesPerVertex||!bulk_static::affine(world)||
+       (cull!=D3DCULL_NONE&&cull!=D3DCULL_CW&&cull!=D3DCULL_CCW)) { result.code=ERROR_INVALID_DATA;return result; }
+    frameAt(at);
+    if(pending>=8) { return defer(Budget::GpuBacklog,at); }
+    if(frameDraws>=limits.draws) { return defer(Budget::Draws,at); }
+    const auto cost=geometry.bytes();
+    if(cost>limits.frameBytes-frameBytes) { return defer(Budget::FrameBytes,at); }
+    if(cost>limits.bytes-bytes) { return defer(Budget::LiveBytes,at); }
+    if(meshes.size()>=limits.entries) { return defer(Budget::Entries,at); }
+    const auto materialKey=sourceMaterial.key;
+    auto materialFound=materials.find(materialKey);
+    if(materialFound==materials.end()) {
+      if(materials.size()>=512) { return defer(Budget::Entries,at); }
+      MaterialRecord record;record.hash=0x4c444d4100000000ull+nextMaterial++;
+      materialFound=materials.emplace(materialKey,record).first;
+    }
+    auto& material=materialFound->second;
+    if(material.handle&&material.variant!=variant&&material.last>completed) { return defer(Budget::GpuBacklog,at); }
+    if(!material.handle||material.variant!=variant) {
+      runtime_profile::Scope timing(runtime_profile::Stage::Material);
+      if(material.handle) {
+        result.operation="destroy_material_for_batch_update";result.code=uint32_t(api->DestroyMaterial(material.handle));
+        if(result.code) { return result; }material.handle=nullptr;
+      }
+      auto ext=opaque(variant);ext.albedoConstant=sourceMaterial.textured()?remixapi_Float3D{1,1,1}:remixapi_Float3D{0.55f,0.55f,0.55f};
+      if(sourceMaterial.alphaBlend) { ext.blendType_hasvalue=TRUE;ext.blendType_value=0;ext.opacityConstant=1; }
+      ext.alphaTestType=sourceMaterial.alphaTest;ext.alphaReferenceValue=sourceMaterial.alphaRef;
+      remixapi_MaterialInfo info{};info.sType=REMIXAPI_STRUCT_TYPE_MATERIAL_INFO;info.pNext=&ext;info.hash=material.hash;
+      info.albedoTexture=sourceMaterial.textured()?sourceMaterial.path.c_str():nullptr;
+      info.filterMode=sourceMaterial.filter;info.wrapModeU=sourceMaterial.wrapU;info.wrapModeV=sourceMaterial.wrapV;
+      if(variant==Material::Emissive) { info.emissiveIntensity=3;info.emissiveColorConstant={0.8f,0.2f,0.05f}; }
+      result.operation="create_batch_material";result.code=uint32_t(api->CreateMaterial(&info,&material.handle));
+      if(result.code||!material.handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
+      material.variant=variant;++materialUpdates;result.materialUpdated=true;
+    }
+    result.materialHandle=material.hash;result.textured=sourceMaterial.textured();
+    remixapi_MeshInfoSurfaceTriangles surface{};surface.vertices_values=geometry.vertices.data();surface.vertices_count=geometry.vertices.size();
+    surface.indices_values=geometry.indices.data();surface.indices_count=geometry.indices.size();surface.material=material.handle;
+    remixapi_MeshInfo mesh{};mesh.sType=REMIXAPI_STRUCT_TYPE_MESH_INFO;mesh.hash=0x4c444d5300000000ull+next++;
+    mesh.surfaces_values=&surface;mesh.surfaces_count=1;remixapi_MeshHandle handle=nullptr;
+    { runtime_profile::Scope timing(runtime_profile::Stage::MeshCreate);
+      result.operation="create_batch_mesh";result.code=uint32_t(api->CreateMesh(&mesh,&handle)); }
+    if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
+    const auto key="frame-batch-"+std::to_string(at)+"-"+std::to_string(frameDraws);
+    auto found=meshes.emplace(key,Record{handle,at,cost,materialKey}).first;
+    bytes+=cost;peakBytes=(std::max)(peakBytes,bytes);frameBytes+=cost;++created;result.created=true;result.key=key;
+    result.handle=reinterpret_cast<uint64_t>(handle);result.triangles=geometry.indices.size()/3;
+    remixapi_InstanceInfo instance{};instance.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO;instance.mesh=handle;instance.doubleSided=cull==D3DCULL_NONE;
+    for(unsigned row=0;row<3;++row) { for(unsigned col=0;col<4;++col) { instance.transform.matrix[row][col]=world[col*4+row]; } }
+    result.operation="draw_batch_instance";{ runtime_profile::Scope timing(runtime_profile::Stage::Instance);result.code=uint32_t(api->DrawInstance(&instance)); }
+    if(result.code) { return result; }
+    material.last=at;found->second.last=at;++submitted;++frameDraws;result.success=true;return result;
+  }
   uint32_t retire(uint64_t completed,uint64_t now,bool all=false) {
     runtime_profile::Scope timing(runtime_profile::Stage::Retire);
     for(auto it=meshes.begin();it!=meshes.end();) {

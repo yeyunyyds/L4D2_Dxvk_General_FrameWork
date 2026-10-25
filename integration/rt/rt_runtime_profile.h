@@ -6,11 +6,14 @@
 // Host elapsed scopes include blocking; nested scopes must not be summed.
 // These are not GPU duration queries or process CPU utilization counters.
 namespace ldb_rt::runtime_profile {
-enum class Stage : unsigned { Draw,Metadata,Static,Model,Prepare,SourceGeometry,Skin,Texture,TextureRead,TexturePersist,InfectedBake,Hash,GeometryBuild,Material,MeshCreate,Instance,Retire,OriginalDraw,Readback,Scene,Trace,Present,Count };
-inline constexpr const char* names[]={"draw","metadata","static","model","prepare","source_geometry","skin","texture","texture_read","texture_persist","infected_bake","hash","geometry_build","material","mesh_create","instance","retire","original_draw","readback","scene","trace","present"};
+enum class Stage : unsigned { Draw,Metadata,Static,Model,Prepare,SourceGeometry,Skin,Texture,TextureRead,TexturePersist,InfectedBake,Hash,GeometryBuild,Material,MeshCreate,Instance,Retire,OriginalDraw,Readback,Scene,Trace,BatchWait,BatchAssemble,BatchSubmit,Present,Count };
+inline constexpr const char* names[]={"draw","metadata","static","model","prepare","source_geometry","skin","texture","texture_read","texture_persist","infected_bake","hash","geometry_build","material","mesh_create","instance","retire","original_draw","readback","scene","trace","batch_wait","batch_assemble","batch_submit","present"};
 struct Counter { uint64_t calls=0,ticks=0,maximum=0; };
 struct Window { bool enabled=false,threadTimes=false;uint64_t start=0,frequency=0,first=0,threadKernel=0,threadUser=0;std::array<Counter,unsigned(Stage::Count)> values{}; };
-inline Window& window() { static Window w;return w; }
+// Worker-side model reconstruction uses the same Scope helpers as the device
+// thread. Keep each thread's counters independent: only the device thread
+// resets/emits its timing window, while worker cost is reported by Pool.
+inline Window& window() { thread_local static Window w;return w; }
 inline uint64_t clock() noexcept { LARGE_INTEGER t{};QueryPerformanceCounter(&t);return uint64_t(t.QuadPart); }
 inline uint64_t fileTime(const FILETIME& t) noexcept { return (uint64_t(t.dwHighDateTime)<<32)|t.dwLowDateTime; }
 inline bool threadTimes(uint64_t& kernel,uint64_t& user) noexcept {

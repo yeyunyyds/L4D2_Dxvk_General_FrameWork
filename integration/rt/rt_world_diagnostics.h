@@ -25,10 +25,11 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v42 retains v41's complete optimized CPU-pose fallback. That run improved
-// steady throughput by about 70% and left GPU-64 near 42% median 3D use. Probe
-// 64, 80 and 96 to locate the new balance while staying below the v40 GPU-128
-// saturation point. Excess and unsupported parts remain visible on the CPU path.
+// v43 keeps one 30-frame GPU-80 explicit oracle, then runs two 30-frame
+// windows through the CPU-worker frame batcher. v42 proved that raising the
+// per-surface GPU limit from80 to96 reduces throughput, so no further ramp is
+// useful. The batch windows retain complete CPU-pose output while changing the
+// unit submitted to Remix from Source surface Draws to material/transform chunks.
 constexpr unsigned kGpuSkinPerformanceFirstFrames=30;
 constexpr unsigned kGpuSkinPerformanceSecondFrames=30;
 constexpr unsigned kGpuSkinPerformanceThirdFrames=30;
@@ -36,16 +37,17 @@ constexpr unsigned kGpuSkinPerformanceRtFrames=kGpuSkinPerformanceFirstFrames+
   kGpuSkinPerformanceSecondFrames+kGpuSkinPerformanceThirdFrames;
 constexpr unsigned kGpuSkinPerformanceRasterFrames=60;
 constexpr unsigned kGpuSkinPerformanceFrames=kGpuSkinPerformanceRtFrames+kGpuSkinPerformanceRasterFrames;
-constexpr unsigned kGpuSkinPerformanceLimit=96;
+constexpr unsigned kGpuSkinPerformanceLimit=80;
 inline int performanceGpuSkinPhase(uint64_t completedFrames) noexcept {
   return completedFrames<kGpuSkinPerformanceFirstFrames?0:
     completedFrames<kGpuSkinPerformanceFirstFrames+kGpuSkinPerformanceSecondFrames?1:
     completedFrames<kGpuSkinPerformanceRtFrames?2:3;
 }
 inline unsigned performanceGpuSkinLimit(uint64_t completedFrames) noexcept {
-  return completedFrames<kGpuSkinPerformanceFirstFrames?64:
-    completedFrames<kGpuSkinPerformanceFirstFrames+kGpuSkinPerformanceSecondFrames?80:
-    completedFrames<kGpuSkinPerformanceRtFrames?96:0;
+  return completedFrames<kGpuSkinPerformanceFirstFrames?80:0;
+}
+inline bool performanceFrameBatch(uint64_t completedFrames) noexcept {
+  return completedFrames>=kGpuSkinPerformanceFirstFrames&&completedFrames<kGpuSkinPerformanceRtFrames;
 }
 inline bool performanceGpuSkinReport(uint64_t completedFrames) noexcept {
   return completedFrames==kGpuSkinPerformanceFirstFrames ||

@@ -324,7 +324,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
     if performance:
         performance_review=review_performance(directory);save(directory/'performance-analysis.json',performance_review)
-        report['performance']='arc_restir_optimized_gpu_skin_balance_collected' if performance_review['pass'] else 'incomplete'
+        report['performance']='arc_structural_frame_batch_collected' if performance_review['pass'] else 'incomplete'
         report['preview']='completed_performance_lifecycle' if performance_review['pass'] else 'incomplete'
         if not performance_review['pass']:report['errors'].extend(performance_review['errors']);report['collection']='incomplete'
     elif report.get('preview'):
@@ -413,12 +413,13 @@ def review_performance(directory):
     custom_profile=revision>=36
     native_fallback=revision==38
     complete_fallback=revision>=39
+    structural_batch=revision>=43
     ends=[e for e in events if e.get('event')=='preview_end']
     minimum_frames=(150 if complete_fallback else 270) if lifecycle else 128 if stability else 120
     if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<minimum_frames or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
-    elif complete_fallback:
+    elif complete_fallback and not structural_batch:
         if ends[0].get('cpu_pose_submitted',0)<=0 or ends[0].get('cpu_pose_created',-1)+ends[0].get('cpu_pose_reused',-1)!=ends[0].get('cpu_pose_submitted') or ends[0].get('submitted')!=ends[0].get('skinned_submitted',0)+ends[0].get('cpu_pose_submitted',0) or ends[0].get('budget_omitted')!=0:errors.append('performance_complete_cpu_pose_fallback')
-    elif ends[0].get('submitted')!=ends[0].get('skinned_submitted'):errors.append('performance_cpu_pose_submission')
+    elif not complete_fallback and ends[0].get('submitted')!=ends[0].get('skinned_submitted'):errors.append('performance_cpu_pose_submission')
     if lifecycle:
         recovery=[e for e in events if e.get('event')=='performance_resources_recovered' and e.get('code')==0]
         raster=[e for e in events if e.get('event')=='performance_raster_survival_complete' and e.get('code')==0]
@@ -454,6 +455,78 @@ def review_performance(directory):
                 if not remix_mode['restir_gi_activated'] or remix_mode['importance_sampled_activated']:errors.append('effective_indirect_mode_not_restir_gi')
                 if native_fallback and remix_mode.get('vertex_capture_disabled_skip'):errors.append('native_vertex_capture_fallback_not_effective')
             elif not remix_mode['importance_sampled_activated'] or remix_mode['restir_gi_activated']:errors.append('effective_indirect_mode_not_importance_sampled')
+    if structural_batch:
+        mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
+        if [e.get('gpu_skin_performance_phase') for e in mesh]!=[0,1,2] or [e.get('skinned_frame_limit') for e in mesh]!=[80,0,0]:
+            errors.append('performance_phase_sequence')
+        elif (mesh[0].get('skinned_frame_max')!=80 or not isinstance(mesh[0].get('skinned_frame_submitted'),int) or
+              not 0<mesh[0]['skinned_frame_submitted']<=80 or mesh[0].get('skinned_frame_unique_meshes')!=mesh[0]['skinned_frame_submitted'] or
+              mesh[0].get('skinned_frame_repeat_draws')!=0 or any(e.get('skinned_frame_max')!=80 or e.get('skinned_frame_submitted')!=0 for e in mesh[1:])):
+            errors.append('performance_explicit_oracle_not_exercised')
+        flushes=[e for e in events if e.get('event')=='frame_batch_flush']
+        valid_flushes=len(flushes)==60 and all(
+            all(isinstance(e.get(k),int) and e[k]>=0 for k in ('source_draws','source_vertices','source_indices','batches','submitted_source_draws','worker_submitted','worker_completed','worker_failed','worker_threads','worker_max_active')) and
+            e['source_draws']>0 and e['source_vertices']>0 and e['source_indices']>0 and e['batches']>0 and
+            e['submitted_source_draws']==e['source_draws'] and e['worker_failed']==0 and e['worker_threads']==4 and
+            isinstance(e.get('worker_cpu_elapsed_ms'),(int,float)) and math.isfinite(e['worker_cpu_elapsed_ms']) and e['worker_cpu_elapsed_ms']>=0
+            for e in flushes)
+        if not valid_flushes:errors.append('performance_frame_batch_evidence')
+        total_source=sum(e.get('source_draws',0) for e in flushes);total_batches=sum(e.get('batches',0) for e in flushes)
+        end=ends[0] if len(ends)==1 else {}
+        if (not valid_flushes or total_batches>=total_source or max((e.get('worker_max_active',0) for e in flushes),default=0)<2 or
+            end.get('frame_batch_flushes')!=60 or end.get('frame_batch_source_draws')!=total_source or
+            end.get('frame_batch_submitted_source_draws')!=total_source or end.get('frame_batch_failures')!=0 or
+            end.get('frame_batch_worker_submitted')!=total_source or end.get('frame_batch_worker_completed')!=total_source or
+            end.get('frame_batch_worker_failed')!=0 or end.get('frame_batch_worker_threads')!=4 or end.get('frame_batch_worker_max_active',0)<2):
+            errors.append('performance_frame_batch_accounting')
+        windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'}
+        gpu_rows=[];gpu_file=directory/'gpu-engine-samples.jsonl'
+        if gpu_file.is_file() and gpu_file.stat().st_size<=32*1024*1024:
+            try:gpu_rows=[json.loads(line) for line in gpu_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+            except json.JSONDecodeError:gpu_rows=[]
+        names=('explicit_oracle_80','frame_batch_warm','frame_batch_steady');phases=[]
+        prior_submitted=0
+        for index,name in enumerate(names):
+            row=windows.get(name);wall=row.get('wall_ms',0) if row else 0
+            if not isinstance(wall,(int,float)) or not math.isfinite(wall) or wall<=0:
+                errors.append('performance_timing:'+name);continue
+            evidence=mesh[index] if len(mesh)>index else {};submitted=evidence.get('preview_submitted',-1)
+            if not isinstance(submitted,int) or submitted<prior_submitted:errors.append('performance_batch_api_accounting:'+name);submitted=prior_submitted
+            api_delta=submitted-prior_submitted
+            phase_flushes=[] if index==0 else flushes[:30] if index==1 else flushes[30:]
+            phase_source=sum(e.get('source_draws',0) for e in phase_flushes);phase_batches=sum(e.get('batches',0) for e in phase_flushes)
+            if index and api_delta!=phase_batches:errors.append('performance_batch_api_accounting:'+name)
+            phase={'name':name,'gpu_skin_limit':80 if index==0 else 0,'frames':30,'wall_ms':wall,'fps':30000/wall,
+                   'api_mesh_submitted_delta':api_delta,'source_draws':phase_source,'api_batches':phase_batches,
+                   'batch_compression_ratio':phase_source/phase_batches if phase_batches else None,
+                   'model_ms':row.get('scopes',{}).get('model',{}).get('elapsed_ms',0),
+                   'capture_ms':row.get('scopes',{}).get('prepare',{}).get('elapsed_ms',0),
+                   'batch_wait_ms':row.get('scopes',{}).get('batch_wait',{}).get('elapsed_ms',0),
+                   'batch_assemble_ms':row.get('scopes',{}).get('batch_assemble',{}).get('elapsed_ms',0),
+                   'batch_submit_ms':row.get('scopes',{}).get('batch_submit',{}).get('elapsed_ms',0)}
+            thread_cpu=row.get('thread_cpu_ms');
+            if row.get('thread_times_available') is not True or not isinstance(thread_cpu,(int,float)) or not math.isfinite(thread_cpu) or not 0<=thread_cpu<=wall+1:
+                errors.append('performance_thread_cpu_timing:'+name)
+            else:phase['host_device_thread_cpu_ms']=thread_cpu;phase['host_device_thread_non_cpu_ms']=max(0,wall-thread_cpu)
+            if isinstance(row.get('utc_filetime_100ns'),int):
+                end_ns=(row['utc_filetime_100ns']-116444736000000000)*100;start_ns=end_ns-int(wall*1000000);values=[]
+                for sample in gpu_rows:
+                    if start_ns<=sample.get('unix_ns',0)<=end_ns:
+                        engines=[e.get('percent',0) for e in sample.get('engines',[]) if e.get('instance','').endswith('engtype_3D') and isinstance(e.get('percent'),(int,float)) and math.isfinite(e['percent'])]
+                        if engines:values.append(max(engines))
+                if values:
+                    ordered=sorted(values);phase['gpu_3d_engine']={'samples':len(values),'average_percent':sum(values)/len(values),'p50_percent':ordered[len(ordered)//2],'p95_percent':ordered[int((len(ordered)-1)*.95)],'max_percent':max(values)}
+            phases.append(phase);prior_submitted=submitted
+        raster_window=windows.get('gpu_lifecycle_raster')
+        if not raster_window or not isinstance(raster_window.get('wall_ms'),(int,float)) or not math.isfinite(raster_window['wall_ms']) or raster_window['wall_ms']<=0:errors.append('performance_raster_timing')
+        best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
+        return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_structural_frame_batch','phases':phases,
+                'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
+                'frame_batch':{'flushes':len(flushes),'source_draws':total_source,'api_batches':total_batches,
+                               'compression_ratio':total_source/total_batches if total_batches else None,
+                               'worker_max_active':max((e.get('worker_max_active',0) for e in flushes),default=0)},
+                'effective_indirect_mode':remix_mode,'raster_survival':{'frames':end.get('raster_survival_frames',0),'timing':raster_window},
+                'end':end,'limits':'v43 preserves a 30-frame GPU-80 explicit oracle, then moves CPU pose reconstruction to four Host workers and submits 30 warm plus 30 steady frames as material/transform batches. Source-draw completion and API-batch compression are audited independently; visual completeness still requires user review.'}
     mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
     expected=([64,80,96] if revision>=42 else [64,64,64] if revision==41 else [16,64,128] if revision==40 else [0,8,16]) if lifecycle else [32]*4 if stability else [16,32,48,64]
     if [e.get('gpu_skin_performance_phase') for e in mesh]!=list(range(len(expected))) or [e.get('skinned_frame_limit') for e in mesh]!=expected:
@@ -617,12 +690,12 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
                 'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 1','rtx.useVertexCapture = False']
             config='\n'.join(config_options)+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='arc_restir_optimized_gpu_skin_balance_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
+            report['scope']='arc_structural_frame_batch_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v42: one complete explicit-model run. Global vertex capture is disabled. The optimized CPU-pose fallback remains active while persistent GPU skinning steps through 64, 80 and 96 submissions per frame for 30 frames each. All accepted parts remain visible, then resources retire before 60 raster Presents. Keep characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v43: the first 30 frames retain the GPU-80 explicit oracle. The next 60 frames move CPU pose reconstruction to four Host workers and combine compatible Source surfaces before Remix submission. All accepted Source draws must remain accounted for, then resources retire before 60 raster Presents. Keep characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
@@ -669,7 +742,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         preview_running=directory/f'rt-preview-running-{session}.json'
         if world and manifest.get('pilot_revision',0)>=20:report['preview']='incomplete'
         if world and preview_running.is_file():
-            notify('30-frame gate passed. The optimized GPU-64/80/96 comparison is active. Keep characters visible and check whether their full bodies remain present; RT turns off automatically for the final raster survival check.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
+            notify('30-frame gate passed. The four-worker frame batch path is active for 60 frames. Keep characters visible and check whether their full bodies remain present; RT turns off automatically for the final raster survival check.' if performance else '30-frame safety gate passed. Five-minute RT Beta is active; play normally and watch for missing geometry, deformation, freezes or crashes.' if beta else '600-Present diagnostic saved. Live preview first30s has no AA, last30s requests native TAA. Observe edges/trails; no second keypress.')
             preview_done=directory/f'rt-preview-done-{session}.json';preview_deadline=time.monotonic()+(240 if performance else 330 if beta else 90)
             while not preview_done.is_file() and time.monotonic()<preview_deadline:
                 if pid not in game_pids():break

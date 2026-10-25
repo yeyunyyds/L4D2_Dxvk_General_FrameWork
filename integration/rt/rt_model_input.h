@@ -172,19 +172,50 @@ template<class Device> bool standardAlpha(Device* d) {
     SUCCEEDED(d->GetRenderState(D3DRS_BLENDOP,&op))&&SUCCEEDED(d->GetRenderState(D3DRS_SEPARATEALPHABLENDENABLE,&separate))&&
     src==D3DBLEND_SRCALPHA&&dst==D3DBLEND_INVSRCALPHA&&op==D3DBLENDOP_ADD&&!separate;
 }
-inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true,bool gpuSkinOnly=false) {
+struct Captured {
+  scene_input::Data input;
+  std::string digest;
+  const char* reason="model_capture_unavailable";
+  HRESULT result=S_OK;
+  bool ready=false;
+};
+inline Captured capture(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,
+    const std::array<uint32_t,6>& args,bool gpuSkinOnly=false) {
   runtime_profile::Scope timing(runtime_profile::Stage::Prepare);
-  DWORD values[7]{};scene_input::Prepared rejected;
+  DWORD values[7]{};Captured captured;
   const D3DRENDERSTATETYPE names[]={D3DRS_ALPHABLENDENABLE,D3DRS_ZENABLE,D3DRS_ZWRITEENABLE,D3DRS_STENCILENABLE,D3DRS_CLIPPLANEENABLE,D3DRS_COLORWRITEENABLE,D3DRS_ZFUNC};
   for (unsigned i=0;i<7;++i) {
-    const auto hr=d->GetRenderState(names[i],values+i);if (FAILED(hr)) { rejected.result=hr;rejected.reason="model_pipeline_query_failed";return rejected; }
+    const auto hr=d->GetRenderState(names[i],values+i);if (FAILED(hr)) { captured.result=hr;captured.reason="model_pipeline_query_failed";return captured; }
   }
-  if (values[1]!=1 || values[2]>1 || (!values[0]&&!values[2]) || (values[0]&&(!standardAlpha(d)||!std::strcmp(s.materialInfo.shader.data(),"Infected")))) { rejected.reason="model_pipeline_unsupported";return rejected; }
-  if (values[3] || values[4] || (values[5]&7)!=7 || (values[5]&~15u) || (values[6]!=D3DCMP_LESS && values[6]!=D3DCMP_LESSEQUAL)) { rejected.reason="model_pipeline_special_pass";return rejected; }
-  auto input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
-  const auto digest=ldb_rt_file::bytesSha256(input.vs.data(),input.vs.size()*4);
-  if (!gpuSkinOnly && model_shader::profile(digest)!=model_shader::Profile::Unknown && model_shader::profile(digest)!=model_shader::Profile::InfectedRigid && SUCCEEDED(input.result) && input.constants[13][0]!=0) { scene_input::morphPositions(d,input); }
-  auto out=reconstruct(s,input,digest,allowPersistentGpuSkinning,verifyGpuSkinOutput,gpuSkinOnly);if (!out.bytes.empty() && ownDraw(out,input,kind,args) && (cpuOnly || scene_input::upload(d,out))) { out.ready=true; }
-  if (evidence && out.ready) { *evidence=std::move(input); }return out;
+  if (values[1]!=1 || values[2]>1 || (!values[0]&&!values[2]) || (values[0]&&(!standardAlpha(d)||!std::strcmp(s.materialInfo.shader.data(),"Infected")))) { captured.reason="model_pipeline_unsupported";return captured; }
+  if (values[3] || values[4] || (values[5]&7)!=7 || (values[5]&~15u) || (values[6]!=D3DCMP_LESS && values[6]!=D3DCMP_LESSEQUAL)) { captured.reason="model_pipeline_special_pass";return captured; }
+  captured.input=scene_input::capture(d,kind,type,args,false,scene_input::kModelLimits);
+  captured.digest=ldb_rt_file::bytesSha256(captured.input.vs.data(),captured.input.vs.size()*4);
+  const auto profile=model_shader::profile(captured.digest);
+  if (!gpuSkinOnly && profile!=model_shader::Profile::Unknown && profile!=model_shader::Profile::InfectedRigid &&
+      SUCCEEDED(captured.input.result) && captured.input.constants[13][0]!=0) { scene_input::morphPositions(d,captured.input); }
+  captured.reason=captured.input.reason;captured.result=captured.input.result;
+  // A successful owner-thread capture is a valid worker job even when the VS
+  // profile is unknown. finish() owns classification and preserves its exact
+  // rejection reason for both synchronous and queued callers.
+  captured.ready=SUCCEEDED(captured.input.result);
+  return captured;
+}
+inline scene_input::Prepared finish(const draw_observe::Snapshot& s,Captured&& captured,uint32_t kind,
+    const std::array<uint32_t,6>& args,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true,bool gpuSkinOnly=false) {
+  if(!captured.ready) { scene_input::Prepared out;out.reason=captured.reason;out.result=captured.result;return out; }
+  auto out=reconstruct(s,captured.input,captured.digest,allowPersistentGpuSkinning,verifyGpuSkinOutput,gpuSkinOnly);
+  if(!out.bytes.empty()&&ownDraw(out,captured.input,kind,args)) { out.ready=true; }
+  return out;
+}
+inline scene_input::Prepared prepare(IDirect3DDevice9* d,const draw_observe::Snapshot& s,uint32_t kind,D3DPRIMITIVETYPE type,const std::array<uint32_t,6>& args,scene_input::Data* evidence=nullptr,bool cpuOnly=false,bool allowPersistentGpuSkinning=false,bool verifyGpuSkinOutput=true,bool gpuSkinOnly=false) {
+  auto captured=capture(d,s,kind,type,args,gpuSkinOnly);
+  // Evidence is published only after the full conversion succeeds, matching
+  // the original synchronous contract.
+  scene_input::Data evidenceInput;if(evidence&&captured.ready) { evidenceInput=captured.input; }
+  auto out=finish(s,std::move(captured),kind,args,allowPersistentGpuSkinning,verifyGpuSkinOutput,gpuSkinOnly);
+  if(out.ready&&!cpuOnly) { out.ready=scene_input::upload(d,out); }
+  if(evidence&&out.ready) { *evidence=std::move(evidenceInput); }
+  return out;
 }
 } // namespace ldb_rt::model_input

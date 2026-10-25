@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 import rt_draw_suite as suite
+from analyze_rt_runtime import analyze as analyze_runtime
 from package_rt_draw import observer_files, sha
 import test_rt_draw as draw_cases
 
@@ -436,6 +437,48 @@ assert result['execution']=='incomplete'
         self.assertIn('v42 retains the optimized',result['limits'])
         events[5]['skinned_frame_max']=128;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         self.assertIn('performance_gpu_skin_not_exercised',suite.review_performance(directory)['errors'])
+
+    def test_performance_review_v43_requires_parallel_lossless_frame_batch(self):
+        directory=self.root/'performance-v43';directory.mkdir()
+        events=[dict(event='pilot_delivery_revision',code=0,value='43'),dict(event='performance_lifecycle_begin',code=0)]
+        events += [dict(event='runtime_timing_window',segment='explicit_oracle_80',wall_ms=6000,thread_times_available=True,
+                       thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
+                   dict(event='api_mesh_frame',stage='api_continuous_preview',gpu_skin_performance_phase=0,skinned_frame_limit=80,
+                        skinned_frame_submitted=80,skinned_frame_unique_meshes=80,skinned_frame_repeat_draws=0,skinned_frame_max=80,
+                        preview_submitted=3000,preview_skinned_submitted=2400,skinned_submitted=2400,skinned_created=80,skinned_reused=2320)]
+        worker=0
+        for frame in range(60):
+            worker+=100;events.append(dict(event='frame_batch_flush',frame=100+frame,source_draws=100,source_vertices=1000,
+                source_indices=3000,batches=10,submitted_source_draws=100,worker_submitted=worker,worker_completed=worker,
+                worker_failed=0,worker_threads=4,worker_max_active=4,worker_cpu_elapsed_ms=frame+1.0))
+            if frame in (29,59):
+                phase=1 if frame==29 else 2;name='frame_batch_warm' if phase==1 else 'frame_batch_steady'
+                events += [dict(event='runtime_timing_window',segment=name,wall_ms=3000,thread_times_available=True,
+                                thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,
+                                scopes={'batch_wait':{'calls':30,'elapsed_ms':100,'max_ms':5},'batch_assemble':{'calls':30,'elapsed_ms':50,'max_ms':3},'batch_submit':{'calls':300,'elapsed_ms':200,'max_ms':2}}),
+                           dict(event='api_mesh_frame',stage='api_continuous_preview',gpu_skin_performance_phase=phase,skinned_frame_limit=0,
+                                skinned_frame_submitted=0,skinned_frame_unique_meshes=0,skinned_frame_repeat_draws=0,skinned_frame_max=80,
+                                preview_submitted=3000+phase*300,preview_skinned_submitted=2400,
+                                skinned_submitted=2400,skinned_created=80,skinned_reused=2320)]
+        events += [dict(event='performance_resources_recovered',code=0),dict(event='performance_raster_survival_complete',code=0),
+                   dict(event='runtime_timing_window',segment='gpu_lifecycle_raster',wall_ms=1000,thread_times_available=True,
+                        thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
+                   dict(event='preview_end',complete=True,frames=150,rt_frames=90,raster_survival_frames=60,resources_recovered=True,
+                        entries=0,pending_fences=0,held=0,submitted=3600,skinned_submitted=2400,skinned_created=80,skinned_reused=2320,
+                        budget_omitted=0,frame_batch_flushes=60,frame_batch_source_draws=6000,frame_batch_submitted_source_draws=6000,
+                        frame_batch_failures=0,frame_batch_worker_submitted=6000,frame_batch_worker_completed=6000,
+                        frame_batch_worker_failed=0,frame_batch_worker_threads=4,frame_batch_worker_max_active=4)]
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        (directory/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in
+            [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1'),
+             dict(event='rtx.useVertexCapture',code=0,value='False')])+'\n')
+        (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['profile'],'arc_structural_frame_batch');self.assertEqual(result['frame_batch']['compression_ratio'],10)
+        self.assertTrue(analyze_runtime(directory)['pass'])
+        events[-1]['frame_batch_worker_completed']=5999;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        self.assertIn('performance_frame_batch_accounting',suite.review_performance(directory)['errors'])
+        self.assertIn('invalid_structural_frame_batch',analyze_runtime(directory)['errors'])
 
 
 class InstallTests(unittest.TestCase):
