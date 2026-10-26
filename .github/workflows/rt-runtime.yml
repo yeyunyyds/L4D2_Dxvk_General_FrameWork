@@ -15,7 +15,7 @@ permissions:
   contents: write
 concurrency:
   group: rt-runtime
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: windows-2022
