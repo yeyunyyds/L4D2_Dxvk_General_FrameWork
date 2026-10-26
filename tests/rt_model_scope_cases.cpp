@@ -41,7 +41,7 @@ void threadIsolation() {
     const auto first=model_scope::Scope::takeSurface(),second=model_scope::Scope::takeSurface();
     check(first.identity&&second.surface==1&&first.bones[0][3]==translation,"thread scope invalid");return std::pair<uint64_t,uint64_t>{first.identity->instance,first.scope};
   };
-  auto a=std::async(std::launch::async,run,11,3);auto b=std::async(std::launch::async,run,12,4);const auto av=a.get(),bv=b.get();
+  auto a=std::async(std::launch::async,run,uintptr_t(11),3.0f);auto b=std::async(std::launch::async,run,uintptr_t(12),4.0f);const auto av=a.get(),bv=b.get();
   check(av.first!=bv.first&&av.second!=bv.second&&!model_scope::Scope::currentIdentity(),"thread scopes collided");
 }
 int main() {
