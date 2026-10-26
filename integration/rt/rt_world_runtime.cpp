@@ -57,7 +57,8 @@ uint64_t completedMeshFrame=0,apiCameraFrame=0,apiMaintenanceFrame=0;
 unsigned previousModelDraws=0;
 uint64_t gpuSkinDensityThrottleFrames=0;
 std::unique_ptr<model_batch::Pool> modelWorkers;
-uint64_t batchFrame=0,batchFlushes=0,batchSourceDraws=0,batchSubmitted=0,batchFailures=0;
+uint64_t batchFrame=0,batchFlushes=0,batchSourceDraws=0,batchSubmitted=0,batchFailures=0,batchInputFallbacks=0;
+uint64_t batchFallbackFrame=0,batchFrameInputFallbacks=0;
 std::vector<std::future<model_batch::Result>> batchPending;
 std::array<float,16> apiView{},apiProjection{};
 std::array<uint64_t,world_diagnostics::kModelStages> apiPayloadBytes{};
@@ -450,10 +451,12 @@ bool flushModelBatch(uint64_t frame) {
     <<",\"batches\":"<<submittedBatches<<",\"submitted_source_draws\":"<<submittedDraws
     <<",\"persistent_phase\":"<<(world_diagnostics::performancePersistentBatch(previewFrames)?"true":"false")
     <<",\"persistent_created\":"<<persistentCreated<<",\"persistent_updated\":"<<persistentUpdated
+    <<",\"input_fallbacks\":"<<(batchFallbackFrame==frame?batchFrameInputFallbacks:0)
     <<",\"worker_submitted\":"<<stats.submitted<<",\"worker_completed\":"<<stats.completed<<",\"worker_failed\":"<<stats.failed
     <<",\"worker_threads\":"<<stats.workers<<",\"worker_max_active\":"<<stats.maxActive
     <<",\"worker_cpu_elapsed_ms\":"<<(frequency.QuadPart?double(stats.workerTicks)*1000.0/double(frequency.QuadPart):0.0)<<"}\n"<<std::flush;
-  batchFrame=0;return assembly.sourceDraws&&submittedDraws==assembly.sourceDraws;
+  batchFrame=0;batchFallbackFrame=0;batchFrameInputFallbacks=0;
+  return assembly.sourceDraws&&submittedDraws==assembly.sourceDraws;
 }
 void presented(IDirect3DDevice9* device,uint64_t frame) noexcept {
   try {
@@ -669,7 +672,18 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
       operation="capture_frame_batch_model";
       if(!modelWorkers||batchPending.size()>=2048||(batchFrame&&batchFrame!=frame)) { return failed("frame_batch_queue_state"); }
       auto captured=model_input::capture(device,s,kind,type,args,false);
-      if(!captured.ready) { ++counts.reasons[captured.reason];++counts.fallback;return failed(captured.reason); }
+      const auto disposition=model_batch::captureDisposition(captured);
+      if(disposition!=model_batch::CaptureDisposition::Queue) {
+        ++counts.reasons[captured.reason];++counts.fallback;
+        ++liveShaderFallbacks[std::string(s.materialInfo.shader.data())+":"+captured.reason];
+        if(disposition==model_batch::CaptureDisposition::Fatal) { return failed(captured.reason); }
+        if(batchFallbackFrame!=frame) { batchFallbackFrame=frame;batchFrameInputFallbacks=0; }
+        ++batchFrameInputFallbacks;++batchInputFallbacks;
+        // The caller performs the untouched physical Draw.  This mirrors the
+        // synchronous path and, critically, does not disable RT or discard the
+        // rest of the frame because one model pass is intentionally excluded.
+        return false;
+      }
       DWORD cull=0;auto hr=device->GetRenderState(D3DRS_CULLMODE,&cull);
       if(SUCCEEDED(hr)&&apiCameraFrame!=frame) {
         remixapi_CameraInfo camera{};camera.sType=REMIXAPI_STRUCT_TYPE_CAMERA_INFO;camera.type=REMIXAPI_CAMERA_TYPE_WORLD;
@@ -963,6 +977,7 @@ void endPreview(bool clean,const char* reason) noexcept {
       <<",\"gpu_skin_density_throttle_frames\":"<<gpuSkinDensityThrottleFrames
       <<",\"frame_batch_flushes\":"<<batchFlushes<<",\"frame_batch_source_draws\":"<<batchSourceDraws
       <<",\"frame_batch_submitted_source_draws\":"<<batchSubmitted<<",\"frame_batch_failures\":"<<batchFailures
+      <<",\"frame_batch_input_fallbacks\":"<<batchInputFallbacks
       <<",\"frame_batch_worker_submitted\":"<<workerStats.submitted<<",\"frame_batch_worker_completed\":"<<workerStats.completed
       <<",\"frame_batch_worker_failed\":"<<workerStats.failed<<",\"frame_batch_worker_threads\":"<<workerStats.workers
       <<",\"frame_batch_worker_max_active\":"<<workerStats.maxActive
@@ -986,13 +1001,13 @@ void startPreview(IDirect3DDevice9* device) noexcept {
     if(!marker) { return; }
     runtime_profile::reset();sourceShaderCensus.clear();sourceCensusOmitted=0;previewTaa=false;
     if(modelWorkers) { modelWorkers->shutdown(); }modelWorkers=launch.performance?std::make_unique<model_batch::Pool>(4):nullptr;
-    batchPending.clear();batchFrame=0;batchFlushes=0;batchSourceDraws=0;batchSubmitted=0;batchFailures=0;
+    batchPending.clear();batchFrame=0;batchFlushes=0;batchSourceDraws=0;batchSubmitted=0;batchFailures=0;batchInputFallbacks=0;batchFallbackFrame=0;batchFrameInputFallbacks=0;
     state().preview=true;state().active=true;previewStarted=GetTickCount64();previewRecoverAt=0;previewFrames=0;previewRasterFrames=0;
     previewRecover=false;previewResourcesRecovered=false;previewMaintenanceFailed=false;previewReadFailed=false;previewReadbacks=0;previewBindingRows=0;previewBindingOmitted=0;previewFirstRead=0;previewStartSubmitted=apiMeshes.submitted;previewStartCreated=apiMeshes.created;previewStartReused=apiMeshes.reused;previewStartUpdated=apiMeshes.updated;previewStartOmitted=apiMeshes.omitted;
     previousModelDraws=0;gpuSkinDensityThrottleFrames=0;
     previewStartSkinnedSubmitted=apiMeshes.skinnedSubmitted;previewStartSkinnedCreated=apiMeshes.skinnedCreated;previewStartSkinnedReused=apiMeshes.skinnedReused;
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"44");
+    event("pilot_delivery_revision",0,"45");
     event("preview_begin",0,launch.performance?"Arc_persistent_mesh_update;vertex_capture_off;30_RT_explicit_oracle_GPU80;30_RT_CPU_worker_batch_control;30_RT_persistent_handle_update;RT_off;resources_zero;60_raster_Presents;custom_preset;ReSTIR_GI;TAAU_0.75;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
     if(launch.performance) {
       event("performance_lifecycle_begin",performanceProfileConfigured?0:ERROR_INVALID_DATA,
@@ -1095,9 +1110,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy",0,"v23_display_4GiB_priority_spool_no_rejected_rereads_standard_alpha_models");
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"44");
+    event("pilot_delivery_revision",0,"45");
     event("runtime_timing_policy",0,"QPC_elapsed_nested_scopes_plus_device_thread_kernel_user_CPU;not_GPU_duration;source_geometry_skin_texture_hash_API_original_Draw_Present_readback");
-    event("api_mesh_policy",0,"v44_persistent_mesh_update;30_frame_explicit_GPU80_oracle_then_30_frame_CPU_worker_batch_control_then_30_frame_same_handle_update;dynamic_CPU_pose_batches_only;vertex_capture_off;mesh_entries_3072_bytes_512MiB;RT_off_resource_zero_then60_raster_Presents;TAAU_0.75_secondary_off_RTXDI_off;four_workers;flush_before_HUD_injection");
+    event("api_mesh_policy",0,"v45_persistent_mesh_update;recoverable_batch_input_fallback;30_frame_explicit_GPU80_oracle_then_30_frame_CPU_worker_batch_control_then_30_frame_same_handle_update;dynamic_CPU_pose_batches_only;vertex_capture_off;mesh_entries_3072_bytes_512MiB;RT_off_resource_zero_then60_raster_Presents;TAAU_0.75_secondary_off_RTXDI_off;four_workers;flush_before_HUD_injection");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");

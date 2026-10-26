@@ -25,9 +25,10 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v44 keeps one 30-frame GPU-80 explicit oracle, then runs a 30-frame ordinary
+// v45 keeps one 30-frame GPU-80 explicit oracle, then runs a 30-frame ordinary
 // batch control and a 30-frame persistent-handle update window through the
-// CPU-worker frame batcher. v42 proved that raising the
+// CPU-worker frame batcher. Expected unsupported model passes remain per-Draw
+// fallbacks instead of aborting the batch lifecycle. v42 proved that raising the
 // per-surface GPU limit from80 to96 reduces throughput, so no further ramp is
 // useful. The batch windows retain complete CPU-pose output while changing the
 // unit submitted to Remix from Source surface Draws to material/transform chunks.

@@ -66,6 +66,18 @@ struct CategoryDevice {
 int main() {
  try {
   infectedMaterialCases();textureHashCases();systemTextureExport();
+  {
+    model_input::Captured captured;captured.reason="model_pipeline_unsupported";
+    require(model_batch::captureDisposition(captured)==model_batch::CaptureDisposition::Fallback,
+      "supported non-ready batch exclusion became fatal");
+    captured.ready=true;
+    require(model_batch::captureDisposition(captured)==model_batch::CaptureDisposition::Queue,
+      "ready batch capture was not queued");
+    captured.ready=false;captured.result=E_FAIL;
+    require(model_batch::captureDisposition(captured)==model_batch::CaptureDisposition::Fatal,
+      "failed D3D batch capture was silently downgraded");
+    std::cout<<"RT frame batch recoverable model exclusion versus fatal capture: PASS\n";
+  }
   for(DWORD category:std::array<DWORD,4>{{0,live_mesh::kUnused,4,0x100}}) {
    fixture::CategoryDevice d;d.value=category;
    { live_mesh::IgnoreScope<fixture::CategoryDevice> scope(&d);require(scope.ready()&&d.value==((category==live_mesh::kUnused?0:category)|live_mesh::kIgnore),"ignore flag not applied");scope.finish();require(SUCCEEDED(scope.restore),"ignore restoration"); }

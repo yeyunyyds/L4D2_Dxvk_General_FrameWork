@@ -15,6 +15,16 @@
 
 namespace ldb_rt::model_batch {
 
+enum class CaptureDisposition { Queue, Fallback, Fatal };
+
+inline CaptureDisposition captureDisposition(const model_input::Captured& captured) noexcept {
+  if(captured.ready) { return CaptureDisposition::Queue; }
+  // Unsupported/special pipeline states are normal per-Draw exclusions.  A
+  // failed D3D query/capture is different: continuing would hide a real device
+  // or IPC failure, so only successful non-ready captures may fall back.
+  return SUCCEEDED(captured.result)?CaptureDisposition::Fallback:CaptureDisposition::Fatal;
+}
+
 struct Job {
   uint64_t frame=0;
   draw_observe::Snapshot snapshot;
