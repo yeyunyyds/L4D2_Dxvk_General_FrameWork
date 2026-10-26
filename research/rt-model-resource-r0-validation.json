@@ -1,0 +1,48 @@
+{
+  "architecture": {
+    "compatibility_fallbacks": 0,
+    "cpu_posed_vertices": 0,
+    "cpu_rewritten_indices": 0,
+    "frame_ownership": "triple_arena",
+    "model_topology": "immutable_generation_resource",
+    "per_frame_data": [
+      "instance_identity",
+      "world_transform",
+      "bone_palette",
+      "visible_surface_mask"
+    ]
+  },
+  "boundaries": {
+    "b580_execution": "unrun",
+    "bridge_stream_integration": "unimplemented",
+    "old_capture_model_identity": "unavailable",
+    "remix_create_mesh_draw_instance": "unimplemented",
+    "source_draw_model_hook": "unimplemented"
+  },
+  "date": "2026-10-26",
+  "executed": {
+    "existing_protocol_native": "pass",
+    "linux_gxx_strict": "pass",
+    "model_resource_native_groups": 5,
+    "python_rt_live": 6,
+    "python_rt_runtime": 19,
+    "python_source_guard": 4,
+    "scale_instances": [
+      1,
+      8,
+      32,
+      64
+    ],
+    "single_resource_replay_frames": 300,
+    "windows_x64_mingw_strict_compile": "pass"
+  },
+  "inputs_sha256": {
+    "integration/rt/rt_model_frame.h": "a83202cd8ff1f240c60902e996ad7ec4df6103f81fc22972a178a2f1c729b68c",
+    "integration/rt/rt_model_resource.h": "94f9669ac32992ae1dc56754f034278482f10792b822f3eb694b3041e3891f4b",
+    "scripts/build_rt_foundation.ps1": "73a4b67fb4a443fc2d52f6c88d827e5ccc5ba51d74d299d98b9a72da936d4116",
+    "scripts/prepare_rt_bridge.py": "f719125238081f1b70615708be1ac9cb626f4d3388ff19c57fde4b7262ee6491",
+    "tests/rt_model_resource_cases.cpp": "657265b796c12604af0c98445ecc43a876153eb4295b1243a83b1f1a0e26de24"
+  },
+  "schema": 1,
+  "scope": "rt_model_resource_r0"
+}

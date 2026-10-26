@@ -13,6 +13,12 @@ Remix 已经支持在 `CreateMesh` 中接收 skin weights/indices，并在 `Draw
 
 v42 的“批量动态几何后端”设想被本方案取代。它虽然减少了 API 批次数，却仍然每帧在 CPU 上构造全部几何，因此没有改变主要成本。
 
+## 实施状态
+
+R0 数据层已于 2026-10-26 落地：`rt_model_resource.h` 提供资源定义、generation、ready/invalidate 状态机和 wire 校验；`rt_model_frame.h` 提供实例／palette wire、顺序敏感 frame commit 和三槽所有权。原生用例已执行 300 帧单资源回放和 1/8/32/64 实例扩展，并强制 `CPU posed vertices`、`CPU rewritten indices`、`compatibility fallbacks` 为零。
+
+旧采集没有 `DrawModelExecute` 的模型／实体身份，不能诚实地把数百个旧 surface 自动还原成资源实例。R1 将直接增加该身份入口；R0 不用 Draw 顺序伪造实机回放结论。
+
 ## 为什么要停止优化 `batch_assemble`
 
 v46 的同一场景实测如下：
@@ -86,17 +92,17 @@ ModelFrameState  = instance key + resource key
 
 ## Bridge：资源消息和帧事务
 
-协议增加五类有序消息：
+协议增加四类有序消息和一个 Host 内部 ready 状态：
 
 | 消息 | 生命周期 | 内容 |
 | --- | --- | --- |
 | `MODEL_DEFINE` | cache miss / generation 变化 | 资源 ID、顶点属性、权重、索引、材质分段 |
-| `MODEL_READY` | Host 完成验证后 | 资源 ID、generation、接受或拒绝原因 |
+| `MODEL_READY` | Host 内部状态 | 资源 ID、generation、接受或拒绝原因；不增加反向 RPC |
 | `MODEL_INSTANCE` | 每帧每实例 | 实例 ID、资源 ID、transform、palette、可见 mask |
 | `MODEL_INVALIDATE` | 换图／资源重载／Reset | 资源或 generation 失效屏障 |
 | `FRAME_COMMIT` | 每帧一次 | frame ID、相机、实例数量、完整性摘要 |
 
-传输使用三槽 frame arena：Source 写 `N`，Bridge/Host 消费 `N-1`，GPU 使用更早的资源。arena 中只放连续的 POD header、matrix 数组和 ID，不为每个 Draw 分配 future 或执行同步 RPC。资源定义走独立、有界的可靠队列；实例帧不能引用尚未收到 `MODEL_READY` 的 generation。
+传输使用三槽 frame arena：Source 写 `N`，Bridge/Host 消费 `N-1`，GPU 使用更早的资源。arena 中只放连续的 POD header、matrix 数组和 ID，不为每个 Draw 分配 future 或执行同步 RPC。资源定义走独立、有界的可靠队列；Host 在资源校验和 `CreateMesh` 后将 generation 标为 ready，实例帧不能引用尚未 ready 的 generation。
 
 背压策略很简单：资源未 ready 的实例在探索版中计为 `unsupported/awaiting_resource` 并从 RT 场景省略；不调用旧 CPU 路径。这样一次实测只能证明新架构本身，结果不会被兼容回退掩盖。
 
