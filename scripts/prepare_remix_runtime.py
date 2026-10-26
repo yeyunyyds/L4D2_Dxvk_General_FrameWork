@@ -13,6 +13,7 @@ RUNTIME_ASSET_SOURCE = Path('src/dxvk/rtx_render/rtx_asset_replacer.cpp')
 RUNTIME_ASSET_HEADER = Path('src/dxvk/rtx_render/rtx_asset_replacer.h')
 RUNTIME_ACCEL_SOURCE = Path('src/dxvk/rtx_render/rtx_accel_manager.cpp')
 RUNTIME_CONSTANTS_HEADER = Path('src/dxvk/rtx_render/rtx_constants.h')
+RUNTIME_SCENE_SOURCE = Path('src/dxvk/rtx_render/rtx_scene_manager.cpp')
 RUNTIME_SKINNING_PATCH = ROOT / 'integration/rt/remix-runtime-skinning.patch'
 
 
@@ -57,6 +58,14 @@ def validate_runtime_persistent_mesh(api, asset, header, accel=b'', constants=b'
         raise RuntimeError('Persistent geometry is not forced through the dynamic BLAS update path')
 
 
+def validate_runtime_stable_instance_identity(scene):
+    required = [b'uint32_t stableInstanceId;', b'data.stableInstanceId = drawCall.drawCallID;',
+                b'data.boneHash = data.stableInstanceId ? 0 :',
+                b'if (!data.stableInstanceId)', b'&ExternalDrawIdentityHashData::stableInstanceId']
+    if any(marker not in scene for marker in required):
+        raise RuntimeError('Stable external model instance identity is incomplete')
+
+
 def prepare(output):
     if output.exists():
         raise RuntimeError('Preserve existing runtime output; choose a new --output')
@@ -80,9 +89,11 @@ def prepare(output):
     runtime_asset_header = output / RUNTIME_ASSET_HEADER
     runtime_accel_source = output / RUNTIME_ACCEL_SOURCE
     runtime_constants_header = output / RUNTIME_CONSTANTS_HEADER
+    runtime_scene_source = output / RUNTIME_SCENE_SOURCE
     validate_runtime_persistent_mesh(runtime_skinning_source.read_bytes(), runtime_asset_source.read_bytes(),
                                      runtime_asset_header.read_bytes(), runtime_accel_source.read_bytes(),
                                      runtime_constants_header.read_bytes())
+    validate_runtime_stable_instance_identity(runtime_scene_source.read_bytes())
     api = output / 'public/include/remix/remix_c.h'
     receipt = {'schema': 3, 'repository': baseline['runtime_repository'],
                'commit': baseline['runtime_commit'], 'branch_reference': baseline['runtime_branch_reference'],
@@ -95,10 +106,12 @@ def prepare(output):
                'runtime_asset_header_sha256': digest(runtime_asset_header),
                'runtime_accel_source_sha256': digest(runtime_accel_source),
                'runtime_constants_header_sha256': digest(runtime_constants_header),
+               'runtime_scene_source_sha256': digest(runtime_scene_source),
                'runtime_skinning_weight_stride': 'sizeof(float)*bonesPerVertex',
                'runtime_skinning_command_counter': 'reset_after_flush',
                'runtime_persistent_mesh_update': 'remixapi_LdbUpdateMesh',
                'runtime_persistent_topology_identity': 'first_frame_upsert_stable_indices_descriptor_dynamic_vertex_generation_forced_dynamic_blas',
+               'runtime_external_instance_identity': 'object_picking_value_stable_identity_bone_hash_still_drives_blas',
                'submodules': 'pending', 'runtime_execution': 'unrun', 'b580_rt': 'unrun'}
     def save():
         (output / 'rt-runtime-source.json').write_text(json.dumps(receipt, indent=2) + '\n')

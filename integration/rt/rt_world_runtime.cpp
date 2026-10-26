@@ -742,7 +742,8 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
         // Infected alpha is encoded palette data, never surface coverage.
         const auto variant=infected?live_mesh::Material::Neutral:liveMaterial(currentModels());
         operation="submit_api_mesh";
-        submitted=apiMeshes.draw(prepared,kind,type,control?DWORD(D3DCULL_NONE):cull,variant,frame,meshFences.size(),source,completedMeshFrame);
+        submitted=apiMeshes.draw(prepared,kind,type,control?DWORD(D3DCULL_NONE):cull,variant,frame,meshFences.size(),source,completedMeshFrame,
+          s.modelScope?s.modelResource:0,s.modelScope?s.modelSurface:0,s.modelScope?s.modelInstance:0);
         textureBinding(source,submitted,frame,s);
         if(submitted.success) { if(source.textured()) { ++texturedSubmissions; }else { ++textureFallbackSubmissions; } }
       }

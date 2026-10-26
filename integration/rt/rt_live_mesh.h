@@ -151,7 +151,8 @@ public:
 
   size_t entries() const { return meshes.size(); }
   void bind(remixapi_Interface* table,UpdateMesh update=nullptr) { api=table;updateMesh=update; }
-  Submission draw(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,Material variant,uint64_t at,size_t pending=0,const model_texture::Source& sourceMaterial={},uint64_t completed=0) {
+  Submission draw(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,Material variant,uint64_t at,size_t pending=0,const model_texture::Source& sourceMaterial={},uint64_t completed=0,
+      uint64_t stableResource=0,uint32_t stableSurface=0,uint64_t stableInstance=0) {
     Submission result;
     if(!api || !api->CreateMaterial||!api->DestroyMaterial||!api->CreateMesh||!api->DrawInstance || unsigned(variant)>=unsigned(Material::Count) ||
        !source.ready || !bulk_static::affine(source.world)) { result.code=ERROR_INVALID_DATA;return result; }
@@ -184,8 +185,9 @@ public:
       const auto bh=ldb_rt_file::geometrySha256(source.skinning.indices.data(),source.skinning.indices.size()*sizeof(uint32_t));
       if(wh.empty()||bh.empty()) { result.code=ERROR_INVALID_DATA;return result; }skinKey=":skin3:"+wh+bh;result.skinned=true;
     }
-    result.key=vh+ih+skinKey+":"+std::to_string(kind)+":"+std::to_string(unsigned(topology))+":"+std::to_string(cull)+":"+materialKey;
-    if(source.skinning.enabled) {
+    result.key=(stableResource?"model-resource:"+std::to_string(stableResource)+":"+std::to_string(stableSurface)+":":"")+
+      vh+ih+skinKey+":"+std::to_string(kind)+":"+std::to_string(unsigned(topology))+":"+std::to_string(cull)+":"+materialKey;
+    if(source.skinning.enabled&&!stableInstance) {
       const auto baseKey=result.key;
       result.key+=":pose-slot:"+std::to_string(frameSkinnedSlots[baseKey]++);
     }
@@ -236,11 +238,18 @@ public:
     result.triangles=kind==2?source.drawArgs[4]:source.drawArgs[1];
     remixapi_InstanceInfo instance{};instance.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO;instance.mesh=r.mesh;instance.doubleSided=cull==D3DCULL_NONE;
     for(unsigned row=0;row<3;++row) { for(unsigned col=0;col<4;++col) { instance.transform.matrix[row][col]=source.world[col*4+row]; } }
+    remixapi_InstanceInfoObjectPickingEXT identity{};
+    if(stableInstance) {
+      identity.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_OBJECT_PICKING_EXT;
+      identity.objectPickingValue=uint32_t(stableInstance)^uint32_t(stableInstance>>32);
+      if(!identity.objectPickingValue) { identity.objectPickingValue=1; }instance.pNext=&identity;
+    }
     std::vector<remixapi_Transform> transforms;remixapi_InstanceInfoBoneTransformsEXT bones{};
     if(source.skinning.enabled) {
       transforms.resize(source.skinning.transforms.size());
       for(size_t i=0;i<transforms.size();++i) { std::memcpy(transforms[i].matrix,source.skinning.transforms[i].data(),sizeof(transforms[i].matrix)); }
-      bones.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_BONE_TRANSFORMS_EXT;bones.boneTransforms_values=transforms.data();bones.boneTransforms_count=uint32_t(transforms.size());instance.pNext=&bones;
+      bones.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_BONE_TRANSFORMS_EXT;bones.pNext=instance.pNext;
+      bones.boneTransforms_values=transforms.data();bones.boneTransforms_count=uint32_t(transforms.size());instance.pNext=&bones;
     }
     result.operation="draw_instance";{ runtime_profile::Scope timing(runtime_profile::Stage::Instance);result.code=uint32_t(api->DrawInstance(&instance)); }if(result.code) { return result; }
     material.last=at;++submitted;if(result.skinned) {

@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "date": "2026-10-26",
+  "revision": "v47-r2a",
+  "scope": "shared skinned topology and stable external instance identity",
+  "status": "implemented_compile_validated_game_unrun",
+  "host": {
+    "mesh_identity": "model resource plus surface plus immutable topology/material signature",
+    "simultaneous_pose_slots": "removed when a stable model instance is available",
+    "instance_transport": "InstanceInfoObjectPickingEXT with nonzero folded 64-bit instance ID",
+    "legacy_path": "unchanged when stable model identity is absent"
+  },
+  "runtime": {
+    "replacement_instance_identity": "stable object-picking ID replaces bone hash and world transform in identity",
+    "blas_update_identity": "bone hash remains in DrawCallCache and geometry update decisions",
+    "shared_mesh_multiple_palettes": "supported through per-frame BLAS buckets"
+  },
+  "validation": {
+    "runtime_patch_clean_apply": "pass",
+    "runtime_contract_guards": "pass",
+    "windows_x64_live_mesh_strict_compile": "pass",
+    "python_runtime_tests": "19 pass",
+    "preflight_tests": "pass",
+    "windows_native_ci": "pending",
+    "b580_game_capture": "unrun"
+  },
+  "next": "aggregate all eligible surfaces in one model scope into one multi-surface Remix mesh and one DrawInstance"
+}

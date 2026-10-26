@@ -11,7 +11,7 @@ void require(bool value,const char* why) { if(!value) { throw std::runtime_error
 namespace fixture {
 unsigned failureCode=1,fail=0,created=0,updates=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live,materialLive;
 int lastAlpha=7;uint8_t lastRef=0;bool lastTextured=false,lastBlend=false;float lastOpacity=0;
-bool lastSkinned=false;uint32_t lastSkinWeights=0,lastSkinIndices=0,lastBoneCount=0;float lastBoneX=0;
+bool lastSkinned=false;uint32_t lastSkinWeights=0,lastSkinIndices=0,lastBoneCount=0,lastStableInstance=0;float lastBoneX=0;
 std::vector<remixapi_HardcodedVertex> received;remixapi_Transform lastTransform{};
 remixapi_ErrorCode result(unsigned at) { return static_cast<remixapi_ErrorCode>(fail==at?failureCode:0); }
 remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remixapi_MaterialHandle* out) {
@@ -38,7 +38,13 @@ remixapi_ErrorCode REMIXAPI_CALL updateMesh(const remixapi_MeshInfo* info) {
 }
 remixapi_ErrorCode REMIXAPI_CALL draw(const remixapi_InstanceInfo* info) {
   if(fail==3) { return result(3); }require(live.count(reinterpret_cast<uint64_t>(info->mesh))!=0,"draw dead mesh");lastTransform=info->transform;
-  lastBoneCount=0;lastBoneX=0;if(info->pNext) { const auto* b=static_cast<const remixapi_InstanceInfoBoneTransformsEXT*>(info->pNext);require(b->sType==REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_BONE_TRANSFORMS_EXT,"unknown instance extension");lastBoneCount=b->boneTransforms_count;if(lastBoneCount>1) { lastBoneX=b->boneTransforms_values[1].matrix[0][3]; } }
+  struct Extension { remixapi_StructType type;void* next; };
+  lastBoneCount=0;lastStableInstance=0;lastBoneX=0;for(auto* next=info->pNext;next;) {
+    const auto* extension=static_cast<const Extension*>(next);const auto type=extension->type;const auto linked=extension->next;
+    if(type==REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_BONE_TRANSFORMS_EXT) { const auto* b=static_cast<const remixapi_InstanceInfoBoneTransformsEXT*>(next);lastBoneCount=b->boneTransforms_count;if(lastBoneCount>1) { lastBoneX=b->boneTransforms_values[1].matrix[0][3]; } }
+    else if(type==REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_OBJECT_PICKING_EXT) { lastStableInstance=static_cast<const remixapi_InstanceInfoObjectPickingEXT*>(next)->objectPickingValue; }
+    else { require(false,"unknown instance extension"); }next=linked;
+  }
   ++draws;return static_cast<remixapi_ErrorCode>(0);
 }
 remixapi_ErrorCode REMIXAPI_CALL destroy(remixapi_MeshHandle handle) {
@@ -137,6 +143,13 @@ int main() {
     const auto secondNextFrame=skins.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,3);
     require(firstNextFrame.success&&secondNextFrame.success&&!firstNextFrame.created&&!secondNextFrame.created&&firstNextFrame.handle==first.handle&&secondNextFrame.handle==repeated.handle&&skins.skinnedCreated==2&&skins.skinnedReused==3&&skins.frameSkinnedUniqueMeshes==2,"skinned pose slots were not persistent across frames");
     require(!skins.retire(3,5,true)&&skins.entries()==0,"persistent skin cleanup");
+    auto sharedApi=fixture::table();live_mesh::Scene shared(&sharedApi);const auto sharedA=shared.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,4,0,{},3,101,7,0x1234567800000042ull);
+    const auto firstStable=fixture::lastStableInstance;prepared.skinning.transforms[1][3]=30;
+    const auto sharedB=shared.draw(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,live_mesh::Material::Neutral,4,0,{},3,101,7,0x8765432100000011ull);
+    require(sharedA.success&&sharedB.success&&sharedA.created&&!sharedB.created&&sharedA.handle==sharedB.handle&&shared.entries()==1&&
+      shared.frameSkinnedUniqueMeshes==1&&shared.frameSkinnedRepeatDraws==1&&firstStable==(0x12345678u^0x42u)&&
+      fixture::lastStableInstance==(0x87654321u^0x11u),"stable model instances duplicated topology or lost explicit identity");
+    require(!shared.retire(4,6,true),"stable shared skin cleanup");
     input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,digest,true);
     require(!morphed.skinning.enabled&&std::string(morphed.reason)=="original_vs_three_weight","morph must retain CPU skin fallback");
     auto isolatedMorph=model_input::reconstruct(snapshot,input,digest,true,true,true);

@@ -51,6 +51,8 @@ class PreflightCases(unittest.TestCase):
         self.assertIn('skinning.blendWeights_count != expectedSkinningValues', patch_text)
         self.assertIn('skinning.blendIndices_count != expectedSkinningValues', patch_text)
         self.assertIn('+        m_skinningCommands = 0;', patch_text)
+        self.assertIn('data.stableInstanceId = drawCall.drawCallID;', patch_text)
+        self.assertIn('data.boneHash = data.stableInstanceId ? 0 :', patch_text)
         corrected = b' '.join((
             b'expectedSkinningValues',
             b'skinning.blendWeights_count != expectedSkinningValues',

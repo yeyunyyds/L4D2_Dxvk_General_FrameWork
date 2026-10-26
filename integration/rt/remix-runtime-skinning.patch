@@ -240,3 +240,46 @@ index 3113fe2..5fc0c3e 100644
    REMIXAPI remixapi_ErrorCode REMIXAPI_CALL remixapi_InitializeLibrary(const remixapi_InitializeLibraryInfo* info,
                                                                         remixapi_Interface* out_result) {
      if (!info || info->sType != REMIXAPI_STRUCT_TYPE_INITIALIZE_LIBRARY_INFO) {
+diff --git a/src/dxvk/rtx_render/rtx_scene_manager.cpp b/src/dxvk/rtx_render/rtx_scene_manager.cpp
+index 3a773fa..2eb4db3 100644
+--- a/src/dxvk/rtx_render/rtx_scene_manager.cpp
++++ b/src/dxvk/rtx_render/rtx_scene_manager.cpp
+@@ -68,6 +68,7 @@ namespace dxvk {
+       uintptr_t meshId;
+       XXH64_hash_t materialHash;
+       XXH64_hash_t boneHash;
++      uint32_t stableInstanceId;
+       CameraType::Enum cameraType;
+       uint32_t categoriesRaw;
+       XXH64_hash_t particleDescHash;
+@@ -89,7 +90,11 @@ namespace dxvk {
+     const DrawCallTransforms& transforms = drawCall.getTransformData();
+     data.meshId = reinterpret_cast<uintptr_t>(mesh);
+     data.materialHash = drawCall.getMaterialData().getHash();
+-    data.boneHash = drawCall.getSkinningState().boneHash;
++    // Remix API callers can provide an object-picking value as a stable
++    // instance identity.  Animation changes must still update/refit the BLAS,
++    // but must not manufacture a new ReplacementInstance every frame.
++    data.stableInstanceId = drawCall.drawCallID;
++    data.boneHash = data.stableInstanceId ? 0 : drawCall.getSkinningState().boneHash;
+     data.cameraType = cameraType;
+     data.categoriesRaw = categories.raw();
+ 
+@@ -109,13 +114,16 @@ namespace dxvk {
+     data.zWriteEnable = drawCall.zWriteEnable ? 1u : 0u;
+     data.zEnable = drawCall.zEnable ? 1u : 0u;
+     data.skyAutoDetected = drawCall.skyAutoDetected ? 1u : 0u;
+-    data.objectToWorld = transforms.objectToWorld;
++    if (!data.stableInstanceId) {
++      data.objectToWorld = transforms.objectToWorld;
++    }
+     data.textureTransform = transforms.textureTransform;
+ 
+     return hashStructByMemory<ExternalDrawIdentityHashData,
+         &ExternalDrawIdentityHashData::meshId,
+         &ExternalDrawIdentityHashData::materialHash,
+         &ExternalDrawIdentityHashData::boneHash,
++        &ExternalDrawIdentityHashData::stableInstanceId,
+         &ExternalDrawIdentityHashData::cameraType,
+         &ExternalDrawIdentityHashData::categoriesRaw,
+         &ExternalDrawIdentityHashData::particleDescHash,

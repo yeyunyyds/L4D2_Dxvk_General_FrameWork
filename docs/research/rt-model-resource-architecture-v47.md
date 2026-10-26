@@ -19,6 +19,8 @@ R0 数据层已于 2026-10-26 落地：`rt_model_resource.h` 提供资源定义�
 
 旧采集没有 `DrawModelExecute` 的模型／实体身份，不能诚实地把数百个旧 surface 自动还原成资源实例。R1 已增加该身份入口：32 位 Bridge 在 performance 请求出现后才挂接 `VEngineModel016::DrawModelExecute` slot 19，通过线程局部 scope 把模型路径、checksum、实体、skin/body/lod、surface 序号和 owned bone palette 关联到其内部 D3D draw。第一条 surface 携带一次 palette，其余 surface 只携带身份，避免按材质面重复复制。该阶段只观察，不改变人物绘制，也不把候选指针身份冒充跨帧稳定身份。
 
+R2A 核对固定 runtime 后修正了两个隐藏的身份问题。Runtime 的 `DrawCallCache` 本来就会让同一拓扑的不同 palette 使用独立 BLAS 槽，所以 Host 不再为每个同时出现的 pose 添加 `pose-slot` 并复制 Mesh。Host 通过已有 `InstanceInfoObjectPickingEXT` 传递折叠后的稳定实例 ID；runtime 的外部实例 identity 在该 ID 存在时不再包含 bone hash 和 world transform。Bone hash 仍保留在 `DrawCallCache` 中决定 skinning 和 BLAS update/refit，因此稳定实例身份不会把动画误判为静态。当前粒度仍是一张 surface 一个 Mesh；R2B 将把同一 model scope 的 surface 聚合成单个多 surface Mesh。
+
 ## 为什么要停止优化 `batch_assemble`
 
 v46 的同一场景实测如下：

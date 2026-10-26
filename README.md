@@ -2,7 +2,7 @@
 
 目标：在 L4D2 + DXVK + Intel Arc B580 环境研究光追与插帧。当前优先大量复用 l4d2-rtx，保留 Source 的多线程渲染能力。
 
-[v47 人物资源／实例架构](docs/research/rt-model-resource-architecture-v47.md)：停止逐帧 CPU pose、几何拼接和动态 Mesh 更新，改为 bind-pose 拓扑只上传一次、每帧只提交实例和骨骼 palette，直接使用 Remix GPU skinning。R0 的资源 generation、实例 palette、顺序敏感 frame commit 和三槽 arena 已实现并通过 300 帧及 1/8/32/64 实例原生回放；R1 已接入仅在 performance 采集时启用的 `DrawModelExecute` 身份观察，并把 owned bone palette 关联到同线程 D3D surface。当前仍是观察链，尚未将人物提交给 Remix GPU skinning。
+[v47 人物资源／实例架构](docs/research/rt-model-resource-architecture-v47.md)：停止逐帧 CPU pose、几何拼接和动态 Mesh 更新，改为 bind-pose 拓扑只上传一次、每帧只提交实例和骨骼 palette，直接使用 Remix GPU skinning。R0 的资源／帧事务和 R1 的 `DrawModelExecute` 身份观察已落地。R2A 已让具有稳定模型身份的多个角色复用同一 surface Mesh，并通过现有 ObjectPicking 扩展向固定 runtime 传递稳定实例 ID；动画 bone hash 继续驱动 BLAS 更新，但不再每帧制造新实例身份。下一步将同一人物的多个 surface 聚合为一次资源定义和一次 `DrawInstance`。
 
 [v43 四 worker 帧批处理原型](docs/research/rt-world-v43-frame-batch.md)：同一次 F9 先保留 30 帧 GPU-80 正确性 oracle，再把 60 帧 CPU 姿态与几何准备交给四个 Host worker，并在 HUD 注入前将同材质／变换的 Source surface 合并为较少的 Remix Mesh。Source Draw 完整性与 API 批次压缩分别验收，任何部件缺失都会失败。[v42 后的架构重审](docs/research/rt-architecture-reassessment-v42.md)与[实测结果](docs/research/rt-performance-232019-result.md)记录了切换路线的依据。
 
