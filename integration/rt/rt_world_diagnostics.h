@@ -25,14 +25,11 @@ inline bool readback(uint64_t frame) noexcept { return frame==30 || (frame>=120 
 constexpr unsigned kGpuSkinSubmissionsPerFrame=16;
 constexpr unsigned kGpuSkinModelDensityLimit=256;
 constexpr unsigned kGpuSkinHighDensitySubmissionsPerFrame=4;
-// v46 keeps one 30-frame GPU-80 explicit oracle, then runs a 30-frame ordinary
-// batch control and a 30-frame persistent-topology update window through the
-// CPU-worker frame batcher. The custom Runtime keeps topology hashes stable so
-// vertex changes reuse a BlasEntry and select BVH update/refit. Expected
-// unsupported model passes remain per-Draw fallbacks. v42 proved that raising the
-// per-surface GPU limit from80 to96 reduces throughput, so no further ramp is
-// useful. The batch windows retain complete CPU-pose output while changing the
-// unit submitted to Remix from Source surface Draws to material/transform chunks.
+// v47 keeps three 30-frame observation windows for comparable timing, but all
+// three use immutable multi-surface bind-pose resources and one GPU-skinned
+// instance per Source model scope. The old numerical limits remain only as
+// archived telemetry fields; stable scopes bypass them and the v47 analyzers use
+// resource definition/instance accounting instead.
 constexpr unsigned kGpuSkinPerformanceFirstFrames=30;
 constexpr unsigned kGpuSkinPerformanceSecondFrames=30;
 constexpr unsigned kGpuSkinPerformanceThirdFrames=30;

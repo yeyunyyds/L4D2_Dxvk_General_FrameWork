@@ -140,6 +140,7 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
       bool called = false; HRESULT physical = E_ABORT;
       if constexpr (std::is_base_of<IDirect3DDevice9, Device>::value) {
         const auto& runtime = ldb_rt::world_runtime::state();
+        if(runtime.active&&runtime.modelScope&&!control) { runtime.modelScope(graphics,current); }
         if (runtime.active && runtime.overlay && !control &&
             runtime.overlay(graphics, current, type, userMemory, report, physical)) {
           consumer->second->conversion(uid, ldb_rt::consumer_world::Decision::HudOverlay, report, false, physical);
@@ -210,6 +211,9 @@ template<class Device, class Draw> HRESULT drawCommand(uint64_t device, uint32_t
     }
     return result;
   } catch (...) { return E_FAIL; }
+}
+inline void beforePresent(IDirect3DDevice9* device) noexcept {
+  try { auto& runtime=ldb_rt::world_runtime::state();if(runtime.active&&runtime.beforePresent&&device) { runtime.beforePresent(device); } }catch(...) { }
 }
 inline void present(uint64_t device, uint32_t uid, HRESULT result) noexcept {
   ldb_rt::draw_observe::present(device, uid, result);

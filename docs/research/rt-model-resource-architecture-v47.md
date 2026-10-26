@@ -19,11 +19,15 @@ R0 数据层已于 2026-10-26 落地：`rt_model_resource.h` 提供资源定义�
 
 旧采集没有 `DrawModelExecute` 的模型／实体身份，不能诚实地把数百个旧 surface 自动还原成资源实例。R1 已增加该身份入口：32 位 Bridge 在 performance 请求出现后才挂接 `VEngineModel016::DrawModelExecute` slot 19，通过线程局部 scope 把模型路径、checksum、实体、skin/body/lod、surface 序号和 owned bone palette 关联到其内部 D3D draw。第一条 surface 携带一次 palette，其余 surface 只携带身份，避免按材质面重复复制。该阶段只观察，不改变人物绘制，也不把候选指针身份冒充跨帧稳定身份。
 
-R2A 核对固定 runtime 后修正了两个隐藏的身份问题。Runtime 的 `DrawCallCache` 本来就会让同一拓扑的不同 palette 使用独立 BLAS 槽，所以 Host 不再为每个同时出现的 pose 添加 `pose-slot` 并复制 Mesh。Host 通过已有 `InstanceInfoObjectPickingEXT` 传递折叠后的稳定实例 ID；runtime 的外部实例 identity 在该 ID 存在时不再包含 bone hash 和 world transform。Bone hash 仍保留在 `DrawCallCache` 中决定 skinning 和 BLAS update/refit，因此稳定实例身份不会把动画误判为静态。当前粒度仍是一张 surface 一个 Mesh；R2B 将把同一 model scope 的 surface 聚合成单个多 surface Mesh。
+R2A 核对固定 runtime 后修正了两个隐藏的身份问题。Runtime 的 `DrawCallCache` 本来就会让同一拓扑的不同 palette 使用独立 BLAS 槽，所以 Host 不再为每个同时出现的 pose 添加 `pose-slot` 并复制 Mesh。Host 通过已有 `InstanceInfoObjectPickingEXT` 传递折叠后的稳定实例 ID；runtime 的外部实例 identity 在该 ID 存在时不再包含 bone hash 和 world transform。Bone hash 仍保留在 `DrawCallCache` 中决定 skinning 和 BLAS update/refit，因此稳定实例身份不会把动画误判为静态。
 
-R2B Host 核心现已提供 `defineResource`／`drawResource`：一次定义严格有序的多个蒙皮 surface 及各自材质，随后用一份 palette 和稳定实例 ID 提交一次 `DrawInstance`。资源定义对顶点、索引、权重、骨骼索引、材质和 surface ordinal 计算不可变签名；同 ID 的拓扑变化会被拒绝，不能静默覆盖正在使用的资源。资源和材质继续按 fence 完成帧释放。当前尚未把 D3D draw scope 自动喂给该接口；下一步是全 draw palette 旁路与 scope 完成事务，不能假设第一条 HDR 候选恰好也是 `DrawModelExecute` 的第一条 D3D draw。
+R2B Host 核心提供 `defineResource`／`drawResource`：一次定义严格有序的多个蒙皮 surface 及各自材质，随后用一份 palette 和稳定实例 ID 提交一次 `DrawInstance`。资源定义对顶点、索引、权重、骨骼索引、材质和 surface ordinal 计算不可变签名；同 ID 的拓扑变化会被拒绝，不能静默覆盖正在使用的资源。资源和材质继续按 fence 完成帧释放。
 
-`rt_model_assembly.h` 已实现这条 scope 事务：第一条任意 D3D draw 拥有 palette，后续符合条件的 surface 可以用稀疏 ordinal 加入；遇到下一 scope 或帧边界时一次性交付拥有所有权的 palette 与 surface 列表。它拒绝孤立 continuation、身份变化、乱序/重复 surface、NaN palette 和超限输入。实机接线还需要在物理 Present **之前**完成最后一个 scope；现有 `presented` 回调发生在 Present 成功之后，不能把旧 pose 延迟提交到下一帧。
+`rt_model_assembly.h` 实现 scope 事务：第一条任意 D3D draw 拥有 palette，后续符合条件的 surface 可以用稀疏 ordinal 加入；遇到下一 scope 或帧边界时一次性交付拥有所有权的 palette 与 surface 列表。它拒绝孤立 continuation、身份变化、乱序/重复 surface、NaN palette 和超限输入。
+
+R2C 已完成实机 Host 接线。每条模型 draw 在 shader 分类前先进入 scope 观察器；符合条件的 surface 仅收集 bind-pose 几何和材质。下一 scope 到来时提交上一实例，最后一个 scope 由 Device/SwapChain 的 pre-Present hook 在物理 Present **之前**提交，因此不会把旧 pose 延迟到下一帧。性能模式固定关闭 `frameBatchActive()`，不创建 worker pool，并要求 CPU pose、frame batch 与兼容回退计数全部为零。
+
+v47 验收器要求 90 个 RT Present 内资源定义数小于实例数，证明至少发生复用；每个成功 scope 恰好对应一个实例，所有 scope 必须含有效 surface 和 palette；资源失败、CPU pose、frame batch、未释放资源任一非零都会失败。三个 30 帧窗口分别记录预热、稳定和复用阶段，随后关闭 RT、等待资源清零并完成 60 个普通 Present。该接线已通过 Python 回归、便携事务用例、严格 Win64 交叉编译和固定 Bridge 补丁重放；Windows 原生 CI 与 B580 游戏运行仍未完成。
 
 ## 为什么要停止优化 `batch_assemble`
 

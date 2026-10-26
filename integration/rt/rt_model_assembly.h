@@ -63,6 +63,7 @@ public:
   }
   bool active() const noexcept { return m_have; }
   size_t surfaceCount() const noexcept { return m_have?m_active.surfaces.size():0; }
+  void reset() { m_active={};m_completed.reset();m_have=false; }
 };
 
 } // namespace ldb_rt::model_assembly

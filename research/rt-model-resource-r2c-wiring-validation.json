@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "date": "2026-10-26",
+  "status": "host_wiring_compile_validated_game_unrun",
+  "revision": 47,
+  "implemented": {
+    "draw_scope_observation": "every labelled model draw reaches the collector before shader classification",
+    "surface_collection": "eligible surfaces retain bind-pose topology, skin weights, bone indices and material identity",
+    "submission": "one multi-surface resource definition and one GPU-skinned DrawInstance per completed Source model scope",
+    "frame_boundary": "Device and SwapChain paths flush the final scope before physical Present",
+    "fallback_policy": "performance mode has no CPU-pose, frame-batch or worker-pool fallback; rt_model_batch.h is absent from the prepared production source"
+  },
+  "acceptance": {
+    "resource_definitions": "positive and fewer than resource instances",
+    "scope_accounting": "successful scopes equal successful instances; one event per scope",
+    "forbidden_work": "CPU pose and all frame-batch/worker counters are zero",
+    "lifecycle": "90 RT Presents, complete resource retirement, then at least 60 raster Presents"
+  },
+  "validation": {
+    "python_rt_tests": "full test_rt_*.py discovery passed",
+    "model_scope_portable_fixture": "passed with -Wall -Wextra -Werror",
+    "win64_runtime_translation_unit": "passed with MinGW -Wall -Wextra -Werror",
+    "win64_live_mesh_fixture": "compiled with MinGW -Wall -Wextra -Werror",
+    "pinned_bridge_patch_replay": "passed",
+    "windows_native_ci": "pending",
+    "l4d2_b580": "unrun"
+  },
+  "known_limit": "The first live version still captures and hashes eligible bind-pose surface input on every scope before defineResource recognizes an existing resource. It removes CPU pose and geometry assembly, but topology capture-once is the next optimization after correctness evidence.",
+  "next": "Build and publish the Windows v47 performance package, then run one combined character-heavy B580 capture."
+}

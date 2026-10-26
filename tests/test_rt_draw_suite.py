@@ -509,6 +509,51 @@ assert result['execution']=='incomplete'
         self.assertIn('performance_frame_batch_accounting',suite.review_performance(directory)['errors'])
         self.assertIn('invalid_structural_frame_batch',analyze_runtime(directory)['errors'])
 
+    def test_performance_review_v47_requires_reused_model_resources_without_cpu_batch(self):
+        directory=self.root/'performance-v47';directory.mkdir()
+        events=[dict(event='pilot_delivery_revision',code=0,value='47'),dict(event='performance_lifecycle_begin',code=0)]
+        for instance in range(1,10):
+            events.append(dict(event='model_resource_scope_submitted',frame=instance,scope=100+instance,
+                resource=1 if instance%2 else 2,instance=1000+instance,surfaces=4,bones=32,created=instance<=2))
+        for phase,(name,instances) in enumerate(zip(('model_resource_warm','model_resource_steady','model_resource_reuse'),(3,6,9))):
+            events += [dict(event='runtime_timing_window',segment=name,wall_ms=3000,thread_times_available=True,
+                            thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={
+                                'model':{'calls':30,'elapsed_ms':100,'max_ms':5},
+                                'prepare':{'calls':30,'elapsed_ms':50,'max_ms':3},
+                                'mesh_create':{'calls':2 if phase==0 else 0,'elapsed_ms':20 if phase==0 else 0,'max_ms':10 if phase==0 else 0},
+                                'instance':{'calls':3,'elapsed_ms':15,'max_ms':5}}),
+                       dict(event='api_mesh_frame',stage='api_continuous_preview',gpu_skin_performance_phase=phase,
+                            skinned_frame_limit=0,skinned_frame_submitted=3,skinned_frame_unique_meshes=2,
+                            skinned_frame_repeat_draws=1,skinned_frame_max=80,preview_submitted=instances,
+                            preview_skinned_submitted=instances,preview_skinned_created=2,preview_skinned_reused=instances-2,
+                            skinned_submitted=instances,skinned_created=2,skinned_reused=instances-2,
+                            model_resource_scopes=instances,model_resource_definitions=2,
+                            model_resource_instances=instances,model_resource_failures=0)]
+        events += [dict(event='performance_resources_recovered',code=0),dict(event='performance_raster_survival_complete',code=0),
+                   dict(event='runtime_timing_window',segment='gpu_lifecycle_raster',wall_ms=1000,thread_times_available=True,
+                        thread_kernel_ms=10,thread_user_ms=20,thread_cpu_ms=30,scopes={}),
+                   dict(event='preview_end',complete=True,frames=150,rt_frames=90,raster_survival_frames=60,
+                        resources_recovered=True,entries=0,pending_fences=0,held=0,submitted=9,skinned_submitted=9,
+                        skinned_created=2,skinned_reused=7,cpu_pose_submitted=0,cpu_pose_created=0,cpu_pose_reused=0,
+                        budget_omitted=0,frame_batch_flushes=0,frame_batch_source_draws=0,
+                        frame_batch_submitted_source_draws=0,frame_batch_failures=0,frame_batch_worker_submitted=0,
+                        frame_batch_worker_completed=0,frame_batch_worker_failed=0,frame_batch_worker_threads=0,
+                        frame_batch_worker_max_active=0,model_resource_scopes=9,model_resource_definitions=2,
+                        model_resource_instances=9,model_resource_failures=0)]
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        (directory/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in
+            [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1'),
+             dict(event='rtx.useVertexCapture',code=0,value='False')])+'\n')
+        (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['profile'],'arc_model_resource_instance');self.assertEqual(result['model_resources']['model_resource_definitions'],2)
+        runtime=analyze_runtime(directory);self.assertTrue(runtime['pass'],runtime['errors'])
+        self.assertEqual(runtime['gpu_skinning']['status'],'performance_model_resource_requires_visual_review')
+        events[-1]['cpu_pose_submitted']=1
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        self.assertIn('performance_model_resource_instance',suite.review_performance(directory)['errors'])
+        self.assertIn('invalid_model_resource_instance_lifecycle',analyze_runtime(directory)['errors'])
+
 
 class InstallTests(unittest.TestCase):
     def setUp(self):

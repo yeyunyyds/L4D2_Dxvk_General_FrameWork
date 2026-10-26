@@ -11,6 +11,7 @@ struct State {
   void (*capture)(IDirect3DDevice9*, uint64_t) noexcept = nullptr;
   bool (*raytracing)(bool) noexcept = nullptr;
   void (*draw)(IDirect3DDevice9*) noexcept = nullptr;
+  void (*modelScope)(IDirect3DDevice9*,const draw_observe::Snapshot&) noexcept = nullptr;
   void (*audit)(IDirect3DDevice9*, const draw_observe::Snapshot&) noexcept = nullptr;
   void (*inspect)(IDirect3DDevice9*, const draw_observe::Snapshot&, uint32_t, D3DPRIMITIVETYPE, const std::array<uint32_t,6>&) noexcept = nullptr;
   bool (*model)(IDirect3DDevice9*, const draw_observe::Snapshot&, uint32_t, D3DPRIMITIVETYPE, const std::array<uint32_t,6>&, static_draw::Report&, bool&, HRESULT&, HRESULT&) noexcept = nullptr;
@@ -18,6 +19,7 @@ struct State {
   bool (*overlay)(IDirect3DDevice9*, const draw_observe::Snapshot&, D3DPRIMITIVETYPE, bool, static_draw::Report&, HRESULT&) noexcept = nullptr;
   uint64_t presents = 0;
   void (*presented)(IDirect3DDevice9*,uint64_t) noexcept = nullptr;
+  void (*beforePresent)(IDirect3DDevice9*) noexcept = nullptr;
   bool preview=false;
   void (*startPreview)(IDirect3DDevice9*) noexcept = nullptr;
   void (*previewStep)(IDirect3DDevice9*,bool) noexcept = nullptr;
