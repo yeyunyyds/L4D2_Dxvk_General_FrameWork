@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "date": "2026-10-26",
+  "revision": "v47-r2b-scope",
+  "scope": "model scope palette and eligible-surface transaction",
+  "status": "portable_core_validated_host_wiring_pending",
+  "behavior": {
+    "palette": "copied from the first D3D draw whether or not that draw is an HDR model candidate",
+    "surfaces": "eligible surfaces append with strictly increasing sparse ordinals",
+    "completion": "next scope or explicit frame boundary publishes one owned transaction",
+    "rejection": ["orphan continuation", "identity mismatch", "nonfinite palette", "duplicate or descending surface", "surface limit", "unconsumed completion"]
+  },
+  "validation": {
+    "linux_strict_compile_and_run": "pass",
+    "windows_x64_strict_compile": "pass",
+    "native_groups": "owned palette, sparse surfaces, boundaries, rejection",
+    "windows_native_ci": "pending",
+    "game_host_wiring": "unrun"
+  },
+  "next": "add a Host callback for every draw and a pre-Present flush so the final scope is submitted in the same frame"
+}

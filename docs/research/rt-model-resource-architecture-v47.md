@@ -23,6 +23,8 @@ R2A 核对固定 runtime 后修正了两个隐藏的身份问题。Runtime 的 `
 
 R2B Host 核心现已提供 `defineResource`／`drawResource`：一次定义严格有序的多个蒙皮 surface 及各自材质，随后用一份 palette 和稳定实例 ID 提交一次 `DrawInstance`。资源定义对顶点、索引、权重、骨骼索引、材质和 surface ordinal 计算不可变签名；同 ID 的拓扑变化会被拒绝，不能静默覆盖正在使用的资源。资源和材质继续按 fence 完成帧释放。当前尚未把 D3D draw scope 自动喂给该接口；下一步是全 draw palette 旁路与 scope 完成事务，不能假设第一条 HDR 候选恰好也是 `DrawModelExecute` 的第一条 D3D draw。
 
+`rt_model_assembly.h` 已实现这条 scope 事务：第一条任意 D3D draw 拥有 palette，后续符合条件的 surface 可以用稀疏 ordinal 加入；遇到下一 scope 或帧边界时一次性交付拥有所有权的 palette 与 surface 列表。它拒绝孤立 continuation、身份变化、乱序/重复 surface、NaN palette 和超限输入。实机接线还需要在物理 Present **之前**完成最后一个 scope；现有 `presented` 回调发生在 Present 成功之后，不能把旧 pose 延迟提交到下一帧。
+
 ## 为什么要停止优化 `batch_assemble`
 
 v46 的同一场景实测如下：

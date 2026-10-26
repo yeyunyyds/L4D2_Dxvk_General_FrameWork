@@ -21,6 +21,7 @@ try {
     $protocol = Join-Path $repo 'tests/rt_protocol_cases.cpp'
     $modelResource = Join-Path $repo 'tests/rt_model_resource_cases.cpp'
     $modelScope = Join-Path $repo 'tests/rt_model_scope_cases.cpp'
+    $modelAssembly = Join-Path $repo 'tests/rt_model_assembly_cases.cpp'
     $hostCases = Join-Path $repo 'tests/rt_host_cases.cpp'
     $staticCases = Join-Path $repo 'tests/rt_static_draw_cases.cpp'
     $drawPacket = Join-Path $repo 'tests/rt_draw_packet_cases.cpp'
@@ -65,6 +66,8 @@ try {
       "& `"$dir/model-resource.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$modelScope`" /Fe:`"$dir/model-scope.exe`" /Fo:`"$dir/model-scope.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/model-scope.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$modelAssembly`" /Fe:`"$dir/model-assembly.exe`" /Fo:`"$dir/model-assembly.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
+      "& `"$dir/model-assembly.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$include`" `"$drawPacket`" /Fe:`"$dir/draw-packet.exe`" /Fo:`"$dir/draw-packet.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& `"$dir/draw-packet.exe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +
       "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /MT /I`"$utilInclude`" `"$transportCases`" /Fe:`"$dir/transport.exe`" /Fo:`"$dir/transport.obj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; " +

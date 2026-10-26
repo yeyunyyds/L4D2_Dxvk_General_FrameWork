@@ -69,7 +69,7 @@ def prepare(output, bridge, upstream, detours):
               'remix-skinning-transport.patch': digest(skinning_transport)}
     for role, names in [('client', ['rt_protocol.h', 'rt_bridge_api.h', 'rt_client.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_client.h', 'rt_material_decode.h', 'rt_file_hash.h', 'rt_runtime_profile.h', 'rt_model_resource.h', 'rt_model_frame.h', 'rt_model_scope.h', 'rt_model_hook.h']),
                         ('server', ['rt_protocol.h', 'rt_host.h', 'rt_static_draw.h', 'rt_draw_packet.h', 'rt_draw_request.h', 'rt_draw_host.h',
-                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_runtime_profile.h', 'rt_scene_draw.h', 'rt_sky_shader.h', 'rt_scene_input.h', 'rt_bulk_static.h', 'rt_model_shader.h', 'rt_model_input.h', 'rt_model_texture.h', 'rt_infected_material.h', 'rt_live_mesh.h', 'rt_model_batch.h', 'rt_model_resource.h', 'rt_model_frame.h', 'rt_model_scope.h']),
+                                    'rt_consumer_world.h', 'rt_material_decode.h', 'rt_world_runtime.h', 'rt_world_runtime.cpp', 'rt_world_diagnostics.h', 'rt_overlay.h', 'rt_file_hash.h', 'rt_runtime_profile.h', 'rt_scene_draw.h', 'rt_sky_shader.h', 'rt_scene_input.h', 'rt_bulk_static.h', 'rt_model_shader.h', 'rt_model_input.h', 'rt_model_texture.h', 'rt_infected_material.h', 'rt_live_mesh.h', 'rt_model_batch.h', 'rt_model_resource.h', 'rt_model_frame.h', 'rt_model_scope.h', 'rt_model_assembly.h']),
                         ('util', ['rt_draw_request.h', 'rt_transport_policy.h'])]:
         for name in names:
             source = ROOT / 'integration/rt' / name
