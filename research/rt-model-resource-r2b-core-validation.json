@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "date": "2026-10-26",
+  "revision": "v47-r2b-core",
+  "scope": "Host multi-surface skinned resource API",
+  "status": "implemented_strict_compile_game_unrun",
+  "contract": {
+    "definition": "one CreateMesh with ordered surfaces and immutable topology/material signature",
+    "instance": "one DrawInstance with one owned palette and stable instance identity",
+    "topology_change": "rejected until an explicit generation/invalidation transaction",
+    "lifetime": "mesh and all referenced materials retire only after completed frame"
+  },
+  "limits": {
+    "surfaces": 256,
+    "bones": 256,
+    "entries": 3072,
+    "live_bytes": 536870912,
+    "frame_definition_bytes": 201326592
+  },
+  "validation": {
+    "windows_x64_strict_compile": "pass",
+    "multi_surface_fake_api_fixture": "compiled; native Windows execution pending CI",
+    "bridge_translation_unit_strict_compile": "pending after scope integration",
+    "b580_game_capture": "unrun"
+  },
+  "next": "feed every draw snapshot into a palette side channel, assemble eligible surfaces by scope, then call the resource API at the scope boundary"
+}

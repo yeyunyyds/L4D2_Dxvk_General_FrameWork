@@ -21,6 +21,8 @@ R0 数据层已于 2026-10-26 落地：`rt_model_resource.h` 提供资源定义�
 
 R2A 核对固定 runtime 后修正了两个隐藏的身份问题。Runtime 的 `DrawCallCache` 本来就会让同一拓扑的不同 palette 使用独立 BLAS 槽，所以 Host 不再为每个同时出现的 pose 添加 `pose-slot` 并复制 Mesh。Host 通过已有 `InstanceInfoObjectPickingEXT` 传递折叠后的稳定实例 ID；runtime 的外部实例 identity 在该 ID 存在时不再包含 bone hash 和 world transform。Bone hash 仍保留在 `DrawCallCache` 中决定 skinning 和 BLAS update/refit，因此稳定实例身份不会把动画误判为静态。当前粒度仍是一张 surface 一个 Mesh；R2B 将把同一 model scope 的 surface 聚合成单个多 surface Mesh。
 
+R2B Host 核心现已提供 `defineResource`／`drawResource`：一次定义严格有序的多个蒙皮 surface 及各自材质，随后用一份 palette 和稳定实例 ID 提交一次 `DrawInstance`。资源定义对顶点、索引、权重、骨骼索引、材质和 surface ordinal 计算不可变签名；同 ID 的拓扑变化会被拒绝，不能静默覆盖正在使用的资源。资源和材质继续按 fence 完成帧释放。当前尚未把 D3D draw scope 自动喂给该接口；下一步是全 draw palette 旁路与 scope 完成事务，不能假设第一条 HDR 候选恰好也是 `DrawModelExecute` 的第一条 D3D draw。
+
 ## 为什么要停止优化 `batch_assemble`
 
 v46 的同一场景实测如下：

@@ -110,6 +110,21 @@ inline remixapi_MaterialInfoOpaqueEXT opaque(Material kind) {
 }
 struct MaterialRecord { remixapi_MaterialHandle handle=nullptr;Material variant=Material::Neutral;uint64_t last=0,hash=0; };
 struct Record { remixapi_MeshHandle mesh=nullptr;uint64_t last=0,bytes=0;std::string materialKey; };
+struct ResourceSurface {
+  Geometry geometry;
+  model_texture::Source material;
+  Material variant=Material::Neutral;
+  DWORD cull=D3DCULL_NONE;
+  uint32_t ordinal=0;
+};
+struct ResourceRecord {
+  remixapi_MeshHandle mesh=nullptr;
+  uint64_t last=0,bytes=0;
+  uint32_t maxBone=0;
+  bool doubleSided=false;
+  std::string signature;
+  std::vector<std::string> materialKeys;
+};
 enum class Budget : unsigned { None,Draws,FrameBytes,LiveBytes,Entries,GpuBacklog,Count };
 inline const char* name(Budget reason) {
   switch(reason) { case Budget::Draws:return "draw_limit";case Budget::FrameBytes:return "frame_geometry_bytes";
@@ -127,6 +142,7 @@ public:
 private:
   remixapi_Interface* api=nullptr;UpdateMesh updateMesh=nullptr;uint64_t next=1,nextMaterial=1;
   std::map<std::string,Record> meshes;
+  std::map<uint64_t,ResourceRecord> resources;
   Limits limits;
   std::map<std::string,MaterialRecord> materials;
   std::set<std::string> frameSkinnedKeys;
@@ -136,6 +152,29 @@ private:
   // mesh handle. Draw order is stable for Source studio models and gives each
   // occurrence a persistent slot that is reused on the following frame.
   std::map<std::string,unsigned> frameSkinnedSlots;
+  MaterialRecord* resourceMaterial(const model_texture::Source& source,Material variant,uint64_t completed,Submission& result) {
+    auto found=materials.find(source.key);
+    if(found==materials.end()) {
+      if(materials.size()>=512) { result=defer(Budget::Entries,frame);return nullptr; }
+      MaterialRecord record;record.hash=0x4c444d4100000000ull+nextMaterial++;found=materials.emplace(source.key,record).first;
+    }
+    auto& material=found->second;
+    if(material.handle&&material.variant!=variant&&material.last>completed) { result=defer(Budget::GpuBacklog,frame);return nullptr; }
+    if(!material.handle||material.variant!=variant) {
+      runtime_profile::Scope timing(runtime_profile::Stage::Material);
+      if(material.handle) { result.operation="destroy_resource_material_for_update";result.code=uint32_t(api->DestroyMaterial(material.handle));if(result.code) { return nullptr; }material.handle=nullptr; }
+      auto ext=opaque(variant);ext.albedoConstant=source.textured()?remixapi_Float3D{1,1,1}:remixapi_Float3D{0.55f,0.55f,0.55f};
+      if(source.alphaBlend) { ext.blendType_hasvalue=TRUE;ext.blendType_value=0;ext.opacityConstant=1; }
+      ext.alphaTestType=source.alphaTest;ext.alphaReferenceValue=source.alphaRef;
+      remixapi_MaterialInfo info{};info.sType=REMIXAPI_STRUCT_TYPE_MATERIAL_INFO;info.pNext=&ext;info.hash=material.hash;
+      info.albedoTexture=source.textured()?source.path.c_str():nullptr;info.filterMode=source.filter;info.wrapModeU=source.wrapU;info.wrapModeV=source.wrapV;
+      if(variant==Material::Emissive) { info.emissiveIntensity=3;info.emissiveColorConstant={0.8f,0.2f,0.05f}; }
+      result.operation="create_resource_material";result.code=uint32_t(api->CreateMaterial(&info,&material.handle));
+      if(result.code||!material.handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return nullptr; }
+      material.variant=variant;++materialUpdates;result.materialUpdated=true;
+    }
+    result.materialHandle=material.hash;result.textured=result.textured||source.textured();return &material;
+  }
 public:
   uint64_t bytes=0,peakBytes=0,created=0,reused=0,updated=0,destroyed=0,submitted=0,materialUpdates=0,skinnedCreated=0,skinnedReused=0,skinnedSubmitted=0;
   static constexpr uint64_t maxBytes=512ull*1024*1024,maxFrameBytes=192ull*1024*1024;
@@ -149,7 +188,7 @@ public:
   }
   uint32_t begin(uint64_t completed,uint64_t at) { frameAt(at);return retire(completed,at); }
 
-  size_t entries() const { return meshes.size(); }
+  size_t entries() const { return meshes.size()+resources.size(); }
   void bind(remixapi_Interface* table,UpdateMesh update=nullptr) { api=table;updateMesh=update; }
   Submission draw(const scene_input::Prepared& source,uint32_t kind,D3DPRIMITIVETYPE topology,DWORD cull,Material variant,uint64_t at,size_t pending=0,const model_texture::Source& sourceMaterial={},uint64_t completed=0,
       uint64_t stableResource=0,uint32_t stableSurface=0,uint64_t stableInstance=0) {
@@ -257,6 +296,77 @@ public:
       if(frameSkinnedKeys.insert(result.key).second) { ++frameSkinnedUniqueMeshes; }else { ++frameSkinnedRepeatDraws; }
     }++frameDraws;result.success=true;return result;
   }
+  Submission defineResource(uint64_t resource,const std::vector<ResourceSurface>& source,uint64_t at,size_t pending=0,uint64_t completed=0) {
+    Submission result;result.operation="resource_input";
+    if(!api||!api->CreateMaterial||!api->DestroyMaterial||!api->CreateMesh||!api->DrawInstance||!resource||source.empty()||source.size()>model_resource::kMaxSurfaces) {
+      result.code=ERROR_INVALID_DATA;return result;
+    }
+    frameAt(at);if(pending>=8) { return defer(Budget::GpuBacklog,at); }
+    std::ostringstream identity;uint64_t cost=0;uint32_t maxBone=0;bool doubleSided=false;uint32_t previous=0;bool first=true;
+    for(const auto& part:source) {
+      if(part.geometry.vertices.empty()||part.geometry.indices.empty()||part.geometry.indices.size()%3||!part.geometry.bonesPerVertex||
+         part.geometry.blendWeights.size()!=part.geometry.vertices.size()*part.geometry.bonesPerVertex||
+         part.geometry.blendIndices.size()!=part.geometry.vertices.size()*part.geometry.bonesPerVertex||
+         (part.cull!=D3DCULL_NONE&&part.cull!=D3DCULL_CW&&part.cull!=D3DCULL_CCW)||(!first&&part.ordinal<=previous)) { result.code=ERROR_INVALID_DATA;return result; }
+      for(const auto bone:part.geometry.blendIndices) { if(bone>=model_resource::kMaxBones) { result.code=ERROR_INVALID_DATA;return result; }maxBone=(std::max)(maxBone,bone); }
+      const auto vh=ldb_rt_file::geometrySha256(part.geometry.vertices.data(),part.geometry.vertices.size()*sizeof(part.geometry.vertices[0]));
+      const auto ih=ldb_rt_file::geometrySha256(part.geometry.indices.data(),part.geometry.indices.size()*sizeof(part.geometry.indices[0]));
+      const auto wh=ldb_rt_file::geometrySha256(part.geometry.blendWeights.data(),part.geometry.blendWeights.size()*sizeof(float));
+      const auto bh=ldb_rt_file::geometrySha256(part.geometry.blendIndices.data(),part.geometry.blendIndices.size()*sizeof(uint32_t));
+      if(vh.empty()||ih.empty()||wh.empty()||bh.empty()) { result.code=ERROR_INVALID_DATA;return result; }
+      identity<<part.ordinal<<':'<<unsigned(part.variant)<<':'<<part.cull<<':'<<part.material.key<<':'<<vh<<ih<<wh<<bh<<';';
+      if(part.geometry.bytes()>limits.bytes-cost) { return defer(Budget::LiveBytes,at); }cost+=part.geometry.bytes();
+      doubleSided=doubleSided||part.cull==D3DCULL_NONE;previous=part.ordinal;first=false;
+    }
+    const auto signature=identity.str();auto existing=resources.find(resource);
+    if(existing!=resources.end()) {
+      if(existing->second.signature!=signature) { result.operation="resource_topology_mismatch";result.code=ERROR_INVALID_DATA;return result; }
+      existing->second.last=at;result.handle=reinterpret_cast<uint64_t>(existing->second.mesh);result.skinned=true;result.success=true;++reused;++skinnedReused;return result;
+    }
+    if(cost>limits.frameBytes-frameBytes) { return defer(Budget::FrameBytes,at); }
+    if(cost>limits.bytes-bytes) { return defer(Budget::LiveBytes,at); }
+    if(entries()>=limits.entries) { return defer(Budget::Entries,at); }
+    std::vector<remixapi_MaterialHandle> materialHandles;materialHandles.reserve(source.size());
+    std::vector<std::string> materialKeys;materialKeys.reserve(source.size());
+    for(const auto& part:source) {
+      auto* material=resourceMaterial(part.material,part.variant,completed,result);if(!material) { return result; }
+      materialHandles.push_back(material->handle);materialKeys.push_back(part.material.key);
+    }
+    std::vector<remixapi_MeshInfoSurfaceTriangles> surfaces(source.size());
+    for(size_t i=0;i<source.size();++i) { const auto& geometry=source[i].geometry;auto& surface=surfaces[i];
+      surface.vertices_values=geometry.vertices.data();surface.vertices_count=geometry.vertices.size();surface.indices_values=geometry.indices.data();surface.indices_count=geometry.indices.size();surface.material=materialHandles[i];
+      surface.skinning_hasvalue=TRUE;surface.skinning_value.bonesPerVertex=geometry.bonesPerVertex;
+      surface.skinning_value.blendWeights_values=geometry.blendWeights.data();surface.skinning_value.blendWeights_count=uint32_t(geometry.blendWeights.size());
+      surface.skinning_value.blendIndices_values=geometry.blendIndices.data();surface.skinning_value.blendIndices_count=uint32_t(geometry.blendIndices.size());
+    }
+    remixapi_MeshInfo mesh{};mesh.sType=REMIXAPI_STRUCT_TYPE_MESH_INFO;mesh.hash=0x4c444d5300000000ull+next++;
+    mesh.surfaces_values=surfaces.data();mesh.surfaces_count=uint32_t(surfaces.size());remixapi_MeshHandle handle=nullptr;
+    { runtime_profile::Scope timing(runtime_profile::Stage::MeshCreate);result.operation="create_model_resource";result.code=uint32_t(api->CreateMesh(&mesh,&handle)); }
+    if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
+    ResourceRecord record;record.mesh=handle;record.last=at;record.bytes=cost;record.maxBone=maxBone;record.doubleSided=doubleSided;record.signature=signature;record.materialKeys=std::move(materialKeys);
+    resources.emplace(resource,std::move(record));bytes+=cost;frameBytes+=cost;peakBytes=(std::max)(peakBytes,bytes);++created;++skinnedCreated;
+    result.handle=reinterpret_cast<uint64_t>(handle);result.created=true;result.skinned=true;result.key="model-resource:"+std::to_string(resource);result.success=true;return result;
+  }
+  Submission drawResource(uint64_t resource,uint64_t stableInstance,const std::vector<model_scope::Matrix3x4>& palette,uint64_t at) {
+    Submission result;result.operation="resource_instance";frameAt(at);const auto found=resources.find(resource);
+    if(!api||!api->DrawInstance||!resource||!stableInstance||found==resources.end()||palette.empty()||palette.size()>model_resource::kMaxBones||found->second.maxBone>=palette.size()) { result.code=ERROR_INVALID_DATA;return result; }
+    if(frameDraws>=limits.draws) { return defer(Budget::Draws,at); }
+    std::vector<remixapi_Transform> transforms(palette.size());for(size_t i=0;i<palette.size();++i) {
+      for(const auto value:palette[i]) { if(!std::isfinite(value)||std::abs(value)>1e8f) { result.code=ERROR_INVALID_DATA;return result; } }
+      std::memcpy(transforms[i].matrix,palette[i].data(),sizeof(transforms[i].matrix));
+    }
+    remixapi_InstanceInfoObjectPickingEXT identity{};identity.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_OBJECT_PICKING_EXT;
+    identity.objectPickingValue=uint32_t(stableInstance)^uint32_t(stableInstance>>32);if(!identity.objectPickingValue) { identity.objectPickingValue=1; }
+    remixapi_InstanceInfoBoneTransformsEXT bones{};bones.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO_BONE_TRANSFORMS_EXT;bones.pNext=&identity;
+    bones.boneTransforms_values=transforms.data();bones.boneTransforms_count=uint32_t(transforms.size());
+    remixapi_InstanceInfo instance{};instance.sType=REMIXAPI_STRUCT_TYPE_INSTANCE_INFO;instance.pNext=&bones;instance.mesh=found->second.mesh;instance.doubleSided=found->second.doubleSided;
+    instance.transform.matrix[0][0]=instance.transform.matrix[1][1]=instance.transform.matrix[2][2]=1;
+    { runtime_profile::Scope timing(runtime_profile::Stage::Instance);result.operation="draw_model_resource";result.code=uint32_t(api->DrawInstance(&instance)); }
+    if(result.code) { return result; }
+    found->second.last=at;for(const auto& key:found->second.materialKeys) { const auto material=materials.find(key);if(material!=materials.end()) { material->second.last=at; } }
+    result.handle=reinterpret_cast<uint64_t>(found->second.mesh);result.key="model-resource:"+std::to_string(resource);result.skinned=true;result.success=true;
+    ++submitted;++skinnedSubmitted;++frameSkinnedDraws;++frameDraws;if(frameSkinnedKeys.insert(result.key).second) { ++frameSkinnedUniqueMeshes; }else { ++frameSkinnedRepeatDraws; }return result;
+  }
   // A frame batch is already canonical triangle-list geometry. Unlike draw(),
   // it represents many Source surfaces that share one material, transform and
   // raster class. The API still copies the arrays synchronously, but the Host
@@ -337,6 +447,13 @@ public:
   }
   uint32_t retire(uint64_t completed,uint64_t now,bool all=false) {
     runtime_profile::Scope timing(runtime_profile::Stage::Retire);
+    for(auto it=resources.begin();it!=resources.end();) {
+      const auto& resource=it->second;
+      if(resource.last<=completed&&(all||(now>=resource.last&&now-resource.last>=2))) {
+        const auto code=uint32_t(api->DestroyMesh(resource.mesh));if(code) { return code; }
+        bytes-=resource.bytes;it=resources.erase(it);++destroyed;
+      } else { ++it; }
+    }
     for(auto it=meshes.begin();it!=meshes.end();) {
       const auto& r=it->second;
       if(r.last<=completed && (all || (now>=r.last && now-r.last>=2))) {
@@ -345,6 +462,7 @@ public:
       } else { ++it; }
     }
     std::set<std::string> referenced;for(const auto& mesh:meshes) { referenced.insert(mesh.second.materialKey); }
+    for(const auto& resource:resources) { referenced.insert(resource.second.materialKeys.begin(),resource.second.materialKeys.end()); }
     for(auto it=materials.begin();it!=materials.end();) {
       auto& material=it->second;
       const bool used=referenced.count(it->first)!=0;

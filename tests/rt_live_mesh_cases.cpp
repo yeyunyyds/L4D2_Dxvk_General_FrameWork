@@ -11,7 +11,7 @@ void require(bool value,const char* why) { if(!value) { throw std::runtime_error
 namespace fixture {
 unsigned failureCode=1,fail=0,created=0,updates=0,draws=0,materials=0,destroyed=0,materialDestroyed=0;std::set<uint64_t> live,materialLive;
 int lastAlpha=7;uint8_t lastRef=0;bool lastTextured=false,lastBlend=false;float lastOpacity=0;
-bool lastSkinned=false;uint32_t lastSkinWeights=0,lastSkinIndices=0,lastBoneCount=0,lastStableInstance=0;float lastBoneX=0;
+bool lastSkinned=false;uint32_t lastSkinWeights=0,lastSkinIndices=0,lastBoneCount=0,lastStableInstance=0,lastSurfaceCount=0;float lastBoneX=0;
 std::vector<remixapi_HardcodedVertex> received;remixapi_Transform lastTransform{};
 remixapi_ErrorCode result(unsigned at) { return static_cast<remixapi_ErrorCode>(fail==at?failureCode:0); }
 remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remixapi_MaterialHandle* out) {
@@ -23,11 +23,13 @@ remixapi_ErrorCode REMIXAPI_CALL material(const remixapi_MaterialInfo* info,remi
   ++materials;*out=reinterpret_cast<remixapi_MaterialHandle>(info->hash);return static_cast<remixapi_ErrorCode>(0);
 }
 remixapi_ErrorCode REMIXAPI_CALL mesh(const remixapi_MeshInfo* info,remixapi_MeshHandle* out) {
-  if(fail==2) { return result(2); }require(info&&info->surfaces_count==1,"invalid mesh surface count");
-  const auto& s=info->surfaces_values[0];require(s.material&&s.vertices_count&&s.indices_count&&s.indices_count%3==0,"indexed mesh correspondence");
-  for(size_t i=0;i<s.indices_count;++i) { require(s.indices_values[i]<s.vertices_count,"API index exceeds retained vertex range"); }
-  lastSkinned=s.skinning_hasvalue!=FALSE;lastSkinWeights=s.skinning_value.blendWeights_count;lastSkinIndices=s.skinning_value.blendIndices_count;
-  if(lastSkinned) { require(s.skinning_value.bonesPerVertex==3&&lastSkinWeights==s.vertices_count*3&&lastSkinIndices==s.vertices_count*3,"API skinning scalar counts"); }
+  if(fail==2) { return result(2); }require(info&&info->surfaces_count>0,"invalid mesh surface count");lastSurfaceCount=info->surfaces_count;
+  for(uint32_t surface=0;surface<info->surfaces_count;++surface) { const auto& s=info->surfaces_values[surface];require(s.material&&s.vertices_count&&s.indices_count&&s.indices_count%3==0,"indexed mesh correspondence");
+    for(size_t i=0;i<s.indices_count;++i) { require(s.indices_values[i]<s.vertices_count,"API index exceeds retained vertex range"); }
+    lastSkinned=s.skinning_hasvalue!=FALSE;lastSkinWeights=s.skinning_value.blendWeights_count;lastSkinIndices=s.skinning_value.blendIndices_count;
+    if(lastSkinned) { require(s.skinning_value.bonesPerVertex==3&&lastSkinWeights==s.vertices_count*3&&lastSkinIndices==s.vertices_count*3,"API skinning scalar counts"); }
+  }
+  const auto& s=info->surfaces_values[0];
   require(live.insert(info->hash).second,"duplicate live API mesh handle");++created;
   received.assign(s.vertices_values,s.vertices_values+s.vertices_count);*out=reinterpret_cast<remixapi_MeshHandle>(info->hash);return static_cast<remixapi_ErrorCode>(0);
 }
@@ -150,6 +152,19 @@ int main() {
       shared.frameSkinnedUniqueMeshes==1&&shared.frameSkinnedRepeatDraws==1&&firstStable==(0x12345678u^0x42u)&&
       fixture::lastStableInstance==(0x87654321u^0x11u),"stable model instances duplicated topology or lost explicit identity");
     require(!shared.retire(4,6,true),"stable shared skin cleanup");
+    auto resourceApi=fixture::table();live_mesh::Scene resourceScene(&resourceApi);live_mesh::Geometry resourceGeometry;
+    require(live_mesh::build(prepared,2,D3DPT_TRIANGLESTRIP,D3DCULL_NONE,resourceGeometry),"resource geometry build");
+    live_mesh::ResourceSurface partA;partA.geometry=resourceGeometry;partA.ordinal=2;partA.material.key="body";
+    auto partB=partA;partB.ordinal=5;partB.material.key="clothes";std::vector<live_mesh::ResourceSurface> parts{partA,partB};
+    const auto definition=resourceScene.defineResource(700,parts,10);require(definition.success&&definition.created&&fixture::lastSurfaceCount==2&&resourceScene.entries()==1,"multi-surface model resource not created once");
+    std::vector<model_scope::Matrix3x4> resourcePalette=prepared.skinning.transforms;
+    const auto instanceA=resourceScene.drawResource(700,800,resourcePalette,10),instanceB=resourceScene.drawResource(700,801,resourcePalette,10);
+    require(instanceA.success&&instanceB.success&&instanceA.handle==definition.handle&&instanceB.handle==definition.handle&&resourceScene.frameDraws==2&&
+      resourceScene.frameSkinnedDraws==2&&resourceScene.frameSkinnedUniqueMeshes==1&&resourceScene.frameSkinnedRepeatDraws==1,"multi-surface resource did not issue one instance draw per character");
+    auto changed=parts;changed[1].geometry.indices[0]=1;const auto mismatch=resourceScene.defineResource(700,changed,11);
+    require(!mismatch.success&&mismatch.code&&std::string(mismatch.operation)=="resource_topology_mismatch","resource generation accepted changed topology");
+    resourcePalette.resize(1);require(!resourceScene.drawResource(700,802,resourcePalette,11).success,"short resource palette accepted");
+    require(!resourceScene.retire(10,12,true)&&resourceScene.entries()==0,"multi-surface resource cleanup");
     input.constants[13][0]=1;input.morph.positions.resize(4);auto morphed=model_input::reconstruct(snapshot,input,digest,true);
     require(!morphed.skinning.enabled&&std::string(morphed.reason)=="original_vs_three_weight","morph must retain CPU skin fallback");
     auto isolatedMorph=model_input::reconstruct(snapshot,input,digest,true,true,true);
