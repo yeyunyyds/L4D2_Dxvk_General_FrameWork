@@ -64,8 +64,12 @@ class PreflightCases(unittest.TestCase):
         validate_runtime_skinning_flush(geometry)
         with self.assertRaisesRegex(RuntimeError, 'not reset'):
             validate_runtime_skinning_flush(b'm_skinningContext->flushCommandList();')
-        api = b'remixapi_LdbUpdateMesh remixapi_CreateOrUpdateMesh assets->updateExternalMesh'
-        asset = b'void AssetReplacer::updateExternalMesh *found->second = std::move(submeshes);'
+        api = (b'remixapi_LdbUpdateMesh remixapi_CreateOrUpdateMesh assets->updateExternalMesh '
+               b'ldbPersistentHash HashComponents::Indices HashComponents::GeometryDescriptor '
+               b'const auto vertexGeneration = hack_getNextGeomHash()')
+        asset = (b'void AssetReplacer::updateExternalMesh '
+                 b'm_extMeshes.emplace(handle, std::make_unique<std::vector<RasterGeometry>> '
+                 b'*found->second = std::move(submeshes);')
         header = b'void updateExternalMesh'
         validate_runtime_persistent_mesh(api, asset, header)
         with self.assertRaisesRegex(RuntimeError, 'export'):

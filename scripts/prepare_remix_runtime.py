@@ -38,10 +38,14 @@ def validate_runtime_skinning_flush(geometry):
 
 def validate_runtime_persistent_mesh(api, asset, header):
     required_api = [b'remixapi_LdbUpdateMesh', b'remixapi_CreateOrUpdateMesh',
-                    b'assets->updateExternalMesh']
+                    b'assets->updateExternalMesh', b'ldbPersistentHash',
+                    b'HashComponents::Indices', b'HashComponents::GeometryDescriptor',
+                    b'const auto vertexGeneration = hack_getNextGeomHash()']
     if any(marker not in api for marker in required_api):
         raise RuntimeError('Persistent external mesh update export is incomplete')
-    if b'void AssetReplacer::updateExternalMesh' not in asset or b'*found->second = std::move(submeshes);' not in asset:
+    if (b'void AssetReplacer::updateExternalMesh' not in asset or
+            b'm_extMeshes.emplace(handle, std::make_unique<std::vector<RasterGeometry>>' not in asset or
+            b'*found->second = std::move(submeshes);' not in asset):
         raise RuntimeError('Persistent external mesh registry update is incomplete')
     if b'void updateExternalMesh' not in header:
         raise RuntimeError('Persistent external mesh declaration is missing')
@@ -83,6 +87,7 @@ def prepare(output):
                'runtime_skinning_weight_stride': 'sizeof(float)*bonesPerVertex',
                'runtime_skinning_command_counter': 'reset_after_flush',
                'runtime_persistent_mesh_update': 'remixapi_LdbUpdateMesh',
+               'runtime_persistent_topology_identity': 'first_frame_upsert_stable_indices_descriptor_dynamic_vertex_generation',
                'submodules': 'pending', 'runtime_execution': 'unrun', 'b580_rt': 'unrun'}
     def save():
         (output / 'rt-runtime-source.json').write_text(json.dumps(receipt, indent=2) + '\n')

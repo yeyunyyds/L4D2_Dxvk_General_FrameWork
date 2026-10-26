@@ -19,7 +19,8 @@ if ((Get-FileHash $api -Algorithm SHA256).Hash.ToLower() -ne $receipt.api_sha256
     (Get-FileHash $runtimeAssetHeader -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_asset_header_sha256 -or
     $receipt.runtime_skinning_weight_stride -ne 'sizeof(float)*bonesPerVertex' -or
     $receipt.runtime_skinning_command_counter -ne 'reset_after_flush' -or
-    $receipt.runtime_persistent_mesh_update -ne 'remixapi_LdbUpdateMesh') {
+    $receipt.runtime_persistent_mesh_update -ne 'remixapi_LdbUpdateMesh' -or
+    $receipt.runtime_persistent_topology_identity -ne 'first_frame_upsert_stable_indices_descriptor_dynamic_vertex_generation') {
   throw 'Runtime API/smoke/skinning input changed after preparation'
 }
 $head = & git -C $sourcePath rev-parse HEAD

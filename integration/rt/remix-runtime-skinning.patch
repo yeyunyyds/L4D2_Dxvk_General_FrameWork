@@ -1,15 +1,18 @@
 diff --git a/src/dxvk/rtx_render/rtx_asset_replacer.cpp b/src/dxvk/rtx_render/rtx_asset_replacer.cpp
-index d51dbcb..32df3b3 100644
+index d51dbcb..a3db4a8 100644
 --- a/src/dxvk/rtx_render/rtx_asset_replacer.cpp
 +++ b/src/dxvk/rtx_render/rtx_asset_replacer.cpp
-@@ -197,6 +197,16 @@ void AssetReplacer::registerExternalMesh(remixapi_MeshHandle handle, std::vector
+@@ -197,6 +197,19 @@ void AssetReplacer::registerExternalMesh(remixapi_MeshHandle handle, std::vector
    m_extMeshes.emplace(handle, std::make_unique< std::vector<RasterGeometry>>(std::move(submeshes)));
  }
  
 +void AssetReplacer::updateExternalMesh(remixapi_MeshHandle handle, std::vector<RasterGeometry>&& submeshes) {
 +  auto found = m_extMeshes.find(handle);
 +  if (found == m_extMeshes.end()) {
-+    Logger::err("Ignoring update for an unknown external mesh (handle=" + tostr(handle) + ") ");
++    // LDB's persistent update entry point is an upsert.  Using it for the
++    // first frame as well as later frames lets the runtime assign stable
++    // topology identity before the mesh is ever registered.
++    m_extMeshes.emplace(handle, std::make_unique<std::vector<RasterGeometry>>(std::move(submeshes)));
 +    return;
 +  }
 +
@@ -31,11 +34,50 @@ index 460ae62..386ff1f 100644
      [[nodiscard]] const std::vector<RasterGeometry>& accessExternalMesh(remixapi_MeshHandle handle) const;
      void destroyExternalMesh(remixapi_MeshHandle handle);
  
+diff --git a/src/dxvk/rtx_render/rtx_geometry_utils.h b/src/dxvk/rtx_render/rtx_geometry_utils.h
+index 862d905..9ae77df 100644
+--- a/src/dxvk/rtx_render/rtx_geometry_utils.h
++++ b/src/dxvk/rtx_render/rtx_geometry_utils.h
+@@ -201,6 +201,7 @@ namespace dxvk {
+     inline void flushCommandList() {
+       if (m_skinningContext->getCommandList() != nullptr && m_skinningCommands > 0) {
+         m_skinningContext->flushCommandList();
++        m_skinningCommands = 0;
+       }
+     }
+ 
 diff --git a/src/dxvk/rtx_render/rtx_remix_api.cpp b/src/dxvk/rtx_render/rtx_remix_api.cpp
-index 3113fe2..1c82388 100644
+index 3113fe2..3073ec9 100644
 --- a/src/dxvk/rtx_render/rtx_remix_api.cpp
 +++ b/src/dxvk/rtx_render/rtx_remix_api.cpp
-@@ -912,14 +912,16 @@ namespace {
+@@ -100,6 +100,26 @@ namespace {
+     return sizeof(T) * count;
+   }
+ 
++  XXH64_hash_t ldbPersistentHash(
++    remixapi_MeshHandle handle,
++    size_t surface,
++    uint64_t component,
++    const void* bytes = nullptr,
++    size_t byteCount = 0) {
++    struct Identity {
++      uintptr_t handle;
++      uint64_t surface;
++      uint64_t component;
++    } identity { reinterpret_cast<uintptr_t>(handle), uint64_t(surface), component };
++    auto hash = XXH64(&identity, sizeof(identity), 0x4c44425045525349ull);
++    if (byteCount) {
++      hash = XXH64(bytes, byteCount, hash);
++    }
++    // GeometryHashes reserves the empty value.  A zero XXH result is
++    // possible, though extraordinarily unlikely, so make the contract exact.
++    return hash == dxvk::kEmptyHash ? 1 : hash;
++  }
++
+ 
+   bool isHResultAliasedWithRemixErrorCode(HRESULT hr) {
+     switch (hr) {
+@@ -912,14 +932,16 @@ namespace {
      return REMIXAPI_ERROR_CODE_REMIX_DEVICE_WAS_NOT_REGISTERED;
    }
  
@@ -44,7 +86,7 @@ index 3113fe2..1c82388 100644
      const remixapi_MeshInfo* info,
 -    remixapi_MeshHandle* out_handle) {
 +    remixapi_MeshHandle* out_handle,
-+    bool update) {
++    bool persistentUpdate) {
      dxvk::D3D9DeviceEx* remixDevice = tryAsDxvk();
      if (!remixDevice) {
        return REMIXAPI_ERROR_CODE_REMIX_DEVICE_WAS_NOT_REGISTERED;
@@ -55,7 +97,7 @@ index 3113fe2..1c82388 100644
        return REMIXAPI_ERROR_CODE_INVALID_ARGUMENTS;
      }
      static_assert(sizeof(remixapi_MeshHandle) == sizeof(info->hash));
-@@ -933,6 +935,28 @@ namespace {
+@@ -933,6 +955,28 @@ namespace {
      for (size_t i = 0; i < info->surfaces_count; i++) {
        const remixapi_MeshInfoSurfaceTriangles& src = info->surfaces_values[i];
  
@@ -84,7 +126,7 @@ index 3113fe2..1c82388 100644
        const size_t vertexDataSize = sizeInBytes(src.vertices_values, src.vertices_count);
        const size_t indexDataSize = sizeInBytes(src.indices_values, src.indices_count);
  
-@@ -1014,7 +1038,7 @@ namespace {
+@@ -1014,33 +1058,63 @@ namespace {
          dst.color0Buffer = dxvk::RasterBuffer { vertexSlice, offsetof(remixapi_HardcodedVertex, color), sizeof(remixapi_HardcodedVertex), VK_FORMAT_B8G8R8A8_UNORM };
          if (src.skinning_hasvalue) {
            dst.numBonesPerVertex = src.skinning_value.bonesPerVertex;
@@ -93,15 +135,50 @@ index 3113fe2..1c82388 100644
            dst.blendIndicesBuffer = dxvk::RasterBuffer { blendIndicesSlice, 0, sizeof(uint32_t), VK_FORMAT_R8G8B8A8_USCALED };
          }
  
-@@ -1032,15 +1056,25 @@ namespace {
+         dst.indexCount = src.indices_count;
+         static_assert(sizeof(src.indices_values[0]) == 4);
+         dst.indexBuffer = dxvk::RasterBuffer { indexSlice, 0, sizeof(uint32_t), VK_INDEX_TYPE_UINT32 };
+-        // look comments in UsdMod::Impl::processMesh, rtx_mod_usd.cpp
+-        dst.hashes[dxvk::HashComponents::Indices] = dst.hashes[dxvk::HashComponents::VertexPosition] = hack_getNextGeomHash();
+-        dst.hashes[dxvk::HashComponents::VertexTexcoord] = hack_getNextGeomHash();
+-        dst.hashes[dxvk::HashComponents::GeometryDescriptor] = hack_getNextGeomHash();
+-        dst.hashes[dxvk::HashComponents::VertexLayout] = hack_getNextGeomHash();
++        // Ordinary Remix API meshes keep their historical one-shot identity.
++        // Persistent LDB meshes instead retain topology identity while their
++        // vertex identity changes each update.  This keeps DrawCallCache on
++        // one BlasEntry and selects kUpdateBVH / Vulkan BLAS refit instead of
++        // allocating a new scene object and BLAS for every animated frame.
++        if (persistentUpdate) {
++          struct Descriptor {
++            uint32_t vertices;
++            uint32_t indices;
++            uint32_t indexType;
++            uint32_t topology;
++          } descriptor { src.vertices_count, src.indices_count, uint32_t(VK_INDEX_TYPE_UINT32), uint32_t(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) };
++          dst.hashes[dxvk::HashComponents::Indices] = ldbPersistentHash(handle, i, 1, src.indices_values, indexDataSize);
++          dst.hashes[dxvk::HashComponents::GeometryDescriptor] = ldbPersistentHash(handle, i, 2, &descriptor, sizeof(descriptor));
++          dst.hashes[dxvk::HashComponents::VertexLayout] = ldbPersistentHash(handle, i, 3);
++          const auto vertexGeneration = hack_getNextGeomHash();
++          dst.hashes[dxvk::HashComponents::VertexPosition] = vertexGeneration;
++          dst.hashes[dxvk::HashComponents::VertexTexcoord] = vertexGeneration;
++        } else {
++          // See comments in UsdMod::Impl::processMesh, rtx_mod_usd.cpp.
++          dst.hashes[dxvk::HashComponents::Indices] = dst.hashes[dxvk::HashComponents::VertexPosition] = hack_getNextGeomHash();
++          dst.hashes[dxvk::HashComponents::VertexTexcoord] = hack_getNextGeomHash();
++          dst.hashes[dxvk::HashComponents::GeometryDescriptor] = hack_getNextGeomHash();
++          dst.hashes[dxvk::HashComponents::VertexLayout] = hack_getNextGeomHash();
++        }
+         dst.hashes.precombine();
+       }
+       allocatedSurfaces.push_back(std::move(dst));
      }
      std::lock_guard lock { s_mutex };
  
 -    remixDevice->EmitCs([cHandle = handle, cSurfaces = std::move(allocatedSurfaces)](dxvk::DxvkContext* ctx) mutable {
-+    remixDevice->EmitCs([cHandle = handle, cSurfaces = std::move(allocatedSurfaces), update](dxvk::DxvkContext* ctx) mutable {
++    remixDevice->EmitCs([cHandle = handle, cSurfaces = std::move(allocatedSurfaces), persistentUpdate](dxvk::DxvkContext* ctx) mutable {
        auto& assets = ctx->getCommonObjects()->getSceneManager().getAssetReplacer();
 -      assets->registerExternalMesh(cHandle, std::move(cSurfaces));
-+      if (update) {
++      if (persistentUpdate) {
 +        assets->updateExternalMesh(cHandle, std::move(cSurfaces));
 +      } else {
 +        assets->registerExternalMesh(cHandle, std::move(cSurfaces));
@@ -121,7 +198,7 @@ index 3113fe2..1c82388 100644
    remixapi_ErrorCode REMIXAPI_CALL remixapi_DestroyMesh(
      remixapi_MeshHandle handle) {
      dxvk::D3D9DeviceEx* remixDevice = tryAsDxvk();
-@@ -1742,6 +1776,11 @@ namespace {
+@@ -1742,6 +1816,11 @@ namespace {
  
  extern "C"
  {
@@ -133,14 +210,3 @@ index 3113fe2..1c82388 100644
    REMIXAPI remixapi_ErrorCode REMIXAPI_CALL remixapi_InitializeLibrary(const remixapi_InitializeLibraryInfo* info,
                                                                         remixapi_Interface* out_result) {
      if (!info || info->sType != REMIXAPI_STRUCT_TYPE_INITIALIZE_LIBRARY_INFO) {
-diff --git a/src/dxvk/rtx_render/rtx_geometry_utils.h b/src/dxvk/rtx_render/rtx_geometry_utils.h
-index 862d9059..9ae77dfe 100644
---- a/src/dxvk/rtx_render/rtx_geometry_utils.h
-+++ b/src/dxvk/rtx_render/rtx_geometry_utils.h
-@@ -201,5 +201,6 @@ namespace dxvk {
-     inline void flushCommandList() {
-       if (m_skinningContext->getCommandList() != nullptr && m_skinningCommands > 0) {
-         m_skinningContext->flushCommandList();
-+        m_skinningCommands = 0;
-       }
-     }

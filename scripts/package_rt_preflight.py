@@ -131,6 +131,7 @@ def package(source, output, python_package, vulkan_loader, build_commit, verify=
                     'weight_stride': receipt['runtime_skinning_weight_stride'],
                     'command_counter': receipt['runtime_skinning_command_counter']},
                     'persistent_mesh': {'export': receipt['runtime_persistent_mesh_update'],
+                    'topology_identity': receipt['runtime_persistent_topology_identity'],
                     'asset_source_sha256': receipt['runtime_asset_source_sha256'],
                     'asset_header_sha256': receipt['runtime_asset_header_sha256']}},
                 'vulkan_loader': {'repository': 'https://github.com/KhronosGroup/Vulkan-Loader.git',

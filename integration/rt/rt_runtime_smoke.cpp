@@ -405,8 +405,13 @@ int wmain(int argc, wchar_t** argv) {
       surface.indices_values = indices; surface.indices_count = 3; surface.material = materialHandles[variant];
       remixapi_MeshInfo mesh{}; mesh.sType = REMIXAPI_STRUCT_TYPE_MESH_INFO; mesh.hash = 0x4c445202 + variant * 16;
       mesh.surfaces_values = &surface; mesh.surfaces_count = 1;
-      log.result("create_mesh", uint32_t(runtime.api.CreateMesh(&mesh, &meshHandles[variant])));
-      if (variant == 0) { log.result("update_mesh_same_handle", uint32_t(updateMesh(&mesh))); }
+      if (variant == 0) {
+        log.result("upsert_persistent_mesh_first_frame", uint32_t(updateMesh(&mesh)));
+        meshHandles[variant] = reinterpret_cast<remixapi_MeshHandle>(mesh.hash);
+        log.result("update_mesh_same_handle", uint32_t(updateMesh(&mesh)));
+      } else {
+        log.result("create_mesh", uint32_t(runtime.api.CreateMesh(&mesh, &meshHandles[variant])));
+      }
     }
     materialInputs << "]}\n";
     materialInputs.close(); if (!materialInputs) { throw std::runtime_error("save material input validation"); }
