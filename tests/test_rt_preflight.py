@@ -64,16 +64,18 @@ class PreflightCases(unittest.TestCase):
         validate_runtime_skinning_flush(geometry)
         with self.assertRaisesRegex(RuntimeError, 'not reset'):
             validate_runtime_skinning_flush(b'm_skinningContext->flushCommandList();')
-        api = (b'remixapi_LdbUpdateMesh remixapi_CreateOrUpdateMesh assets->updateExternalMesh '
+        api = (b'remixapi_LdbUpdateMesh remixapi_CreateOrUpdateMesh assets->updateExternalMesh kLdbPersistentGeometryMarker '
                b'ldbPersistentHash HashComponents::Indices HashComponents::GeometryDescriptor '
                b'const auto vertexGeneration = hack_getNextGeomHash()')
         asset = (b'void AssetReplacer::updateExternalMesh '
                  b'm_extMeshes.emplace(handle, std::make_unique<std::vector<RasterGeometry>> '
                  b'*found->second = std::move(submeshes);')
         header = b'void updateExternalMesh'
-        validate_runtime_persistent_mesh(api, asset, header)
+        accel = b'requestDynamicBlas kLdbPersistentGeometryMarker'
+        constants = b'kLdbPersistentGeometryMarker'
+        validate_runtime_persistent_mesh(api, asset, header, accel, constants)
         with self.assertRaisesRegex(RuntimeError, 'export'):
-            validate_runtime_persistent_mesh(b'remixapi_CreateOrUpdateMesh', asset, header)
+            validate_runtime_persistent_mesh(b'remixapi_CreateOrUpdateMesh', asset, header, accel, constants)
         build_script = (Path(__file__).resolve().parents[1] / 'scripts/build_remix_runtime.ps1').read_text()
         self.assertIn('dbghelp.lib', build_script)
         packager = (Path(__file__).resolve().parents[1] / 'scripts/package_rt_preflight.py').read_text()

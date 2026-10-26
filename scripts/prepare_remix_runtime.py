@@ -11,6 +11,8 @@ RUNTIME_SKINNING_SOURCE = Path('src/dxvk/rtx_render/rtx_remix_api.cpp')
 RUNTIME_GEOMETRY_SOURCE = Path('src/dxvk/rtx_render/rtx_geometry_utils.h')
 RUNTIME_ASSET_SOURCE = Path('src/dxvk/rtx_render/rtx_asset_replacer.cpp')
 RUNTIME_ASSET_HEADER = Path('src/dxvk/rtx_render/rtx_asset_replacer.h')
+RUNTIME_ACCEL_SOURCE = Path('src/dxvk/rtx_render/rtx_accel_manager.cpp')
+RUNTIME_CONSTANTS_HEADER = Path('src/dxvk/rtx_render/rtx_constants.h')
 RUNTIME_SKINNING_PATCH = ROOT / 'integration/rt/remix-runtime-skinning.patch'
 
 
@@ -36,7 +38,7 @@ def validate_runtime_skinning_flush(geometry):
         raise RuntimeError('GPU skinning command count is not reset after submission')
 
 
-def validate_runtime_persistent_mesh(api, asset, header):
+def validate_runtime_persistent_mesh(api, asset, header, accel=b'', constants=b''):
     required_api = [b'remixapi_LdbUpdateMesh', b'remixapi_CreateOrUpdateMesh',
                     b'assets->updateExternalMesh', b'ldbPersistentHash',
                     b'HashComponents::Indices', b'HashComponents::GeometryDescriptor',
@@ -49,6 +51,10 @@ def validate_runtime_persistent_mesh(api, asset, header):
         raise RuntimeError('Persistent external mesh registry update is incomplete')
     if b'void updateExternalMesh' not in header:
         raise RuntimeError('Persistent external mesh declaration is missing')
+    if (b'kLdbPersistentGeometryMarker' not in api or
+            b'kLdbPersistentGeometryMarker' not in accel or
+            b'kLdbPersistentGeometryMarker' not in constants):
+        raise RuntimeError('Persistent geometry is not forced through the dynamic BLAS update path')
 
 
 def prepare(output):
@@ -72,8 +78,11 @@ def prepare(output):
     validate_runtime_skinning_flush(runtime_geometry_source.read_bytes())
     runtime_asset_source = output / RUNTIME_ASSET_SOURCE
     runtime_asset_header = output / RUNTIME_ASSET_HEADER
+    runtime_accel_source = output / RUNTIME_ACCEL_SOURCE
+    runtime_constants_header = output / RUNTIME_CONSTANTS_HEADER
     validate_runtime_persistent_mesh(runtime_skinning_source.read_bytes(), runtime_asset_source.read_bytes(),
-                                     runtime_asset_header.read_bytes())
+                                     runtime_asset_header.read_bytes(), runtime_accel_source.read_bytes(),
+                                     runtime_constants_header.read_bytes())
     api = output / 'public/include/remix/remix_c.h'
     receipt = {'schema': 3, 'repository': baseline['runtime_repository'],
                'commit': baseline['runtime_commit'], 'branch_reference': baseline['runtime_branch_reference'],
@@ -84,10 +93,12 @@ def prepare(output):
                'runtime_geometry_source_sha256': digest(runtime_geometry_source),
                'runtime_asset_source_sha256': digest(runtime_asset_source),
                'runtime_asset_header_sha256': digest(runtime_asset_header),
+               'runtime_accel_source_sha256': digest(runtime_accel_source),
+               'runtime_constants_header_sha256': digest(runtime_constants_header),
                'runtime_skinning_weight_stride': 'sizeof(float)*bonesPerVertex',
                'runtime_skinning_command_counter': 'reset_after_flush',
                'runtime_persistent_mesh_update': 'remixapi_LdbUpdateMesh',
-               'runtime_persistent_topology_identity': 'first_frame_upsert_stable_indices_descriptor_dynamic_vertex_generation',
+               'runtime_persistent_topology_identity': 'first_frame_upsert_stable_indices_descriptor_dynamic_vertex_generation_forced_dynamic_blas',
                'submodules': 'pending', 'runtime_execution': 'unrun', 'b580_rt': 'unrun'}
     def save():
         (output / 'rt-runtime-source.json').write_text(json.dumps(receipt, indent=2) + '\n')

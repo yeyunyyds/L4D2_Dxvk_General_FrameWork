@@ -1,3 +1,17 @@
+diff --git a/src/dxvk/rtx_render/rtx_accel_manager.cpp b/src/dxvk/rtx_render/rtx_accel_manager.cpp
+index c662027..cdc5136 100644
+--- a/src/dxvk/rtx_render/rtx_accel_manager.cpp
++++ b/src/dxvk/rtx_render/rtx_accel_manager.cpp
+@@ -719,7 +719,8 @@ namespace dxvk {
+       const uint32_t blasPrims = blasEntry->modifiedGeometryData.calculatePrimitiveCount();
+ 
+       // Figure out if this blas should be a dynamic one
+-      const bool requestDynamicBlas = instance->surface.instancesToObject != nullptr ||    // Point instancer geometry is replicated many times in a scene, we want to reuse the BLAS memory for these objects
++      const bool requestDynamicBlas = blasEntry->input.getGeometryData().hashes[HashComponents::VertexShader] == kLdbPersistentGeometryMarker || // LDB CPU-deformed batches retain topology and require update/refit even below the normal primitive threshold
++                                      instance->surface.instancesToObject != nullptr ||    // Point instancer geometry is replicated many times in a scene, we want to reuse the BLAS memory for these objects
+                                       blasEntry->input.getSkinningState().numBones != 0 || // Skinned meshes are always desirable to give a dynamic BLAS, since we'll want to make use of BVH update for performance reasons
+                                       blasEntry->getLinkedInstances().size() > 1  ||       // Meshes that are used in instances multiple times should benefit from BLAS reuse
+                                       blasEntry->dynamicBlas != nullptr ||                 // If we already have a dynamic BLAS, keep using it.
 diff --git a/src/dxvk/rtx_render/rtx_asset_replacer.cpp b/src/dxvk/rtx_render/rtx_asset_replacer.cpp
 index d51dbcb..a3db4a8 100644
 --- a/src/dxvk/rtx_render/rtx_asset_replacer.cpp
@@ -34,6 +48,21 @@ index 460ae62..386ff1f 100644
      [[nodiscard]] const std::vector<RasterGeometry>& accessExternalMesh(remixapi_MeshHandle handle) const;
      void destroyExternalMesh(remixapi_MeshHandle handle);
  
+diff --git a/src/dxvk/rtx_render/rtx_constants.h b/src/dxvk/rtx_render/rtx_constants.h
+index 79a7b4f..62a252a 100644
+--- a/src/dxvk/rtx_render/rtx_constants.h
++++ b/src/dxvk/rtx_render/rtx_constants.h
+@@ -29,6 +29,10 @@ namespace dxvk {
+ 
+   // Sentinel value representing a null hash
+   static constexpr XXH64_hash_t kEmptyHash = 0;
++  // Project-local marker used only by the LDB persistent external-mesh entry
++  // point. It keeps CPU-deformed batches out of merged BLASes so their stable
++  // topology can use the runtime's dynamic BLAS update/refit path.
++  static constexpr XXH64_hash_t kLdbPersistentGeometryMarker = 0x4c44425045525354ull;
+ 
+   // Note: 0xFFFF used for inactive buffer and surface material index to indicate to the GPU that no buffer/material is in use
+   // for a specific variable (as some are optional). Also used for debugging to provide wildly out of range values in case one is not set.
 diff --git a/src/dxvk/rtx_render/rtx_geometry_utils.h b/src/dxvk/rtx_render/rtx_geometry_utils.h
 index 862d905..9ae77df 100644
 --- a/src/dxvk/rtx_render/rtx_geometry_utils.h
@@ -47,7 +76,7 @@ index 862d905..9ae77df 100644
      }
  
 diff --git a/src/dxvk/rtx_render/rtx_remix_api.cpp b/src/dxvk/rtx_render/rtx_remix_api.cpp
-index 3113fe2..3073ec9 100644
+index 3113fe2..79b3251 100644
 --- a/src/dxvk/rtx_render/rtx_remix_api.cpp
 +++ b/src/dxvk/rtx_render/rtx_remix_api.cpp
 @@ -100,6 +100,26 @@ namespace {
@@ -126,7 +155,7 @@ index 3113fe2..3073ec9 100644
        const size_t vertexDataSize = sizeInBytes(src.vertices_values, src.vertices_count);
        const size_t indexDataSize = sizeInBytes(src.indices_values, src.indices_count);
  
-@@ -1014,33 +1058,63 @@ namespace {
+@@ -1014,33 +1058,64 @@ namespace {
          dst.color0Buffer = dxvk::RasterBuffer { vertexSlice, offsetof(remixapi_HardcodedVertex, color), sizeof(remixapi_HardcodedVertex), VK_FORMAT_B8G8R8A8_UNORM };
          if (src.skinning_hasvalue) {
            dst.numBonesPerVertex = src.skinning_value.bonesPerVertex;
@@ -158,6 +187,7 @@ index 3113fe2..3073ec9 100644
 +          dst.hashes[dxvk::HashComponents::Indices] = ldbPersistentHash(handle, i, 1, src.indices_values, indexDataSize);
 +          dst.hashes[dxvk::HashComponents::GeometryDescriptor] = ldbPersistentHash(handle, i, 2, &descriptor, sizeof(descriptor));
 +          dst.hashes[dxvk::HashComponents::VertexLayout] = ldbPersistentHash(handle, i, 3);
++          dst.hashes[dxvk::HashComponents::VertexShader] = dxvk::kLdbPersistentGeometryMarker;
 +          const auto vertexGeneration = hack_getNextGeomHash();
 +          dst.hashes[dxvk::HashComponents::VertexPosition] = vertexGeneration;
 +          dst.hashes[dxvk::HashComponents::VertexTexcoord] = vertexGeneration;
@@ -198,7 +228,7 @@ index 3113fe2..3073ec9 100644
    remixapi_ErrorCode REMIXAPI_CALL remixapi_DestroyMesh(
      remixapi_MeshHandle handle) {
      dxvk::D3D9DeviceEx* remixDevice = tryAsDxvk();
-@@ -1742,6 +1816,11 @@ namespace {
+@@ -1742,6 +1817,11 @@ namespace {
  
  extern "C"
  {

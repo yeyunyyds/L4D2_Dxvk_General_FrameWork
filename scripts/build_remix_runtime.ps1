@@ -10,6 +10,8 @@ $runtimeSkinningSource = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_remix_ap
 $runtimeGeometrySource = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_geometry_utils.h'
 $runtimeAssetSource = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_asset_replacer.cpp'
 $runtimeAssetHeader = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_asset_replacer.h'
+$runtimeAccelSource = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_accel_manager.cpp'
+$runtimeConstantsHeader = Join-Path $sourcePath 'src/dxvk/rtx_render/rtx_constants.h'
 if ((Get-FileHash $api -Algorithm SHA256).Hash.ToLower() -ne $receipt.api_sha256 -or
     (Get-FileHash $smoke -Algorithm SHA256).Hash.ToLower() -ne $receipt.smoke_source_sha256 -or
     (Get-FileHash $runtimeSkinningPatch -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_skinning_patch_sha256 -or
@@ -17,10 +19,12 @@ if ((Get-FileHash $api -Algorithm SHA256).Hash.ToLower() -ne $receipt.api_sha256
     (Get-FileHash $runtimeGeometrySource -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_geometry_source_sha256 -or
     (Get-FileHash $runtimeAssetSource -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_asset_source_sha256 -or
     (Get-FileHash $runtimeAssetHeader -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_asset_header_sha256 -or
+    (Get-FileHash $runtimeAccelSource -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_accel_source_sha256 -or
+    (Get-FileHash $runtimeConstantsHeader -Algorithm SHA256).Hash.ToLower() -ne $receipt.runtime_constants_header_sha256 -or
     $receipt.runtime_skinning_weight_stride -ne 'sizeof(float)*bonesPerVertex' -or
     $receipt.runtime_skinning_command_counter -ne 'reset_after_flush' -or
     $receipt.runtime_persistent_mesh_update -ne 'remixapi_LdbUpdateMesh' -or
-    $receipt.runtime_persistent_topology_identity -ne 'first_frame_upsert_stable_indices_descriptor_dynamic_vertex_generation') {
+    $receipt.runtime_persistent_topology_identity -ne 'first_frame_upsert_stable_indices_descriptor_dynamic_vertex_generation_forced_dynamic_blas') {
   throw 'Runtime API/smoke/skinning input changed after preparation'
 }
 $head = & git -C $sourcePath rev-parse HEAD
