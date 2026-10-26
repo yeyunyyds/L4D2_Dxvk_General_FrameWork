@@ -9,6 +9,7 @@ import struct
 RECORD = struct.Struct('<IIQIIQ')
 SNAPSHOT = struct.Struct('<IIQQQII48fII4I2f')
 MATERIAL = struct.Struct('<QII64s')
+MODEL = struct.Struct('<3Q2IiI')
 PIPELINE = struct.Struct('<12I2f4I')
 PIPELINE_V7 = struct.Struct('<12I2f5I')  # original CULLMODE follows declaration count
 PIPELINE_V23 = struct.Struct('<12I2f16I')  # adds blend/depth special-pass proof
@@ -91,11 +92,13 @@ def analyze(path):
     attribution_omitted_draws = 0
     pending_attribution = None
     viewport_mismatch = 0
+    model_scopes,model_resources,model_instances=set(),set(),set()
+    model_surfaces=model_palettes=0
     while offset < len(data):
         if len(data) - offset < RECORD.size:
             errors.append('truncated_record'); break
         event, size, uid, thread, reserved, tick = RECORD.unpack_from(data, offset)
-        if size < RECORD.size or size > 4096 or offset + size > len(data) or reserved or footer:
+        if size < RECORD.size or size > 64*1024 or offset + size > len(data) or reserved or footer:
             errors.append('invalid_record_or_data_after_footer'); break
         payload = data[offset + RECORD.size:offset + size]; offset += size
         if host_thread is None:
@@ -109,7 +112,10 @@ def analyze(path):
                 if event==9:
                     if pending is not None or uid or len(payload)<8 or len(templates)>=4096:raise ValueError('invalid_template_definition')
                     ident,kind=struct.unpack_from('<2I',payload);raw=payload[8:]
-                    if ident!=len(templates)+1 or kind not in (1,2) or (kind==1 and len(raw) not in (SNAPSHOT.size-40,SNAPSHOT.size+MATERIAL.size-40)) or (kind==2 and not PIPELINE.size<=len(raw)<=PIPELINE_V23.size+65*8):raise ValueError('invalid_template_layout')
+                    snapshot_template=kind==1 and (len(raw) in (SNAPSHOT.size-40,SNAPSHOT.size+MATERIAL.size-40) or
+                        SNAPSHOT.size+MATERIAL.size+MODEL.size-40<=len(raw)<=SNAPSHOT.size+MATERIAL.size+MODEL.size-40+256*48 and
+                        (len(raw)-(SNAPSHOT.size+MATERIAL.size+MODEL.size-40))%48==0)
+                    if ident!=len(templates)+1 or kind not in (1,2) or (kind==1 and not snapshot_template) or (kind==2 and not PIPELINE.size<=len(raw)<=PIPELINE_V23.size+65*8):raise ValueError('invalid_template_layout')
                     templates[ident]=(kind,raw);continue
                 if len(payload)!=80:raise ValueError('invalid_compact_draw')
                 snapshot_id,pipeline_id=struct.unpack_from('<2I',payload,72)
@@ -156,7 +162,7 @@ def analyze(path):
                     raise ValueError('unpaired_or_short_draw')
                 fields = SNAPSHOT.unpack_from(payload)
                 magic, version, session, ordinal, client_tick, client_thread, status = fields[:7]
-                if magic != 0x314f444c or version not in (1,2) or session != header['session'] or not ordinal or not client_thread or status not in STATUS:
+                if magic != 0x314f444c or version not in (1,2,3) or session != header['session'] or not ordinal or not client_thread or status not in STATUS:
                     raise ValueError('invalid_snapshot_identity')
                 previous = client_threads.get(client_thread, 0)
                 if ordinal in ordinals or ordinal <= previous:
@@ -164,15 +170,29 @@ def analyze(path):
                 ordinals.add(ordinal); client_threads[client_thread] = ordinal
                 statuses[STATUS[status]] += 1
                 matrices = fields[7:55]
-                snapshot_size=SNAPSHOT.size+(MATERIAL.size if version==2 else 0)
+                snapshot_size=SNAPSHOT.size+(MATERIAL.size if version>=2 else 0)
                 vertex_format,flags,shader=0,0,''
-                if version==2:
+                if version>=2:
                     vertex_format,flags,reserved,raw_name=MATERIAL.unpack_from(payload,SNAPSHOT.size)
                     if reserved or flags&~3 or raw_name[-1]:raise ValueError('invalid_material_wire')
                     shader=raw_name.split(b'\0',1)[0].decode('ascii')
                     if flags&2 and (not flags&1 or not shader):raise ValueError('invalid_material_identity')
                     material_flags[flags]+=1
                     if shader:shaders[shader]+=1
+                if version==3:
+                    model_at=SNAPSHOT.size+MATERIAL.size
+                    model_scope,model_resource,model_instance,model_surface,model_bones,model_entity,model_flags=MODEL.unpack_from(payload,model_at)
+                    if model_flags&~3:raise ValueError('invalid_model_flags')
+                    present=bool(model_flags&1);first=bool(model_flags&2)
+                    if present != bool(model_scope and model_resource and model_instance and 0<model_bones<=256 and model_entity>=0) or first != (present and model_surface==0):raise ValueError('invalid_model_identity')
+                    transmitted=model_bones if first else 0;snapshot_size+=MODEL.size+transmitted*48
+                    if len(payload)<snapshot_size+32+PIPELINE.size:raise ValueError('truncated_model_palette')
+                    if transmitted:
+                        palette=struct.unpack_from('<%df'%(transmitted*12),payload,model_at+MODEL.size)
+                        if not all(math.isfinite(x) and abs(x)<=1e8 for x in palette):raise ValueError('invalid_model_palette')
+                    if present:
+                        model_scopes.add(model_scope);model_resources.add(model_resource);model_instances.add(model_instance);model_surfaces+=1
+                        if first:model_palettes+=1
                 if status == 1 and (not all(math.isfinite(x) for x in matrices)
                                     or not nonsingular(matrices[16:32]) or not nonsingular(matrices[32:48])):
                     raise ValueError('nonfinite_valid_matrix')
@@ -381,6 +401,8 @@ def analyze(path):
             'pipeline_query_failure_draws':pipeline_failures,
             'camera_groups':cameras,'vertex_layouts':layouts,
             'material_decode_flags':dict(material_flags),'shader_names':dict(shaders),
+            'model_scope_observation':{'scopes':len(model_scopes),'resources':len(model_resources),'instances':len(model_instances),
+                'surfaces':model_surfaces,'palettes':model_palettes,'scope':'DrawModelExecute candidate identity and owned palette; not yet a stable cross-frame identity proof'},
             'world_decisions':dict(decisions),'world_conversion':dict(conversions),
             'world_material_attribution':{'groups':list(attribution.values()),'limit':256,'omitted_draws':attribution_omitted_draws,
                 'scope':'main-camera candidate opaque HDR world draws; original cull state, material/layout identity and RPC linkage; no screen-space or per-object identity proof'},

@@ -41,9 +41,19 @@ int main() {
     const auto bytes = pack(s); require(bytes.size() == kSnapshotBytes,"wire size");
     Snapshot copy; require(unpack(bytes.data(),bytes.size(),copy) && copy.world == s.world && copy.view == s.view,"wire roundtrip");
     require(!unpack(bytes.data(),bytes.size()-1,copy),"reject truncated snapshot");
-    auto malformed = bytes; malformed[4] = 3; require(!unpack(malformed.data(),malformed.size(),copy),"reject version");
+    auto malformed = bytes; malformed[4] = 4; require(!unpack(malformed.data(),malformed.size(),copy),"reject version");
+    auto version2=bytes;version2.resize(kSnapshotV2Bytes);version2[4]=2;
+    require(unpack(version2.data(),version2.size(),copy)&&copy.materialInfo.flags==s.materialInfo.flags,"preserve version2 trace compatibility");
     auto legacy = bytes; legacy.resize(kSnapshotV1Bytes); legacy[4] = 1;
     require(unpack(legacy.data(), legacy.size(), copy) && copy.materialInfo.flags == 0, "preserve version1 trace compatibility");
+    {
+      const auto bones=std::vector<model_scope::Matrix3x4>(3,model_scope::Matrix3x4{1,0,0,4,0,1,0,5,0,0,1,6});
+      s.modelScope=7;s.modelResource=8;s.modelInstance=9;s.modelSurface=0;s.modelBoneCount=3;s.modelEntity=11;
+      s.modelFlags=kModelPresent|kModelFirstSurface;s.modelBones=bones;const auto modelBytes=pack(s);
+      require(modelBytes.size()==kSnapshotBytes+3*sizeof(model_scope::Matrix3x4)&&unpack(modelBytes.data(),modelBytes.size(),copy),"model snapshot rejected");
+      require(copy.modelResource==8&&copy.modelInstance==9&&copy.modelBones==bones,"model snapshot changed");
+      auto bad=modelBytes;bad.back()=0x7f;bad[bad.size()-2]=0xff;require(!unpack(bad.data(),bad.size(),copy),"nonfinite palette accepted");
+    }
     s.projection.fill(0); const auto singular = pack(s);
     require(!unpack(singular.data(),singular.size(),copy),"valid flag cannot hide singular camera");
     for (unsigned failure = 1; failure <= 18; ++failure) {

@@ -117,6 +117,21 @@ class DrawObservation(unittest.TestCase):
         self.assertEqual(r['world_conversion']['converted'],210)
         self.assertEqual(r['game_rt'],'unrun')
 
+    def test_v3_model_scope_and_palette_are_bounded(self):
+        events=self.world_fixture();event,uid,payload=events[1]
+        snapshot=bytearray(payload[:check.SNAPSHOT.size]);struct.pack_into('<I',snapshot,4,3)
+        material=payload[check.SNAPSHOT.size:check.SNAPSHOT.size+check.MATERIAL.size]
+        model=check.MODEL.pack(71,72,73,0,2,17,3)
+        palette=struct.pack('<24f',*([1.,0,0,4,0,1,0,5,0,0,1,6]*2))
+        rest=payload[check.SNAPSHOT.size+check.MATERIAL.size:]
+        events[1]=(event,uid,bytes(snapshot)+material+model+palette+rest)
+        report=self.inspect(events);self.assertTrue(report['pass'],report['errors'])
+        self.assertEqual(report['model_scope_observation'],{
+            'scopes':1,'resources':1,'instances':1,'surfaces':1,'palettes':1,
+            'scope':'DrawModelExecute candidate identity and owned palette; not yet a stable cross-frame identity proof'})
+        damaged=events.copy();bad=bytearray(damaged[1][2]);struct.pack_into('<I',bad,check.SNAPSHOT.size+check.MATERIAL.size+36,4)
+        damaged[1]=(event,uid,bytes(bad));self.assertIn('invalid_model_flags',self.inspect(damaged)['errors'])
+
     def coverage_fixture(self):
         events=self.world_fixture()
         events[0]=(0,0,struct.pack('<IQQQII',3,42,7,10000000,240,30))

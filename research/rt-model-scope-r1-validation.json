@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "date": "2026-10-26",
+  "revision": "v47-r1",
+  "scope": "DrawModelExecute identity and owned bone-palette observation only",
+  "status": "implemented_host_validated_game_unrun",
+  "implementation": {
+    "hook": "VEngineModel016 slot 19, enabled only after a performance capture request",
+    "association": "thread-local nested DrawModelExecute scope to D3D draw surfaces",
+    "palette_ownership": "copied into fixed TLS storage before the original model draw",
+    "wire": "snapshot v3; palette sent only on the first surface of each scope",
+    "rendering_change": false
+  },
+  "limits": {
+    "max_scope_depth": 8,
+    "max_bones": 256,
+    "max_model_path_bytes": 260,
+    "max_trace_record_bytes": 65536
+  },
+  "validation": {
+    "linux_strict_native": "pass",
+    "windows_x64_strict_compile": "pass",
+    "windows_x86_hook_strict_compile": "pass",
+    "python_analyzer_tests": "19 pass",
+    "model_scope_native_groups": "4 pass",
+    "v46_trace_backward_compatibility": "pass; 26801 valid draws and zero model scopes as expected",
+    "bridge_prepare": "pass",
+    "windows_x86_native_ci": "pending",
+    "b580_game_capture": "unrun"
+  },
+  "acceptance_for_next_stage": [
+    "native x86 build accepts the exact Source ABI structs",
+    "one normal infected capture reports nonzero scopes, resources, instances, surfaces and palettes",
+    "raster output remains unchanged during observation"
+  ],
+  "claims_excluded": [
+    "stable cross-frame resource identity",
+    "Remix GPU skinning",
+    "performance improvement",
+    "complete model coverage"
+  ]
+}

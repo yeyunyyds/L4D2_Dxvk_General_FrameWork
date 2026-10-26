@@ -113,7 +113,7 @@ public:
     auto state = pipeline(device, request.world); payload.data.insert(payload.data.end(), state.begin(), state.end());
     if (pending) { ++failures; }
     pending = true; pendingUid = uid;
-    if(request.world&&templates.size()<4094) {
+    if(request.world&&!snapshot.modelScope&&templates.size()<4094) {
       const auto define=[&](uint32_t type,const uint8_t* bytes,size_t size) {
         Bytes key;key.reserve(size+1);key.push_back(uint8_t(type));key.insert(key.end(),bytes,bytes+size);
         auto found=templates.find(key);

@@ -2,6 +2,7 @@
 #include "rt_draw_packet.h"
 #include "rt_draw_request.h"
 #include "rt_file_hash.h"
+#include "rt_model_hook.h"
 #include <bcrypt.h>
 #include <d3d9.h>
 #include <mutex>
@@ -84,6 +85,8 @@ class Collector {
   std::ofstream controlLog;
   unsigned controlEvents = 0;
   uint64_t heartbeatAt = 0, drawsSeen = 0;
+  model_hook::Status modelHookStatus=model_hook::Status::Unavailable;
+  bool modelHookAttempted=false;
   bool rawDown = false;
   void control(const char* name, uint64_t value = 0, uint64_t other = 0) {
     if (!request.session || controlEvents >= 192) { return; }
@@ -150,7 +153,11 @@ public:
           Request next;
           if (readRequest(next) && next.session != request.session) {
             request = std::move(next); ordinal = 0; materials.clear(); materialLog.close(); finished = false;
-            controlLog.close(); controlEvents = 0; heartbeatAt = 0; control("request_seen");
+            controlLog.close(); controlEvents = 0; heartbeatAt = 0;modelHookAttempted=modelHookStatus==model_hook::Status::Installed;control("request_seen");
+          }
+          if(request.session&&request.performance&&!modelHookAttempted) {
+            modelHookAttempted=true;
+            modelHookStatus=model_hook::install();control("model_hook_status",uint64_t(modelHookStatus));
           }
           DWORD pid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &pid);
           const bool raw = (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
@@ -178,6 +185,12 @@ public:
       if (SUCCEEDED(device->GetViewport(&vp))) {
         s.viewport = {vp.X, vp.Y, vp.Width, vp.Height}; s.minZ = vp.MinZ; s.maxZ = vp.MaxZ;
       } else { s.status = Status::ReadFailed; }
+      const auto model=model_scope::Scope::takeSurface();
+      if(model.identity) {
+        s.modelScope=model.scope;s.modelResource=model.identity->resource;s.modelInstance=model.identity->instance;s.modelSurface=model.surface;
+        s.modelBoneCount=model.boneCount;s.modelEntity=model.identity->entity;s.modelFlags=kModelPresent|(model.first?kModelFirstSurface:0);
+        if(model.first) { s.modelBones.assign(model.bones,model.bones+model.boneCount); }
+      }
       return pack(s);
     } catch (...) { return {}; } // Diagnostic failures never suppress a game Draw.
   }

@@ -17,7 +17,7 @@ v42 的“批量动态几何后端”设想被本方案取代。它虽然减少�
 
 R0 数据层已于 2026-10-26 落地：`rt_model_resource.h` 提供资源定义、generation、ready/invalidate 状态机和 wire 校验；`rt_model_frame.h` 提供实例／palette wire、顺序敏感 frame commit 和三槽所有权。原生用例已执行 300 帧单资源回放和 1/8/32/64 实例扩展，并强制 `CPU posed vertices`、`CPU rewritten indices`、`compatibility fallbacks` 为零。
 
-旧采集没有 `DrawModelExecute` 的模型／实体身份，不能诚实地把数百个旧 surface 自动还原成资源实例。R1 将直接增加该身份入口；R0 不用 Draw 顺序伪造实机回放结论。
+旧采集没有 `DrawModelExecute` 的模型／实体身份，不能诚实地把数百个旧 surface 自动还原成资源实例。R1 已增加该身份入口：32 位 Bridge 在 performance 请求出现后才挂接 `VEngineModel016::DrawModelExecute` slot 19，通过线程局部 scope 把模型路径、checksum、实体、skin/body/lod、surface 序号和 owned bone palette 关联到其内部 D3D draw。第一条 surface 携带一次 palette，其余 surface 只携带身份，避免按材质面重复复制。该阶段只观察，不改变人物绘制，也不把候选指针身份冒充跨帧稳定身份。
 
 ## 为什么要停止优化 `batch_assemble`
 
