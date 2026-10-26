@@ -304,7 +304,10 @@ public:
     if(found==meshes.end()) {
       mesh.hash=0x4c444d5300000000ull+next++;remixapi_MeshHandle handle=nullptr;
       { runtime_profile::Scope timing(runtime_profile::Stage::MeshCreate);
-        result.operation=persistentKey.empty()?"create_batch_mesh":"create_persistent_batch_mesh";result.code=uint32_t(api->CreateMesh(&mesh,&handle)); }
+        result.operation=persistentKey.empty()?"create_batch_mesh":"upsert_persistent_batch_mesh";
+        if(persistentKey.empty()) { result.code=uint32_t(api->CreateMesh(&mesh,&handle)); }
+        else { result.code=uint32_t(updateMesh(&mesh));handle=reinterpret_cast<remixapi_MeshHandle>(mesh.hash); }
+      }
       if(result.code||!handle) { if(!result.code) { result.code=ERROR_INVALID_HANDLE; }return result; }
       found=meshes.emplace(key,Record{handle,at,cost,materialKey}).first;
       bytes+=cost;++created;result.created=true;

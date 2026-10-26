@@ -32,9 +32,9 @@ remixapi_ErrorCode REMIXAPI_CALL mesh(const remixapi_MeshInfo* info,remixapi_Mes
   received.assign(s.vertices_values,s.vertices_values+s.vertices_count);*out=reinterpret_cast<remixapi_MeshHandle>(info->hash);return static_cast<remixapi_ErrorCode>(0);
 }
 remixapi_ErrorCode REMIXAPI_CALL updateMesh(const remixapi_MeshInfo* info) {
-  require(info&&live.count(info->hash)==1&&info->surfaces_count==1,"persistent update used unknown mesh");
+  require(info&&info->surfaces_count==1,"invalid persistent mesh upsert");
   const auto& s=info->surfaces_values[0];require(s.vertices_count&&s.indices_count,"empty persistent update");
-  received.assign(s.vertices_values,s.vertices_values+s.vertices_count);++updates;return static_cast<remixapi_ErrorCode>(0);
+  live.insert(info->hash);received.assign(s.vertices_values,s.vertices_values+s.vertices_count);++updates;return static_cast<remixapi_ErrorCode>(0);
 }
 remixapi_ErrorCode REMIXAPI_CALL draw(const remixapi_InstanceInfo* info) {
   if(fail==3) { return result(3); }require(live.count(reinterpret_cast<uint64_t>(info->mesh))!=0,"draw dead mesh");lastTransform=info->transform;
@@ -278,15 +278,15 @@ int main() {
       "combined Source draws were not one Remix mesh/instance");
     require(!batched.retire(70,72,true),"frame batch cleanup");
     require(grouped->persistent&&!grouped->persistentKey.empty(),"dynamic batch has no persistent slot identity");
-    live_mesh::Scene persistent(&batchApi,{},fixture::updateMesh);const auto updatesBefore=fixture::updates;
+    live_mesh::Scene persistent(&batchApi,{},fixture::updateMesh);const auto updatesBefore=fixture::updates,createsBefore=fixture::created;
     auto warm=persistent.drawBatch(grouped->geometry,grouped->world,grouped->cull,grouped->variant,80,0,grouped->material,79,grouped->persistentKey);
     auto changed=grouped->geometry;changed.vertices[0].position[0]+=0.25f;
     auto steady=persistent.drawBatch(changed,grouped->world,grouped->cull,grouped->variant,81,0,grouped->material,80,grouped->persistentKey);
     require(warm.success&&warm.created&&!warm.updated&&steady.success&&!steady.created&&steady.updated&&steady.handle==warm.handle&&
-      fixture::updates==updatesBefore+1&&persistent.created==1&&persistent.updated==1&&persistent.entries()==1,
-      "persistent frame batch recreated its Remix mesh or skipped geometry update");
+      fixture::updates==updatesBefore+2&&fixture::created==createsBefore&&persistent.created==1&&persistent.updated==1&&persistent.entries()==1,
+      "persistent frame batch bypassed the Runtime upsert path, recreated its Remix mesh, or skipped geometry update");
     require(!persistent.retire(81,83,true),"persistent frame batch cleanup");
-    std::cout<<"RT frame batch exact grouping plus persistent same-handle update: PASS\n";
+    std::cout<<"RT frame batch exact grouping plus persistent first-frame upsert/same-handle update: PASS\n";
   }
   require(fixture::live.empty()&&fixture::materialLive.empty(),"fixture left live meshes or materials");
   std::cout<<"RT live mesh CPU pose update/cache/material/fence-gated lifetime/API failures: PASS; actual GPU/game unrun\n";return 0;

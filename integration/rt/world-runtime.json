@@ -1,21 +1,24 @@
 {
   "schema": 1,
   "scope": "rt_prerequisites",
-  "build_commit": "a1c900632243528211e50ce6994a29197262dbc0",
+  "build_commit": "96f64389453968fdadd17223dae1871f4f97116b",
   "runtime_commit": "b73eb23053aa50d3787b0c6c8b4b8ae49962880e",
   "runtime_execution": "unrun",
   "runtime_patches": {
     "skinning": {
-      "sha256": "5640576bcd5ce14665c031f9a44ff77974af94dc6300ca19bb4d22a297a713b8",
-      "source_sha256": "40dbcb96899985df954ced304271b733bcc5bf169945159793115a399fed8196",
+      "sha256": "578099d501883947347f136091e09f0d295df0316875a4286a19160e4b8b952c",
+      "source_sha256": "d5407f268ccbbfb4349eac0ea51b73d6c6243a65419732c941b0621bc7a4d2f9",
       "geometry_source_sha256": "8ec3814b35cbbbb1bed29e1b449c7f3ffd428ef0efde261c84c93473fb52f360",
       "weight_stride": "sizeof(float)*bonesPerVertex",
       "command_counter": "reset_after_flush"
     },
     "persistent_mesh": {
       "export": "remixapi_LdbUpdateMesh",
-      "asset_source_sha256": "cdd01a66f4ff6eb73c4cc39accd01fd7af9d5ac71a7fb23166b4be5a52a726ae",
-      "asset_header_sha256": "22ef2bd94ed745075d4164abc0cd320549ab6afcaccb6e46f30d47f03ed4bda7"
+      "topology_identity": "first_frame_upsert_stable_indices_descriptor_dynamic_vertex_generation_forced_dynamic_blas",
+      "asset_source_sha256": "bc6172d0b375f1def8a539faab8f50147fbdba5dc09fef9b8733a86954ecaee4",
+      "asset_header_sha256": "22ef2bd94ed745075d4164abc0cd320549ab6afcaccb6e46f30d47f03ed4bda7",
+      "accel_source_sha256": "0758a176e7383c515e66dd2f1b78035d7ba2188bf4c6a99a626e275e8945d73a",
+      "constants_header_sha256": "5caf33705a9e6930348ac10eccf5c5430ed62efe7f6096216122107bdd075660"
     }
   },
   "vulkan_loader": {
@@ -29,22 +32,22 @@
   "source_threading": "unrun",
   "payloads": [
     {
-      "name": "rt-prereq-payload-4ae87b0441f30f6fb20e7509.zip",
-      "sha256": "4ae87b0441f30f6fb20e7509e431f0d757670ac778f4c3c9d4668a0015c4833f",
-      "size": 78276826,
-      "ref": "6de283b56a7f30bfb1e79f9ae945e4fce1e7711c"
+      "name": "rt-prereq-payload-c39457c1c90562ae6607c6e9.zip",
+      "sha256": "c39457c1c90562ae6607c6e912565ea92078db992a0010e5dddcba9c3bf547f4",
+      "size": 78277109,
+      "ref": "67a5860965080ed18084602cca761eb709da76ef"
     },
     {
-      "name": "rt-prereq-payload-df48a419f679e12c93742f5e.zip",
-      "sha256": "df48a419f679e12c93742f5e72da644f526e57f475cdd282f790c9789d59b402",
+      "name": "rt-prereq-payload-0013ae0b7752047e3657e689.zip",
+      "sha256": "0013ae0b7752047e3657e68988318a0bf87989206ecccfe598992cf0961bbd00",
       "size": 95644514,
-      "ref": "6de283b56a7f30bfb1e79f9ae945e4fce1e7711c"
+      "ref": "67a5860965080ed18084602cca761eb709da76ef"
     },
     {
-      "name": "rt-prereq-payload-6a5d1c04e2055b4123c6dc82.zip",
-      "sha256": "6a5d1c04e2055b4123c6dc82d1d082f2d1baafb1c092e1401edd173586ffbf40",
-      "size": 89310655,
-      "ref": "6de283b56a7f30bfb1e79f9ae945e4fce1e7711c"
+      "name": "rt-prereq-payload-5ff44fff3095173f86391315.zip",
+      "sha256": "5ff44fff3095173f8639131562c761ebb9422f8a215d4db5c407b72a6c4b59f6",
+      "size": 89310643,
+      "ref": "67a5860965080ed18084602cca761eb709da76ef"
     }
   ],
   "runtime_files": {
@@ -85,8 +88,8 @@
       "sha256": "c2c9a9c22a9bcba90e261825968836787b331038047a26770cffb7a583c28344"
     },
     "d3d9.dll": {
-      "size": 210379264,
-      "sha256": "5ef73ba7e13d46e0e13649eaec8cf74b5877682dd87718c016a37f8dcab238e8"
+      "size": 210379776,
+      "sha256": "0ecebaf16bb4f89575354f49cc6a23ccc4689e20aa3f59fe9e2844871aa5ef9b"
     },
     "gf.dll": {
       "size": 587800,
@@ -162,7 +165,7 @@
     },
     "rt-runtime-smoke.exe": {
       "size": 322048,
-      "sha256": "9aebaa6990bdfb97e10616ea7271c50e46494201ed770cb6bd86f0a90411efec"
+      "sha256": "e9851603f575d07abf0bfb923b520df4e4f74a75761342d8a4cb04d1b5f02dd3"
     },
     "rtxio.dll": {
       "size": 2622976,
@@ -430,7 +433,7 @@
     },
     "usd/plugins/RemixCategories/RemixCategories.dll": {
       "size": 69120,
-      "sha256": "903f35e5fc02b2643b06339ef3670be36d8dd7b7fff993230751cc0de8be7644"
+      "sha256": "41ea22fbe881dffbf2231fb9bb9ea4bb002350dfed5a407a4accab07eeea78a5"
     },
     "usd/plugins/RemixCategories/generatedSchema.usda": {
       "size": 13073,
@@ -442,7 +445,7 @@
     },
     "usd/plugins/RemixParticleSystem/RemixParticleSystem.dll": {
       "size": 200192,
-      "sha256": "e7c2a193300d7892c300e24f684c2b4e223650636b7239744379b97d93e42006"
+      "sha256": "07022f57911bbf8f2b4579485fcc271e715c8ad421b5b32ed7c464a02044fed3"
     },
     "usd/plugins/RemixParticleSystem/generatedSchema.usda": {
       "size": 49208,

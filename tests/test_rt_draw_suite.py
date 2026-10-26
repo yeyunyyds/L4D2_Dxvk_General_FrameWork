@@ -207,6 +207,19 @@ assert result['execution']=='incomplete'
         world.assert_not_called();self.assertEqual(report['collection'],'complete')
         self.assertEqual(report['beta_session'],'completed_requires_image_review')
 
+    def test_performance_completion_uses_explicit_pilot_revision(self):
+        directory=self.root/'performance-finalize';directory.mkdir()
+        report={'collection':'complete','errors':[],'preview':'collected_requires_review'}
+        with patch.object(suite,'collect_game_logs'),patch.object(suite,'wait_stopped'),\
+             patch.object(suite,'archive_result',return_value=directory.with_suffix('.zip')),\
+             patch.object(suite,'review_performance',return_value={'pass':True,'errors':[]}),\
+             patch.object(suite,'analyze_runtime',return_value={'pass':True,'errors':[],'status':'valid_evidence_requires_review'}):
+            suite.finish_world_capture(directory,self.root/'game',0,report,lambda message:None,
+                                       performance=True,pilot_revision=46)
+        self.assertEqual(report['performance'],'arc_persistent_mesh_update_collected')
+        self.assertEqual(report['preview'],'completed_performance_lifecycle')
+        self.assertEqual(report['collection'],'complete')
+
     def test_performance_review_accepts_four_exercised_phases_and_reports_fps(self):
         directory=self.root/'performance';directory.mkdir();events=[dict(event='performance_ramp_begin',code=0)]
         total=created=reused=0
@@ -487,6 +500,8 @@ assert result['execution']=='incomplete'
         (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
         self.assertEqual(result['profile'],'arc_persistent_mesh_update');self.assertTrue(analyze_runtime(directory)['pass'])
+        self.assertAlmostEqual(result['persistent_vs_warm']['fps_gain_percent'],0)
+        self.assertFalse(result['persistent_vs_warm']['material_gain'])
         flushes[31]['persistent_created']=1;(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         self.assertIn('performance_persistent_mesh_update',suite.review_performance(directory)['errors'])
         self.assertIn('invalid_structural_frame_batch',analyze_runtime(directory)['errors']);flushes[31]['persistent_created']=0
