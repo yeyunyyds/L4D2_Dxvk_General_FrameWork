@@ -76,7 +76,7 @@ index 862d905..9ae77df 100644
      }
  
 diff --git a/src/dxvk/rtx_render/rtx_remix_api.cpp b/src/dxvk/rtx_render/rtx_remix_api.cpp
-index 3113fe2..79b3251 100644
+index 3113fe2..5fc0c3e 100644
 --- a/src/dxvk/rtx_render/rtx_remix_api.cpp
 +++ b/src/dxvk/rtx_render/rtx_remix_api.cpp
 @@ -100,6 +100,26 @@ namespace {
@@ -183,7 +183,7 @@ index 3113fe2..79b3251 100644
 +            uint32_t indices;
 +            uint32_t indexType;
 +            uint32_t topology;
-+          } descriptor { src.vertices_count, src.indices_count, uint32_t(VK_INDEX_TYPE_UINT32), uint32_t(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) };
++          } descriptor { uint32_t(src.vertices_count), uint32_t(src.indices_count), uint32_t(VK_INDEX_TYPE_UINT32), uint32_t(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) };
 +          dst.hashes[dxvk::HashComponents::Indices] = ldbPersistentHash(handle, i, 1, src.indices_values, indexDataSize);
 +          dst.hashes[dxvk::HashComponents::GeometryDescriptor] = ldbPersistentHash(handle, i, 2, &descriptor, sizeof(descriptor));
 +          dst.hashes[dxvk::HashComponents::VertexLayout] = ldbPersistentHash(handle, i, 3);
