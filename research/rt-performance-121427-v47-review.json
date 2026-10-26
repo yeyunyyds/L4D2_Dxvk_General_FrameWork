@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "date": "2026-10-26",
+  "archive": {
+    "name": "rt-performance-20261026-121427-5cab7165.zip",
+    "sha256": "4601bf1e44a47218ad8a5503d80090051958cbc9efa36d86ea159efeb4752d2c",
+    "build_commit": "020d28b9d412d1eb8f87f514cea3ea509c16fd1a",
+    "pilot_revision": 47
+  },
+  "acceptance": "failed",
+  "accepted": {
+    "capture_marker": {"draws": 29105, "valid": 29105, "presents": 30},
+    "performance_lifecycle_completed": true,
+    "rt_frames": 90,
+    "raster_survival_frames": 60,
+    "resources_recovered": true,
+    "frame_batch_work": 0
+  },
+  "failed": {
+    "model_resource_scopes": 0,
+    "model_resource_definitions": 0,
+    "model_resource_instances": 0,
+    "cpu_pose_submitted": 56117,
+    "cpu_pose_created": 54754,
+    "cpu_pose_reused": 1363,
+    "best_fps": 6.1040986886259585,
+    "worst_fps": 4.635497898133914
+  },
+  "phase_fps": {
+    "model_resource_warm": 4.635497898133914,
+    "model_resource_steady": 6.1040986886259585,
+    "model_resource_reuse": 5.531029332670986
+  },
+  "telemetry": {
+    "samples": 803,
+    "host_one_core_percent_mean": 45.92,
+    "host_one_core_percent_p95": 79.97,
+    "gpu_3d_percent_mean": 14.624,
+    "gpu_3d_percent_p95": 55.158,
+    "gpu_3d_percent_max": 73.665,
+    "interpretation": "The GPU receives intermittent work while the Host remains on the per-surface CPU pose path. This run does not exercise the resource/instance architecture."
+  },
+  "root_cause": {
+    "sdk_slot": 19,
+    "interface": "VEngineModel016",
+    "v47_install_status": "vtable entry replacement reported installed",
+    "observed_calls": 0,
+    "finding": "L4D2 directly invokes CModelRender::DrawModelExecute internally. Replacing only the IVModelRender vtable entry misses those direct calls. The l4d2-rtx reference resolves slot 19 and detours the function entry instead.",
+    "confidence": "high"
+  },
+  "exit": {
+    "status": "abnormal",
+    "exception": "0xc0000005 execute at 0x104b0",
+    "timing": "after Bridge reported shutdown cleanup",
+    "named_frames": ["necola.dll+0x1447fc", "necola.dll+0x1448de"],
+    "assessment": "The v47 vtable entry remained pointed at Client code during unload and is a material dangling-callback risk. Named frames alone do not prove the unique caller."
+  },
+  "v48_actions": [
+    "Detour the DrawModelExecute function entry instead of replacing only slot 19.",
+    "Detach the model hook before Bridge Client unload.",
+    "Record function-entry calls, valid captures and rejected captures.",
+    "Keep unscoped performance draws on the native path so CPU pose cannot conceal a hook failure."
+  ]
+}

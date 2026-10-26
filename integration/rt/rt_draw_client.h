@@ -89,7 +89,7 @@ class Collector {
   bool modelHookAttempted=false;
   bool rawDown = false;
   void control(const char* name, uint64_t value = 0, uint64_t other = 0) {
-    if (!request.session || controlEvents >= 192) { return; }
+    if (!request.session || controlEvents >= 512) { return; }
     if (!controlLog.is_open()) {
       controlLog.open(request.output / ("rt-draw-control-" + std::to_string(GetCurrentProcessId()) + "-" +
         std::to_string(reinterpret_cast<uintptr_t>(this)) + ".jsonl"), std::ios::binary);
@@ -157,20 +157,25 @@ public:
           }
           if(request.session&&request.performance&&!modelHookAttempted) {
             modelHookAttempted=true;
-            modelHookStatus=model_hook::install();control("model_hook_status",uint64_t(modelHookStatus));
+            modelHookStatus=model_hook::install();control("model_hook_status",uint64_t(modelHookStatus),uint64_t(model_hook::target()));
           }
           DWORD pid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &pid);
           const bool raw = (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
           const bool pressed = pid == GetCurrentProcessId() && raw;
           if (raw && !rawDown) { control("f9_key_down", pid, pressed ? 1 : 0); } rawDown = raw;
-          if (now >= heartbeatAt) { control("waiting_for_f9", pid, drawsSeen); heartbeatAt = now + 5000; }
+          if (now >= heartbeatAt) {
+            control("waiting_for_f9", pid, drawsSeen);
+            heartbeatAt = now + 5000;
+          }
           if (pressed && !down && request.session && !finished) {
             active = true; startedAt = now; control("capture_started", pid, drawsSeen);
+            control("model_hook_capture_start",model_hook::calls(),model_hook::captured());
           }
           down = pressed;
         }
         if (active && (now - startedAt > (request.world ? 420000u : 60000u) || (fs::exists(doneFile(request)) && (!request.world || !fs::exists(previewRunningFile(request)) || fs::exists(previewDoneFile(request)))))) {
-          control("capture_stopped", ordinal); active = false; finished = true;
+          control("capture_stopped", ordinal);control("model_hook_capture_end",model_hook::calls(),model_hook::captured());
+          control("model_hook_rejected",model_hook::rejected(),0);active = false; finished = true;
         }
       }
       if (!active) { return {}; }

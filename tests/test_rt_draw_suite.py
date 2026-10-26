@@ -509,9 +509,9 @@ assert result['execution']=='incomplete'
         self.assertIn('performance_frame_batch_accounting',suite.review_performance(directory)['errors'])
         self.assertIn('invalid_structural_frame_batch',analyze_runtime(directory)['errors'])
 
-    def test_performance_review_v47_requires_reused_model_resources_without_cpu_batch(self):
-        directory=self.root/'performance-v47';directory.mkdir()
-        events=[dict(event='pilot_delivery_revision',code=0,value='47'),dict(event='performance_lifecycle_begin',code=0)]
+    def test_performance_review_v48_requires_function_hook_and_reused_resources_without_cpu_batch(self):
+        directory=self.root/'performance-v48';directory.mkdir()
+        events=[dict(event='pilot_delivery_revision',code=0,value='48'),dict(event='performance_lifecycle_begin',code=0)]
         for instance in range(1,10):
             events.append(dict(event='model_resource_scope_submitted',frame=instance,scope=100+instance,
                 resource=1 if instance%2 else 2,instance=1000+instance,surfaces=4,bones=32,created=instance<=2))
@@ -545,10 +545,17 @@ assert result['execution']=='incomplete'
             [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1'),
              dict(event='rtx.useVertexCapture',code=0,value='False')])+'\n')
         (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
+        controls=[dict(event='model_hook_status',value=1,other=0x12340000),
+                  dict(event='model_hook_capture_start',value=10,other=5),
+                  dict(event='model_hook_capture_end',value=110,other=95),
+                  dict(event='model_hook_rejected',value=15,other=0)]
+        control=directory/'rt-draw-control-1.jsonl';control.write_text('\n'.join(json.dumps(e) for e in controls))
         result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
         self.assertEqual(result['profile'],'arc_model_resource_instance');self.assertEqual(result['model_resources']['model_resource_definitions'],2)
+        self.assertEqual(result['model_hook']['captured_delta'],90)
         runtime=analyze_runtime(directory);self.assertTrue(runtime['pass'],runtime['errors'])
         self.assertEqual(runtime['gpu_skinning']['status'],'performance_model_resource_requires_visual_review')
+        control.unlink();self.assertIn('performance_model_hook_evidence',suite.review_performance(directory)['errors']);control.write_text('\n'.join(json.dumps(e) for e in controls))
         events[-1]['cpu_pose_submitted']=1
         (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         self.assertIn('performance_model_resource_instance',suite.review_performance(directory)['errors'])

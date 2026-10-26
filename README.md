@@ -2,7 +2,7 @@
 
 目标：在 L4D2 + DXVK + Intel Arc B580 环境研究光追与插帧。当前优先大量复用 l4d2-rtx，保留 Source 的多线程渲染能力。
 
-[v47 人物资源／实例架构](docs/research/rt-model-resource-architecture-v47.md)：停止逐帧 CPU pose、几何拼接和动态 Mesh 更新，改为 bind-pose 拓扑只上传一次、每帧只提交实例和骨骼 palette，直接使用 Remix GPU skinning。R0/R1、稳定身份、多 surface 资源和 scope 事务均已落地；R2C 已把全 draw palette 旁路、符合条件的 surface 收集和物理 Present 前提交接入 Host。性能模式不再启动 worker pool，也不会进入 CPU pose／frame batch 回退。当前等待 Windows CI 产包及 B580 实机验证；尚不能声称画面或性能通过。
+[v48 人物资源／实例架构](docs/research/rt-model-resource-architecture-v47.md)：v47 实机证明虚表项替换未覆盖引擎内部对 `CModelRender::DrawModelExecute` 的直接调用；v48 改为函数入口 Detours，并在 Bridge 卸载前解除钩子。bind-pose 拓扑只上传一次、每帧只提交实例和骨骼 palette，直接使用 Remix GPU skinning；性能模式不启动 worker pool，也禁止无 scope draw 落回 CPU pose／frame batch。当前等待 Windows CI 和 B580 实机验证函数入口命中、画面及性能。
 
 [v43 四 worker 帧批处理原型](docs/research/rt-world-v43-frame-batch.md)：同一次 F9 先保留 30 帧 GPU-80 正确性 oracle，再把 60 帧 CPU 姿态与几何准备交给四个 Host worker，并在 HUD 注入前将同材质／变换的 Source surface 合并为较少的 Remix Mesh。Source Draw 完整性与 API 批次压缩分别验收，任何部件缺失都会失败。[v42 后的架构重审](docs/research/rt-architecture-reassessment-v42.md)与[实测结果](docs/research/rt-performance-232019-result.md)记录了切换路线的依据。
 

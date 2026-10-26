@@ -1,0 +1,22 @@
+diff --git a/bridge/src/client/d3d9_lss.cpp b/bridge/src/client/d3d9_lss.cpp
+index b40d70a..3594e22 100644
+--- a/bridge/src/client/d3d9_lss.cpp
++++ b/bridge/src/client/d3d9_lss.cpp
+@@ -47,6 +47,7 @@
+ #include "readback_recovery.h"
+ #include "steam_workshop_status.h"
+ #include "retention_runtime.h"
++#include "rt_model_hook.h"
+ 
+ #include "util_bridge_assert.h"
+ #include "util_bridge_state.h"
+@@ -683,6 +684,9 @@ void RemixDetach() {
+ 
+     l4d2_data::finish();
+     l4d2_color::finish();
++    if (!ldb_rt::model_hook::uninstall()) {
++      Logger::err("LDB RT model hook detach failed during client shutdown.");
++    }
+     Logger::info("Shutdown cleanup successful, exiting now!");
+     BridgeState::setClientState(BridgeState::ProcessState::Exited);
+ 

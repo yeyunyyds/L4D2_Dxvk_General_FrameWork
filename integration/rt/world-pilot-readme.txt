@@ -1,6 +1,6 @@
-LDB RT Performance v47 — 人物资源／实例架构验证
+LDB RT Performance v48 — 函数入口模型资源／实例架构验证
 
-v43–v46 的 CPU pose、几何拼接、frame batch 和动态 Mesh 更新路线已经停止。v47 将同一 Source model scope 的可用 surface 定义为一个不可变的多 surface bind-pose 资源；之后每个角色每帧只提交一次实例和骨骼 palette，交给 Remix GPU skinning。性能窗口不会启动 Host worker pool，也不会回退到 CPU pose 或 frame batch。
+v47 实机证明只替换 IVModelRender 虚表项无法观察 L4D2 对 CModelRender::DrawModelExecute 的直接调用。v48 改为钩住 slot 19 指向的函数入口，并在 Bridge 卸载前解除钩子。同一 Source model scope 的可用 surface 仍定义为一个不可变的多 surface bind-pose 资源；之后每个角色每帧只提交一次实例和骨骼 palette，交给 Remix GPU skinning。性能窗口不会启动 Host worker pool，也不会回退到 CPU pose 或 frame batch；没有 scope 的 draw 保持原游戏路径。
 
 测试步骤（一次 F9）
 1. 解压到新文件夹，运行 run-performance.cmd。程序会安装配套 Client、Host 和实验 Remix Runtime，然后启动游戏。

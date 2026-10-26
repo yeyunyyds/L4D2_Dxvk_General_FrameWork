@@ -419,6 +419,26 @@ def review_performance(directory):
     resource_instance=revision>=47
     structural_batch=43<=revision<47
     persistent_batch=44<=revision<47
+    hook={'status':'not_required','target':0,'calls_delta':0,'captured_delta':0,'rejected':0}
+    if revision>=48:
+        control=[]
+        for file in directory.glob('rt-draw-control-*.jsonl'):
+            if file.stat().st_size>4*1024*1024:errors.append('oversized_model_hook_control_log');continue
+            try:control.extend(json.loads(line) for line in file.read_text(encoding='utf-8').splitlines() if line.strip())
+            except json.JSONDecodeError:errors.append('invalid_model_hook_control_log')
+        installed=[e for e in control if e.get('event')=='model_hook_status' and e.get('value')==1 and isinstance(e.get('other'),int) and e.get('other')>0]
+        starts=[e for e in control if e.get('event')=='model_hook_capture_start']
+        stops=[e for e in control if e.get('event')=='model_hook_capture_end']
+        rejects=[e for e in control if e.get('event')=='model_hook_rejected']
+        if len(installed)!=1 or len(starts)!=1 or len(stops)!=1 or len(rejects)!=1:
+            errors.append('performance_model_hook_evidence')
+        else:
+            calls=stops[0].get('value',-1)-starts[0].get('value',0)
+            captured=stops[0].get('other',-1)-starts[0].get('other',0)
+            rejected=rejects[0].get('value',-1)
+            hook={'status':'function_entry_exercised' if calls>0 and captured>0 and 0<captured<=calls else 'invalid',
+                  'target':installed[0]['other'],'calls_delta':calls,'captured_delta':captured,'rejected':rejected}
+            if hook['status']!='function_entry_exercised' or not isinstance(rejected,int) or rejected<0:errors.append('performance_model_hook_not_exercised')
     ends=[e for e in events if e.get('event')=='preview_end']
     minimum_frames=(150 if revision>=39 else 270) if lifecycle else 128 if stability else 120
     if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<minimum_frames or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
@@ -507,9 +527,9 @@ def review_performance(directory):
         best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
         return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_model_resource_instance','phases':phases,
             'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
-            'model_resources':{k:end.get(k) for k in keys},'effective_indirect_mode':remix_mode,
+            'model_resources':{k:end.get(k) for k in keys},'model_hook':hook,'effective_indirect_mode':remix_mode,
             'raster_survival':{'frames':end.get('raster_survival_frames',0),'timing':raster_window},'end':end,
-            'limits':'v47 defines each multi-surface bind-pose model resource once, submits one GPU-skinned instance per Source model scope before Present, and rejects any CPU-pose or frame-batch fallback. Visual completeness and throughput still require user review.'}
+            'limits':'v48 detours the DrawModelExecute function entry, defines each multi-surface bind-pose model resource once, submits one GPU-skinned instance per Source model scope before Present, and rejects any CPU-pose or frame-batch fallback. Visual completeness and throughput still require user review.'}
     if structural_batch:
         mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
         if [e.get('gpu_skin_performance_phase') for e in mesh]!=[0,1,2] or [e.get('skinned_frame_limit') for e in mesh]!=[80,0,0]:
@@ -771,7 +791,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v47: all 90 RT frames define multi-surface bind-pose model resources once and submit one GPU-skinned instance per Source model scope before Present. CPU-pose and frame-batch fallbacks are disabled. Keep several characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v48: DrawModelExecute is observed at the function entry. All 90 RT frames define multi-surface bind-pose model resources once and submit one GPU-skinned instance per Source model scope before Present. CPU-pose and frame-batch fallbacks are disabled. Keep several characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

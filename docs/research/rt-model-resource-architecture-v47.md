@@ -1,5 +1,11 @@
 # v47 人物渲染资源／实例架构
 
+## v47 实机结论与 v48 修正
+
+2026-10-26 的 v47 B580 运行完成了 90 个 RT Present、资源回收和 60 个 raster Present，但模型 scope、资源定义与实例提交均为 0；同时产生 56,117 次 CPU-pose 提交。Client 只记录到“虚表项写入成功”，没有任何模型 scope。复核固定 L4D2 SDK 与 `l4d2-rtx` 后确认 slot 19 本身正确，差异在钩子方式：参考项目用 slot 19 取得 `CModelRender::DrawModelExecute` 地址后对函数入口安装 MinHook，v47 仅替换 IVModelRender 虚表项，无法覆盖引擎内部的直接函数调用。
+
+v48 改为用 Bridge 已固定的 Microsoft Detours 对函数入口安装钩子，并在 Client 卸载前解除；控制日志分别记录入口调用、有效 palette 与拒绝数。性能路径对无 scope draw 只执行原游戏 draw，不再进入 CPU pose API Mesh 路径。资源／实例架构保持不变，下一次实机验收先要求入口调用与有效 scope 非零，再评价复用、画面和吞吐。
+
 日期：2026-10-26
 
 ## 决策

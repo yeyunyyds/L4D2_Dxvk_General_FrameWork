@@ -636,6 +636,10 @@ bool model(IDirect3DDevice9* device,const draw_observe::Snapshot& s,uint32_t kin
   };
   try {
     if(device!=registered||!raytracingRequested) { return false; }
+    // A performance run measures only the model-resource path. Untagged draws
+    // stay on the untouched game path and must never become CPU-posed API
+    // meshes that hide a failed Source hook.
+    if(launch.performance&&!s.modelScope) { return false; }
     Ref<IDirect3DSurface9> target;D3DSURFACE_DESC desc{};D3DVIEWPORT9 vp{};
     if(FAILED(device->GetRenderTarget(0,&target.value))||!target.value||FAILED(target.value->GetDesc(&desc))||
        FAILED(device->GetViewport(&vp))||desc.Format!=D3DFMT_A16B16G16R16F||desc.Width!=s.viewport[2]||desc.Height!=s.viewport[3]||
@@ -950,11 +954,11 @@ void startPreview(IDirect3DDevice9* device) noexcept {
     previousModelDraws=0;gpuSkinDensityThrottleFrames=0;
     previewStartSkinnedSubmitted=apiMeshes.skinnedSubmitted;previewStartSkinnedCreated=apiMeshes.skinnedCreated;previewStartSkinnedReused=apiMeshes.skinnedReused;
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"47");
-    event("preview_begin",0,launch.performance?"v47_model_resource_scope;vertex_capture_off;bind_pose_topology_once;one_DrawInstance_per_scope;GPU_skinning;no_CPU_pose_or_batch_fallback;RT_off;resources_zero;60_raster_Presents;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
+    event("pilot_delivery_revision",0,"48");
+    event("preview_begin",0,launch.performance?"v48_function_entry_model_scope;vertex_capture_off;bind_pose_topology_once;one_DrawInstance_per_scope;GPU_skinning;no_CPU_pose_or_batch_fallback;RT_off;resources_zero;60_raster_Presents;one_F9":launch.beta?"five_minute_beta;30_seconds_no_AA_then_native_TAA;one_F9;not_controlled_performance_benchmark":"30_seconds_no_AA_then_30_seconds_native_TAA;one_F9;not_controlled_performance_benchmark");
     if(launch.performance) {
       event("performance_lifecycle_begin",performanceProfileConfigured?0:ERROR_INVALID_DATA,
-        "v47_resource_instance_path;bind_pose_topology_once;scope_palette;multi_surface_mesh;stable_instance;no_CPU_pose_or_batch_fallback;vertex_capture_off;RT_off;resources_zero;raster_survival_60");
+        "v48_function_entry_detour;scope_palette;multi_surface_mesh;stable_instance;no_CPU_pose_or_batch_fallback;vertex_capture_off;RT_off;resources_zero;raster_survival_60");
       if(!performanceProfileConfigured) { endPreview(false,"performance_profile_failed");return; }
     }
     if(!raytracing(true)) { endPreview(false,"rt_enable_failed"); }
@@ -1053,9 +1057,9 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("startup_raster_policy", 0, "RT_off_until_valid_converted_draw_after_control");
     event("coverage_comparison_policy",0,"v23_display_4GiB_priority_spool_no_rejected_rereads_standard_alpha_models");
     event("world_coverage_revision",0,"23");
-    event("pilot_delivery_revision",0,"47");
+    event("pilot_delivery_revision",0,"48");
     event("runtime_timing_policy",0,"QPC_elapsed_nested_scopes_plus_device_thread_kernel_user_CPU;not_GPU_duration;source_geometry_skin_texture_hash_API_original_Draw_Present_readback");
-    event("api_mesh_policy",0,"v47_model_resource_instance;multi_surface_CreateMesh_once;DrawInstance_per_scope;stable_object_identity;GPU_skinning_and_dynamic_BLAS;no_CPU_pose_or_batch_fallback;vertex_capture_off;mesh_entries_3072_bytes_512MiB;pre_Present_scope_flush");
+    event("api_mesh_policy",0,"v48_function_entry_model_resource_instance;multi_surface_CreateMesh_once;DrawInstance_per_scope;stable_object_identity;GPU_skinning_and_dynamic_BLAS;no_CPU_pose_or_batch_fallback;vertex_capture_off;mesh_entries_3072_bytes_512MiB;pre_Present_scope_flush");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");
