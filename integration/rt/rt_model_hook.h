@@ -8,7 +8,6 @@
 #include "rt_file_hash.h"
 #include <windows.h>
 #include <detours.h>
-#include <tier1/callqueue.h>
 #include <new>
 #endif
 
@@ -44,6 +43,24 @@ static_assert(sizeof(DrawModelState)==28,"L4D2 DrawModelState ABI");
 static_assert(sizeof(ModelRenderInfo)==68,"L4D2 ModelRenderInfo ABI");
 
 using DrawModelExecute = void(__fastcall*)(void*,void*,const DrawModelState&,const ModelRenderInfo&,model_scope::Matrix3x4*);
+// Minimal mirror of the pinned L4D2 SDK CFunctor/ICallQueue ABI. Including
+// callqueue.h here would inject tier0 before/after-order requirements into the
+// already-formed Bridge translation unit. The native SDK fixture independently
+// verifies these x86 slots against the exact pinned headers.
+class SourceFunctor {
+public:
+  virtual int AddRef()=0;
+  virtual int Release()=0;
+  virtual void operator()()=0;
+  unsigned userId=0;
+};
+class SourceCallQueue {
+  virtual void queueInternal(SourceFunctor*)=0;
+public:
+  void queue(SourceFunctor* task) { task->AddRef();queueInternal(task); }
+};
+static_assert(sizeof(SourceFunctor)==8,"L4D2 CFunctor x86 ABI");
+static_assert(sizeof(SourceCallQueue)==4,"L4D2 ICallQueue x86 ABI");
 inline DrawModelExecute g_original=nullptr;
 inline std::atomic<Status> g_status{Status::Unavailable};
 inline std::atomic<QueueStatus> g_queueStatus{QueueStatus::Unavailable};
@@ -89,7 +106,7 @@ inline bool initializeMaterialBinding() noexcept {
 
 struct Context {
   void* object=nullptr;
-  ICallQueue* queue=nullptr;
+  SourceCallQueue* queue=nullptr;
   bool immediate=false;
 };
 inline void release(Context& value) noexcept {
@@ -116,7 +133,7 @@ inline Context context() noexcept {
     if(!readProcess(table+142,method)||reinterpret_cast<uintptr_t>(method)!=base+146640||!executable(method)) {
       g_queueStatus.store(QueueStatus::VersionMismatch,std::memory_order_release);release(out);return {};
     }
-    using GetCallQueue=ICallQueue*(__thiscall*)(void*);out.queue=reinterpret_cast<GetCallQueue>(method)(out.object);
+    using GetCallQueue=SourceCallQueue*(__thiscall*)(void*);out.queue=reinterpret_cast<GetCallQueue>(method)(out.object);
     void** queueTable=nullptr;void* queueCall=nullptr;
     if(!out.queue||!readProcess(out.queue,queueTable)||!readProcess(queueTable,queueCall)||!executable(queueCall)) {
       g_queueStatus.store(QueueStatus::Failed,std::memory_order_release);release(out);return {};
@@ -132,12 +149,12 @@ inline Context context() noexcept {
   g_queueStatus.store(QueueStatus::VersionMismatch,std::memory_order_release);release(out);return {};
 }
 
-class BeginTask final : public CFunctor {
+class BeginTask final : public SourceFunctor {
   std::atomic<int> m_refs{1};
   model_scope::Captured m_capture;
   std::atomic<bool> m_called{false};
 public:
-  explicit BeginTask(const model_scope::Captured& capture) noexcept:m_capture(capture) { m_nUserID=0; }
+  explicit BeginTask(const model_scope::Captured& capture) noexcept:m_capture(capture) { userId=0; }
   ~BeginTask() { if(!m_called.load(std::memory_order_relaxed)) { g_queueCancelled.fetch_add(1,std::memory_order_relaxed); } }
   int AddRef() override { return m_refs.fetch_add(1,std::memory_order_relaxed)+1; }
   int Release() override { const auto n=m_refs.fetch_sub(1,std::memory_order_acq_rel)-1;if(!n) { delete this; }return n; }
@@ -146,12 +163,12 @@ public:
     g_queueBegun.fetch_add(1,std::memory_order_relaxed);
   }
 };
-class EndTask final : public CFunctor {
+class EndTask final : public SourceFunctor {
   std::atomic<int> m_refs{1};
   uint64_t m_scope;
   std::atomic<bool> m_called{false};
 public:
-  explicit EndTask(uint64_t scope) noexcept:m_scope(scope) { m_nUserID=0; }
+  explicit EndTask(uint64_t scope) noexcept:m_scope(scope) { userId=0; }
   ~EndTask() { if(!m_called.load(std::memory_order_relaxed)) { g_queueCancelled.fetch_add(1,std::memory_order_relaxed); } }
   int AddRef() override { return m_refs.fetch_add(1,std::memory_order_relaxed)+1; }
   int Release() override { const auto n=m_refs.fetch_sub(1,std::memory_order_acq_rel)-1;if(!n) { delete this; }return n; }
@@ -185,8 +202,8 @@ inline void __fastcall hooked(void* self,void* edx,const DrawModelState& stateRe
   if(current.queue) {
     auto* begin=new(std::nothrow) BeginTask(captured);auto* end=new(std::nothrow) EndTask(captured.scope);
     if(begin&&end) {
-      current.queue->QueueFunctor(begin);begin->Release();g_original(self,edx,stateRef,infoRef,customBones);
-      current.queue->QueueFunctor(end);end->Release();g_queued.fetch_add(1,std::memory_order_relaxed);g_captured.fetch_add(1,std::memory_order_relaxed);release(current);return;
+      current.queue->queue(begin);begin->Release();g_original(self,edx,stateRef,infoRef,customBones);
+      current.queue->queue(end);end->Release();g_queued.fetch_add(1,std::memory_order_relaxed);g_captured.fetch_add(1,std::memory_order_relaxed);release(current);return;
     }
     if(begin) { begin->Release(); }if(end) { end->Release(); }g_queueFailures.fetch_add(1,std::memory_order_relaxed);
   } else if(current.immediate) {

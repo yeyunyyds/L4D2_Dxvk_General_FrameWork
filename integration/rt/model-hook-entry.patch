@@ -38,11 +38,10 @@ diff --git a/bridge/src/client/meson.build b/bridge/src/client/meson.build
 index 8579850..a57caf1 100644
 --- a/bridge/src/client/meson.build
 +++ b/bridge/src/client/meson.build
-@@ -117,11 +117,13 @@ d3d9_header = files([
+@@ -117,11 +117,12 @@ d3d9_header = files([
  ])
  
  detours_include_path = include_directories('../../../submodules/Detours/src')
-+sdk_include_path = include_directories('../../../../rt-sdk-source/public')
  
  thread_dep = dependency('threads')
  
@@ -50,8 +49,7 @@ index 8579850..a57caf1 100644
    sources             : [ bridge_version ],
 +  cpp_args            : [ '-DLDB_RT_ENABLE_MODEL_HOOK=1' ],
    dependencies        : [ thread_dep, util_dep, lib_version, lib_version, lib_commCtrl, tracy_dep, bridge_compiler.find_library('bcrypt') ],
--  include_directories : [ bridge_include_path, util_include_path, detours_include_path, public_include_path ],
-+  include_directories : [ bridge_include_path, util_include_path, detours_include_path, sdk_include_path, public_include_path ],
+   include_directories : [ bridge_include_path, util_include_path, detours_include_path, public_include_path ],
    vs_module_defs      : 'd3d9_lss.def')
 diff --git a/bridge/src/server/main.cpp b/bridge/src/server/main.cpp
 --- a/bridge/src/server/main.cpp
