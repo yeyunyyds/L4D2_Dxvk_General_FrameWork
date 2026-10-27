@@ -87,6 +87,7 @@ class Collector {
   uint64_t heartbeatAt = 0, drawsSeen = 0;
   model_hook::Status modelHookStatus=model_hook::Status::Unavailable;
   bool modelHookAttempted=false;
+  bool contextProbeLogged=false;
   bool rawDown = false;
   void control(const char* name, uint64_t value = 0, uint64_t other = 0) {
     if (!request.session || controlEvents >= 2048) { return; }
@@ -139,6 +140,24 @@ class Collector {
       << "\",\"shader_method\":" << info.shaderMethod << ",\"shader_code\":\"" << (codeRead ? bytesHex(shaderCode, sizeof(shaderCode)) : "")
       << "\",\"method_calls_executed\":false}\n" << std::flush;
   }
+  void contextProbe(bool force=false) {
+    if(contextProbeLogged) { return; }
+    const auto observed=model_hook::contextVtableRva();if(!force&&(!observed||!model_hook::contextEvidenceReady())) { return; }
+    control("model_context_vtable_rva",observed,0);
+    control("model_binding_stage",model_hook::bindingStage(),model_hook::bindingFailure());
+    control("model_context_attempts",model_hook::contextAttempts(),model_hook::maxContextAttempts());
+    for(uint32_t variant=0;variant<model_hook::kContextVariants;++variant) {
+      control("model_context_variant",variant,model_hook::contextVariant(variant));
+      control("model_context_variant_hits",variant,model_hook::contextVariantHits(variant));
+      for(uint32_t index=0;index<model_hook::kCandidateSlots;++index) {
+        const auto slot=model_hook::kFirstCandidateSlot+index;
+        control("model_context_candidate_rva",(uint64_t(variant)<<32)|slot,model_hook::candidateRva(variant,index));
+        for(uint32_t word=0;word<model_hook::kCandidateCodeWords;++word)
+          control("model_context_candidate_code",(uint64_t(variant)<<48)|(uint64_t(slot)<<16)|word,model_hook::candidateCode(variant,index,word));
+      }
+    }
+    contextProbeLogged=true;
+  }
 public:
   template<class Device> Bytes snapshot(Device* device) noexcept {
     try {
@@ -152,7 +171,7 @@ public:
         if (!active) {
           Request next;
           if (readRequest(next) && next.session != request.session) {
-            request = std::move(next); ordinal = 0; materials.clear(); materialLog.close(); finished = false;
+            request = std::move(next); ordinal = 0; materials.clear(); materialLog.close(); finished = false;contextProbeLogged=false;
             controlLog.close(); controlEvents = 0; heartbeatAt = 0;modelHookAttempted=modelHookStatus==model_hook::Status::Installed;control("request_seen");
           }
           if(request.session&&request.performance&&!modelHookAttempted) {
@@ -180,22 +199,11 @@ public:
           control("model_queue_enqueued",model_hook::queued(),model_hook::queueCancelled());
           control("model_queue_executed",model_hook::queueBegun(),model_hook::queueEnded());
           control("model_queue_surfaces",model_hook::surfaces(),model_hook::queueFailures());
-          control("model_context_vtable_rva",model_hook::contextVtableRva(),0);
-          control("model_binding_stage",model_hook::bindingStage(),model_hook::bindingFailure());
-          control("model_context_attempts",model_hook::contextAttempts(),512);
-          for(uint32_t variant=0;variant<model_hook::kContextVariants;++variant) {
-            control("model_context_variant",variant,model_hook::contextVariant(variant));
-            control("model_context_variant_hits",variant,model_hook::contextVariantHits(variant));
-            for(uint32_t index=0;index<model_hook::kCandidateSlots;++index) {
-              const auto slot=model_hook::kFirstCandidateSlot+index;
-              control("model_context_candidate_rva",(uint64_t(variant)<<32)|slot,model_hook::candidateRva(variant,index));
-              for(uint32_t word=0;word<model_hook::kCandidateCodeWords;++word)
-                control("model_context_candidate_code",(uint64_t(variant)<<48)|(uint64_t(slot)<<16)|word,model_hook::candidateCode(variant,index,word));
-            }
-          }
+          contextProbe(true);
           control("model_hook_detached",model_hook::uninstall()?1:0,0);
         }
       }
+      if(active) { contextProbe(); }
       if (!active) { return {}; }
       Snapshot s; s.session = request.session; s.ordinal = ++ordinal; s.thread = GetCurrentThreadId();
       LARGE_INTEGER ticks{}; QueryPerformanceCounter(&ticks); s.ticks = uint64_t(ticks.QuadPart);

@@ -1059,7 +1059,7 @@ HMODULE load(const draw_observe::Request& request) noexcept {
     event("world_coverage_revision",0,"23");
     event("pilot_delivery_revision",0,"50");
     event("runtime_timing_policy",0,"QPC_elapsed_nested_scopes_plus_device_thread_kernel_user_CPU;not_GPU_duration;source_geometry_skin_texture_hash_API_original_Draw_Present_readback");
-    event("api_mesh_policy",0,"v50_Source_queue_ABI_recovery;model_submission_disabled;read_only_context_vtable_probe;no_CPU_pose_or_batch_fallback;vertex_capture_off;mesh_entries_3072_bytes_512MiB");
+    event("api_mesh_policy",0,"v52_single_Source_context_evidence;model_submission_disabled;no_candidate_execution;no_CPU_pose_or_batch_fallback;vertex_capture_off;mesh_entries_3072_bytes_512MiB");
     event("model_texture_policy",0,"sampler0_source_mips_128MiB_working_4GiB_spool_256MiB_infected_reserve_64MiB_evidence_256_refs_16_reads_per_frame");
     event("scene_input_policy",0,"skinned_materials_v2");
     event("material_audit_policy", 0, "first_restored_state_per_material_phase_max64_COLOROP_COLORARG1_COLORARG2_ALPHAOP_ALPHAARG1_ALPHAARG2_TEXCOORDINDEX_TEXTURETRANSFORMFLAGS_RESULTARG");

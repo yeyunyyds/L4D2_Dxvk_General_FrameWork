@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "capture": "rt-performance-20261027-134726-a80fe79e.zip",
+  "build_commit": "ab55919c2cdb4aced63227ca3b54e51eab9e0c3c",
+  "revision": 51,
+  "result": "client_access_violation_after_f9",
+  "capture_complete": false,
+  "exception": {
+    "code": "0xc0000005",
+    "module": "engine.dll",
+    "offset": "0xe0940",
+    "access": "read",
+    "target": "0xc",
+    "client_pid": 12400,
+    "host_pid": 16892
+  },
+  "control_evidence": {
+    "hook_installed": true,
+    "f9_seen": true,
+    "capture_started": true,
+    "capture_stopped": false,
+    "context_evidence_persisted": false
+  },
+  "differential_conclusion": "v51 executed no candidate virtual slot. Its material change from crash-free v50 was retrying GetRenderContext/Release for unknown contexts instead of making the first classification miss terminal. The repeated acquisition path reproduced the v49 engine crash signature after roughly two seconds.",
+  "v52": "Acquire one context only, scan each observed table once, and persist binding/context evidence immediately rather than waiting for capture completion. Candidate execution and model submission remain disabled."
+}

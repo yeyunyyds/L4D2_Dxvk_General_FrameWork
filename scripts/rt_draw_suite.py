@@ -594,7 +594,7 @@ def review_performance(directory):
             code_keys={(e.get('value',0)>>48,(e.get('value',0)>>16)&0xffffffff,e.get('value',0)&0xffff) for e in code if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')!=0}
             complete=sum(1 for variant,slot in observed if (variant,slot,0) in code_keys and (variant,slot,1) in code_keys)
             if (len(vtables)!=1 or not isinstance(vtables[0].get('value'),int) or vtables[0]['value']<=0 or
-                len(binding)!=1 or binding[0].get('value',0)<8 or len(attempts)!=1 or not 0<attempts[0].get('value',0)<=attempts[0].get('other',0)==512 or
+                len(binding)!=1 or binding[0].get('value',0)<8 or len(attempts)!=1 or not 0<attempts[0].get('value',0)<=attempts[0].get('other',0)==(1 if revision>=52 else 512) or
                 not populated or any(hits.get(index,0)<=0 for index in populated) or complete<20):
                 errors.append('performance_model_context_probe')
         else:
@@ -629,7 +629,7 @@ def review_performance(directory):
             'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
             'model_resources':{k:end.get(k) for k in keys},'model_hook':hook,'api_wait':api_wait,'effective_indirect_mode':remix_mode,
             'raster_survival':{'frames':end.get('raster_survival_frames',0),'timing':raster_window},'end':end,
-            'limits':('v51 records up to four actual render-context vtables, hit counts, binding stage/failure, and slots 128-159 without calling any candidate or submitting models. The probe retries unknown contexts instead of making the first mismatch terminal.' if context_variant_probe else 'v50 never calls the unverified Source queue virtual function. It records queued-context slots 140-150 and 16-byte code prefixes, verifies a crash-free 90-frame RT baseline, and brackets the run with client/Host wait counters. Model submission is intentionally disabled until the exact game ABI is proven.')}
+            'limits':('v52 acquires one render context, immediately persists its actual vtable, binding stage/failure and slots 128-159, and never calls a candidate or submits a model. It removes v51 repeated context acquisition after that path reproduced the v49 engine crash.' if revision>=52 else 'v51 records up to four actual render-context vtables, hit counts, binding stage/failure, and slots 128-159 without calling any candidate or submitting models. The probe retries unknown contexts instead of making the first mismatch terminal.' if context_variant_probe else 'v50 never calls the unverified Source queue virtual function. It records queued-context slots 140-150 and 16-byte code prefixes, verifies a crash-free 90-frame RT baseline, and brackets the run with client/Host wait counters. Model submission is intentionally disabled until the exact game ABI is proven.')}
     if resource_instance:
         mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
         scopes=[e for e in events if e.get('event')=='model_resource_scope_submitted']
@@ -941,7 +941,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v51: this safe read-only run records the actual render-context variants, hit counts, binding stage/failure and slots 128-159. Unknown contexts are retried; no candidate virtual function is called and no model is submitted. Keep several characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v52: this read-only run acquires one render context and immediately records its actual vtable, binding stage/failure and slots 128-159. Repeated context acquisition is removed; no candidate virtual function is called and no model is submitted. Keep several characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

@@ -2,7 +2,7 @@
 
 目标：在 L4D2 + DXVK + Intel Arc B580 环境研究光追与插帧。当前优先大量复用 l4d2-rtx，保留 Source 的多线程渲染能力。
 
-[v51 渲染上下文恢复](docs/research/rt-model-resource-architecture-v47.md)：v50 实机完成了无崩溃的 90 RT + 60 raster 生命周期，稳定阶段约 29 FPS；其固定 materialsystem 校验实际通过，失败发生在返回 context vtable 的分类阶段。v51 只读记录最多四种实际 context、命中数、绑定阶段及槽 128–159，并对未知 context 有界重试；仍不调用候选队列函数或提交人物。
+[v52 单次渲染上下文取证](docs/research/rt-model-resource-architecture-v47.md)：v51 在未知 context 上反复执行 `GetRenderContext/Release`，实机再次触发 `engine.dll+0xE0940`。v52 恢复 v50 已证明无崩溃的单次获取，并立即持久化实际 context、绑定阶段及槽 128–159；仍不调用候选队列函数或提交人物。
 
 [v43 四 worker 帧批处理原型](docs/research/rt-world-v43-frame-batch.md)：同一次 F9 先保留 30 帧 GPU-80 正确性 oracle，再把 60 帧 CPU 姿态与几何准备交给四个 Host worker，并在 HUD 注入前将同材质／变换的 Source surface 合并为较少的 Remix Mesh。Source Draw 完整性与 API 批次压缩分别验收，任何部件缺失都会失败。[v42 后的架构重审](docs/research/rt-architecture-reassessment-v42.md)与[实测结果](docs/research/rt-performance-232019-result.md)记录了切换路线的依据。
 

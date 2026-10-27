@@ -650,6 +650,13 @@ assert result['execution']=='incomplete'
         self.assertEqual(result['model_hook']['context_variants']['0'],700000)
         runtime=analyze_runtime(directory);self.assertTrue(runtime['pass'],runtime['errors'])
         self.assertEqual(runtime['gpu_skinning']['status'],'context_variant_recovery_collected')
+        events[0]['value']='52';(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        controls51[10]['value']=1;controls51[10]['other']=1
+        (directory/'rt-draw-control-1.jsonl').write_text('\n'.join(json.dumps(e) for e in controls51))
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['model_hook']['context_attempts'],1)
+        events[0]['value']='51';controls51[10]['value']=90;controls51[10]['other']=512
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
         controls51[9]['value']=7
         (directory/'rt-draw-control-1.jsonl').write_text('\n'.join(json.dumps(e) for e in controls51))
         self.assertIn('performance_model_context_probe',suite.review_performance(directory)['errors'])

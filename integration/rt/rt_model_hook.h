@@ -14,6 +14,7 @@ namespace ldb_rt::model_hook {
 
 enum class Status : uint32_t { Unavailable, Installed, Failed };
 enum class QueueStatus : uint32_t { Unavailable, ObservedQueued, Immediate, VersionMismatch, Failed, ObservedUnknown };
+constexpr uint32_t kMaxContextAttempts=1;
 
 #if defined(LDB_RT_ENABLE_MODEL_HOOK) && defined(_WIN32) && (defined(_M_IX86) || defined(__i386__))
 
@@ -57,6 +58,7 @@ constexpr uint32_t kContextVariants=4,kFirstCandidateSlot=128,kCandidateSlots=32
 inline std::array<std::atomic<uintptr_t>,kContextVariants> g_contextVtableVariants{};
 inline std::array<std::atomic<uint64_t>,kContextVariants> g_contextVariantHits{};
 inline std::array<std::atomic<bool>,kContextVariants> g_contextVariantCaptured{};
+inline std::atomic<bool> g_contextEvidenceReady{false};
 inline std::array<std::array<std::atomic<uintptr_t>,kCandidateSlots>,kContextVariants> g_candidateRva{};
 inline std::array<std::array<std::array<std::atomic<uint64_t>,kCandidateCodeWords>,kCandidateSlots>,kContextVariants> g_candidateCode{};
 inline std::atomic<uintptr_t> g_contextVtableRva{0};
@@ -67,7 +69,7 @@ inline void reached(uint32_t stage) noexcept {
 }
 inline bool reserveContextAttempt() noexcept {
   auto attempts=g_contextAttempts.load(std::memory_order_relaxed);
-  while(attempts<512) {
+  while(attempts<kMaxContextAttempts) {
     if(g_contextAttempts.compare_exchange_weak(attempts,attempts+1,std::memory_order_relaxed)) { return true; }
   }
   return false;
@@ -155,6 +157,7 @@ inline void observeContext(void** table,uintptr_t base) noexcept {
     g_candidateRva[variant][index].store(address>=base?address-base:address,std::memory_order_relaxed);
     for(uint32_t word=0;word<kCandidateCodeWords;++word)g_candidateCode[variant][index][word].store(codeWord(candidate,word*sizeof(uint64_t)),std::memory_order_relaxed);
   }
+  g_contextEvidenceReady.store(true,std::memory_order_release);
 }
 inline Context context() noexcept {
   Context out;if(!reserveContextAttempt()||!initializeMaterialBinding()) { return out; }
@@ -222,7 +225,7 @@ inline void setCaptureActive(bool active) noexcept {
     g_calls.store(0);g_captured.store(0);g_rejected.store(0);g_observedQueued.store(0);g_immediate.store(0);g_probeFailures.store(0);
     g_queueStatus.store(QueueStatus::Unavailable,std::memory_order_release);
     g_bindingStage.store(0);g_bindingFailure.store(0);g_contextAttempts.store(0);g_contextVtableRva.store(0);
-    for(auto& value:g_contextVtableVariants)value.store(0);for(auto& value:g_contextVariantHits)value.store(0);for(auto& value:g_contextVariantCaptured)value.store(false);
+    for(auto& value:g_contextVtableVariants)value.store(0);for(auto& value:g_contextVariantHits)value.store(0);for(auto& value:g_contextVariantCaptured)value.store(false);g_contextEvidenceReady.store(false);
     for(auto& variant:g_candidateRva)for(auto& rva:variant)rva.store(0);
     for(auto& variant:g_candidateCode)for(auto& row:variant)for(auto& word:row)word.store(0);
     model_scope::resetSurfacesTaken();
@@ -245,6 +248,8 @@ inline uintptr_t contextVtableRva() noexcept { return g_contextVtableRva.load(st
 inline uint32_t bindingStage() noexcept { return g_bindingStage.load(std::memory_order_relaxed); }
 inline uint32_t bindingFailure() noexcept { return g_bindingFailure.load(std::memory_order_relaxed); }
 inline uint32_t contextAttempts() noexcept { return g_contextAttempts.load(std::memory_order_relaxed); }
+inline uint32_t maxContextAttempts() noexcept { return kMaxContextAttempts; }
+inline bool contextEvidenceReady() noexcept { return g_contextEvidenceReady.load(std::memory_order_acquire); }
 inline uintptr_t contextVariant(uint32_t variant) noexcept { return variant<kContextVariants?g_contextVtableVariants[variant].load(std::memory_order_relaxed):0; }
 inline uint64_t contextVariantHits(uint32_t variant) noexcept { return variant<kContextVariants?g_contextVariantHits[variant].load(std::memory_order_relaxed):0; }
 inline uintptr_t candidateRva(uint32_t variant,uint32_t index) noexcept { return variant<kContextVariants&&index<kCandidateSlots?g_candidateRva[variant][index].load(std::memory_order_relaxed):0; }
@@ -309,6 +314,8 @@ inline uintptr_t contextVtableRva() noexcept { return 0; }
 inline uint32_t bindingStage() noexcept { return 0; }
 inline uint32_t bindingFailure() noexcept { return 0; }
 inline uint32_t contextAttempts() noexcept { return 0; }
+inline uint32_t maxContextAttempts() noexcept { return kMaxContextAttempts; }
+inline bool contextEvidenceReady() noexcept { return false; }
 inline uintptr_t contextVariant(uint32_t) noexcept { return 0; }
 inline uint64_t contextVariantHits(uint32_t) noexcept { return 0; }
 inline uintptr_t candidateRva(uint32_t,uint32_t) noexcept { return 0; }
