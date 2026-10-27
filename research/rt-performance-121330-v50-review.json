@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "capture": "rt-performance-20261027-121330-c79fb8b8.zip",
+  "capture_sha256": "f0100adb1ba5cb9fe5ce583ceeb04d63d3a3548b8d9d96d6cffabeba1feaf182",
+  "build_commit": "3d6aa79ac69421714bd5ab120e8f1a7270c2565b",
+  "revision": 50,
+  "conclusion": "crash_free_lifecycle_and_stable_29_fps;model_context_classification_failed",
+  "lifecycle": {
+    "rt_frames": 90,
+    "raster_survival_frames": 60,
+    "resources_recovered": true,
+    "exit_status": "cleanup_warning",
+    "exceptions": 0,
+    "backend_objects_remaining": 40
+  },
+  "phases": [
+    {"name": "model_resource_warm", "frames": 30, "wall_ms": 2577.8343, "fps": 11.637675858374605, "present_max_ms": 1506.0752, "gpu_3d_average_percent": 8.43381661303247},
+    {"name": "model_resource_steady", "frames": 30, "wall_ms": 1040.1051, "fps": 28.843239014980313, "gpu_3d_average_percent": 93.90212804108982},
+    {"name": "model_resource_reuse", "frames": 30, "wall_ms": 1034.4124, "fps": 29.001972520824385, "gpu_3d_average_percent": 94.2590168326432},
+    {"name": "gpu_lifecycle_raster", "frames": 60, "wall_ms": 1689.0923, "fps": 35.522025907229814}
+  ],
+  "model_probe": {
+    "draw_model_execute_calls": 2514,
+    "valid_model_inputs": 364,
+    "rejected_inputs": 2150,
+    "context_probe_failures": 364,
+    "queue_status": "VersionMismatch",
+    "submitted_models": 0,
+    "corrected_root_cause": "The materialsystem file hash, VMaterialSystem080 primary vtable RVA 641060 and GetRenderContext slot 95 target RVA 100368 all match the v50 pin. The returned render-context vtable did not match the two hard-coded primary values, and v50 made that first classification miss terminal before recording the actual value.",
+    "unsafe_slot_142_finding": "Queued-context slot 142 starts with lea eax,[ecx+0x2a4];ret and is not proven to return an ICallQueue virtual interface. v49's call through the returned field caused the engine.dll+0xe0940 crash and remains disabled."
+  },
+  "api_wait": {
+    "capture_tick_ms": [2643406, 2650937],
+    "client_main_thread": 12780,
+    "client_main_thread_ipc_submit_ms": 2972.6927,
+    "client_main_thread_api_ms": 315.8151,
+    "client_main_thread_command_mutex_ms": 42.9752,
+    "host_device_thread": 3828,
+    "host_device_thread_api_ms": 3917.4109,
+    "host_swapchain_present_ms": 2900.0959,
+    "host_other_api_ms": 917.5212,
+    "interpretation": "Counters are cumulative per-thread time and nested categories can overlap. The stable phase GPU samples near 94 percent show that the old roughly-20-percent GPU observation no longer describes this baseline; model-path cost must be measured again after correct model submission is restored."
+  },
+  "next_revision": "v51 records the exact binding stage and failure, up to four returned context vtables and hit counts, and executable slots 128-159 with 16-byte prefixes. Unknown contexts retry at most 512 times; each distinct table is scanned once. No candidate function or model submission executes."
+}

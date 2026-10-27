@@ -627,6 +627,34 @@ assert result['execution']=='incomplete'
         self.assertEqual(len(result['model_hook']['candidate_rvas']),11);self.assertTrue(result['api_wait']['pass'])
         runtime=analyze_runtime(directory);self.assertTrue(runtime['pass'],runtime['errors'])
         self.assertEqual(runtime['gpu_skinning']['status'],'source_queue_abi_recovery_collected')
+        events[0]['value']='51';(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        controls51=[dict(event='model_hook_status',value=1,other=0x12340000),
+                    dict(event='model_hook_capture_start',value=0,other=0,tick_ms=1500),
+                    dict(event='model_hook_capture_end',value=100,other=90,tick_ms=4500),
+                    dict(event='model_hook_rejected',value=10,other=0),dict(event='model_queue_mode',value=5,other=0),
+                    dict(event='model_queue_enqueued',value=0,other=0),dict(event='model_queue_executed',value=0,other=0),
+                    dict(event='model_queue_surfaces',value=0,other=90),dict(event='model_context_vtable_rva',value=700000,other=0),
+                    dict(event='model_binding_stage',value=8,other=9),dict(event='model_context_attempts',value=90,other=512)]
+        for variant in range(4):
+            controls51 += [dict(event='model_context_variant',value=variant,other=700000 if variant==0 else 0),
+                           dict(event='model_context_variant_hits',value=variant,other=90 if variant==0 else 0)]
+            for slot in range(128,160):
+                key=(variant<<32)|slot;code_key=(variant<<48)|(slot<<16)
+                controls51 += [dict(event='model_context_candidate_rva',value=key,other=100000+slot if variant==0 else 0),
+                               dict(event='model_context_candidate_code',value=code_key,other=0x1122334455667788 if variant==0 else 0),
+                               dict(event='model_context_candidate_code',value=code_key|1,other=0x8877665544332211 if variant==0 else 0)]
+        controls51.append(dict(event='model_hook_detached',value=1,other=0))
+        (directory/'rt-draw-control-1.jsonl').write_text('\n'.join(json.dumps(e) for e in controls51))
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['profile'],'context_variant_recovery');self.assertEqual(result['model_hook']['binding_failure'],9)
+        self.assertEqual(result['model_hook']['context_variants']['0'],700000)
+        runtime=analyze_runtime(directory);self.assertTrue(runtime['pass'],runtime['errors'])
+        self.assertEqual(runtime['gpu_skinning']['status'],'context_variant_recovery_collected')
+        controls51[9]['value']=7
+        (directory/'rt-draw-control-1.jsonl').write_text('\n'.join(json.dumps(e) for e in controls51))
+        self.assertIn('performance_model_context_probe',suite.review_performance(directory)['errors'])
+        events[0]['value']='50';(directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        (directory/'rt-draw-control-1.jsonl').write_text('\n'.join(json.dumps(e) for e in controls))
         controls[10]['other']=0
         (directory/'rt-draw-control-1.jsonl').write_text('\n'.join(json.dumps(e) for e in controls))
         self.assertIn('performance_model_context_probe',suite.review_performance(directory)['errors'])

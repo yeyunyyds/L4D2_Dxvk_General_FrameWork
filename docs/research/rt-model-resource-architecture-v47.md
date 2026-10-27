@@ -6,6 +6,14 @@
 
 v50 撤销全部队列 functor 和候选虚函数执行。它保留已验证的 `DrawModelExecute` 入口 Hook，在生产线程取得 pinned `VMaterialSystem080` render context 后，只读取 queued context 的虚表 RVA、140–150 槽目标 RVA 和每个目标前 16 字节；不调用任何候选，不改变 `mat_queue_mode`。本轮要求完成 90 个 RT Present、资源归零和 60 个 raster Present，同时收集同一 F9 窗口的 Client/Host API wait 计数。人物实例提交有意关闭，结果用于从机器码确定真实 getter／队列 ABI 后再恢复跨线程身份。
 
+## v50 实机结论与 v51 context 变体恢复
+
+v50 实机完整完成 90 个 RT 帧、资源归零和 60 个 raster 帧，未出现异常；稳定两段分别为 28.84 和 29.00 FPS。预热段 11.64 FPS 主要来自一次 1506 ms 的首次 Present。稳定两段的 Arc 3D 引擎单秒采样分别为 93.90% 和 94.26%，所以旧版约 20% GPU 占用不能继续代表这条基线。
+
+模块证据纠正了最初判断：`materialsystem.dll` 文件 SHA-256、`VMaterialSystem080` 主 vtable RVA 641060 和 95 槽目标 RVA 100368 都与固定值相符。失败发生在 `GetRenderContext` 返回之后：v50 只接受两个主 vtable，首次不匹配便写入终态 `VersionMismatch`，且尚未记录实际 vtable。其后 364 个有效人物输入全部跳过探测。
+
+v51 把模块绑定阶段和 context 分类分开。它记录阶段／失败码、最多四种实际 context vtable、命中数和每种表的 128–159 槽；未知 context 最多重试 512 次，每种表只读取一次槽代码。该版本仍不调用候选函数，不执行人物提交。只有获得实际 context 及静态机器码证据后，才会设计队列生产／消费边界。
+
 ## v48 实机结论与 v49 尝试
 
 2026-10-26 的 v48 B580 运行证明函数入口 Detours 确实命中：性能窗口记录 2,914 次模型调用与 362 个有效 palette，但模型资源、scope、实例仍全部为 0。原因已经收敛为 Source 的 queued rendering：`DrawModelExecute` 在生产线程把真正 D3D 命令排队后返回，v48 的线程局部 scope 随即结束；消费线程稍后执行 surface 时已经没有人物身份。用户看到环境正常、人物和感染者全部缺失，与计数一致。

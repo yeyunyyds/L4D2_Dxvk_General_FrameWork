@@ -332,7 +332,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
     if performance:
         performance_review=review_performance(directory);save(directory/'performance-analysis.json',performance_review)
-        report['performance']='source_queue_abi_recovery_collected' if performance_review['pass'] and pilot_revision>=50 else 'arc_model_resource_instance_collected' if performance_review['pass'] and pilot_revision>=47 else 'arc_persistent_mesh_update_collected' if performance_review['pass'] and pilot_revision>=44 else 'arc_structural_frame_batch_collected' if performance_review['pass'] else 'incomplete'
+        report['performance']='context_variant_recovery_collected' if performance_review['pass'] and pilot_revision>=51 else 'source_queue_abi_recovery_collected' if performance_review['pass'] and pilot_revision>=50 else 'arc_model_resource_instance_collected' if performance_review['pass'] and pilot_revision>=47 else 'arc_persistent_mesh_update_collected' if performance_review['pass'] and pilot_revision>=44 else 'arc_structural_frame_batch_collected' if performance_review['pass'] else 'incomplete'
         report['preview']='completed_performance_lifecycle' if performance_review['pass'] else 'incomplete'
         if not performance_review['pass']:report['errors'].extend(performance_review['errors']);report['collection']='incomplete'
     elif report.get('preview'):
@@ -347,7 +347,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
         report['result_scope']='five-minute complete-coverage gameplay beta; visual correctness and long-term stability still require review'
         return
     if performance:
-        report['result_scope']='Source queue ABI recovery: read-only queued-context slots and code prefixes, no candidate virtual call or model submission, complete RT resource retirement and 60 surviving raster Presents, plus Client/Host wait counters' if pilot_revision>=50 else 'Arc model resource/instance feasibility: multi-surface bind-pose resources, one GPU-skinned instance per Source scope, zero CPU-pose/frame-batch fallback, complete RT resource retirement and 60 surviving raster Presents; visual completeness and throughput require review' if pilot_revision>=47 else 'Arc complete explicit-model balance: optimized CPU-pose fallback with GPU-skin limits 64/80/96; global vertex capture disabled; complete RT resource retirement and 60 surviving raster Presents; visual completeness requires review'
+        report['result_scope']='Render-context variant recovery: actual vtables, hit counts, binding stage/failure and slots 128-159 are recorded read-only with bounded retry; no candidate virtual call or model submission' if pilot_revision>=51 else 'Source queue ABI recovery: read-only queued-context slots and code prefixes, no candidate virtual call or model submission, complete RT resource retirement and 60 surviving raster Presents, plus Client/Host wait counters' if pilot_revision>=50 else 'Arc model resource/instance feasibility: multi-surface bind-pose resources, one GPU-skinned instance per Source scope, zero CPU-pose/frame-batch fallback, complete RT resource retirement and 60 surviving raster Presents; visual completeness and throughput require review' if pilot_revision>=47 else 'Arc complete explicit-model balance: optimized CPU-pose fallback with GPU-skin limits 64/80/96; global vertex capture disabled; complete RT resource retirement and 60 surviving raster Presents; visual completeness requires review'
         return
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
@@ -478,6 +478,7 @@ def review_performance(directory):
     native_fallback=revision==38
     complete_fallback=39<=revision<47
     binding_probe=revision>=50
+    context_variant_probe=revision>=51
     resource_instance=47<=revision<50
     structural_batch=43<=revision<47
     persistent_batch=44<=revision<47
@@ -508,14 +509,21 @@ def review_performance(directory):
             executed=[e for e in control if e.get('event')=='model_queue_executed']
             surfaces=[e for e in control if e.get('event')=='model_queue_surfaces']
             detached=[e for e in control if e.get('event')=='model_hook_detached']
-            valid_queue=(len(modes)==len(enqueued)==len(executed)==len(surfaces)==len(detached)==1 and
-                detached[0].get('value')==1 and modes[0].get('value')==1 and
-                modes[0].get('other')==0 and isinstance(enqueued[0].get('value'),int) and enqueued[0]['value']>0 and
-                enqueued[0].get('other')==0 and enqueued[0]['value']==hook.get('captured_delta') and
-                ((revision==49 and executed[0].get('value')==executed[0].get('other')==enqueued[0]['value'] and
-                  isinstance(surfaces[0].get('value'),int) and surfaces[0]['value']>0 and surfaces[0].get('other')==0) or
-                 (binding_probe and executed[0].get('value')==executed[0].get('other')==0 and
-                  surfaces[0].get('value')==surfaces[0].get('other')==0)))
+            complete_queue_rows=len(modes)==len(enqueued)==len(executed)==len(surfaces)==len(detached)==1
+            if context_variant_probe and complete_queue_rows:
+                valid_queue=(detached[0].get('value')==1 and modes[0].get('value') in (1,2,5) and
+                    isinstance(modes[0].get('other'),int) and modes[0]['other']>=0 and
+                    isinstance(enqueued[0].get('value'),int) and enqueued[0]['value']>=0 and enqueued[0].get('other')==0 and
+                    executed[0].get('value')==executed[0].get('other')==0 and surfaces[0].get('value')==0 and
+                    isinstance(surfaces[0].get('other'),int) and surfaces[0]['other']>=0)
+            else:
+                valid_queue=(complete_queue_rows and detached[0].get('value')==1 and modes[0].get('value')==1 and
+                    modes[0].get('other')==0 and isinstance(enqueued[0].get('value'),int) and enqueued[0]['value']>0 and
+                    enqueued[0].get('other')==0 and enqueued[0]['value']==hook.get('captured_delta') and
+                    ((revision==49 and executed[0].get('value')==executed[0].get('other')==enqueued[0]['value'] and
+                      isinstance(surfaces[0].get('value'),int) and surfaces[0]['value']>0 and surfaces[0].get('other')==0) or
+                     (binding_probe and executed[0].get('value')==executed[0].get('other')==0 and
+                      surfaces[0].get('value')==surfaces[0].get('other')==0)))
             if not valid_queue:errors.append('performance_model_source_queue')
             hook.update({'queue_mode':modes[0].get('value') if len(modes)==1 else None,
                          'queued':enqueued[0].get('value') if len(enqueued)==1 else None,
@@ -574,13 +582,27 @@ def review_performance(directory):
     if binding_probe:
         end=ends[0] if len(ends)==1 else {}
         vtables=[e for e in control if e.get('event')=='model_context_vtable_rva']
-        rvas=[e for e in control if e.get('event')=='model_context_candidate_rva']
-        code=[e for e in control if e.get('event')=='model_context_candidate_code']
-        expected_slots=set(range(140,151))
-        observed_slots={e.get('value') for e in rvas if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')>0}
-        code_keys={(e.get('value',0)>>32,e.get('value',0)&0xffffffff) for e in code if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')!=0}
-        if len(vtables)!=1 or not isinstance(vtables[0].get('value'),int) or vtables[0]['value']<=0 or observed_slots!=expected_slots or any((slot,word) not in code_keys for slot in expected_slots for word in (0,1)):
-            errors.append('performance_model_context_probe')
+        rvas=[e for e in control if e.get('event')=='model_context_candidate_rva'];code=[e for e in control if e.get('event')=='model_context_candidate_code']
+        binding=[e for e in control if e.get('event')=='model_binding_stage']
+        attempts=[e for e in control if e.get('event')=='model_context_attempts']
+        variants=[e for e in control if e.get('event')=='model_context_variant']
+        variant_hits=[e for e in control if e.get('event')=='model_context_variant_hits']
+        if context_variant_probe:
+            populated={e.get('value'):e.get('other') for e in variants if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')>0}
+            hits={e.get('value'):e.get('other') for e in variant_hits if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
+            observed={(e.get('value',0)>>32,e.get('value',0)&0xffffffff) for e in rvas if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')>0}
+            code_keys={(e.get('value',0)>>48,(e.get('value',0)>>16)&0xffffffff,e.get('value',0)&0xffff) for e in code if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')!=0}
+            complete=sum(1 for variant,slot in observed if (variant,slot,0) in code_keys and (variant,slot,1) in code_keys)
+            if (len(vtables)!=1 or not isinstance(vtables[0].get('value'),int) or vtables[0]['value']<=0 or
+                len(binding)!=1 or binding[0].get('value',0)<8 or len(attempts)!=1 or not 0<attempts[0].get('value',0)<=attempts[0].get('other',0)==512 or
+                not populated or any(hits.get(index,0)<=0 for index in populated) or complete<20):
+                errors.append('performance_model_context_probe')
+        else:
+            expected_slots=set(range(140,151))
+            observed_slots={e.get('value') for e in rvas if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')>0}
+            code_keys={(e.get('value',0)>>32,e.get('value',0)&0xffffffff) for e in code if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')!=0}
+            if len(vtables)!=1 or not isinstance(vtables[0].get('value'),int) or vtables[0]['value']<=0 or observed_slots!=expected_slots or any((slot,word) not in code_keys for slot in expected_slots for word in (0,1)):
+                errors.append('performance_model_context_probe')
         keys=('model_resource_scopes','model_resource_definitions','model_resource_instances','model_resource_failures')
         if any(end.get(k)!=0 for k in keys) or any(end.get(k)!=0 for k in ('cpu_pose_submitted','frame_batch_flushes','submitted')):
             errors.append('performance_probe_mutated_model_pipeline')
@@ -598,12 +620,16 @@ def review_performance(directory):
         best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
         hook['context_vtable_rva']=vtables[0].get('value') if len(vtables)==1 else None
         hook['candidate_rvas']={str(e['value']):e['other'] for e in rvas if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
-        hook['candidate_code']={f"{e['value']>>32}:{e['value']&0xffffffff}":e['other'] for e in code if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
-        return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'source_queue_abi_recovery','phases':phases,
+        hook['candidate_code']={str(e['value']):e['other'] for e in code if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
+        hook['binding_stage']=binding[0].get('value') if len(binding)==1 else None;hook['binding_failure']=binding[0].get('other') if len(binding)==1 else None
+        hook['context_attempts']=attempts[0].get('value') if len(attempts)==1 else None
+        hook['context_variants']={str(e['value']):e['other'] for e in variants if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
+        hook['context_variant_hits']={str(e['value']):e['other'] for e in variant_hits if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
+        return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'context_variant_recovery' if context_variant_probe else 'source_queue_abi_recovery','phases':phases,
             'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
             'model_resources':{k:end.get(k) for k in keys},'model_hook':hook,'api_wait':api_wait,'effective_indirect_mode':remix_mode,
             'raster_survival':{'frames':end.get('raster_survival_frames',0),'timing':raster_window},'end':end,
-            'limits':'v50 never calls the unverified Source queue virtual function. It records queued-context slots 140-150 and 16-byte code prefixes, verifies a crash-free 90-frame RT baseline, and brackets the run with client/Host wait counters. Model submission is intentionally disabled until the exact game ABI is proven.'}
+            'limits':('v51 records up to four actual render-context vtables, hit counts, binding stage/failure, and slots 128-159 without calling any candidate or submitting models. The probe retries unknown contexts instead of making the first mismatch terminal.' if context_variant_probe else 'v50 never calls the unverified Source queue virtual function. It records queued-context slots 140-150 and 16-byte code prefixes, verifies a crash-free 90-frame RT baseline, and brackets the run with client/Host wait counters. Model submission is intentionally disabled until the exact game ABI is proven.')}
     if resource_instance:
         mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
         scopes=[e for e in events if e.get('event')=='model_resource_scope_submitted']
@@ -910,12 +936,12 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
                 'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 1','rtx.useVertexCapture = False']
             config='\n'.join(config_options)+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='source_queue_abi_recovery' if performance and manifest.get('pilot_revision',0)>=50 else 'arc_model_resource_instance_validation' if performance and manifest.get('pilot_revision',0)>=47 else 'arc_persistent_mesh_update_validation' if performance and manifest.get('pilot_revision',0)>=44 else 'arc_structural_frame_batch_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
+            report['scope']='context_variant_recovery' if performance and manifest.get('pilot_revision',0)>=51 else 'source_queue_abi_recovery' if performance and manifest.get('pilot_revision',0)>=50 else 'arc_model_resource_instance_validation' if performance and manifest.get('pilot_revision',0)>=47 else 'arc_persistent_mesh_update_validation' if performance and manifest.get('pilot_revision',0)>=44 else 'arc_structural_frame_batch_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v50: the crashing Source queue virtual call is removed. This run records queued-context slots 140-150, verifies a crash-free 90-frame RT baseline, and captures 1-second Client/Host wait counters. Model submission is intentionally disabled for this ABI-recovery run. Keep several characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v51: this safe read-only run records the actual render-context variants, hit counts, binding stage/failure and slots 128-159. Unknown contexts are retried; no candidate virtual function is called and no model is submitted. Keep several characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

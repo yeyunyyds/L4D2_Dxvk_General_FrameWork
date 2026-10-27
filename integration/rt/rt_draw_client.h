@@ -89,7 +89,7 @@ class Collector {
   bool modelHookAttempted=false;
   bool rawDown = false;
   void control(const char* name, uint64_t value = 0, uint64_t other = 0) {
-    if (!request.session || controlEvents >= 512) { return; }
+    if (!request.session || controlEvents >= 2048) { return; }
     if (!controlLog.is_open()) {
       controlLog.open(request.output / ("rt-draw-control-" + std::to_string(GetCurrentProcessId()) + "-" +
         std::to_string(reinterpret_cast<uintptr_t>(this)) + ".jsonl"), std::ios::binary);
@@ -181,11 +181,17 @@ public:
           control("model_queue_executed",model_hook::queueBegun(),model_hook::queueEnded());
           control("model_queue_surfaces",model_hook::surfaces(),model_hook::queueFailures());
           control("model_context_vtable_rva",model_hook::contextVtableRva(),0);
-          for(uint32_t index=0;index<model_hook::kCandidateSlots;++index) {
-            const auto slot=model_hook::kFirstCandidateSlot+index;
-            control("model_context_candidate_rva",slot,model_hook::candidateRva(index));
-            for(uint32_t word=0;word<model_hook::kCandidateCodeWords;++word)
-              control("model_context_candidate_code",(uint64_t(slot)<<32)|word,model_hook::candidateCode(index,word));
+          control("model_binding_stage",model_hook::bindingStage(),model_hook::bindingFailure());
+          control("model_context_attempts",model_hook::contextAttempts(),512);
+          for(uint32_t variant=0;variant<model_hook::kContextVariants;++variant) {
+            control("model_context_variant",variant,model_hook::contextVariant(variant));
+            control("model_context_variant_hits",variant,model_hook::contextVariantHits(variant));
+            for(uint32_t index=0;index<model_hook::kCandidateSlots;++index) {
+              const auto slot=model_hook::kFirstCandidateSlot+index;
+              control("model_context_candidate_rva",(uint64_t(variant)<<32)|slot,model_hook::candidateRva(variant,index));
+              for(uint32_t word=0;word<model_hook::kCandidateCodeWords;++word)
+                control("model_context_candidate_code",(uint64_t(variant)<<48)|(uint64_t(slot)<<16)|word,model_hook::candidateCode(variant,index,word));
+            }
           }
           control("model_hook_detached",model_hook::uninstall()?1:0,0);
         }
