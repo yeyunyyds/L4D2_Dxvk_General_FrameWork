@@ -180,6 +180,13 @@ public:
           control("model_queue_enqueued",model_hook::queued(),model_hook::queueCancelled());
           control("model_queue_executed",model_hook::queueBegun(),model_hook::queueEnded());
           control("model_queue_surfaces",model_hook::surfaces(),model_hook::queueFailures());
+          control("model_context_vtable_rva",model_hook::contextVtableRva(),0);
+          for(uint32_t index=0;index<model_hook::kCandidateSlots;++index) {
+            const auto slot=model_hook::kFirstCandidateSlot+index;
+            control("model_context_candidate_rva",slot,model_hook::candidateRva(index));
+            for(uint32_t word=0;word<model_hook::kCandidateCodeWords;++word)
+              control("model_context_candidate_code",(uint64_t(slot)<<32)|word,model_hook::candidateCode(index,word));
+          }
           control("model_hook_detached",model_hook::uninstall()?1:0,0);
         }
       }

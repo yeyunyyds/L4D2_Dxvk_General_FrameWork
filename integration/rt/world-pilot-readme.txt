@@ -1,6 +1,6 @@
-LDB RT Performance v49 — Source 队列人物恢复与 14 FPS 等待归因
+LDB RT Performance v50 — Source 队列 ABI 恢复与 14 FPS 等待归因
 
-v48 已证明函数入口钩子生效，但 Source 在生产线程返回 DrawModelExecute 后，实际 D3D surface 才由渲染线程执行，因此线程局部 scope 已结束：人物被省略，只剩环境，而稳定段仍仅 14.0–14.3 FPS。v49 在 Source 自己的 ICallQueue 中把 begin/end 标记排在人物 D3D 命令两侧，把 owned palette 和身份安全传到渲染线程；不修改 mat_queue_mode。同一次测试自动开启 Client/Host API wait 诊断，以 1 秒快照拆分 Present、IPC submit、队列满、命令锁、Host backend 与未归因时间。
+v49 在 F9 后约 2.4 秒于 engine.dll+0xe0940 读取 0xc 崩溃，证明调用的 Source 队列候选并非已验证的 ICallQueue ABI。v50 完全移除该虚函数调用，只读记录 queued render context 的 140–150 槽地址与各 16 字节代码前缀，同时保留已验证的 DrawModelExecute 入口 Hook。人物提交在本轮有意关闭，避免错误身份污染；mat_queue_mode 不变。同一次测试自动开启 Client/Host API wait 诊断，以 1 秒快照拆分 Present、IPC submit、队列满、命令锁、Host backend 与未归因时间。
 
 测试步骤（一次 F9）
 1. 解压到新文件夹，运行 run-performance.cmd。程序会安装配套 Client、Host 和实验 Remix Runtime，然后启动游戏。

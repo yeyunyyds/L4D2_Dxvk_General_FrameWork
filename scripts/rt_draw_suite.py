@@ -332,7 +332,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
     notify('Game and Host exited. Analyzing readbacks and textures, then updating the final ZIP...')
     if performance:
         performance_review=review_performance(directory);save(directory/'performance-analysis.json',performance_review)
-        report['performance']='arc_model_resource_instance_collected' if performance_review['pass'] and pilot_revision>=47 else 'arc_persistent_mesh_update_collected' if performance_review['pass'] and pilot_revision>=44 else 'arc_structural_frame_batch_collected' if performance_review['pass'] else 'incomplete'
+        report['performance']='source_queue_abi_recovery_collected' if performance_review['pass'] and pilot_revision>=50 else 'arc_model_resource_instance_collected' if performance_review['pass'] and pilot_revision>=47 else 'arc_persistent_mesh_update_collected' if performance_review['pass'] and pilot_revision>=44 else 'arc_structural_frame_batch_collected' if performance_review['pass'] else 'incomplete'
         report['preview']='completed_performance_lifecycle' if performance_review['pass'] else 'incomplete'
         if not performance_review['pass']:report['errors'].extend(performance_review['errors']);report['collection']='incomplete'
     elif report.get('preview'):
@@ -347,7 +347,7 @@ def finish_world_capture(directory,game,since,report,notify,beta=False,performan
         report['result_scope']='five-minute complete-coverage gameplay beta; visual correctness and long-term stability still require review'
         return
     if performance:
-        report['result_scope']='Arc model resource/instance feasibility: multi-surface bind-pose resources, one GPU-skinned instance per Source scope, zero CPU-pose/frame-batch fallback, complete RT resource retirement and 60 surviving raster Presents; visual completeness and throughput require review' if pilot_revision>=47 else 'Arc complete explicit-model balance: optimized CPU-pose fallback with GPU-skin limits 64/80/96; global vertex capture disabled; complete RT resource retirement and 60 surviving raster Presents; visual completeness requires review'
+        report['result_scope']='Source queue ABI recovery: read-only queued-context slots and code prefixes, no candidate virtual call or model submission, complete RT resource retirement and 60 surviving raster Presents, plus Client/Host wait counters' if pilot_revision>=50 else 'Arc model resource/instance feasibility: multi-surface bind-pose resources, one GPU-skinned instance per Source scope, zero CPU-pose/frame-batch fallback, complete RT resource retirement and 60 surviving raster Presents; visual completeness and throughput require review' if pilot_revision>=47 else 'Arc complete explicit-model balance: optimized CPU-pose fallback with GPU-skin limits 64/80/96; global vertex capture disabled; complete RT resource retirement and 60 surviving raster Presents; visual completeness requires review'
         return
     from analyze_rt_infected import analyze as analyze_infected
     infected=analyze_infected(directory);save(directory/'infected-analysis.json',infected)
@@ -477,7 +477,8 @@ def review_performance(directory):
     custom_profile=revision>=36
     native_fallback=revision==38
     complete_fallback=39<=revision<47
-    resource_instance=revision>=47
+    binding_probe=revision>=50
+    resource_instance=47<=revision<50
     structural_batch=43<=revision<47
     persistent_batch=44<=revision<47
     hook={'status':'not_required','target':0,'calls_delta':0,'captured_delta':0,'rejected':0}
@@ -511,8 +512,10 @@ def review_performance(directory):
                 detached[0].get('value')==1 and modes[0].get('value')==1 and
                 modes[0].get('other')==0 and isinstance(enqueued[0].get('value'),int) and enqueued[0]['value']>0 and
                 enqueued[0].get('other')==0 and enqueued[0]['value']==hook.get('captured_delta') and
-                executed[0].get('value')==executed[0].get('other')==enqueued[0]['value'] and
-                isinstance(surfaces[0].get('value'),int) and surfaces[0]['value']>0 and surfaces[0].get('other')==0)
+                ((revision==49 and executed[0].get('value')==executed[0].get('other')==enqueued[0]['value'] and
+                  isinstance(surfaces[0].get('value'),int) and surfaces[0]['value']>0 and surfaces[0].get('other')==0) or
+                 (binding_probe and executed[0].get('value')==executed[0].get('other')==0 and
+                  surfaces[0].get('value')==surfaces[0].get('other')==0)))
             if not valid_queue:errors.append('performance_model_source_queue')
             hook.update({'queue_mode':modes[0].get('value') if len(modes)==1 else None,
                          'queued':enqueued[0].get('value') if len(enqueued)==1 else None,
@@ -568,6 +571,39 @@ def review_performance(directory):
                 if not remix_mode['restir_gi_activated'] or remix_mode['importance_sampled_activated']:errors.append('effective_indirect_mode_not_restir_gi')
                 if native_fallback and remix_mode.get('vertex_capture_disabled_skip'):errors.append('native_vertex_capture_fallback_not_effective')
             elif not remix_mode['importance_sampled_activated'] or remix_mode['restir_gi_activated']:errors.append('effective_indirect_mode_not_importance_sampled')
+    if binding_probe:
+        end=ends[0] if len(ends)==1 else {}
+        vtables=[e for e in control if e.get('event')=='model_context_vtable_rva']
+        rvas=[e for e in control if e.get('event')=='model_context_candidate_rva']
+        code=[e for e in control if e.get('event')=='model_context_candidate_code']
+        expected_slots=set(range(140,151))
+        observed_slots={e.get('value') for e in rvas if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')>0}
+        code_keys={(e.get('value',0)>>32,e.get('value',0)&0xffffffff) for e in code if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')!=0}
+        if len(vtables)!=1 or not isinstance(vtables[0].get('value'),int) or vtables[0]['value']<=0 or observed_slots!=expected_slots or any((slot,word) not in code_keys for slot in expected_slots for word in (0,1)):
+            errors.append('performance_model_context_probe')
+        keys=('model_resource_scopes','model_resource_definitions','model_resource_instances','model_resource_failures')
+        if any(end.get(k)!=0 for k in keys) or any(end.get(k)!=0 for k in ('cpu_pose_submitted','frame_batch_flushes','submitted')):
+            errors.append('performance_probe_mutated_model_pipeline')
+        windows={e.get('segment'):e for e in events if e.get('event')=='runtime_timing_window'};phases=[]
+        for name in ('model_resource_warm','model_resource_steady','model_resource_reuse'):
+            row=windows.get(name);wall=row.get('wall_ms',0) if row else 0;thread_cpu=row.get('thread_cpu_ms') if row else None
+            if not isinstance(wall,(int,float)) or not math.isfinite(wall) or wall<=0:errors.append('performance_timing:'+name);continue
+            if row.get('thread_times_available') is not True or not isinstance(thread_cpu,(int,float)) or not math.isfinite(thread_cpu) or not 0<=thread_cpu<=wall+1:
+                errors.append('performance_thread_cpu_timing:'+name)
+            phases.append({'name':name,'frames':30,'wall_ms':wall,'fps':30000/wall,
+                'host_device_thread_cpu_ms':thread_cpu if isinstance(thread_cpu,(int,float)) else None,
+                'host_device_thread_non_cpu_ms':max(0,wall-thread_cpu) if isinstance(thread_cpu,(int,float)) else None})
+        raster_window=windows.get('gpu_lifecycle_raster')
+        if not raster_window or not isinstance(raster_window.get('wall_ms'),(int,float)) or raster_window['wall_ms']<=0:errors.append('performance_raster_timing')
+        best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
+        hook['context_vtable_rva']=vtables[0].get('value') if len(vtables)==1 else None
+        hook['candidate_rvas']={str(e['value']):e['other'] for e in rvas if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
+        hook['candidate_code']={f"{e['value']>>32}:{e['value']&0xffffffff}":e['other'] for e in code if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
+        return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'source_queue_abi_recovery','phases':phases,
+            'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
+            'model_resources':{k:end.get(k) for k in keys},'model_hook':hook,'api_wait':api_wait,'effective_indirect_mode':remix_mode,
+            'raster_survival':{'frames':end.get('raster_survival_frames',0),'timing':raster_window},'end':end,
+            'limits':'v50 never calls the unverified Source queue virtual function. It records queued-context slots 140-150 and 16-byte code prefixes, verifies a crash-free 90-frame RT baseline, and brackets the run with client/Host wait counters. Model submission is intentionally disabled until the exact game ABI is proven.'}
     if resource_instance:
         mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
         scopes=[e for e in events if e.get('event')=='model_resource_scope_submitted']
@@ -874,12 +910,12 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
                 'rtx.enableSecondaryBounces = False','rtx.useRTXDI = False','rtx.integrateIndirectMode = 1','rtx.useVertexCapture = False']
             config='\n'.join(config_options)+'\n'
             (directory/'world.conf').write_text(config,encoding='utf-8')
-            report['scope']='arc_model_resource_instance_validation' if performance and manifest.get('pilot_revision',0)>=47 else 'arc_persistent_mesh_update_validation' if performance and manifest.get('pilot_revision',0)>=44 else 'arc_structural_frame_batch_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
+            report['scope']='source_queue_abi_recovery' if performance and manifest.get('pilot_revision',0)>=50 else 'arc_model_resource_instance_validation' if performance and manifest.get('pilot_revision',0)>=47 else 'arc_persistent_mesh_update_validation' if performance and manifest.get('pilot_revision',0)>=44 else 'arc_structural_frame_batch_validation' if performance else 'five_minute_complete_coverage_gameplay_beta' if beta else 'selected_static_world_runtime_pilot'
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v49: DrawModelExecute identity is carried through the Source call queue to render-thread surfaces. The run also records 1-second Client/Host API wait counters around the same 90 RT frames. CPU-pose and frame-batch fallbacks are disabled. Keep several characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v50: the crashing Source queue virtual call is removed. This run records queued-context slots 140-150, verifies a crash-free 90-frame RT baseline, and captures 1-second Client/Host wait counters. Model submission is intentionally disabled for this ABI-recovery run. Keep several characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

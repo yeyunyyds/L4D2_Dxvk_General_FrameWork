@@ -1,6 +1,12 @@
 # v47 人物渲染资源／实例架构
 
-## v48 实机结论与 v49 修正
+## v49 崩溃结论与 v50 ABI 恢复
+
+2026-10-27 的 v49 实机在 F9 后约 2.4 秒闪退。Bridge 异常记录为 x86 `EXCEPTION_ACCESS_VIOLATION`，`engine.dll+0xE0940` 读取地址 `0xC`；控制日志只到 `model_hook_capture_start`，首个 RT 帧尚未开始。v48 的同一函数入口 Hook 已完成 90 个 RT Present，因此新增风险唯一收敛到 v49 对 Source 队列候选的虚函数调用。固定 SDK 的布局只能证明 SDK 候选，不能证明当前游戏对象的实际 ABI。
+
+v50 撤销全部队列 functor 和候选虚函数执行。它保留已验证的 `DrawModelExecute` 入口 Hook，在生产线程取得 pinned `VMaterialSystem080` render context 后，只读取 queued context 的虚表 RVA、140–150 槽目标 RVA 和每个目标前 16 字节；不调用任何候选，不改变 `mat_queue_mode`。本轮要求完成 90 个 RT Present、资源归零和 60 个 raster Present，同时收集同一 F9 窗口的 Client/Host API wait 计数。人物实例提交有意关闭，结果用于从机器码确定真实 getter／队列 ABI 后再恢复跨线程身份。
+
+## v48 实机结论与 v49 尝试
 
 2026-10-26 的 v48 B580 运行证明函数入口 Detours 确实命中：性能窗口记录 2,914 次模型调用与 362 个有效 palette，但模型资源、scope、实例仍全部为 0。原因已经收敛为 Source 的 queued rendering：`DrawModelExecute` 在生产线程把真正 D3D 命令排队后返回，v48 的线程局部 scope 随即结束；消费线程稍后执行 surface 时已经没有人物身份。用户看到环境正常、人物和感染者全部缺失，与计数一致。
 

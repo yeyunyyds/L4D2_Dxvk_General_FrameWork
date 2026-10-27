@@ -8,13 +8,12 @@
 #include "rt_file_hash.h"
 #include <windows.h>
 #include <detours.h>
-#include <new>
 #endif
 
 namespace ldb_rt::model_hook {
 
 enum class Status : uint32_t { Unavailable, Installed, Failed };
-enum class QueueStatus : uint32_t { Unavailable, Queued, Immediate, VersionMismatch, Failed };
+enum class QueueStatus : uint32_t { Unavailable, ObservedQueued, Immediate, VersionMismatch, Failed };
 
 #if defined(LDB_RT_ENABLE_MODEL_HOOK) && defined(_WIN32) && (defined(_M_IX86) || defined(__i386__))
 
@@ -43,24 +42,6 @@ static_assert(sizeof(DrawModelState)==28,"L4D2 DrawModelState ABI");
 static_assert(sizeof(ModelRenderInfo)==68,"L4D2 ModelRenderInfo ABI");
 
 using DrawModelExecute = void(__fastcall*)(void*,void*,const DrawModelState&,const ModelRenderInfo&,model_scope::Matrix3x4*);
-// Minimal mirror of the pinned L4D2 SDK CFunctor/ICallQueue ABI. Including
-// callqueue.h here would inject tier0 before/after-order requirements into the
-// already-formed Bridge translation unit. The native SDK fixture independently
-// verifies these x86 slots against the exact pinned headers.
-class SourceFunctor {
-public:
-  virtual int AddRef()=0;
-  virtual int Release()=0;
-  virtual void operator()()=0;
-  unsigned userId=0;
-};
-class SourceCallQueue {
-  virtual void queueInternal(SourceFunctor*)=0;
-public:
-  void queue(SourceFunctor* task) { task->AddRef();queueInternal(task); }
-};
-static_assert(sizeof(SourceFunctor)==8,"L4D2 CFunctor x86 ABI");
-static_assert(sizeof(SourceCallQueue)==4,"L4D2 ICallQueue x86 ABI");
 inline DrawModelExecute g_original=nullptr;
 inline std::atomic<Status> g_status{Status::Unavailable};
 inline std::atomic<QueueStatus> g_queueStatus{QueueStatus::Unavailable};
@@ -68,8 +49,12 @@ inline std::atomic_flag g_installing=ATOMIC_FLAG_INIT;
 inline std::atomic_flag g_binding=ATOMIC_FLAG_INIT;
 inline std::atomic<bool> g_captureActive{false};
 inline std::atomic<uint64_t> g_calls{0},g_captured{0},g_rejected{0};
-inline std::atomic<uint64_t> g_queued{0},g_immediate{0},g_queueBegun{0},g_queueEnded{0},g_queueCancelled{0},g_queueFailures{0};
+inline std::atomic<uint64_t> g_observedQueued{0},g_immediate{0},g_probeFailures{0};
 inline std::atomic<uintptr_t> g_target{0},g_materialBase{0},g_materialSystem{0};
+constexpr uint32_t kFirstCandidateSlot=140,kCandidateSlots=11,kCandidateCodeWords=2;
+inline std::array<std::atomic<uintptr_t>,kCandidateSlots> g_candidateRva{};
+inline std::array<std::array<std::atomic<uint64_t>,kCandidateCodeWords>,kCandidateSlots> g_candidateCode{};
+inline std::atomic<uintptr_t> g_contextVtableRva{0};
 
 template<class T> inline bool readProcess(const void* address,T& output) noexcept {
   SIZE_T bytes=0;return address&&ReadProcessMemory(GetCurrentProcess(),address,&output,sizeof(output),&bytes)&&bytes==sizeof(output);
@@ -106,7 +91,7 @@ inline bool initializeMaterialBinding() noexcept {
 
 struct Context {
   void* object=nullptr;
-  SourceCallQueue* queue=nullptr;
+  bool queued=false;
   bool immediate=false;
 };
 inline void release(Context& value) noexcept {
@@ -116,6 +101,10 @@ inline void release(Context& value) noexcept {
     using Release=int(__thiscall*)(void*);reinterpret_cast<Release>(method)(value.object);
   }
   value={};
+}
+inline uint64_t codeWord(const void* address,size_t offset) noexcept {
+  uint64_t value=0;SIZE_T bytes=0;
+  return ReadProcessMemory(GetCurrentProcess(),static_cast<const uint8_t*>(address)+offset,&value,sizeof(value),&bytes)&&bytes==sizeof(value)?value:0;
 }
 inline Context context() noexcept {
   Context out;if(!initializeMaterialBinding()) { return out; }
@@ -130,15 +119,18 @@ inline Context context() noexcept {
   if(!readProcess(out.object,table)) { g_queueStatus.store(QueueStatus::Failed,std::memory_order_release);release(out);return {}; }
   const auto vtable=reinterpret_cast<uintptr_t>(table);
   if(vtable==base+638876) {
-    if(!readProcess(table+142,method)||reinterpret_cast<uintptr_t>(method)!=base+146640||!executable(method)) {
-      g_queueStatus.store(QueueStatus::VersionMismatch,std::memory_order_release);release(out);return {};
+    g_contextVtableRva.store(vtable-base,std::memory_order_relaxed);
+    for(uint32_t index=0;index<kCandidateSlots;++index) {
+      void* candidate=nullptr;
+      if(!readProcess(table+kFirstCandidateSlot+index,candidate)||!executable(candidate)) { continue; }
+      const auto address=reinterpret_cast<uintptr_t>(candidate);
+      g_candidateRva[index].store(address>=base?address-base:address,std::memory_order_relaxed);
+      for(uint32_t word=0;word<kCandidateCodeWords;++word)g_candidateCode[index][word].store(codeWord(candidate,word*sizeof(uint64_t)),std::memory_order_relaxed);
     }
-    using GetCallQueue=SourceCallQueue*(__thiscall*)(void*);out.queue=reinterpret_cast<GetCallQueue>(method)(out.object);
-    void** queueTable=nullptr;void* queueCall=nullptr;
-    if(!out.queue||!readProcess(out.queue,queueTable)||!readProcess(queueTable,queueCall)||!executable(queueCall)) {
-      g_queueStatus.store(QueueStatus::Failed,std::memory_order_release);release(out);return {};
-    }
-    g_queueStatus.store(QueueStatus::Queued,std::memory_order_release);return out;
+    // v49 called slot 142 as GetCallQueue. The returned object's slot zero
+    // entered engine.dll+0xe0940 and crashed reading 0xc. Until the game ABI is
+    // proven from these bytes, this path is deliberately observation-only.
+    out.queued=true;g_queueStatus.store(QueueStatus::ObservedQueued,std::memory_order_release);return out;
   }
   if(vtable==base+650092) {
     if(!readProcess(table+142,method)||reinterpret_cast<uintptr_t>(method)!=base+141712) {
@@ -148,35 +140,6 @@ inline Context context() noexcept {
   }
   g_queueStatus.store(QueueStatus::VersionMismatch,std::memory_order_release);release(out);return {};
 }
-
-class BeginTask final : public SourceFunctor {
-  std::atomic<int> m_refs{1};
-  model_scope::Captured m_capture;
-  std::atomic<bool> m_called{false};
-public:
-  explicit BeginTask(const model_scope::Captured& capture) noexcept:m_capture(capture) { userId=0; }
-  ~BeginTask() { if(!m_called.load(std::memory_order_relaxed)) { g_queueCancelled.fetch_add(1,std::memory_order_relaxed); } }
-  int AddRef() override { return m_refs.fetch_add(1,std::memory_order_relaxed)+1; }
-  int Release() override { const auto n=m_refs.fetch_sub(1,std::memory_order_acq_rel)-1;if(!n) { delete this; }return n; }
-  void operator()() noexcept override {
-    if(m_called.exchange(true,std::memory_order_relaxed)||!model_scope::begin(m_capture)) { g_queueFailures.fetch_add(1,std::memory_order_relaxed);return; }
-    g_queueBegun.fetch_add(1,std::memory_order_relaxed);
-  }
-};
-class EndTask final : public SourceFunctor {
-  std::atomic<int> m_refs{1};
-  uint64_t m_scope;
-  std::atomic<bool> m_called{false};
-public:
-  explicit EndTask(uint64_t scope) noexcept:m_scope(scope) { userId=0; }
-  ~EndTask() { if(!m_called.load(std::memory_order_relaxed)) { g_queueCancelled.fetch_add(1,std::memory_order_relaxed); } }
-  int AddRef() override { return m_refs.fetch_add(1,std::memory_order_relaxed)+1; }
-  int Release() override { const auto n=m_refs.fetch_sub(1,std::memory_order_acq_rel)-1;if(!n) { delete this; }return n; }
-  void operator()() noexcept override {
-    if(m_called.exchange(true,std::memory_order_relaxed)||!model_scope::end(m_scope)) { g_queueFailures.fetch_add(1,std::memory_order_relaxed);return; }
-    g_queueEnded.fetch_add(1,std::memory_order_relaxed);
-  }
-};
 
 inline bool capture(const DrawModelState& stateRef,const ModelRenderInfo& infoRef,model_scope::Matrix3x4* customBones,model_scope::Captured& output) noexcept {
   DrawModelState state{};ModelRenderInfo info{};StudioHeaderPrefix studio{};ModelPrefix model{};
@@ -198,40 +161,45 @@ inline void __fastcall hooked(void* self,void* edx,const DrawModelState& stateRe
   if(!g_captureActive.load(std::memory_order_acquire)) { g_original(self,edx,stateRef,infoRef,customBones);return; }
   g_calls.fetch_add(1,std::memory_order_relaxed);model_scope::Captured captured;
   if(!capture(stateRef,infoRef,customBones,captured)) { g_rejected.fetch_add(1,std::memory_order_relaxed);g_original(self,edx,stateRef,infoRef,customBones);return; }
+  if(g_queueStatus.load(std::memory_order_acquire)==QueueStatus::ObservedQueued) {
+    g_observedQueued.fetch_add(1,std::memory_order_relaxed);g_captured.fetch_add(1,std::memory_order_relaxed);
+    g_original(self,edx,stateRef,infoRef,customBones);return;
+  }
   auto current=context();
-  if(current.queue) {
-    auto* begin=new(std::nothrow) BeginTask(captured);auto* end=new(std::nothrow) EndTask(captured.scope);
-    if(begin&&end) {
-      current.queue->queue(begin);begin->Release();g_original(self,edx,stateRef,infoRef,customBones);
-      current.queue->queue(end);end->Release();g_queued.fetch_add(1,std::memory_order_relaxed);g_captured.fetch_add(1,std::memory_order_relaxed);release(current);return;
-    }
-    if(begin) { begin->Release(); }if(end) { end->Release(); }g_queueFailures.fetch_add(1,std::memory_order_relaxed);
+  if(current.queued) {
+    g_observedQueued.fetch_add(1,std::memory_order_relaxed);g_captured.fetch_add(1,std::memory_order_relaxed);
+    release(current);g_original(self,edx,stateRef,infoRef,customBones);return;
   } else if(current.immediate) {
     model_scope::Scope scope(captured);
     if(scope.valid()) { g_immediate.fetch_add(1,std::memory_order_relaxed);g_captured.fetch_add(1,std::memory_order_relaxed);g_original(self,edx,stateRef,infoRef,customBones);release(current);return; }
-  } else { g_queueFailures.fetch_add(1,std::memory_order_relaxed); }
+  } else { g_probeFailures.fetch_add(1,std::memory_order_relaxed); }
   release(current);g_original(self,edx,stateRef,infoRef,customBones);
 }
 
 inline void setCaptureActive(bool active) noexcept {
   if(active) {
-    g_calls.store(0);g_captured.store(0);g_rejected.store(0);g_queued.store(0);g_immediate.store(0);g_queueBegun.store(0);g_queueEnded.store(0);
-    g_queueCancelled.store(0);g_queueFailures.store(0);model_scope::resetSurfacesTaken();
+    g_calls.store(0);g_captured.store(0);g_rejected.store(0);g_observedQueued.store(0);g_immediate.store(0);g_probeFailures.store(0);
+    g_queueStatus.store(QueueStatus::Unavailable,std::memory_order_release);
+    g_contextVtableRva.store(0);for(auto& rva:g_candidateRva)rva.store(0);for(auto& row:g_candidateCode)for(auto& word:row)word.store(0);
+    model_scope::resetSurfacesTaken();
   }
   g_captureActive.store(active,std::memory_order_release);
 }
 inline uint64_t calls() noexcept { return g_calls.load(std::memory_order_relaxed); }
 inline uint64_t captured() noexcept { return g_captured.load(std::memory_order_relaxed); }
 inline uint64_t rejected() noexcept { return g_rejected.load(std::memory_order_relaxed); }
-inline uint64_t queued() noexcept { return g_queued.load(std::memory_order_relaxed); }
+inline uint64_t queued() noexcept { return g_observedQueued.load(std::memory_order_relaxed); }
 inline uint64_t immediate() noexcept { return g_immediate.load(std::memory_order_relaxed); }
-inline uint64_t queueBegun() noexcept { return g_queueBegun.load(std::memory_order_relaxed); }
-inline uint64_t queueEnded() noexcept { return g_queueEnded.load(std::memory_order_relaxed); }
-inline uint64_t queueCancelled() noexcept { return g_queueCancelled.load(std::memory_order_relaxed); }
-inline uint64_t queueFailures() noexcept { return g_queueFailures.load(std::memory_order_relaxed); }
+inline uint64_t queueBegun() noexcept { return 0; }
+inline uint64_t queueEnded() noexcept { return 0; }
+inline uint64_t queueCancelled() noexcept { return 0; }
+inline uint64_t queueFailures() noexcept { return g_probeFailures.load(std::memory_order_relaxed); }
 inline uint64_t surfaces() noexcept { return model_scope::surfacesTaken(); }
 inline QueueStatus queueStatus() noexcept { return g_queueStatus.load(std::memory_order_relaxed); }
 inline uintptr_t target() noexcept { return g_target.load(std::memory_order_relaxed); }
+inline uintptr_t contextVtableRva() noexcept { return g_contextVtableRva.load(std::memory_order_relaxed); }
+inline uintptr_t candidateRva(uint32_t index) noexcept { return index<kCandidateSlots?g_candidateRva[index].load(std::memory_order_relaxed):0; }
+inline uint64_t candidateCode(uint32_t index,uint32_t word) noexcept { return index<kCandidateSlots&&word<kCandidateCodeWords?g_candidateCode[index][word].load(std::memory_order_relaxed):0; }
 
 inline Status install() noexcept {
   const auto current=g_status.load(std::memory_order_acquire);if(current!=Status::Unavailable) { return current; }
@@ -287,6 +255,10 @@ inline uint64_t queueFailures() noexcept { return 0; }
 inline uint64_t surfaces() noexcept { return 0; }
 inline QueueStatus queueStatus() noexcept { return QueueStatus::Unavailable; }
 inline uintptr_t target() noexcept { return 0; }
+constexpr uint32_t kFirstCandidateSlot=140,kCandidateSlots=11,kCandidateCodeWords=2;
+inline uintptr_t contextVtableRva() noexcept { return 0; }
+inline uintptr_t candidateRva(uint32_t) noexcept { return 0; }
+inline uint64_t candidateCode(uint32_t,uint32_t) noexcept { return 0; }
 
 #endif
 

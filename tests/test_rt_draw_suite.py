@@ -580,6 +580,57 @@ assert result['execution']=='incomplete'
         self.assertIn('performance_model_resource_instance',suite.review_performance(directory)['errors'])
         self.assertIn('invalid_model_resource_instance_lifecycle',analyze_runtime(directory)['errors'])
 
+    def test_performance_review_v50_is_read_only_queue_abi_recovery(self):
+        directory=self.root/'performance-v50';directory.mkdir()
+        events=[dict(event='pilot_delivery_revision',code=0,value='50'),dict(event='performance_lifecycle_begin',code=0)]
+        for phase,name in enumerate(('model_resource_warm','model_resource_steady','model_resource_reuse')):
+            events += [dict(event='runtime_timing_window',segment=name,wall_ms=2100,thread_times_available=True,
+                            thread_kernel_ms=10,thread_user_ms=10,thread_cpu_ms=20,scopes={}),
+                       dict(event='api_mesh_frame',stage='api_continuous_preview',gpu_skin_performance_phase=phase,
+                            skinned_submitted=0,skinned_created=0,skinned_reused=0,model_resource_scopes=0,
+                            model_resource_definitions=0,model_resource_instances=0,model_resource_failures=0)]
+        events += [dict(event='performance_resources_recovered',code=0),dict(event='performance_raster_survival_complete',code=0),
+                   dict(event='runtime_timing_window',segment='gpu_lifecycle_raster',wall_ms=1000,thread_times_available=True,
+                        thread_kernel_ms=10,thread_user_ms=10,thread_cpu_ms=20,scopes={}),
+                   dict(event='preview_end',complete=True,frames=150,rt_frames=90,raster_survival_frames=60,
+                        resources_recovered=True,entries=0,pending_fences=0,held=0,submitted=0,skinned_submitted=0,
+                        skinned_created=0,skinned_reused=0,cpu_pose_submitted=0,frame_batch_flushes=0,model_resource_scopes=0,
+                        model_resource_definitions=0,model_resource_instances=0,model_resource_failures=0)]
+        (directory/'preview-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+        (directory/'world-runtime.jsonl').write_text('\n'.join(json.dumps(e) for e in
+            [dict(event='rtx.graphicsPreset',code=0,value='4'),dict(event='rtx.integrateIndirectMode',code=0,value='1'),
+             dict(event='rtx.useVertexCapture',code=0,value='False')])+'\n')
+        (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
+        controls=[dict(event='model_hook_status',value=1,other=0x12340000),
+                  dict(event='model_hook_capture_start',value=0,other=0,tick_ms=1500),
+                  dict(event='model_hook_capture_end',value=100,other=90,tick_ms=4500),
+                  dict(event='model_hook_rejected',value=10,other=0),dict(event='model_queue_mode',value=1,other=0),
+                  dict(event='model_queue_enqueued',value=90,other=0),dict(event='model_queue_executed',value=0,other=0),
+                  dict(event='model_queue_surfaces',value=0,other=0),dict(event='model_context_vtable_rva',value=638876,other=0)]
+        for slot in range(140,151):
+            controls += [dict(event='model_context_candidate_rva',value=slot,other=100000+slot),
+                         dict(event='model_context_candidate_code',value=(slot<<32),other=0x1122334455667788),
+                         dict(event='model_context_candidate_code',value=(slot<<32)|1,other=0x8877665544332211)]
+        controls.append(dict(event='model_hook_detached',value=1,other=0))
+        (directory/'rt-draw-control-1.jsonl').write_text('\n'.join(json.dumps(e) for e in controls))
+        for index,role in enumerate(('client','host')):
+            folder=directory/'game-logs'/str(index+3);folder.mkdir(parents=True)
+            rows=[]
+            for snapshot,tick,calls,total in ((1,1000,10,100.0),(2,5000,30,600.0)):
+                rows += [f'L4D2_API_WAIT_SUMMARY snapshot={snapshot} role={role} pid={index+1} tick_ms={tick} interval_ms={tick} frequency=1 commands=0 dropped_threads=0 schema=2',
+                         f'L4D2_API_WAIT snapshot={snapshot} tid={index+10} api=Present metric=api calls={calls} total_us={total:.3f} inclusive_us={total:.3f} avg_us=1 max_us=10 ge_1ms=0 ge_5ms=0 ge_10ms=0 ge_50ms=0 ge_100ms=0',
+                         f'L4D2_API_WAIT snapshot={snapshot} tid={index+10} api=Present metric=ipc_submit calls={calls} total_us={total/2:.3f} inclusive_us={total/2:.3f} avg_us=1 max_us=5 ge_1ms=0 ge_5ms=0 ge_10ms=0 ge_50ms=0 ge_100ms=0',
+                         f'L4D2_API_WAIT_END snapshot={snapshot}']
+            (folder/f'l4d2-api-wait-{role}-1.log').write_text('\n'.join(rows)+'\n')
+        result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
+        self.assertEqual(result['profile'],'source_queue_abi_recovery');self.assertEqual(result['model_hook']['queued'],90)
+        self.assertEqual(len(result['model_hook']['candidate_rvas']),11);self.assertTrue(result['api_wait']['pass'])
+        runtime=analyze_runtime(directory);self.assertTrue(runtime['pass'],runtime['errors'])
+        self.assertEqual(runtime['gpu_skinning']['status'],'source_queue_abi_recovery_collected')
+        controls[10]['other']=0
+        (directory/'rt-draw-control-1.jsonl').write_text('\n'.join(json.dumps(e) for e in controls))
+        self.assertIn('performance_model_context_probe',suite.review_performance(directory)['errors'])
+
 
 class InstallTests(unittest.TestCase):
     def setUp(self):

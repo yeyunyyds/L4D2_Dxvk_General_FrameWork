@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "capture": "rt-performance-20261027-113212-827ea78d.zip",
+  "capture_sha256": "a49584e7782f054e5532418ab49150f5a174545e44f69ccd578ef172cbdb031c",
+  "build_commit": "5ea54cc86d5d4d359d323d41eb4e7304a7b0dce4",
+  "pilot_revision": 49,
+  "collection": "incomplete",
+  "failure": {
+    "kind": "client_access_violation",
+    "exception_code": "0xc0000005",
+    "fault": "engine.dll+0xe0940",
+    "access": "read",
+    "target": "0xc",
+    "capture_start_tick_ms": 166484,
+    "exception_utc": "2026-10-27T18:33:38.893Z",
+    "first_rt_frame_started": false
+  },
+  "control_tail": [
+    "f9_key_down",
+    "capture_started",
+    "model_hook_capture_start"
+  ],
+  "attribution": "v48 completed the same DrawModelExecute function-entry detour. The only new executing path in v49 was the hand-bound Source call-queue candidate. The returned object's first virtual call entered engine.dll+0xe0940 and read 0xc, so the current-game ICallQueue object/slot ABI was not proven and must not be called.",
+  "api_wait": "Both roles produced one-second cumulative snapshots before F9, but the last complete snapshots precede capture_start_tick_ms. The crash occurred before the next complete snapshot, so this archive cannot attribute the 14 FPS capture window.",
+  "next_revision": "v50 removes all candidate queue virtual calls, records queued-context slots 140-150 and their 16-byte code prefixes read-only, retains the verified model entry hook, and repeats the 90 RT plus 60 raster lifecycle with Client/Host wait counters. Model submission stays disabled during ABI recovery."
+}
