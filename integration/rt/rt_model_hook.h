@@ -4,7 +4,7 @@
 
 #include <atomic>
 
-#if defined(_WIN32) && (defined(_M_IX86) || defined(__i386__))
+#if defined(LDB_RT_ENABLE_MODEL_HOOK) && defined(_WIN32) && (defined(_M_IX86) || defined(__i386__))
 #include <windows.h>
 #include <detours.h>
 #endif
@@ -13,7 +13,7 @@ namespace ldb_rt::model_hook {
 
 enum class Status : uint32_t { Unavailable, Installed, Failed };
 
-#if defined(_WIN32) && (defined(_M_IX86) || defined(__i386__))
+#if defined(LDB_RT_ENABLE_MODEL_HOOK) && defined(_WIN32) && (defined(_M_IX86) || defined(__i386__))
 
 struct Vector { float x,y,z; };
 struct StudioHeaderPrefix {
