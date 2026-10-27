@@ -229,9 +229,14 @@ def archive_result(directory,report):
 def collect_game_logs(game,directory,since):
     inventory={'association':'game directory and mtime only; PID identity requires log review','copied':[],'omitted':[]}
     used=0
-    for index,folder in enumerate((game/'rtx-remix/logs',game/'bin/rtx-remix/logs',game/'bin/.l4d2bridge/rtx-remix/logs')):
+    locations=((game/'rtx-remix/logs',None),(game/'bin/rtx-remix/logs',None),
+               (game/'bin/.l4d2bridge/rtx-remix/logs',None),
+               (game/'bin','l4d2-api-wait-client-*.log'),
+               (game/'bin/.l4d2bridge','l4d2-api-wait-host64-*.log'))
+    for index,(folder,pattern) in enumerate(locations):
         if not folder.is_dir():continue
-        for source in list(folder.iterdir())[:128]:
+        sources=list(folder.glob(pattern)) if pattern else list(folder.iterdir())
+        for source in sources[:128]:
             if source.is_symlink() or not source.is_file() or source.suffix.lower() not in ('.log','.dmp'):continue
             if source.stat().st_mtime<since-2:continue
             size=source.stat().st_size
@@ -406,6 +411,62 @@ def review_preview(directory):
     return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'end':ends[-1] if ends else None,'color_metrics':metrics,'readbacks':reads,'gpu_image_acceptance':'unrun','limits':'Bounded neutral realtime preview, independent of600-Present diagnostic; no sustained performance or full coverage acceptance.'}
 
 
+def review_api_wait(directory,start_tick,stop_tick):
+    """Delta cumulative Bridge wait counters across the F9 performance window."""
+    directory=Path(directory);roles={};errors=[]
+    summary_re=re.compile(r'^L4D2_API_WAIT_SUMMARY .*?snapshot=(\d+).*?role=(\w+).*?tick_ms=(\d+)')
+    row_re=re.compile(r'^L4D2_API_WAIT .*?snapshot=(\d+).*?tid=(\d+) .*?api=(\w+) .*?metric=(\w+) '
+                      r'.*?calls=(\d+) .*?total_us=([0-9.]+) .*?inclusive_us=([0-9.]+) .*?max_us=([0-9.]+)')
+    end_re=re.compile(r'^L4D2_API_WAIT_END snapshot=(\d+)')
+    for path in sorted(directory.glob('game-logs/*/l4d2-api-wait-*.log')):
+        if path.stat().st_size>16*1024*1024:errors.append('oversized_api_wait_log');continue
+        snapshots={};complete=set()
+        for line in path.read_text(encoding='utf-8',errors='replace').splitlines():
+            match=summary_re.match(line)
+            if match:
+                number=int(match.group(1));snapshots[number]={'role':match.group(2),'tick_ms':int(match.group(3)),'rows':{}}
+                continue
+            match=row_re.match(line)
+            if match:
+                number=int(match.group(1));snapshot=snapshots.get(number)
+                if snapshot is not None:
+                    key=(int(match.group(2)),match.group(3),match.group(4))
+                    snapshot['rows'][key]={'calls':int(match.group(5)),'total_us':float(match.group(6)),
+                                           'inclusive_us':float(match.group(7)),'max_us':float(match.group(8))}
+                continue
+            match=end_re.match(line)
+            if match:complete.add(int(match.group(1)))
+        ordered=sorted((value for number,value in snapshots.items() if number in complete),key=lambda value:value['tick_ms'])
+        if not ordered:errors.append('incomplete_api_wait_log');continue
+        before=[value for value in ordered if value['tick_ms']<=start_tick]
+        after=[value for value in ordered if value['tick_ms']>=stop_tick]
+        if not before or not after:errors.append('api_wait_window_not_bracketed');continue
+        first,last=before[-1],after[0]
+        if first['role']!=last['role']:errors.append('api_wait_role_changed');continue
+        role=last['role'];target=roles.setdefault(role,{'files':0,'window_tick_ms':0,'api_total_us':0.0,
+            'classified_us':0.0,'unattributed_us':0.0,'metrics':{},'apis':{}})
+        target['files']+=1;target['window_tick_ms']=max(target['window_tick_ms'],last['tick_ms']-first['tick_ms'])
+        for key,current in last['rows'].items():
+            previous=first['rows'].get(key,{'calls':0,'total_us':0.0,'inclusive_us':0.0})
+            calls=current['calls']-previous['calls'];total=current['total_us']-previous['total_us']
+            if calls<0 or total<-0.001:errors.append('api_wait_counter_regressed');continue
+            if not calls and total<=0:continue
+            _,api,metric=key;total=max(0.0,total)
+            target['metrics'][metric]=target['metrics'].get(metric,0.0)+total
+            if metric=='api':
+                target['api_total_us']+=total;target['apis'][api]=target['apis'].get(api,0.0)+total
+            elif metric=='unattributed':target['unattributed_us']+=total
+            else:target['classified_us']+=total
+    for role in ('client','host'):
+        if role not in roles:errors.append('missing_api_wait_'+role)
+    for value in roles.values():
+        for key in ('api_total_us','classified_us','unattributed_us'):value[key]=round(value[key],3)
+        value['metrics']={key:round(amount,3) for key,amount in sorted(value['metrics'].items())}
+        value['apis']={key:round(amount,3) for key,amount in sorted(value['apis'].items())}
+    return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'capture_tick_ms':[start_tick,stop_tick],
+            'roles':roles,'limits':'Cumulative per-thread QPC counters differenced between the nearest complete 1-second snapshots bracketing F9 capture; classified nested times are exclusive but can overlap across threads; GPU execution and queue residence are not measured.'}
+
+
 def review_performance(directory):
     directory=Path(directory);errors=[];path=directory/'preview-runtime.jsonl'
     if not path.is_file() or path.stat().st_size>32*1024*1024:return {'schema':1,'pass':False,'errors':['missing_or_oversized_performance_log']}
@@ -420,6 +481,7 @@ def review_performance(directory):
     structural_batch=43<=revision<47
     persistent_batch=44<=revision<47
     hook={'status':'not_required','target':0,'calls_delta':0,'captured_delta':0,'rejected':0}
+    api_wait={'schema':1,'pass':revision<49,'errors':[],'roles':{}}
     if revision>=48:
         control=[]
         for file in directory.glob('rt-draw-control-*.jsonl'):
@@ -439,6 +501,32 @@ def review_performance(directory):
             hook={'status':'function_entry_exercised' if calls>0 and captured>0 and 0<captured<=calls else 'invalid',
                   'target':installed[0]['other'],'calls_delta':calls,'captured_delta':captured,'rejected':rejected}
             if hook['status']!='function_entry_exercised' or not isinstance(rejected,int) or rejected<0:errors.append('performance_model_hook_not_exercised')
+        if revision>=49:
+            modes=[e for e in control if e.get('event')=='model_queue_mode']
+            enqueued=[e for e in control if e.get('event')=='model_queue_enqueued']
+            executed=[e for e in control if e.get('event')=='model_queue_executed']
+            surfaces=[e for e in control if e.get('event')=='model_queue_surfaces']
+            detached=[e for e in control if e.get('event')=='model_hook_detached']
+            valid_queue=(len(modes)==len(enqueued)==len(executed)==len(surfaces)==len(detached)==1 and
+                detached[0].get('value')==1 and modes[0].get('value')==1 and
+                modes[0].get('other')==0 and isinstance(enqueued[0].get('value'),int) and enqueued[0]['value']>0 and
+                enqueued[0].get('other')==0 and enqueued[0]['value']==hook.get('captured_delta') and
+                executed[0].get('value')==executed[0].get('other')==enqueued[0]['value'] and
+                isinstance(surfaces[0].get('value'),int) and surfaces[0]['value']>0 and surfaces[0].get('other')==0)
+            if not valid_queue:errors.append('performance_model_source_queue')
+            hook.update({'queue_mode':modes[0].get('value') if len(modes)==1 else None,
+                         'queued':enqueued[0].get('value') if len(enqueued)==1 else None,
+                         'queue_cancelled':enqueued[0].get('other') if len(enqueued)==1 else None,
+                         'queue_begun':executed[0].get('value') if len(executed)==1 else None,
+                         'queue_ended':executed[0].get('other') if len(executed)==1 else None,
+                         'scoped_surfaces':surfaces[0].get('value') if len(surfaces)==1 else None,
+                         'queue_failures':surfaces[0].get('other') if len(surfaces)==1 else None,
+                         'detached':detached[0].get('value') if len(detached)==1 else None})
+            start_tick=starts[0].get('tick_ms') if len(starts)==1 else None
+            stop_tick=stops[0].get('tick_ms') if len(stops)==1 else None
+            if isinstance(start_tick,int) and isinstance(stop_tick,int) and stop_tick>start_tick:
+                api_wait=review_api_wait(directory,start_tick,stop_tick);errors.extend(api_wait['errors'])
+            else:errors.append('api_wait_capture_ticks')
     ends=[e for e in events if e.get('event')=='preview_end']
     minimum_frames=(150 if revision>=39 else 270) if lifecycle else 128 if stability else 120
     if len(ends)!=1 or not ends[0].get('complete') or ends[0].get('frames',0)<minimum_frames or any(ends[0].get(k)!=0 for k in ('entries','pending_fences','held')):errors.append('performance_completion')
@@ -527,9 +615,9 @@ def review_performance(directory):
         best=max((p['fps'] for p in phases),default=0);worst=min((p['fps'] for p in phases),default=0)
         return {'schema':1,'pass':not errors,'errors':sorted(set(errors)),'profile':'arc_model_resource_instance','phases':phases,
             'best_fps':best,'worst_fps':worst,'meets_24_fps':bool(phases) and worst>=24,
-            'model_resources':{k:end.get(k) for k in keys},'model_hook':hook,'effective_indirect_mode':remix_mode,
+            'model_resources':{k:end.get(k) for k in keys},'model_hook':hook,'api_wait':api_wait,'effective_indirect_mode':remix_mode,
             'raster_survival':{'frames':end.get('raster_survival_frames',0),'timing':raster_window},'end':end,
-            'limits':'v48 detours the DrawModelExecute function entry, defines each multi-surface bind-pose model resource once, submits one GPU-skinned instance per Source model scope before Present, and rejects any CPU-pose or frame-batch fallback. Visual completeness and throughput still require user review.'}
+            'limits':'v49 carries model identity across the Source call queue, defines each multi-surface bind-pose model resource once, submits one GPU-skinned instance per Source model scope before Present, rejects CPU-pose/frame-batch fallback, and brackets the run with client/Host API wait diagnostics. Visual completeness and throughput still require user review.'}
     if structural_batch:
         mesh=[e for e in events if e.get('event')=='api_mesh_frame' and e.get('gpu_skin_performance_phase',-1)>=0]
         if [e.get('gpu_skin_performance_phase') for e in mesh]!=[0,1,2] or [e.get('skinned_frame_limit') for e in mesh]!=[80,0,0]:
@@ -791,7 +879,7 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v48: DrawModelExecute is observed at the function entry. All 90 RT frames define multi-surface bind-pose model resources once and submit one GPU-skinned instance per Source model scope before Present. CPU-pose and frame-batch fallbacks are disabled. Keep several characters in view and do not press F9 again.')
+        if performance:notify('RT Performance v49: DrawModelExecute identity is carried through the Source call queue to render-thread surfaces. The run also records 1-second Client/Host API wait counters around the same 90 RT frames. CPU-pose and frame-batch fallbacks are disabled. Keep several characters in view and do not press F9 again.')
         elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')

@@ -1,5 +1,15 @@
 # v47 人物渲染资源／实例架构
 
+## v48 实机结论与 v49 修正
+
+2026-10-26 的 v48 B580 运行证明函数入口 Detours 确实命中：性能窗口记录 2,914 次模型调用与 362 个有效 palette，但模型资源、scope、实例仍全部为 0。原因已经收敛为 Source 的 queued rendering：`DrawModelExecute` 在生产线程把真正 D3D 命令排队后返回，v48 的线程局部 scope 随即结束；消费线程稍后执行 surface 时已经没有人物身份。用户看到环境正常、人物和感染者全部缺失，与计数一致。
+
+同一次结果也推翻了“人物 CPU 转换是当前唯一性能瓶颈”的假设。人物完全省略时，稳定和复用窗口仍分别只有 14.03 与 14.29 FPS；30 帧约耗时 2.1 秒，而 Host 已记录的 draw、metadata、scene、Present 工作合计不到 0.1 秒，设备线程 CPU 时间接近零。GPU 3D 在末段平均约 24.5%、P95 约 43.3%。因此约 68 ms/帧主要是未分段的同步或供给等待，必须测量 Source、Bridge、Host 和 Runtime 边界。
+
+v49 保留函数入口 Detours，但从固定 `VMaterialSystem080` 取得当前 render context 和 `ICallQueue`。生产线程在调用原函数前后分别排入 begin/end functor，原函数产生的人物 D3D 命令自然位于两者之间；消费线程执行 begin 时启用 owned identity/palette scope，执行 end 时关闭。直接 context 仍按同一线程执行。该方案不修改 `mat_queue_mode`，也不复制 `l4d2-rtx` 的单线程设置。验收要求 queued、begin、end 完全相等、surface 命中非零、取消/失败为零。
+
+v49 同时在 performance 请求中自动启用既有 Client/Host API wait 诊断，每秒记录 Present、IPC submit、command/data queue full wait、command mutex、response wait、backend call 等 QPC 计数。收集器按 F9 开始/结束 tick 选择两侧完整快照并求差。下一次结果会在恢复人物的同时，把 14 FPS 的等待归到具体边界。
+
 ## v47 实机结论与 v48 修正
 
 2026-10-26 的 v47 B580 运行完成了 90 个 RT Present、资源回收和 60 个 raster Present，但模型 scope、资源定义与实例提交均为 0；同时产生 56,117 次 CPU-pose 提交。Client 只记录到“虚表项写入成功”，没有任何模型 scope。复核固定 L4D2 SDK 与 `l4d2-rtx` 后确认 slot 19 本身正确，差异在钩子方式：参考项目用 slot 19 取得 `CModelRender::DrawModelExecute` 地址后对函数入口安装 MinHook，v47 仅替换 IVModelRender 虚表项，无法覆盖引擎内部的直接函数调用。

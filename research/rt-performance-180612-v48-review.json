@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "capture": "rt-performance-20261026-180612-cc5011ac.zip",
+  "capture_sha256": "e77f561d94d86719e8cc3f4c4a35a53a6a89a3c7ffe655169839ced1eacc958c",
+  "build_commit": "910bd358",
+  "pilot_revision": 48,
+  "visual_report": "environment rendered normally; survivors and infected absent; approximately 14 FPS",
+  "phases": [
+    {"name": "model_resource_warm", "frames": 30, "wall_ms": 3506.0, "fps": 8.556},
+    {"name": "model_resource_steady", "frames": 30, "wall_ms": 2137.66, "fps": 14.034},
+    {"name": "model_resource_reuse", "frames": 30, "wall_ms": 2099.35, "fps": 14.29}
+  ],
+  "model_hook": {
+    "calls_delta": 2914,
+    "captured_delta": 362,
+    "model_resource_scopes": 0,
+    "model_resource_definitions": 0,
+    "model_resource_instances": 0,
+    "conclusion": "The function-entry hook works, but its thread-local scope ends on the Source producer thread before queued D3D surface commands execute on the render consumer thread."
+  },
+  "gpu_3d_last_12_seconds": {"mean_percent": 24.55, "p95_percent": 43.25},
+  "timing_conclusion": "The environment-only steady baseline is about 14 FPS. Instrumented Host work accounts for less than 0.1 seconds of each 30-frame window while about 2.0 seconds remain outside existing scopes, so model conversion cannot explain the current ceiling.",
+  "next_revision": "v49 carries model identity and palettes through Source ICallQueue begin/end markers and enables one-second Client/Host API wait snapshots in the same run."
+}

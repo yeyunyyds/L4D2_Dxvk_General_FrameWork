@@ -10,6 +10,7 @@
 #include <cstring>
 #include <string>
 #include <thread>
+#include <utility>
 
 namespace ldb_rt::model_scope {
 
@@ -38,6 +39,12 @@ struct SurfaceView {
   uint64_t scope=0;
   uint32_t surface=0,boneCount=0;
   bool first=false;
+};
+struct Captured {
+  Identity identity;
+  std::array<Matrix3x4,model_resource::kMaxBones> bones{};
+  uint64_t scope=0;
+  uint32_t boneCount=0;
 };
 
 inline uint64_t hashAppend(uint64_t hash,const void* data,size_t size) noexcept {
@@ -74,25 +81,48 @@ struct ScopeState {
 inline thread_local std::array<ScopeState,kMaxScopeDepth> g_scopeStack{};
 inline thread_local size_t g_scopeDepth=0;
 inline std::atomic<uint64_t> g_nextScope{0};
+inline std::atomic<uint64_t> g_surfacesTaken{0};
+
+inline uint64_t nextScope() noexcept {
+  auto value=g_nextScope.fetch_add(1,std::memory_order_relaxed)+1;
+  if(!value) { value=g_nextScope.fetch_add(1,std::memory_order_relaxed)+1; }
+  return value;
+}
+inline bool capture(const Input& input,Captured& output) noexcept {
+  Captured value;if(!identify(input,value.identity)) { return false; }
+  std::copy(input.bones,input.bones+input.boneCount,value.bones.begin());value.boneCount=input.boneCount;value.scope=nextScope();
+  output=std::move(value);return true;
+}
+inline bool begin(const Captured& input) noexcept {
+  if(!input.scope||!input.boneCount||input.boneCount>model_resource::kMaxBones||g_scopeDepth>=kMaxScopeDepth) { return false; }
+  auto& state=g_scopeStack[g_scopeDepth];state={};state.identity=input.identity;state.bones=input.bones;
+  state.boneCount=input.boneCount;state.scope=input.scope;++g_scopeDepth;return true;
+}
+inline bool end(uint64_t scope) noexcept {
+  if(!scope||!g_scopeDepth||g_scopeStack[g_scopeDepth-1].scope!=scope) { return false; }
+  --g_scopeDepth;return true;
+}
+inline uint64_t surfacesTaken() noexcept { return g_surfacesTaken.load(std::memory_order_relaxed); }
+inline void resetSurfacesTaken() noexcept { g_surfacesTaken.store(0,std::memory_order_relaxed); }
 
 class Scope {
   size_t m_depth=0;
   bool m_valid=false;
 public:
   explicit Scope(const Input& input) noexcept {
-    if(g_scopeDepth>=kMaxScopeDepth) { return; }auto& state=g_scopeStack[g_scopeDepth];state={};if(!identify(input,state.identity)) { return; }
-    std::copy(input.bones,input.bones+input.boneCount,state.bones.begin());state.boneCount=input.boneCount;
-    state.scope=g_nextScope.fetch_add(1,std::memory_order_relaxed)+1;if(!state.scope) { state.scope=g_nextScope.fetch_add(1,std::memory_order_relaxed)+1; }
-    m_depth=++g_scopeDepth;m_valid=true;
+    Captured captured;if(!capture(input,captured)||!begin(captured)) { return; }m_depth=g_scopeDepth;m_valid=true;
+  }
+  explicit Scope(const Captured& input) noexcept {
+    if(!begin(input)) { return; }m_depth=g_scopeDepth;m_valid=true;
   }
   Scope(const Scope&)=delete;Scope& operator=(const Scope&)=delete;
-  ~Scope() { if(m_valid&&g_scopeDepth==m_depth) { --g_scopeDepth; } }
+  ~Scope() { if(m_valid&&g_scopeDepth==m_depth) { end(g_scopeStack[m_depth-1].scope); } }
   bool valid() const noexcept { return m_valid; }
   uint32_t surfaces() const noexcept { return m_valid&&m_depth&&g_scopeDepth>=m_depth?g_scopeStack[m_depth-1].surfaces:0; }
   static SurfaceView takeSurface() noexcept {
     SurfaceView out;if(!g_scopeDepth) { return out; }auto& current=g_scopeStack[g_scopeDepth-1];
     out.identity=&current.identity;out.bones=current.bones.data();out.scope=current.scope;
-    out.surface=current.surfaces++;out.first=out.surface==0;out.boneCount=current.boneCount;return out;
+    out.surface=current.surfaces++;out.first=out.surface==0;out.boneCount=current.boneCount;g_surfacesTaken.fetch_add(1,std::memory_order_relaxed);return out;
   }
   static const Identity* currentIdentity() noexcept { return g_scopeDepth?&g_scopeStack[g_scopeDepth-1].identity:nullptr; }
 };

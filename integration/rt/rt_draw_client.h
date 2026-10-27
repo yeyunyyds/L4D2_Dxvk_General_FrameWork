@@ -168,14 +168,19 @@ public:
             heartbeatAt = now + 5000;
           }
           if (pressed && !down && request.session && !finished) {
-            active = true; startedAt = now; control("capture_started", pid, drawsSeen);
+            model_hook::setCaptureActive(true);active = true; startedAt = now; control("capture_started", pid, drawsSeen);
             control("model_hook_capture_start",model_hook::calls(),model_hook::captured());
           }
           down = pressed;
         }
         if (active && (now - startedAt > (request.world ? 420000u : 60000u) || (fs::exists(doneFile(request)) && (!request.world || !fs::exists(previewRunningFile(request)) || fs::exists(previewDoneFile(request)))))) {
-          control("capture_stopped", ordinal);control("model_hook_capture_end",model_hook::calls(),model_hook::captured());
+          model_hook::setCaptureActive(false);control("capture_stopped", ordinal);control("model_hook_capture_end",model_hook::calls(),model_hook::captured());
           control("model_hook_rejected",model_hook::rejected(),0);active = false; finished = true;
+          control("model_queue_mode",uint64_t(model_hook::queueStatus()),model_hook::immediate());
+          control("model_queue_enqueued",model_hook::queued(),model_hook::queueCancelled());
+          control("model_queue_executed",model_hook::queueBegun(),model_hook::queueEnded());
+          control("model_queue_surfaces",model_hook::surfaces(),model_hook::queueFailures());
+          control("model_hook_detached",model_hook::uninstall()?1:0,0);
         }
       }
       if (!active) { return {}; }

@@ -44,8 +44,20 @@ void threadIsolation() {
   auto a=std::async(std::launch::async,run,uintptr_t(11),3.0f);auto b=std::async(std::launch::async,run,uintptr_t(12),4.0f);const auto av=a.get(),bv=b.get();
   check(av.first!=bv.first&&av.second!=bv.second&&!model_scope::Scope::currentIdentity(),"thread scopes collided");
 }
+void queuedMarkersCrossThreads() {
+  auto bones=palette(6,12);model_scope::Captured captured;check(model_scope::capture(input(bones),captured),"queued capture rejected");
+  bones[0][3]=99;const auto producer=std::this_thread::get_id();
+  auto consumer=std::async(std::launch::async,[captured,producer] {
+    check(std::this_thread::get_id()!=producer,"queued marker stayed on producer");
+    check(model_scope::begin(captured),"queued begin rejected");const auto first=model_scope::Scope::takeSurface(),second=model_scope::Scope::takeSurface();
+    check(first.identity&&first.scope==captured.scope&&first.bones[0][3]==12&&second.surface==1,"queued scope lost owned input");
+    check(!model_scope::end(captured.scope+1)&&model_scope::Scope::currentIdentity(),"mismatched end popped scope");
+    check(model_scope::end(captured.scope)&&!model_scope::Scope::currentIdentity(),"queued end failed");return first.scope;
+  });
+  check(consumer.get()==captured.scope&&!model_scope::Scope::currentIdentity(),"queued scope leaked to producer");
+}
 int main() {
-  try { identityAndOwnedPalette();nestedScopesRestore();invalidInputsDoNotPublish();threadIsolation();
-    std::cout<<"RT model Source scope cases: PASS (4 groups)\n";return 0;
+  try { identityAndOwnedPalette();nestedScopesRestore();invalidInputsDoNotPublish();threadIsolation();queuedMarkersCrossThreads();
+    std::cout<<"RT model Source scope cases: PASS (5 groups)\n";return 0;
   } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

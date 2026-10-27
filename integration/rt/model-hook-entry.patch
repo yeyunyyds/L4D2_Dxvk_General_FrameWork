@@ -2,15 +2,29 @@ diff --git a/bridge/src/client/d3d9_lss.cpp b/bridge/src/client/d3d9_lss.cpp
 index b40d70a..3594e22 100644
 --- a/bridge/src/client/d3d9_lss.cpp
 +++ b/bridge/src/client/d3d9_lss.cpp
-@@ -47,6 +47,7 @@
+@@ -47,6 +47,8 @@
  #include "readback_recovery.h"
  #include "steam_workshop_status.h"
  #include "retention_runtime.h"
 +#include "rt_model_hook.h"
++#include "rt_draw_request.h"
  
  #include "util_bridge_assert.h"
  #include "util_bridge_state.h"
-@@ -683,6 +684,9 @@ void RemixDetach() {
+@@ -576,8 +578,10 @@ bool RemixAttach(HMODULE hModule) {
+     } catch (...) { }
+     // NV-DXVK end
+     try {
+-    if (Config::getOption<bool>("client.apiWaitDiagnostics", false)) {
+-      const bool ready = l4d2_api_wait::initialize(true, "client", Config::getOption<unsigned>("client.apiWaitSnapshotMs", 5000));
++    ldb_rt::draw_observe::Request waitRequest;
++    const bool performanceWait = ldb_rt::draw_observe::readRequest(waitRequest) && waitRequest.performance;
++    if (performanceWait || Config::getOption<bool>("client.apiWaitDiagnostics", false)) {
++      const bool ready = l4d2_api_wait::initialize(true, "client", performanceWait ? 1000u : Config::getOption<unsigned>("client.apiWaitSnapshotMs", 5000));
+       Logger::info(ready ? "L4D2 API wait diagnostics enabled: client" : "L4D2 API wait diagnostics failed to initialize: client");
+     }
+     } catch (...) { }
+@@ -683,6 +687,9 @@ void RemixDetach() {
  
      l4d2_data::finish();
      l4d2_color::finish();
@@ -21,14 +35,37 @@ index b40d70a..3594e22 100644
      BridgeState::setClientState(BridgeState::ProcessState::Exited);
  
 diff --git a/bridge/src/client/meson.build b/bridge/src/client/meson.build
-index 8579850..a9ec34a 100644
+index 8579850..a57caf1 100644
 --- a/bridge/src/client/meson.build
 +++ b/bridge/src/client/meson.build
-@@ -122,6 +122,7 @@ thread_dep = dependency('threads')
+@@ -117,11 +117,13 @@ d3d9_header = files([
+ ])
+ 
+ detours_include_path = include_directories('../../../submodules/Detours/src')
++sdk_include_path = include_directories('../../../../rt-sdk-source/public')
+ 
+ thread_dep = dependency('threads')
  
  d3d9_dll = shared_library('d3d9', d3d9_header, d3d9_src, d3d9_res, 
    sources             : [ bridge_version ],
 +  cpp_args            : [ '-DLDB_RT_ENABLE_MODEL_HOOK=1' ],
    dependencies        : [ thread_dep, util_dep, lib_version, lib_version, lib_commCtrl, tracy_dep, bridge_compiler.find_library('bcrypt') ],
-   include_directories : [ bridge_include_path, util_include_path, detours_include_path, public_include_path ],
+-  include_directories : [ bridge_include_path, util_include_path, detours_include_path, public_include_path ],
++  include_directories : [ bridge_include_path, util_include_path, detours_include_path, sdk_include_path, public_include_path ],
    vs_module_defs      : 'd3d9_lss.def')
+diff --git a/bridge/src/server/main.cpp b/bridge/src/server/main.cpp
+--- a/bridge/src/server/main.cpp
++++ b/bridge/src/server/main.cpp
+@@ -4272,8 +4272,10 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
+   } catch (...) { }
+   // NV-DXVK end
+   try {
+-  if (Config::getOption<bool>("server.apiWaitDiagnostics", false)) {
+-    const bool ready = l4d2_api_wait::initialize(true, "host", Config::getOption<unsigned>("server.apiWaitSnapshotMs", 5000));
++  ldb_rt::draw_observe::Request waitRequest;
++  const bool performanceWait = ldb_rt::draw_observe::readRequest(waitRequest) && waitRequest.performance;
++  if (performanceWait || Config::getOption<bool>("server.apiWaitDiagnostics", false)) {
++    const bool ready = l4d2_api_wait::initialize(true, "host", performanceWait ? 1000u : Config::getOption<unsigned>("server.apiWaitSnapshotMs", 5000));
+     Logger::info(ready ? "L4D2 API wait diagnostics enabled: host" : "L4D2 API wait diagnostics failed to initialize: host");
+   }
+   } catch (...) { }

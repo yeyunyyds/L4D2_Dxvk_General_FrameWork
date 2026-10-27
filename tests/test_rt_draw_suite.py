@@ -140,6 +140,8 @@ assert result['execution']=='incomplete'
         game=self.root/'game';logs=game/'rtx-remix/logs';logs.mkdir(parents=True)
         (logs/'bridge32.log').write_text('fixture reply-deadline')
         (logs/'bridge64.log').write_text('fixture Host stopped')
+        (game/'bin').mkdir();(game/'bin/l4d2-api-wait-client-123.log').write_text('client waits')
+        (game/'bin/.l4d2bridge').mkdir();(game/'bin/.l4d2bridge/l4d2-api-wait-host64-456.log').write_text('host waits')
         report={'collection':'incomplete','errors':[],'capture_marker':{'reason':3,'presents':33}}
         def waiting(notify):
             saved=json.loads((directory/'summary.json').read_text())
@@ -151,8 +153,9 @@ assert result['execution']=='incomplete'
             with zipfile.ZipFile(directory.with_suffix('.zip')) as archive:
                 self.assertEqual(json.loads(archive.read('summary.json'))['collection_phase'],'waiting_for_game_and_host_exit')
             inventory=json.loads((directory/'game-log-inventory.json').read_text())
-            self.assertEqual(len(inventory['copied']),2)
+            self.assertEqual(len(inventory['copied']),4)
             self.assertIn('reply-deadline',(directory/'game-logs/0/bridge32.log').read_text())
+            self.assertEqual((directory/'game-logs/3/l4d2-api-wait-client-123.log').read_text(),'client waits')
             raise TimeoutError('fixture game remains alive after Host exit')
         with patch.object(suite,'wait_stopped',side_effect=waiting),patch.object(suite,'analyze_world') as analyze:
             with self.assertRaisesRegex(TimeoutError,'game remains alive'):
@@ -509,9 +512,9 @@ assert result['execution']=='incomplete'
         self.assertIn('performance_frame_batch_accounting',suite.review_performance(directory)['errors'])
         self.assertIn('invalid_structural_frame_batch',analyze_runtime(directory)['errors'])
 
-    def test_performance_review_v48_requires_function_hook_and_reused_resources_without_cpu_batch(self):
-        directory=self.root/'performance-v48';directory.mkdir()
-        events=[dict(event='pilot_delivery_revision',code=0,value='48'),dict(event='performance_lifecycle_begin',code=0)]
+    def test_performance_review_v49_requires_queued_model_scopes_waits_and_reused_resources(self):
+        directory=self.root/'performance-v49';directory.mkdir()
+        events=[dict(event='pilot_delivery_revision',code=0,value='49'),dict(event='performance_lifecycle_begin',code=0)]
         for instance in range(1,10):
             events.append(dict(event='model_resource_scope_submitted',frame=instance,scope=100+instance,
                 resource=1 if instance%2 else 2,instance=1000+instance,surfaces=4,bones=32,created=instance<=2))
@@ -546,13 +549,29 @@ assert result['execution']=='incomplete'
              dict(event='rtx.useVertexCapture',code=0,value='False')])+'\n')
         (directory/'remix-dxvk.log').write_text('rtx.graphicsPreset = 4\n[RTX] Integrate Indirect Mode: ReSTIR GI - activated\n')
         controls=[dict(event='model_hook_status',value=1,other=0x12340000),
-                  dict(event='model_hook_capture_start',value=10,other=5),
-                  dict(event='model_hook_capture_end',value=110,other=95),
-                  dict(event='model_hook_rejected',value=15,other=0)]
+                  dict(event='model_hook_capture_start',value=10,other=5,tick_ms=1500),
+                  dict(event='model_hook_capture_end',value=110,other=95,tick_ms=4500),
+                  dict(event='model_hook_rejected',value=15,other=0),
+                  dict(event='model_queue_mode',value=1,other=0),
+                  dict(event='model_queue_enqueued',value=90,other=0),
+                  dict(event='model_queue_executed',value=90,other=90),
+                  dict(event='model_queue_surfaces',value=360,other=0),
+                  dict(event='model_hook_detached',value=1,other=0)]
         control=directory/'rt-draw-control-1.jsonl';control.write_text('\n'.join(json.dumps(e) for e in controls))
+        for index,role in enumerate(('client','host')):
+            folder=directory/'game-logs'/str(index+3);folder.mkdir(parents=True)
+            rows=[]
+            for snapshot,tick,calls,total in ((1,1000,10,100.0),(2,5000,30,600.0)):
+                rows += [f'L4D2_API_WAIT_SUMMARY snapshot={snapshot} role={role} pid={index+1} tick_ms={tick} interval_ms={tick} frequency=1 commands=0 dropped_threads=0 schema=2',
+                         f'L4D2_API_WAIT snapshot={snapshot} tid={index+10} api=Present metric=api calls={calls} total_us={total:.3f} inclusive_us={total:.3f} avg_us=1 max_us=10 ge_1ms=0 ge_5ms=0 ge_10ms=0 ge_50ms=0 ge_100ms=0',
+                         f'L4D2_API_WAIT snapshot={snapshot} tid={index+10} api=Present metric=ipc_submit calls={calls} total_us={total/2:.3f} inclusive_us={total/2:.3f} avg_us=1 max_us=5 ge_1ms=0 ge_5ms=0 ge_10ms=0 ge_50ms=0 ge_100ms=0',
+                         f'L4D2_API_WAIT_END snapshot={snapshot}']
+            (folder/f'l4d2-api-wait-{role}-1.log').write_text('\n'.join(rows)+'\n')
         result=suite.review_performance(directory);self.assertTrue(result['pass'],result['errors'])
         self.assertEqual(result['profile'],'arc_model_resource_instance');self.assertEqual(result['model_resources']['model_resource_definitions'],2)
         self.assertEqual(result['model_hook']['captured_delta'],90)
+        self.assertEqual(result['model_hook']['queued'],90);self.assertTrue(result['api_wait']['pass'])
+        self.assertEqual(result['api_wait']['roles']['client']['api_total_us'],500.0)
         runtime=analyze_runtime(directory);self.assertTrue(runtime['pass'],runtime['errors'])
         self.assertEqual(runtime['gpu_skinning']['status'],'performance_model_resource_requires_visual_review')
         control.unlink();self.assertIn('performance_model_hook_evidence',suite.review_performance(directory)['errors']);control.write_text('\n'.join(json.dumps(e) for e in controls))
