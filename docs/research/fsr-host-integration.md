@@ -6,14 +6,14 @@
 
 ## 安装与一次测试
 
-1. 完全退出游戏、两个 Host 和 Steam。备份 `bin/dxvk_d3d9.dll` 及整个 `bin/.l4d2bridge`。
-2. 将包内 `bin` 合并到游戏安装目录，覆盖同名文件。五个文件包括 Client、Host64、Host32、`LDBFsrBackend64.dll` 和 `d3d9vk_x64.dll`。后两项是本轮新加入的必需文件。
-3. 运行 `start_fg_test.cmd`，进入地图正常游玩约一分钟，覆盖转头、平移、开枪、换弹及之前出现圆环特效的位置。默认显示生成帧预览，F9 切换到原帧＋生成帧双呈现；F8 切换插帧开关，不会暂停游戏。
-4. 正常退出，压缩完整 `fg-results` 上传。启动脚本会在新的会话目录同时收集 Bridge、DXVK 与 FG 日志。无需 `capture.trigger`，也无需先测帧率收益。
+1. 解压到独立文件夹，完全退出游戏和两个 Host，运行 `install_fg_test.cmd`。脚本自动定位 L4D2、校验包内 DLL，并将五个原文件和哈希保存到游戏目录的 `.ldb-fg-test-backup`；找不到非默认 Steam 库时，把游戏根目录拖到 CMD 上或作为第一个参数传入。
+2. 完全退出 Steam，再运行 `start_fg_test.cmd`，进入地图正常游玩约一分钟，覆盖转头、平移、开枪、换弹及之前出现圆环特效的位置。默认显示生成帧预览，F9 切换到原帧＋生成帧双呈现；F8 切换插帧开关，不会暂停游戏。
+3. 正常退出，压缩完整 `fg-results` 上传。启动脚本会在新的会话目录同时收集 Bridge、DXVK 与 FG 日志。无需 `capture.trigger`，也无需先测帧率收益。
+4. 测试结束且游戏和 Host 已退出时运行 `remove_fg_test.cmd`。脚本先确认五个测试文件仍与本包完全相同，再恢复原文件并删除 `.ldb-fg-test-backup`。若文件在测试后被其他工具修改，脚本会停止而不会覆盖后来的文件。
 
 必须使用 `L4D2Bridge64.exe`。若曾设置 `client.testX86Server=True`，改回 `False`；本包保留现有 `bridge.conf`。32 位 Host 随包保持 Client/Host 版本匹配，未接入 FSR。
 
-回滚时完全退出游戏与 Host，恢复上述备份。改用旧启动方式时清除 `LDB_FG_BACKEND` 或设为 `custom`，以免把旧 DXVK 当成具备新能力的后端。
+已经手工合并旧测试包的用户，应先使用当时的手工备份恢复，再运行本版 `install_fg_test.cmd`；否则自动备份保存的会是旧测试 DLL。改用旧启动方式时清除 `LDB_FG_BACKEND` 或设为 `custom`，以免把旧 DXVK 当成具备新能力的后端。
 
 ## 接入内容与保护
 
