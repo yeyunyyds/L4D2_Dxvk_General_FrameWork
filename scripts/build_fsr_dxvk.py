@@ -4,6 +4,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tarfile
 from prepare_research import ROOT, require_source
@@ -25,7 +26,6 @@ if not source.exists():
         subprocess.run(['git','init','-q',str(dest)],check=True)
         subprocess.run(['git','-C',str(dest),'fetch','--depth=1',url,sha],check=True)
         subprocess.run(['git','-C',str(dest),'checkout','--detach','FETCH_HEAD'],check=True)
-    import shutil
     shutil.copytree(ROOT/'.research/sources/vulkan_headers/include',source/'include/vulkan/include')
     p=source/'src/d3d9/d3d9_device.cpp'
     text=p.read_text()
@@ -43,6 +43,70 @@ if not source.exists():
     p.write_text(p.read_text()+'\nextern "C" DLLEXPORT unsigned int __stdcall LdbFsrProfileVersion() { return 1; }\n')
     p=source/'src/d3d9/d3d9.def';p.write_text(p.read_text()+'\n  LdbFsrProfileVersion\n')
 compiler=ROOT/'.research/windows-tools/root/usr/bin'
+
+# Danyria's replacement-swapchain path reserves four queues in one graphics
+# family. Keep that fast path, but expose the actual topology so the Host can
+# reject or downgrade unsupported Arc devices instead of requesting invalid
+# queue indices. These edits are opt-in and leave normal DXVK unchanged.
+p=source/'src/dxvk/dxvk_device.h'
+text=p.read_text()
+if 'frameGenerationCount' not in text:
+    anchor='''  struct DxvkDeviceQueueSet {
+    DxvkDeviceQueue graphics;
+    DxvkDeviceQueue transfer;
+    DxvkDeviceQueue sparse;
+  };'''
+    replacement='''  struct DxvkDeviceQueueSet {
+    DxvkDeviceQueue graphics;
+    DxvkDeviceQueue transfer;
+    DxvkDeviceQueue sparse;
+    DxvkDeviceQueue frameGeneration[3];
+    uint32_t frameGenerationCount = 0;
+  };'''
+    if text.count(anchor)!=1:raise RuntimeError('Unexpected DXVK queue set')
+    p.write_text(text.replace(anchor,replacement))
+
+p=source/'src/dxvk/dxvk_adapter.cpp'
+text=p.read_text()
+if 'LDB_FG_PRESENTER' not in text:
+    anchor='''    // Create the requested queues
+    float queuePriority = 1.0f;
+    std::vector<VkDeviceQueueCreateInfo> queueInfos;'''
+    replacement='''    // Create the requested queues. The opt-in FG profile reserves up to
+    // three additional queues from the graphics family for the FFX presenter.
+    std::vector<float> queuePriorities(4, 1.0f);
+    std::vector<VkDeviceQueueCreateInfo> queueInfos;
+    const bool enableFgPresenter = env::getEnvVar("LDB_FG_PRESENTER") == "1";
+    uint32_t fgGraphicsQueueCount = 1;'''
+    if text.count(anchor)!=1:raise RuntimeError('Unexpected DXVK queue preamble')
+    text=text.replace(anchor,replacement)
+    anchor='''      graphicsQueue.queueFamilyIndex  = family;
+      graphicsQueue.queueCount        = 1;
+      graphicsQueue.pQueuePriorities  = &queuePriority;
+      queueInfos.push_back(graphicsQueue);'''
+    replacement='''      graphicsQueue.queueFamilyIndex  = family;
+      graphicsQueue.queueCount        = enableFgPresenter && family == queueFamilies.graphics
+        ? std::min(4u, m_queueFamilies[family].queueCount)
+        : 1u;
+      graphicsQueue.pQueuePriorities  = queuePriorities.data();
+      if (family == queueFamilies.graphics)
+        fgGraphicsQueueCount = graphicsQueue.queueCount;
+      queueInfos.push_back(graphicsQueue);'''
+    if text.count(anchor)!=1:raise RuntimeError('Unexpected DXVK queue request')
+    text=text.replace(anchor,replacement)
+    anchor='''    queues.graphics = getDeviceQueue(vkd, queueFamilies.graphics, 0);
+    queues.transfer = getDeviceQueue(vkd, queueFamilies.transfer, 0);
+    queues.sparse = getDeviceQueue(vkd, queueFamilies.sparse, 0);'''
+    replacement='''    queues.graphics = getDeviceQueue(vkd, queueFamilies.graphics, 0);
+    queues.transfer = getDeviceQueue(vkd, queueFamilies.transfer, 0);
+    queues.sparse = getDeviceQueue(vkd, queueFamilies.sparse, 0);
+    queues.frameGenerationCount = fgGraphicsQueueCount > 0 ? fgGraphicsQueueCount - 1 : 0;
+    for (uint32_t i = 0; i < queues.frameGenerationCount; i++)
+      queues.frameGeneration[i] = getDeviceQueue(vkd, queueFamilies.graphics, i + 1);'''
+    if text.count(anchor)!=1:raise RuntimeError('Unexpected DXVK queue retrieval')
+    p.write_text(text.replace(anchor,replacement))
+
+shutil.copy2(ROOT/'tools/fsr_presenter_api.h',source/'src/d3d9/ldb_fg_presenter_api.h')
 p=source/'src/d3d9/d3d9_device.cpp'
 text=p.read_text()
 if 'enabled.vk12.vulkanMemoryModelDeviceScope =' not in text:
@@ -55,11 +119,39 @@ alias=compiler/'x86_64-w64-mingw32-gcc'
 if not alias.exists():alias.symlink_to('x86_64-w64-mingw32-gcc-posix')
 p=source/'src/d3d9/d3d9_main.cpp'
 original=subprocess.check_output(['git','show','HEAD:src/d3d9/d3d9_main.cpp'],cwd=base,text=True)
-p.write_text(original+'\n#include "d3d9_device.h"\nextern "C" DLLEXPORT unsigned int __stdcall LdbFsrDeviceFeatures(IDirect3DDevice9* device) {\n'
+p.write_text(original+'\n#include "d3d9_device.h"\n#include "ldb_fg_presenter_api.h"\nextern "C" DLLEXPORT unsigned int __stdcall LdbFsrDeviceFeatures(IDirect3DDevice9* device) {\n'
  '  if (!device) return 0;\n  const auto& all = static_cast<dxvk::D3D9DeviceEx*>(device)->GetDXVKDevice()->features();\n  const auto& f=all.core.features;\n'
- '  return (f.shaderStorageImageExtendedFormats ? 1u : 0u) | (f.shaderStorageImageReadWithoutFormat ? 2u : 0u) | (f.shaderStorageImageWriteWithoutFormat ? 4u : 0u) | ((!all.vk12.vulkanMemoryModel || all.vk12.vulkanMemoryModelDeviceScope) ? 8u : 0u);\n}\n')
+ '  return (f.shaderStorageImageExtendedFormats ? 1u : 0u) | (f.shaderStorageImageReadWithoutFormat ? 2u : 0u) | (f.shaderStorageImageWriteWithoutFormat ? 4u : 0u) | ((!all.vk12.vulkanMemoryModel || all.vk12.vulkanMemoryModelDeviceScope) ? 8u : 0u);\n}\n'
+ '''extern "C" DLLEXPORT unsigned int __stdcall LdbFgQueryDeviceInfoV1(void* opaque, LdbFgDeviceInfoV1* out) {
+  if (!opaque || !out || out->version != LDB_FG_DEVICE_API_VERSION || out->size != sizeof(*out)) return 0;
+  auto device = static_cast<dxvk::D3D9DeviceEx*>(reinterpret_cast<IDirect3DDevice9*>(opaque))->GetDXVKDevice();
+  const auto& queues = device->queues();
+  LdbFgDeviceInfoV1 result;
+  result.flags = LDB_FG_DEVICE_API_READY;
+  result.graphicsFamily = queues.graphics.queueFamily;
+  result.requestedGraphicsQueues = queues.frameGenerationCount + 1;
+  result.reservedQueueCount = queues.frameGenerationCount;
+  result.featureFlags = LdbFsrDeviceFeatures(reinterpret_cast<IDirect3DDevice9*>(opaque));
+  result.instance = reinterpret_cast<uintptr_t>(device->instance()->handle());
+  result.physicalDevice = reinterpret_cast<uintptr_t>(device->adapter()->handle());
+  result.device = reinterpret_cast<uintptr_t>(device->handle());
+  result.gameQueue = reinterpret_cast<uintptr_t>(queues.graphics.queueHandle);
+  if (queues.frameGenerationCount >= 3) {
+    result.asyncComputeQueue = reinterpret_cast<uintptr_t>(queues.frameGeneration[0].queueHandle);
+    result.presentQueue = reinterpret_cast<uintptr_t>(queues.frameGeneration[1].queueHandle);
+    result.imageAcquireQueue = reinterpret_cast<uintptr_t>(queues.frameGeneration[2].queueHandle);
+    result.flags |= LDB_FG_DEVICE_API_ASYNC_COMPUTE_QUEUE | LDB_FG_DEVICE_API_PRESENTER_QUEUES;
+  } else if (queues.frameGenerationCount >= 2) {
+    result.presentQueue = reinterpret_cast<uintptr_t>(queues.frameGeneration[0].queueHandle);
+    result.imageAcquireQueue = reinterpret_cast<uintptr_t>(queues.frameGeneration[1].queueHandle);
+    result.flags |= LDB_FG_DEVICE_API_PRESENTER_QUEUES;
+  }
+  *out = result;
+  return result.flags;
+}
+''')
 p=source/'src/d3d9/d3d9.def'
-p.write_text(subprocess.check_output(['git','show','HEAD:src/d3d9/d3d9.def'],cwd=base,text=True)+'\n  LdbFsrDeviceFeatures\n')
+p.write_text(subprocess.check_output(['git','show','HEAD:src/d3d9/d3d9.def'],cwd=base,text=True)+'\n  LdbFsrDeviceFeatures\n  LdbFgQueryDeviceInfoV1\n')
 env=os.environ.copy()
 env['PATH']=str(compiler)+os.pathsep+str(ROOT/'.research/tools/root/usr/bin')+os.pathsep+str(ROOT/'.research/python-tools/bin')+os.pathsep+env.get('PATH','')
 env['PYTHONPATH']=str(ROOT/'.research/python-tools')
@@ -76,5 +168,9 @@ subprocess.run(['python3','-m','mesonbuild.mesonmain','compile','-C',str(build),
 dll=build/'src/d3d9/d3d9.dll'
 (out/'build.json').write_text(json.dumps({'dxvk_commit':lock['sources']['dxvk']['commit'],
  'opt_in_environment':'LDB_FG_BACKEND=fsr','dll_sha256':hashlib.sha256(dll.read_bytes()).hexdigest(),
- 'device_patch_sha256':hashlib.sha256((source/'src/d3d9/d3d9_device.cpp').read_bytes()).hexdigest()},indent=2)+'\n')
+ 'presenter_queue_profile':'LDB_FG_PRESENTER=1 reserves up to four graphics queues; Host queries LdbFgQueryDeviceInfoV1',
+ 'patched_source_sha256':{str(p.relative_to(source)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [
+   source/'src/dxvk/dxvk_adapter.cpp',source/'src/dxvk/dxvk_device.h',
+   source/'src/d3d9/d3d9_device.cpp',source/'src/d3d9/d3d9_main.cpp',
+   source/'src/d3d9/ldb_fg_presenter_api.h'] }},indent=2)+'\n')
 print(dll)

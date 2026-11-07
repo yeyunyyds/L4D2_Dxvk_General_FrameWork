@@ -55,13 +55,15 @@ inline bool cameraFromViewProjection(const ldb_camera::Matrix &vp,
       v /= n;
     return true;
   };
-  Vec origin{}, near{}, far{}, x{}, y{};
-  if (!point({0, 0, 1, 0}, origin) || !point({0, 0, 0, 1}, near) ||
-      !point({0, 0, 1, 1}, far) || !point({1, 0, 0, 1}, x) ||
+  Vec origin{}, nearPoint{}, farPoint{}, x{}, y{};
+  if (!point({0, 0, 1, 0}, origin) ||
+      !point({0, 0, 0, 1}, nearPoint) ||
+      !point({0, 0, 1, 1}, farPoint) || !point({1, 0, 0, 1}, x) ||
       !point({0, 1, 0, 1}, y))
     return false;
-  Vec forward = subtract(near, origin), farDirection = subtract(far, origin);
-  Vec right = subtract(x, near), up = subtract(y, near);
+  Vec forward = subtract(nearPoint, origin),
+      farDirection = subtract(farPoint, origin);
+  Vec right = subtract(x, nearPoint), up = subtract(y, nearPoint);
   double n = length(forward), f = length(farDirection), halfHeight = length(up);
   if (!(n > 0 && f > n) || !normalize(forward) || !normalize(farDirection) ||
       !normalize(right) || !normalize(up) ||

@@ -56,5 +56,26 @@ class SessionResultsTests(unittest.TestCase):
         self.assertTrue(result['log_complete'])
         self.assertEqual(result['metrics'],{})
 
+    def test_presenter_device_topology_is_preserved(self):
+        result=self.analyze([dict(event='session',qpc_frequency=1000,
+            presenter_requested=True,presenter_device_api=True,
+            presenter_owner_match=True,presenter_device_flags=7,
+            presenter_feature_flags=15,presenter_graphics_family=2,
+            presenter_graphics_queues=4,presenter_reserved_queues=3,
+            presenter_input_api=1),
+            dict(event='presenter_input',valid=True,flags=151,
+                 gpu_ready_token=False,present_ticket=False,
+                 motion_source='depth_camera_reconstruction'),
+            dict(event='summary',logical_presents=1,generated_presents=0,
+                 presenter_inputs_accepted=1,presenter_inputs_rejected=0)])
+        self.assertEqual(result['presenter_device'],dict(
+            requested=True,device_api=True,owner_match=True,device_flags=7,
+            feature_flags=15,graphics_family=2,graphics_queues=4,
+            reserved_queues=3,input_api=1))
+        self.assertEqual(result['presenter_inputs'],dict(
+            packets=1,valid=1,gpu_ready=0,present_ticket=0,
+            rejected_events=0,motion_source='depth_camera_reconstruction',
+            accepted_total=1,rejected_total=0))
+
 
 if __name__=='__main__': unittest.main()

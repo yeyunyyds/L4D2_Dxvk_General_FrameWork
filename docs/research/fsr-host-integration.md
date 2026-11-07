@@ -26,6 +26,16 @@
 
 配套 DXVK 增加三个 storage-image feature，以及在启用 Vulkan memory model 时使用 Device scope 所需的能力。仅物理 GPU 宣称支持不够，所以使用导出查询检查真实逻辑设备的 enabled features。
 
+## Danyria presenter 迁移基线
+
+本轮开始迁移 Danyria/Asteria 的 replacement-swapchain 路径。设置 `LDB_FG_PRESENTER=1` 后，配套 x64 DXVK 会从实际 graphics family 按能力请求最多四个 queue，并通过 `LdbFgQueryDeviceInfoV1` 向 x64 Host 返回 Vulkan instance、physical/logical device、game/present/acquire/async queue 及逻辑设备 feature。Host 会把队列数和三项 handle 的所有者一致性写入 `session` 事件。
+
+该基线只完成 64 Host 设备所有权和队列数据采集，尚未用 replacement swapchain 显示生成帧。`presenter_device_flags & 2` 表示至少有 game、present、acquire 三个互不相同的 queue；`& 4` 表示另有独立 async compute queue。Arc B580 若只提供一个或两个 queue，日志会如实记录，后续 presenter 必须选择兼容拓扑，不能访问未在 `vkCreateDevice` 中申请的 queue。
+
+Host 同时按 `LdbFgFrameInputsV1` 形成逐帧输入包。包将 generation/frame ticket、最终颜色、场景深度、可选 HUD-less 颜色、当前/上一帧 view-projection、恢复后的相机参数和真实帧间隔绑定在一起；当前运动输入沿用已验证的 depth + camera reconstruction，动态物体由 FFX Optical Flow 补足。日志出现 `presenter_input.valid=true` 表示这些字段来自同一帧且通过合同校验。
+
+这一轮仍是采集合同验收：`gpu_ready_token=false` 和 `present_ticket=false` 是预期值，表示资源目前在同步 Host 路径完成、尚未绑定 replacement swapchain 的 image index/acquire sequence。下一步会把同一合同接到三槽 GPU ring 和 timeline semaphore，稳态不再调用 CPU fence wait；随后由 FFX presenter 直接消费，删除 D3D9 backbuffer 写回和第二次 Present。
+
 ## 日志解释
 
 `session.backend=fsr_official` 表示选择官方后端，`fsr_history_primed` 表示历史预热，`fsr_dispatch.status=0` 表示本项目接受该次官方 SDK 输出，`frame_rejected.reason=fsr_history_warmup` 表示断帧后的原帧回退。驱动或 SDK 内部的画面重复不能仅靠这些计数排除。

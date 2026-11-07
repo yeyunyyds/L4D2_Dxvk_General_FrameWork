@@ -4,6 +4,8 @@
 #include "frame_generate_spirv.h"
 #include "frame_quality_spirv.h"
 #include "fsr_backend_api.h"
+#include "fsr_camera.h"
+#include "fsr_presenter_api.h"
 #include <algorithm>
 #include <memory>
 namespace dxvk_capture {
@@ -794,6 +796,53 @@ public:
       throw std::runtime_error(std::string("FSR dispatch: ") + message);
     end();
     return result;
+  }
+  LdbFgFrameInputsV1 presenterInputs(
+      const ldb_camera::Matrix &current,
+      const ldb_camera::Matrix &previous, uint64_t frame,
+      uint64_t generation, double frameTimeMs, bool hasUi,
+      bool reset) const {
+    LdbFgFrameInputsV1 input;
+    input.flags = LDB_FG_INPUT_COLOR | LDB_FG_INPUT_DEPTH |
+                  LDB_FG_INPUT_CAMERA_MOTION |
+                  (hasUi ? LDB_FG_INPUT_HUDLESS : 0u) |
+                  (reset ? LDB_FG_INPUT_RESET : 0u);
+    input.width = width;
+    input.height = height;
+    input.colorFormat = uint32_t(finalFormat);
+    input.depthFormat = uint32_t(depthFormat);
+    input.ticket.generation = generation;
+    input.ticket.frameId = frame;
+    input.color = reinterpret_cast<uintptr_t>(images[CurrentFinal].image);
+    input.depth = reinterpret_cast<uintptr_t>(images[CurrentDepth].image);
+    input.hudless = hasUi
+                        ? reinterpret_cast<uintptr_t>(images[CurrentUi].image)
+                        : 0;
+    input.colorLayout = uint32_t(images[CurrentFinal].layout);
+    input.depthLayout = uint32_t(images[CurrentDepth].layout);
+    input.hudlessLayout =
+        hasUi ? uint32_t(images[CurrentUi].layout) : 0;
+    input.frameTimeMs =
+        std::isfinite(frameTimeMs) && frameTimeMs > 0
+            ? float(frameTimeMs)
+            : 16.6667f;
+    std::copy(current.begin(), current.end(), input.currentViewProjection);
+    std::copy(previous.begin(), previous.end(),
+              input.previousViewProjection);
+    ldb_fsr::Camera camera;
+    if (!ldb_fsr::cameraFromViewProjection(current, .0254f, camera))
+      throw std::runtime_error("FG presenter camera unsupported");
+    input.cameraNear = camera.nearPlane;
+    input.cameraFar = camera.farPlane;
+    input.cameraVerticalFov = camera.verticalFov;
+    input.metersPerUnit = camera.metersPerUnit;
+    std::copy(camera.position.begin(), camera.position.end(),
+              input.cameraPosition);
+    std::copy(camera.up.begin(), camera.up.end(), input.cameraUp);
+    std::copy(camera.right.begin(), camera.right.end(), input.cameraRight);
+    std::copy(camera.forward.begin(), camera.forward.end(),
+              input.cameraForward);
+    return input;
   }
   Quality readQuality() {
     if (recording || c.pending)

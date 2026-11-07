@@ -25,6 +25,9 @@ def analyze(path):
     frequency = None
     backend = 'custom'
     local_effect_policy = 'whole_frame_rejection'
+    presenter = {}
+    presenter_inputs = {'packets': 0, 'valid': 0, 'gpu_ready': 0,
+                        'present_ticket': 0, 'rejected_events': 0}
     complete = False
     successful = 0
     extra_calls = 0
@@ -37,6 +40,25 @@ def analyze(path):
                 frequency = event['qpc_frequency']
                 backend = event.get('backend','custom')
                 local_effect_policy = event.get('local_effect_policy','whole_frame_rejection')
+                presenter = {
+                    'requested': event.get('presenter_requested', False),
+                    'device_api': event.get('presenter_device_api', False),
+                    'owner_match': event.get('presenter_owner_match', False),
+                    'device_flags': event.get('presenter_device_flags', 0),
+                    'feature_flags': event.get('presenter_feature_flags', 0),
+                    'graphics_family': event.get('presenter_graphics_family'),
+                    'graphics_queues': event.get('presenter_graphics_queues', 0),
+                    'reserved_queues': event.get('presenter_reserved_queues', 0),
+                    'input_api': event.get('presenter_input_api', 0),
+                }
+            elif kind == 'presenter_input':
+                presenter_inputs['packets'] += 1
+                presenter_inputs['valid'] += int(event.get('valid', False))
+                presenter_inputs['gpu_ready'] += int(event.get('gpu_ready_token', False))
+                presenter_inputs['present_ticket'] += int(event.get('present_ticket', False))
+                presenter_inputs['motion_source'] = event.get('motion_source')
+            elif kind == 'presenter_input_rejected':
+                presenter_inputs['rejected_events'] += 1
             elif kind == 'summary':
                 summaries.append(event)
                 complete = True
@@ -72,8 +94,13 @@ def analyze(path):
                         data['source_arrival_interval_ms'].append(value)
                 previous = (group, event)
     logical = summaries[-1]['logical_presents'] if summaries else None
+    if summaries:
+        presenter_inputs['accepted_total'] = summaries[-1].get('presenter_inputs_accepted', 0)
+        presenter_inputs['rejected_total'] = summaries[-1].get('presenter_inputs_rejected', 0)
     return dict(log=path.name, log_complete=complete, event_counts=dict(counts),
                 backend=backend, local_effect_policy=local_effect_policy, gpu_dispatch_scope='preflight_only' if backend.startswith('fsr') else 'generation',
+                presenter_device=presenter,
+                presenter_inputs=presenter_inputs,
                 generated_by_mode=dict(by_mode), successful_generated_presents=successful,
                 backend_calls=logical+extra_calls if logical is not None else None,
                 summaries=summaries, errors=errors, mode_changes=changes, captures=captures,
@@ -84,6 +111,8 @@ def analyze(path):
                                 'Rejected candidates restore the original before Present; candidate PPMs do not prove presentation.',
                                 'GPU dispatch uses device timestamps; -1 means unavailable.',
                                 'For official FSR, GPU dispatch timestamps and motion counts describe the conservative preflight, not the SDK kernels.',
+                                'Presenter device fields only prove x64 DXVK ownership and queue availability; they do not prove replacement-swapchain FG ran.',
+                                'Presenter input packets prove color/depth/camera/HUD-less collection. gpu_ready=false or present_ticket=false means the asynchronous replacement-swapchain handoff is not active yet.',
                                 'Fence waits cover FG submissions including stage copies; Host work covers the Present wrapper only.',
                                 'Source arrival intervals and backend calls do not measure monitor delivery, FPS gain or added input latency.',
                                 'On/off samples can contain different scenes and are not a controlled benchmark.',

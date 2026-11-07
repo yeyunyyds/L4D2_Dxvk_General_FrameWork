@@ -3,6 +3,7 @@
 #include <d3d9.h>
 #include <windows.h>
 #if defined(_WIN64)
+#include "fsr_presenter_api.h"
 #include "frame_math.h"
 #include "resident_frame_generator.h"
 #include <map>
@@ -26,6 +27,7 @@ inline std::wstring readEnv(const wchar_t *key) {
 }
 struct Config {
   bool enabled = false, generatedOnly = false, hotkeys = true;
+  bool presenterProbe = false;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
   std::filesystem::path root;
@@ -33,6 +35,7 @@ struct Config {
   Config() noexcept {
     try {
       enabled = readEnv(L"LDB_FG_ENABLE") == L"1";
+      presenterProbe = readEnv(L"LDB_FG_PRESENTER") == L"1";
 
       if (!enabled)
         return;
@@ -85,6 +88,47 @@ inline const Config &config() {
 inline uint64_t id(const void *p) {
   return uint64_t(reinterpret_cast<uintptr_t>(p));
 }
+
+struct PresenterDeviceProbe {
+  LdbFgDeviceInfoV1 info{};
+  bool apiAvailable = false;
+  bool ownerMatch = false;
+};
+
+inline PresenterDeviceProbe probePresenterDevice(IDirect3DDevice9 *device) {
+  PresenterDeviceProbe result;
+  Com<ID3D9VkInteropDevice> interop;
+  if (!device || FAILED(device->QueryInterface(
+                     __uuidof(ID3D9VkInteropDevice),
+                     reinterpret_cast<void **>(interop.put()))))
+    return result;
+
+  auto vtable = *reinterpret_cast<void ***>(interop.get());
+  HMODULE dxvk = nullptr;
+  if (!vtable || !GetModuleHandleExW(
+                     GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                     reinterpret_cast<LPCWSTR>(vtable[0]), &dxvk))
+    return result;
+
+  auto query = reinterpret_cast<PFN_LdbFgQueryDeviceInfoV1>(
+      GetProcAddress(dxvk, "LdbFgQueryDeviceInfoV1"));
+  if (!query)
+    return result;
+
+  result.apiAvailable = query(device, &result.info) != 0;
+  if (!result.apiAvailable)
+    return result;
+
+  VkInstance instance{};
+  VkPhysicalDevice physical{};
+  VkDevice logical{};
+  interop->GetVulkanHandles(&instance, &physical, &logical);
+  result.ownerMatch = result.info.instance == reinterpret_cast<uintptr_t>(instance) &&
+                      result.info.physicalDevice == reinterpret_cast<uintptr_t>(physical) &&
+                      result.info.device == reinterpret_cast<uintptr_t>(logical);
+  return result;
+}
 struct State {
   IDirect3DDevice9 *device = nullptr;
   std::unique_ptr<ResidentFg> gpu;
@@ -97,6 +141,7 @@ struct State {
 
   uint32_t generation = 0, captures = 0, captureLimit = 4, previousFlags = 0;
   uint32_t acceptedCaptures = 0, rejectedCaptures = 0;
+  uint64_t presenterInputsAccepted = 0, presenterInputsRejected = 0;
   bool scene = false, nearSeen = false, nearCopied = false, uiCopied = false,
        history = false, paused = false, generatedOnly = false, disabled = false;
 
@@ -139,6 +184,7 @@ struct State {
     QueryPerformanceFrequency(&frequency);
     if (config().autoCapture)
       scheduleCapture();
+    const auto presenter = probePresenterDevice(device);
 
     emit("session", 0,
          "\"qpc_frequency\":" + std::to_string(frequency.QuadPart) +
@@ -149,6 +195,24 @@ struct State {
              ",\"motion_source\":" +
              quote(ResidentFg::wantsFsr() ? "camera_plus_bounded_patch"
                                           : "prototype_patch_matching") +
+             ",\"presenter_requested\":" +
+             std::string(config().presenterProbe ? "true" : "false") +
+             ",\"presenter_device_api\":" +
+             std::string(presenter.apiAvailable ? "true" : "false") +
+             ",\"presenter_owner_match\":" +
+             std::string(presenter.ownerMatch ? "true" : "false") +
+             ",\"presenter_device_flags\":" +
+             std::to_string(presenter.info.flags) +
+             ",\"presenter_feature_flags\":" +
+             std::to_string(presenter.info.featureFlags) +
+             ",\"presenter_graphics_family\":" +
+             std::to_string(presenter.info.graphicsFamily) +
+             ",\"presenter_graphics_queues\":" +
+             std::to_string(presenter.info.requestedGraphicsQueues) +
+             ",\"presenter_reserved_queues\":" +
+             std::to_string(presenter.info.reservedQueueCount) +
+             ",\"presenter_input_api\":" +
+             std::to_string(LDB_FG_INPUT_API_VERSION) +
              ",\"local_effect_policy\":" +
              quote(ResidentFg::wantsFsr() ? "regional_current_and_previous"
                                           : "whole_frame_rejection") +
@@ -164,7 +228,11 @@ struct State {
     }
     emit("summary", 0,
          "\"logical_presents\":" + std::to_string(logical) +
-             ",\"generated_presents\":" + std::to_string(generated));
+             ",\"generated_presents\":" + std::to_string(generated) +
+             ",\"presenter_inputs_accepted\":" +
+             std::to_string(presenterInputsAccepted) +
+             ",\"presenter_inputs_rejected\":" +
+             std::to_string(presenterInputsRejected));
   }
   void emit(const char *event, uint32_t uid,
             const std::string &fields = {}) noexcept {
@@ -562,6 +630,8 @@ struct State {
     double captureMs = 0, generatedPresentMs = 0, logicalPresentMs = 0;
     int64_t generatedStart = 0;
     bool wrote = false, ready = false, fsrWarmup = false;
+    bool presenterInputValid = false;
+    uint32_t presenterInputFlags = 0;
     HRESULT extra = S_OK;
     Com<IDirect3DSurface9> back;
 
@@ -577,6 +647,37 @@ struct State {
            "FG final backbuffer");
         transfer(back.get(), ResidentFg::CurrentFinal);
         ready = true;
+        if (config().presenterProbe) {
+          try {
+            auto input = gpu->presenterInputs(
+                currentMatrix, history ? previousMatrix : currentMatrix, frame,
+                uint64_t(generation) + 1, sourceIntervalMs, uiCopied,
+                !history);
+            presenterInputFlags = input.flags;
+            presenterInputValid = LdbFgValidateFrameInputsV1(input);
+            if (presenterInputValid)
+              ++presenterInputsAccepted;
+            else
+              ++presenterInputsRejected;
+            if (frame < 16 || frame % 120 == 0)
+              emit("presenter_input", uid,
+                   "\"valid\":" +
+                       std::string(presenterInputValid ? "true" : "false") +
+                       ",\"flags\":" +
+                       std::to_string(presenterInputFlags) +
+                       ",\"width\":" + std::to_string(input.width) +
+                       ",\"height\":" + std::to_string(input.height) +
+                       ",\"frame_time_ms\":" +
+                       std::to_string(input.frameTimeMs) +
+                       ",\"motion_source\":\"depth_camera_reconstruction\""
+                       ",\"gpu_ready_token\":false"
+                       ",\"present_ticket\":false");
+          } catch (const std::exception &e) {
+            ++presenterInputsRejected;
+            emit("presenter_input_rejected", uid,
+                 "\"message\":" + quote(e.what()));
+          }
+        }
         if (ResidentFg::wantsFsr() && !history) {
           gpu->generateFsr(currentMatrix, currentMatrix, frame,
                            sourceIntervalMs, uiCopied, false);
@@ -857,6 +958,10 @@ struct State {
             ",\"generated_present_ms\":" + std::to_string(generatedPresentMs) +
             ",\"logical_present_ms\":" + std::to_string(logicalPresentMs) +
             ",\"pacing_wait_ms\":" + std::to_string(previousPacingMs) +
+            ",\"presenter_input_valid\":" +
+            std::string(presenterInputValid ? "true" : "false") +
+            ",\"presenter_input_flags\":" +
+            std::to_string(presenterInputFlags) +
             ",\"generated_present_start_qpc\":" +
             std::to_string(generatedStart) + ",\"logical_present_start_qpc\":" +
             std::to_string(logicalStart) + ",\"paired_start_gap_ms\":" +

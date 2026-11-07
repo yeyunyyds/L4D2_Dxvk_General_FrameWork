@@ -18,10 +18,25 @@ def digest(path):
 
 def checkout(path, repository, commit, sparse=None):
     if path.exists():
-        return
-    path.mkdir(parents=True)
-    subprocess.run(['git', 'init', '-q', str(path)], check=True)
-    subprocess.run(['git', 'remote', 'add', 'origin', repository], cwd=path, check=True)
+        if not (path / '.git').is_dir():
+            raise RuntimeError(f'Existing dependency path is not a Git checkout: {path}')
+        head = subprocess.run(['git', 'rev-parse', '--verify', 'HEAD'], cwd=path,
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if head.returncode == 0:
+            return
+        if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=all'],
+                                   cwd=path, text=True).strip():
+            raise RuntimeError(f'Incomplete dependency checkout has local files: {path}')
+        remote = subprocess.run(['git', 'remote', 'get-url', 'origin'], cwd=path,
+                                capture_output=True, text=True)
+        if remote.returncode == 0 and remote.stdout.strip() != repository:
+            raise RuntimeError(f'Incomplete dependency checkout has another origin: {path}')
+        if remote.returncode != 0:
+            subprocess.run(['git', 'remote', 'add', 'origin', repository], cwd=path, check=True)
+    else:
+        path.mkdir(parents=True)
+        subprocess.run(['git', 'init', '-q', str(path)], check=True)
+        subprocess.run(['git', 'remote', 'add', 'origin', repository], cwd=path, check=True)
     subprocess.run(['git', 'fetch', '--depth=1', *(['--filter=blob:none'] if sparse else []), 'origin', commit], cwd=path, check=True)
     if sparse:
         subprocess.run(['git', 'sparse-checkout', 'set', *sparse], cwd=path, check=True)
@@ -62,7 +77,7 @@ def prepare(args):
     hooks = ROOT / 'integration/ldb/host-hooks.patch'
     subprocess.run(['git', 'apply', '--check', str(hooks)], cwd=args.output, check=True)
     subprocess.run(['git', 'apply', str(hooks)], cwd=args.output, check=True)
-    for source in [ROOT / 'tools/fsr_backend_api.h', ROOT / 'integration/ldb/host_capture.h', ROOT / 'integration/ldb/camera_state.h', ROOT / 'tools/dxvk_capture_shared.h', ROOT / 'tools/gpu_reprojection.h', ROOT / 'tools/camera_reproject_spirv.h', ROOT / 'integration/ldb/frame_generation.h', ROOT / 'integration/ldb/frame_math.h', ROOT / 'tools/resident_frame_generator.h', ROOT / 'tools/frame_generate_spirv.h', ROOT / 'tools/frame_quality_spirv.h']:
+    for source in [ROOT / 'tools/fsr_backend_api.h', ROOT / 'tools/fsr_presenter_api.h', ROOT / 'integration/ldb/host_capture.h', ROOT / 'integration/ldb/camera_state.h', ROOT / 'integration/ldb/fsr_camera.h', ROOT / 'tools/dxvk_capture_shared.h', ROOT / 'tools/gpu_reprojection.h', ROOT / 'tools/camera_reproject_spirv.h', ROOT / 'integration/ldb/frame_generation.h', ROOT / 'integration/ldb/frame_math.h', ROOT / 'tools/resident_frame_generator.h', ROOT / 'tools/frame_generate_spirv.h', ROOT / 'tools/frame_quality_spirv.h']:
         shutil.copy2(source, server / source.name)
     generate_interop(args.dxvk, server / 'dxvk_interop.h')
     for name in ('vulkan', 'vk_video'):
@@ -76,7 +91,7 @@ def prepare(args):
     meson.write_text(text.replace(old, old.replace('public_include_path', "public_include_path, include_directories('.')")))
     receipt = {**baseline, 'hooks_sha256': digest(hooks), 'host_capture_sha256': digest(server / 'host_capture.h'),
                'shared_capture_sha256': digest(server / 'dxvk_capture_shared.h'),
-               'gpu_sources_sha256': {name:digest(server/name) for name in ['fsr_backend_api.h','camera_state.h','gpu_reprojection.h','camera_reproject_spirv.h','frame_generation.h','frame_math.h','resident_frame_generator.h','frame_generate_spirv.h','frame_quality_spirv.h']},
+               'gpu_sources_sha256': {name:digest(server/name) for name in ['fsr_backend_api.h','fsr_presenter_api.h','camera_state.h','fsr_camera.h','gpu_reprojection.h','camera_reproject_spirv.h','frame_generation.h','frame_math.h','resident_frame_generator.h','frame_generate_spirv.h','frame_quality_spirv.h']},
                'native_host_build': 'unrun', 'l4d2_game_capture': 'unrun'}
     receipt['build_fingerprint']=hashlib.sha256(json.dumps(receipt,sort_keys=True).encode()).hexdigest()
     (args.output / 'capture-source.json').write_text(json.dumps(receipt, indent=2) + '\n')
