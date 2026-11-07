@@ -34,7 +34,11 @@
 
 Host 同时按 `LdbFgFrameInputsV1` 形成逐帧输入包。包将 generation/frame ticket、最终颜色、场景深度、可选 HUD-less 颜色、当前/上一帧 view-projection、恢复后的相机参数和真实帧间隔绑定在一起；当前运动输入沿用已验证的 depth + camera reconstruction，动态物体由 FFX Optical Flow 补足。日志出现 `presenter_input.valid=true` 表示这些字段来自同一帧且通过合同校验。
 
-这一轮仍是采集合同验收：`gpu_ready_token=false` 和 `present_ticket=false` 是预期值，表示资源目前在同步 Host 路径完成、尚未绑定 replacement swapchain 的 image index/acquire sequence。下一步会把同一合同接到三槽 GPU ring 和 timeline semaphore，稳态不再调用 CPU fence wait；随后由 FFX presenter 直接消费，删除 D3D9 backbuffer 写回和第二次 Present。
+这一轮仍是采集合同验收：`gpu_ready_token=false` 和 `present_ticket=false` 是预期值，表示资源目前在同步 Host 路径完成、尚未绑定 replacement swapchain 的 image index/acquire sequence。
+
+B580 首次采集显示当前 DXVK graphics family 只申请到一个 queue，`presenter_reserved_queues=0`。这只能说明当前逻辑设备的该队列族拓扑，不能推断物理设备没有其他 queue family。官方 FFX replacement swapchain 会拒绝 game、async、present、acquire 中任意两个非空 handle 相同；其中 async 可以为空，但 game、present、acquire 仍需三个不同 handle。因此不能把同一个 graphics queue 填进四个角色，也不能直接照搬 Danyria 固定四队列初始化。
+
+`fg_input_ring.h` 已加入 presenter 无关的三槽所有权层：单生产者发布完整输入，单消费者只取最新 Ready 帧；generation reset 和落后 Ready 帧由消费者回收，InFlight 槽必须等 GPU timeline 达到 `retireValue` 才能复用。原生测试覆盖乱序拒绝、满环重试、reset、旧帧丢弃、提前完成拒绝和 20000 帧并发压力。该层尚未连接实际 FFX dispatch，不构成性能或异步显示验收。下一阶段需要先枚举所有 queue family，选择满足 FFX 不别名约束的 present/acquire handle；若物理拓扑不满足，则改造 DXVK 的队列创建与呈现所有权，而不是在同步 Host 路径继续叠加 fence wait。
 
 ## 日志解释
 
