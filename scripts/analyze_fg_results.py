@@ -49,6 +49,8 @@ def analyze(path):
                     'graphics_family': event.get('presenter_graphics_family'),
                     'graphics_queues': event.get('presenter_graphics_queues', 0),
                     'reserved_queues': event.get('presenter_reserved_queues', 0),
+                    'topology_api': event.get('presenter_topology_api', False),
+                    'queue_families': event.get('presenter_queue_families', []),
                     'input_api': event.get('presenter_input_api', 0),
                 }
             elif kind == 'presenter_input':

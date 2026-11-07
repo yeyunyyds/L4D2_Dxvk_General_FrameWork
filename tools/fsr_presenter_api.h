@@ -9,6 +9,9 @@ inline constexpr uint32_t LDB_FG_DEVICE_API_VERSION = 1;
 inline constexpr uint32_t LDB_FG_DEVICE_API_READY = 1u << 0;
 inline constexpr uint32_t LDB_FG_DEVICE_API_PRESENTER_QUEUES = 1u << 1;
 inline constexpr uint32_t LDB_FG_DEVICE_API_ASYNC_COMPUTE_QUEUE = 1u << 2;
+inline constexpr uint32_t LDB_FG_QUEUE_TOPOLOGY_API_VERSION = 1;
+inline constexpr uint32_t LDB_FG_MAX_QUEUE_FAMILIES = 16;
+inline constexpr uint32_t LDB_FG_MAX_CREATED_QUEUES_PER_FAMILY = 4;
 
 // Frame inputs follow the ownership model used by Asteria/Danyria: a ticket
 // identifies one swapchain generation and the images stay valid until the
@@ -41,6 +44,22 @@ struct LdbFgDeviceInfoV1 {
   uintptr_t asyncComputeQueue = 0;
   uintptr_t presentQueue = 0;
   uintptr_t imageAcquireQueue = 0;
+};
+
+struct LdbFgQueueFamilyInfoV1 {
+  uint32_t queueFlags = 0;
+  uint32_t physicalQueueCount = 0;
+  uint32_t createdQueueCount = 0;
+  uint32_t reserved = 0;
+  uintptr_t createdQueues[LDB_FG_MAX_CREATED_QUEUES_PER_FAMILY]{};
+};
+
+struct LdbFgQueueTopologyV1 {
+  uint32_t version = LDB_FG_QUEUE_TOPOLOGY_API_VERSION;
+  uint32_t size = sizeof(LdbFgQueueTopologyV1);
+  uint32_t familyCount = 0;
+  uint32_t createdFamilyCount = 0;
+  LdbFgQueueFamilyInfoV1 families[LDB_FG_MAX_QUEUE_FAMILIES]{};
 };
 
 struct LdbFgFrameTicketV1 {
@@ -130,8 +149,14 @@ inline bool LdbFgValidateFrameInputsV1(
 
 using PFN_LdbFgQueryDeviceInfoV1 = uint32_t(__stdcall *)(
     void *, LdbFgDeviceInfoV1 *);
+using PFN_LdbFgQueryQueueTopologyV1 = uint32_t(__stdcall *)(
+    void *, LdbFgQueueTopologyV1 *);
 
 static_assert(sizeof(uintptr_t) == 8, "FG device ABI is x64 only");
 static_assert(sizeof(LdbFgDeviceInfoV1) == 88, "FG device ABI changed");
+static_assert(sizeof(LdbFgQueueFamilyInfoV1) == 48,
+              "FG queue family ABI changed");
+static_assert(sizeof(LdbFgQueueTopologyV1) == 784,
+              "FG queue topology ABI changed");
 static_assert(sizeof(LdbFgFrameTicketV1) == 40, "FG ticket ABI changed");
 static_assert(sizeof(LdbFgFrameInputsV1) == 352, "FG input ABI changed");

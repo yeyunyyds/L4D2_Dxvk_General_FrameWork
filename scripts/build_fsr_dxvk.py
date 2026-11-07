@@ -119,7 +119,7 @@ alias=compiler/'x86_64-w64-mingw32-gcc'
 if not alias.exists():alias.symlink_to('x86_64-w64-mingw32-gcc-posix')
 p=source/'src/d3d9/d3d9_main.cpp'
 original=subprocess.check_output(['git','show','HEAD:src/d3d9/d3d9_main.cpp'],cwd=base,text=True)
-p.write_text(original+'\n#include "d3d9_device.h"\n#include "ldb_fg_presenter_api.h"\nextern "C" DLLEXPORT unsigned int __stdcall LdbFsrDeviceFeatures(IDirect3DDevice9* device) {\n'
+p.write_text(original+'\n#include "d3d9_device.h"\n#include "ldb_fg_presenter_api.h"\n#include <algorithm>\n#include <vector>\nextern "C" DLLEXPORT unsigned int __stdcall LdbFsrDeviceFeatures(IDirect3DDevice9* device) {\n'
  '  if (!device) return 0;\n  const auto& all = static_cast<dxvk::D3D9DeviceEx*>(device)->GetDXVKDevice()->features();\n  const auto& f=all.core.features;\n'
  '  return (f.shaderStorageImageExtendedFormats ? 1u : 0u) | (f.shaderStorageImageReadWithoutFormat ? 2u : 0u) | (f.shaderStorageImageWriteWithoutFormat ? 4u : 0u) | ((!all.vk12.vulkanMemoryModel || all.vk12.vulkanMemoryModelDeviceScope) ? 8u : 0u);\n}\n'
  '''extern "C" DLLEXPORT unsigned int __stdcall LdbFgQueryDeviceInfoV1(void* opaque, LdbFgDeviceInfoV1* out) {
@@ -149,9 +149,37 @@ p.write_text(original+'\n#include "d3d9_device.h"\n#include "ldb_fg_presenter_ap
   *out = result;
   return result.flags;
 }
+extern "C" DLLEXPORT unsigned int __stdcall LdbFgQueryQueueTopologyV1(void* opaque, LdbFgQueueTopologyV1* out) {
+  if (!opaque || !out || out->version != LDB_FG_QUEUE_TOPOLOGY_API_VERSION || out->size != sizeof(*out)) return 0;
+  auto device = static_cast<dxvk::D3D9DeviceEx*>(reinterpret_cast<IDirect3DDevice9*>(opaque))->GetDXVKDevice();
+  uint32_t familyCount = 0;
+  device->vki()->vkGetPhysicalDeviceQueueFamilyProperties(device->adapter()->handle(), &familyCount, nullptr);
+  std::vector<VkQueueFamilyProperties> properties(familyCount);
+  device->vki()->vkGetPhysicalDeviceQueueFamilyProperties(device->adapter()->handle(), &familyCount, properties.data());
+  LdbFgQueueTopologyV1 result;
+  result.familyCount = std::min(familyCount, LDB_FG_MAX_QUEUE_FAMILIES);
+  for (uint32_t i = 0; i < result.familyCount; i++) {
+    result.families[i].queueFlags = properties[i].queueFlags;
+    result.families[i].physicalQueueCount = properties[i].queueCount;
+  }
+  const auto& queues = device->queues();
+  auto add = [&](const dxvk::DxvkDeviceQueue& queue) {
+    if (!queue.queueHandle || queue.queueFamily >= result.familyCount) return;
+    auto& family = result.families[queue.queueFamily];
+    for (uint32_t i = 0; i < family.createdQueueCount; i++)
+      if (family.createdQueues[i] == reinterpret_cast<uintptr_t>(queue.queueHandle)) return;
+    if (family.createdQueueCount < LDB_FG_MAX_CREATED_QUEUES_PER_FAMILY)
+      family.createdQueues[family.createdQueueCount++] = reinterpret_cast<uintptr_t>(queue.queueHandle);
+  };
+  add(queues.graphics); add(queues.transfer); add(queues.sparse);
+  for (uint32_t i = 0; i < queues.frameGenerationCount; i++) add(queues.frameGeneration[i]);
+  for (uint32_t i = 0; i < result.familyCount; i++) result.createdFamilyCount += result.families[i].createdQueueCount != 0;
+  *out = result;
+  return 1;
+}
 ''')
 p=source/'src/d3d9/d3d9.def'
-p.write_text(subprocess.check_output(['git','show','HEAD:src/d3d9/d3d9.def'],cwd=base,text=True)+'\n  LdbFsrDeviceFeatures\n  LdbFgQueryDeviceInfoV1\n')
+p.write_text(subprocess.check_output(['git','show','HEAD:src/d3d9/d3d9.def'],cwd=base,text=True)+'\n  LdbFsrDeviceFeatures\n  LdbFgQueryDeviceInfoV1\n  LdbFgQueryQueueTopologyV1\n')
 env=os.environ.copy()
 env['PATH']=str(compiler)+os.pathsep+str(ROOT/'.research/tools/root/usr/bin')+os.pathsep+str(ROOT/'.research/python-tools/bin')+os.pathsep+env.get('PATH','')
 env['PYTHONPATH']=str(ROOT/'.research/python-tools')

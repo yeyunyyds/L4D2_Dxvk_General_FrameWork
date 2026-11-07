@@ -91,8 +91,10 @@ inline uint64_t id(const void *p) {
 
 struct PresenterDeviceProbe {
   LdbFgDeviceInfoV1 info{};
+  LdbFgQueueTopologyV1 topology{};
   bool apiAvailable = false;
   bool ownerMatch = false;
+  bool topologyAvailable = false;
 };
 
 inline PresenterDeviceProbe probePresenterDevice(IDirect3DDevice9 *device) {
@@ -127,7 +129,29 @@ inline PresenterDeviceProbe probePresenterDevice(IDirect3DDevice9 *device) {
   result.ownerMatch = result.info.instance == reinterpret_cast<uintptr_t>(instance) &&
                       result.info.physicalDevice == reinterpret_cast<uintptr_t>(physical) &&
                       result.info.device == reinterpret_cast<uintptr_t>(logical);
+  auto queryTopology = reinterpret_cast<PFN_LdbFgQueryQueueTopologyV1>(
+      GetProcAddress(dxvk, "LdbFgQueryQueueTopologyV1"));
+  if (queryTopology)
+    result.topologyAvailable = queryTopology(device, &result.topology) != 0;
   return result;
+}
+
+inline std::string presenterTopologyJson(const PresenterDeviceProbe &probe) {
+  if (!probe.topologyAvailable)
+    return "[]";
+  std::string result = "[";
+  for (uint32_t i = 0; i < probe.topology.familyCount; ++i) {
+    if (i)
+      result += ',';
+    const auto &family = probe.topology.families[i];
+    result += "{\"family\":" + std::to_string(i) +
+              ",\"flags\":" + std::to_string(family.queueFlags) +
+              ",\"physical\":" +
+              std::to_string(family.physicalQueueCount) +
+              ",\"created\":" +
+              std::to_string(family.createdQueueCount) + '}';
+  }
+  return result + ']';
 }
 struct State {
   IDirect3DDevice9 *device = nullptr;
@@ -211,6 +235,10 @@ struct State {
              std::to_string(presenter.info.requestedGraphicsQueues) +
              ",\"presenter_reserved_queues\":" +
              std::to_string(presenter.info.reservedQueueCount) +
+             ",\"presenter_topology_api\":" +
+             std::string(presenter.topologyAvailable ? "true" : "false") +
+             ",\"presenter_queue_families\":" +
+             presenterTopologyJson(presenter) +
              ",\"presenter_input_api\":" +
              std::to_string(LDB_FG_INPUT_API_VERSION) +
              ",\"local_effect_policy\":" +
