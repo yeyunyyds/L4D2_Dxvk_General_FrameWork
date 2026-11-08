@@ -27,11 +27,6 @@
       "repository": "https://github.com/KhronosGroup/Vulkan-Headers.git",
       "commit": "234c4b7370a8ea3239a214c9e871e4b17c89f4ab",
       "version": "DXVK 2.6.1 Vulkan-Headers gitlink"
-    },
-    "asteria": {
-      "repository": "https://github.com/Anokianx/L4D2-Asteria-Graphics-Enhancement.git",
-      "commit": "5c78e76b08171cfa1e797e4eece0b4a42bf9018b",
-      "version": "x64 Vulkan layer port baseline"
     }
   },
   "references": {

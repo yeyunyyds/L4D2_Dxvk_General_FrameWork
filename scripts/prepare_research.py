@@ -51,7 +51,7 @@ def prepare(cache, only=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache", type=Path, default=ROOT / ".research/sources")
-    parser.add_argument("--only", nargs="+", choices=("dxvk", "fidelityfx", "vulkan_headers", "asteria"))
+    parser.add_argument("--only", nargs="+", choices=("dxvk", "fidelityfx", "vulkan_headers"))
     args = parser.parse_args()
     try:
         prepare(args.cache.resolve(), args.only)

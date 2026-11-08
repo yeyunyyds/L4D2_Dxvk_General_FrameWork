@@ -15,9 +15,22 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def checkout(source: Path, repository: str, commit: str) -> None:
+    if source.exists():
+        require_source(source, commit)
+        return
+    source.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=source, check=True)
+    subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=source, check=True)
+    subprocess.run(["git", "remote", "add", "origin", repository], cwd=source, check=True)
+    subprocess.run(["git", "fetch", "--depth=1", "origin", commit], cwd=source, check=True)
+    subprocess.run(["git", "checkout", "--detach", "FETCH_HEAD"], cwd=source, check=True)
+    require_source(source, commit)
+
+
 def prepare(source: Path, output: Path) -> Path:
-    lock = json.loads((ROOT / "research/sources.lock.json").read_text())
-    spec = lock["sources"]["asteria"]
+    spec = json.loads((ROOT / "integration/fg/asteria-source.json").read_text())
+    checkout(source, spec["repository"], spec["commit"])
     require_source(source, spec["commit"])
     if output.exists():
         raise RuntimeError(f"Prepared Asteria tree already exists: {output}")

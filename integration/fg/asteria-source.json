@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/Anokianx/L4D2-Asteria-Graphics-Enhancement.git",
+  "commit": "5c78e76b08171cfa1e797e4eece0b4a42bf9018b",
+  "license": "MIT",
+  "purpose": "GF x64 Vulkan layer port baseline"
+}
