@@ -191,6 +191,44 @@ index 0476bc7..d83754d 100644
  if (oldState && !FgSwapchainRuntime.wait(*oldState)) return VK_ERROR_DEVICE_LOST;
  
      const auto retireOld = [&] {
+diff --git a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h b/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
+index 3f56217..328acbf 100644
+--- a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
++++ b/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
+@@ -7,6 +7,16 @@
+ 
+ namespace asteria_device_features
+ {
++// DXVK may be built against newer Vulkan headers than the layer.  Maintenance 7
++// has a single feature bit, so keep its ABI-sized representation here until the
++// pinned Asteria headers expose VkPhysicalDeviceMaintenance7FeaturesKHR.
++struct PhysicalDeviceMaintenance7FeaturesKHRCompat
++{
++    VkStructureType sType;
++    void *pNext;
++    VkBool32 maintenance7;
++};
++
+ class OwnedChain
+ {
+     std::vector<std::shared_ptr<void>> nodes;
+@@ -59,6 +69,8 @@ public:
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_FEATURES_EXT: CopyNode<VkPhysicalDeviceShaderModuleIdentifierFeaturesEXT>(node); break;
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT: CopyNode<VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT>(node); break;
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT: CopyNode<VkPhysicalDeviceMemoryPriorityFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT: CopyNode<VkPhysicalDeviceMultiDrawFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT: CopyNode<VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT>(node); break;
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR: CopyNode<VkPhysicalDeviceLineRasterizationFeaturesKHR>(node); break;
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GRAPHICS_PIPELINE_LIBRARY_FEATURES_EXT: CopyNode<VkPhysicalDeviceGraphicsPipelineLibraryFeaturesEXT>(node); break;
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_INTERLOCK_FEATURES_EXT: CopyNode<VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT>(node); break;
+@@ -69,6 +81,7 @@ public:
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentIdFeaturesKHR>(node); break;
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentWaitFeaturesKHR>(node); break;
+             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT: CopyNode<VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT>(node); break;
++            case static_cast<VkStructureType>(1000562000): CopyNode<PhysicalDeviceMaintenance7FeaturesKHRCompat>(node); break;
+             default:
+                 nodes.clear();
+                 return false;
 diff --git a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
 index 54799dd..ef9d718 100644
 --- a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
