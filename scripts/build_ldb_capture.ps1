@@ -75,6 +75,7 @@ try {
     $originalHashes = @{}
     foreach ($relative in $installerFiles) {
       $path = Join-Path $gameFixture $relative
+      New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
       Set-Content -LiteralPath $path -Value ('original:' + $relative) -Encoding ASCII
       $originalHashes[$relative] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
     }
