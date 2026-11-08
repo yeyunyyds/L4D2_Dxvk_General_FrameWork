@@ -42,7 +42,11 @@ set "LDB_FG_CAPTURE_FRAMES=4"
 set "LDB_FG_HOTKEYS=1"
 set "LDB_FG_AUTO_CAPTURE=1"
 set "LDB_FG_PACING_MS=0"
-set "VK_ADD_LAYER_PATH=%~dp0vulkan-layer;%VK_ADD_LAYER_PATH%"
+if defined VK_LAYER_PATH (
+  set "VK_LAYER_PATH=%~dp0vulkan-layer;%VK_LAYER_PATH%"
+) else (
+  set "VK_ADD_LAYER_PATH=%~dp0vulkan-layer;%VK_ADD_LAYER_PATH%"
+)
 set "VK_INSTANCE_LAYERS=VK_LAYER_GF_Asteria_FrameGeneration;%VK_INSTANCE_LAYERS%"
 set "ASTERIA_FG_ENABLE=1"
 set "ASTERIA_FG_ESTIMATED_INTERNAL=1"
