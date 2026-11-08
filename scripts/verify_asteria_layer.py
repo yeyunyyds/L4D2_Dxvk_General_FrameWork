@@ -18,8 +18,8 @@ def verify(dll: Path, source: Path, output: Path) -> None:
     pe = struct.unpack_from("<I", data, 0x3C)[0]
     if data[pe:pe + 4] != b"PE\0\0" or struct.unpack_from("<H", data, pe + 4)[0] != 0x8664:
         raise ValueError("Layer is not an x86_64 PE image")
-    required = (b"vkNegotiateLoaderLayerInterfaceVersion", b"LayerGetInstanceProcAddr",
-                b"LayerGetDeviceProcAddr", "ASTERIA_FG_ESTIMATED_INTERNAL".encode("utf-16le"))
+    required = (b"vkNegotiateLoaderLayerInterfaceVersion", b"vkGetInstanceProcAddr",
+                b"vkGetDeviceProcAddr", "ASTERIA_FG_ESTIMATED_INTERNAL".encode("utf-16le"))
     if any(symbol not in data for symbol in required):
         raise ValueError("Layer is missing a required loader/runtime symbol")
     source_receipt = json.loads((source / "gf-x64-layer-source.json").read_text())
