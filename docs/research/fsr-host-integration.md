@@ -28,7 +28,7 @@
 
 ## Danyria presenter 迁移基线
 
-当前包新增独立的 **x64 Vulkan Layer 完整路径**：`L4D2Bridge64 -> Vulkan loader -> GF/Asteria layer -> Intel Vulkan driver`。它直接拦截 `vkCreateDevice`、swapchain、acquire 与 present，在 Host 进程内创建官方 FSR3 replacement swapchain；不要求客制化 DXVK 暴露私有插帧接口。`start_fg_test.cmd` 会自动设置 Layer 搜索路径、启用 Layer，并将 `asteria-layer.json` 写入本次 `fg-results`。
+当前包新增独立的 **x64 Vulkan Layer 完整路径**：`L4D2Bridge64 -> Vulkan loader -> GF/Asteria layer -> Intel Vulkan driver`。它直接拦截 `vkCreateDevice`、swapchain、acquire 与 present，在 Host 进程内创建官方 FSR3 replacement swapchain；不要求客制化 DXVK 暴露私有插帧接口。`start_fg_test.cmd` 会在保留用户现有 Vulkan Layer 搜索路径的同时加入本包、启用 Layer，并将 `asteria-layer.json` 写入本次 `fg-results`。
 
 Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有四条 queue。本移植从固定 MIT 源码提交重新构建 AMD64 DLL；创建设备时申请所有 graphics/compute/transfer 候选 queue，拿到真实 Win32 surface 后再检查 present support，并为 game、async compute、present、image acquire 分配四条互不相同的物理 queue。各角色保留自己的 family index，交给官方 FFX 的跨 family ownership-transfer 路径。Arc B580 已观测到的 `1 + 4 + 2` 物理拓扑满足数量要求，最终能否启用由该次 surface 的 present-support 实测决定。
 
