@@ -247,3 +247,25 @@ index 54799dd..ef9d718 100644
      fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;
  
      state.deviceContext = {device, physicalDevice, nextGdpa};
+diff --git a/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.cpp b/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.cpp
+index 041b246..5c2e6fa 100644
+--- a/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.cpp
++++ b/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.cpp
+@@ -453,7 +453,7 @@ VkResult FrameInterpolationSwapChainVK::createImage(ReplacementResource&
+     if (res == VK_SUCCESS)
+     {
+         std::ostringstream trace;
+-        trace << "replacement_create name=" << (name ? name : "") << " image=" << static_cast<uint64_t>(resource.image);
++        trace << "replacement_create name=" << (name ? name : "") << " image=" << asteria_vk::Bits(resource.image);
+         AsteriaTraceSwapchain(trace.str());
+         DebugNameSetter debugNameSetter(presentInfo.device);
+         debugNameSetter.setDebugName(resource.image, VK_OBJECT_TYPE_IMAGE, name);  // it's fine if this fails
+@@ -1868,7 +1868,7 @@ VkResult FrameInterpolationSwapChainVK::getSwapchainImages(VkDevice device, uint
+         *pSwapchainImageCount = returnedCount;
+         std::ostringstream trace;
+         trace << "replacement_get count=" << returnedCount << " supplied=" << suppliedCount << " buffers=";
+-        for (uint32_t i = 0; i < returnedCount; ++i) trace << (i ? "," : "") << static_cast<uint64_t>(pSwapchainImages[i]);
++        for (uint32_t i = 0; i < returnedCount; ++i) trace << (i ? "," : "") << asteria_vk::Bits(pSwapchainImages[i]);
+         AsteriaTraceSwapchain(trace.str());
+         return suppliedCount < gameBufferCount ? VK_INCOMPLETE : VK_SUCCESS;
+     }
