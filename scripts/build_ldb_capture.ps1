@@ -14,6 +14,10 @@ $installerErrors = $null
 if ($installerErrors.Count) { throw ('FG installer syntax failed: ' + ($installerErrors -join '; ')) }
 & python (Join-Path $PSScriptRoot 'fetch_fsr_assets.py')
 if ($LASTEXITCODE -ne 0) { throw 'FSR asset verification failed' }
+& python (Join-Path $PSScriptRoot 'prepare_asteria_layer.py')
+if ($LASTEXITCODE -ne 0) { throw 'Asteria x64 source preparation failed' }
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'build_asteria_layer_x64.ps1')
+if ($LASTEXITCODE -ne 0) { throw 'Asteria x64 Vulkan layer build failed' }
 $sourcePath = (Resolve-Path (Join-Path $repo $Source)).Path
 $receipt = Join-Path $sourcePath 'capture-source.json'
 if (-not (Test-Path $receipt)) { throw 'Run prepare_ldb_capture.py first' }
@@ -63,7 +67,10 @@ try {
       'bin/.l4d2bridge/L4D2Bridge64.exe',
       'bin/.l4d2bridge/L4D2Bridge32.exe',
       'bin/.l4d2bridge/LDBFsrBackend64.dll',
-      'bin/.l4d2bridge/d3d9vk_x64.dll'
+      'bin/.l4d2bridge/d3d9vk_x64.dll',
+      'vulkan-layer/AsteriaFrameGenerationLayer64.dll',
+      'vulkan-layer/VK_LAYER_GF_Asteria_FrameGeneration.json',
+      'vulkan-layer/gf-asteria-layer-build.json'
     )
     $originalHashes = @{}
     foreach ($relative in $installerFiles) {

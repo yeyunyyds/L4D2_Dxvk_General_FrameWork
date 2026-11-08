@@ -42,6 +42,12 @@ set "LDB_FG_CAPTURE_FRAMES=4"
 set "LDB_FG_HOTKEYS=1"
 set "LDB_FG_AUTO_CAPTURE=1"
 set "LDB_FG_PACING_MS=0"
+set "VK_ADD_LAYER_PATH=%~dp0vulkan-layer;%VK_ADD_LAYER_PATH%"
+set "VK_INSTANCE_LAYERS=VK_LAYER_GF_Asteria_FrameGeneration;%VK_INSTANCE_LAYERS%"
+set "ASTERIA_FG_ENABLE=1"
+set "ASTERIA_FG_ESTIMATED_INTERNAL=1"
+set "ASTERIA_FG_PROBE_OUTPUT=%LDB_FG_DIAG_DIR%\asteria-layer.json"
+if /i "%LDB_FG_DIAG_MODE%"=="control" set "ASTERIA_FG_ENABLE=0"
 > "%LDB_FG_DIAG_DIR%\startup-info.txt" echo Diagnostic mode: %LDB_FG_DIAG_MODE%
 >> "%LDB_FG_DIAG_DIR%\startup-info.txt" echo Bridge, DXVK and FG logs share this directory. No binaries or configuration are changed.
 for %%f in ("bin\dxvk_d3d9.dll" "bin\.l4d2bridge\L4D2Bridge64.exe" "bin\.l4d2bridge\L4D2Bridge32.exe" "bin\.l4d2bridge\d3d9vk_x64.dll" "bin\.l4d2bridge\LDBFsrBackend64.dll") do (

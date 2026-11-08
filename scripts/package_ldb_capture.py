@@ -45,6 +45,14 @@ def package(source, build_id, output):
             raise ValueError('x86 Host is not LARGEADDRESSAWARE')
         entries[destination] = data
         examples[role] = actual[0]
+    layer = ROOT / '.research/asteria-x64-build'
+    for filename in ('AsteriaFrameGenerationLayer64.dll',
+                     'VK_LAYER_GF_Asteria_FrameGeneration.json',
+                     'gf-asteria-layer-build.json'):
+        path = layer / filename
+        if not path.is_file():
+            raise ValueError(f'Missing compiled x64 Vulkan layer file: {filename}')
+        entries[f'vulkan-layer/{filename}'] = path.read_bytes()
     receipt.update(fsr_assets_archive_sha256=asset_lock['archive_sha256'],
                    fsr_assets_build='cross_compiled_MinGW_x64; Host trio is native MSVC',
                    native_host_build='compiled_MSVC_Release', build_id=build_id, compile_examples=examples,
@@ -75,6 +83,7 @@ def package(source, build_id, output):
         archive.write(ROOT/'.research/sources/bridge-131/LICENSE', 'licenses/LDB-LICENSE')
         archive.write(ROOT/'.research/sources/dxvk/LICENSE', 'licenses/DXVK-LICENSE')
         archive.write(ROOT/'.research/sources/vulkan_headers/LICENSE.md', 'licenses/Vulkan-Headers-LICENSE.md')
+        archive.write(ROOT/'.research/sources/asteria/LICENSE', 'licenses/Asteria-LICENSE')
     print(output)
 
 
