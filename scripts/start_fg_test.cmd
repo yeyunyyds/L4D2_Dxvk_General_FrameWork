@@ -16,9 +16,9 @@ if not errorlevel 1 (
 set "LDB_CAPTURE_DIR="
 set "LDB_CAPTURE_TRIGGER="
 set "LDB_GPU_REPROJECT=0"
-set "LDB_FG_ENABLE=1"
-set "LDB_FG_BACKEND=fsr"
-set "LDB_FG_PRESENTER=1"
+set "LDB_FG_ENABLE=0"
+set "LDB_FG_BACKEND=custom"
+set "LDB_FG_PRESENTER=0"
 set "LDB_FG_MODE=generated"
 set "LDB_FG_LOG_DIR=%~dp0fg-results\session-%RANDOM%-%RANDOM%"
 set "LDB_FG_CAPTURE_FRAMES=4"
@@ -38,8 +38,8 @@ if not exist "%LDB_FG_LOG_DIR%" mkdir "%LDB_FG_LOG_DIR%"
 if not exist "%LDB_FG_LOG_DIR%" exit /b 1
 set "DXVK_LOG_PATH=%LDB_FG_LOG_DIR%"
 set "DXVK_LOG_LEVEL=info"
-echo Starts in generated-frame preview for image correctness.
-echo F8: enable/disable. F9: paired/generated preview.
+echo Starts the x64 Vulkan Layer replacement-swapchain path.
+echo The previous Host FG presenter is disabled for this test.
 echo Automatic capture: delayed bursts throughout this session. No trigger file.
 echo Results: %LDB_FG_LOG_DIR%
 start "" "%LDB_FG_STEAM_EXE%" -applaunch 550

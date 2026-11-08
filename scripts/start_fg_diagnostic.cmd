@@ -18,10 +18,10 @@ if not errorlevel 1 (
   pause
   exit /b 1
 )
-set "LDB_FG_DIAG_MODE=fsr"
-set "LDB_FG_BACKEND=fsr"
-set "LDB_FG_ENABLE=1"
-set "LDB_FG_PRESENTER=1"
+set "LDB_FG_DIAG_MODE=layer"
+set "LDB_FG_BACKEND=custom"
+set "LDB_FG_ENABLE=0"
+set "LDB_FG_PRESENTER=0"
 if /i "%~1"=="control" (
   set "LDB_FG_DIAG_MODE=control"
   set "LDB_FG_BACKEND=custom"
