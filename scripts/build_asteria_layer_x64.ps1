@@ -10,10 +10,13 @@ $VsWhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer
 if (-not (Test-Path $VsWhere)) { throw 'vswhere.exe is missing' }
 $Vs = & $VsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 if (-not $Vs) { throw 'MSVC x64 tools are missing' }
-$DevCmd = Join-Path $Vs 'Common7\Tools\VsDevCmd.bat'
-& cmd.exe /d /s /c "`"`"$DevCmd`" -arch=x64 -host_arch=x64 >nul && set`"" | ForEach-Object {
-  if ($_ -match '^([^=]+)=(.*)$') { Set-Item -Force -Path "Env:$($matches[1])" -Value $matches[2] }
-}
+$VcAuxiliary = Join-Path $Vs 'VC\Auxiliary\Build'
+Push-Location $VcAuxiliary
+try {
+  & cmd.exe /d /c 'vcvarsall.bat amd64 >nul && set' | ForEach-Object {
+    if ($_ -match '^([^=]+)=(.*)$') { Set-Item -Force -Path "Env:$($matches[1])" -Value $matches[2] }
+  }
+} finally { Pop-Location }
 if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) { throw 'MSVC environment setup failed' }
 
 $Fg = Join-Path $Source 'Runtime\FrameGeneration'
