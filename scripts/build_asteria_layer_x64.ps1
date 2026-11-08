@@ -30,7 +30,7 @@ Push-Location (Join-Path $Fg 'Research')
 try {
   & cmake.exe -S . -B $Cpu -G 'NMake Makefiles' -DCMAKE_BUILD_TYPE=Release
   if ($LASTEXITCODE -ne 0) { throw 'FidelityFX x64 configure failed' }
-  & cmake.exe --build $Cpu
+  & cmake.exe --build $Cpu --target ffx_frameinterpolation_x64 ffx_opticalflow_x64
   if ($LASTEXITCODE -ne 0) { throw 'FidelityFX x64 build failed' }
 } finally { Pop-Location }
 
