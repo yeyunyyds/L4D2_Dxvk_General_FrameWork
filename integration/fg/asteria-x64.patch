@@ -278,10 +278,10 @@ index 3f56217..328acbf 100644
                  nodes.clear();
                  return false;
 diff --git a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
-index 54799dd..676aed5 100644
+index 54799dd..73b83d6 100644
 --- a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
 +++ b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
-@@ -20,13 +20,17 @@
+@@ -20,9 +20,11 @@
  #include "LiveSceneMotionRuntime.h"
  
  #include <algorithm>
@@ -289,20 +289,25 @@ index 54799dd..676aed5 100644
  #include <cmath>
  #include <cstdint>
  #include <cstring>
++#include <fstream>
  #include <memory>
  #include <mutex>
-+#include <string>
  #include <vector>
- 
-+void AsteriaTraceSwapchain(const std::string &line);
-+
- #define ASTERIA_FG_CAMERA_API_VERSION_1 1u
- 
- struct AsteriaFrameGenerationCameraV1
-@@ -48,6 +52,14 @@ struct AsteriaFrameGenerationCameraV1
+@@ -48,6 +50,25 @@ struct AsteriaFrameGenerationCameraV1
  namespace asteria_fg_runtime
  {
  
++inline void TraceRuntimeDestroy(const char *line)
++{
++    char path[MAX_PATH]{};
++    const DWORD length = GetEnvironmentVariableA("ASTERIA_FG_SHIM_TRACE_PATH", path, MAX_PATH);
++    if (!line || !length || length >= MAX_PATH) return;
++    static std::mutex traceMutex;
++    const std::lock_guard<std::mutex> lock(traceMutex);
++    std::ofstream output(path, std::ios::app);
++    if (output) output << line << '\n';
++}
++
 +struct FgQueueCandidate
 +{
 +    uint32_t family = UINT32_MAX;
@@ -314,7 +319,7 @@ index 54799dd..676aed5 100644
  struct GpuImage
  {
      VkImage handle = VK_NULL_HANDLE;
-@@ -74,15 +86,22 @@ struct FgCameraState
+@@ -74,15 +95,22 @@ struct FgCameraState
  struct FgDeviceQueues
  {
      uint32_t graphicsFamily = UINT32_MAX;
@@ -337,7 +342,7 @@ index 54799dd..676aed5 100644
      VkDevice device = VK_NULL_HANDLE;
      VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
      PFN_vkGetDeviceProcAddr nextGdpa = nullptr;
-@@ -95,6 +114,9 @@ struct FgSwapchainState
+@@ -95,6 +123,9 @@ struct FgSwapchainState
      uint32_t height = 0;
      VkFormat format = VK_FORMAT_UNDEFINED;
      uint64_t frameID = 0;
@@ -347,7 +352,7 @@ index 54799dd..676aed5 100644
      std::vector<uint8_t> scratch;
      FfxInterface backend{};
      std::unique_ptr<FfxFrameInterpolationContext> interpolation;
-@@ -435,20 +457,22 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -435,20 +466,22 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
  
  inline void DestroySwapchainResources(FgSwapchainState &state)
  {
@@ -359,13 +364,13 @@ index 54799dd..676aed5 100644
 +        // queues before releasing callback-owned contexts and resources.
          FfxFrameGenerationConfig config{};
          config.swapChain = state.swapchainBox;
-+        AsteriaTraceSwapchain("runtime_destroy disable_frame_generation");
++        TraceRuntimeDestroy("runtime_destroy disable_frame_generation");
          ffxSetFrameGenerationConfigToSwapchainVK(&config);
-+        AsteriaTraceSwapchain("runtime_destroy wait_for_presents");
++        TraceRuntimeDestroy("runtime_destroy wait_for_presents");
          ffxWaitForPresents(state.swapchainBox);
          if (state.device != VK_NULL_HANDLE)
          {
-+            AsteriaTraceSwapchain("runtime_destroy wait_device_idle");
++            TraceRuntimeDestroy("runtime_destroy wait_device_idle");
              vkDeviceWaitIdle(state.device);
 -            vkDestroySwapchainFFX(state.device, state.proxySwapchain, nullptr);
          }
@@ -374,17 +379,17 @@ index 54799dd..676aed5 100644
      }
      else if (state.device != VK_NULL_HANDLE && state.inputSession)
          vkDeviceWaitIdle(state.device);
-@@ -461,16 +485,25 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
+@@ -461,16 +494,25 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
      state.historyReset.store(true);
      if (state.interpolationCreated && state.interpolation)
      {
-+        AsteriaTraceSwapchain("runtime_destroy frame_interpolation_context");
++        TraceRuntimeDestroy("runtime_destroy frame_interpolation_context");
          ffxFrameInterpolationContextDestroy(state.interpolation.get());
          state.interpolationCreated = false;
      }
      if (state.opticalFlowCreated && state.opticalFlow)
      {
-+        AsteriaTraceSwapchain("runtime_destroy optical_flow_context");
++        TraceRuntimeDestroy("runtime_destroy optical_flow_context");
          ffxOpticalflowContextDestroy(state.opticalFlow.get());
          state.opticalFlowCreated = false;
      }
@@ -392,7 +397,7 @@ index 54799dd..676aed5 100644
      state.opticalFlow.reset();
 +    if (state.proxySwapchain != VK_NULL_HANDLE && state.swapchainBox != nullptr && state.device != VK_NULL_HANDLE)
 +    {
-+        AsteriaTraceSwapchain("runtime_destroy replacement_swapchain");
++        TraceRuntimeDestroy("runtime_destroy replacement_swapchain");
 +        vkDestroySwapchainFFX(state.device, state.proxySwapchain, nullptr);
 +        state.proxySwapchain = VK_NULL_HANDLE;
 +        state.swapchainBox = nullptr;
@@ -400,7 +405,7 @@ index 54799dd..676aed5 100644
      if (state.device != VK_NULL_HANDLE)
      {
          DestroyGpuImage(state.device, state.reconstructed);
-@@ -494,6 +527,8 @@ inline VkResult InitializeSwapchainResources(
+@@ -494,6 +536,8 @@ inline VkResult InitializeSwapchainResources(
      FgCameraState *cameraState)
  {
      auto provider = CurrentFrameInputProvider();
@@ -409,7 +414,7 @@ index 54799dd..676aed5 100644
      if (!provider && IsEstimatedInternalInputsRequested()) provider = EstimatedProvider();
      if (!provider || !createInfo) return VK_ERROR_FEATURE_NOT_PRESENT;
      state.device = device;
-@@ -512,9 +547,9 @@ inline VkResult InitializeSwapchainResources(
+@@ -512,9 +556,9 @@ inline VkResult InitializeSwapchainResources(
      fgInfo.device = device;
      fgInfo.physicalDevice = physicalDevice;
      fgInfo.gameQueue = {queues.gameQueue, queues.graphicsFamily, nullptr};
@@ -422,7 +427,7 @@ index 54799dd..676aed5 100644
      fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;
  
      state.deviceContext = {device, physicalDevice, nextGdpa};
-@@ -545,6 +580,7 @@ inline VkResult InitializeSwapchainResources(
+@@ -545,6 +589,7 @@ inline VkResult InitializeSwapchainResources(
              }
          }
      }
@@ -430,7 +435,7 @@ index 54799dd..676aed5 100644
      const VkResult scResult = replacement.createSwapchainFFX(device, &ffxCreateInfo, allocator, &state.proxySwapchain, &fgInfo);
      state.nativeCreateAttempted = AsteriaNativeSwapchainCreateAttempted();
      if (scResult != VK_SUCCESS || state.proxySwapchain == VK_NULL_HANDLE)
-@@ -636,6 +672,7 @@ inline VkResult InitializeSwapchainResources(
+@@ -636,6 +681,7 @@ inline VkResult InitializeSwapchainResources(
  
  inline bool WaitForSwapchainIdle(FgSwapchainState &state)
  {
