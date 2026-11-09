@@ -1,5 +1,5 @@
 diff --git a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
-index 0476bc7..329f283 100644
+index 0476bc7..1d0c389 100644
 --- a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
 +++ b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
 @@ -25,6 +25,7 @@
@@ -134,7 +134,7 @@ index 0476bc7..329f283 100644
              }
          }
      }
-@@ -1756,6 +1772,98 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
+@@ -1756,6 +1772,117 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
      return TRUE;
  }
  
@@ -209,31 +209,50 @@ index 0476bc7..329f283 100644
 +    return 0;
 +}
 +
-+extern "C" int32_t __stdcall AsteriaQueryHostFrameStatsV2(AsteriaHostFrameStatsV2 *stats)
++static bool ValidateHostFrameStatsOutput(AsteriaHostFrameStatsV2 *stats)
 +{
 +    __try
 +    {
-+        if (!stats || stats->structSize != sizeof(AsteriaHostFrameStatsV2) ||
-+            stats->apiVersion != ASTERIA_HOST_FRAME_API_VERSION_2) return -1;
++        return stats && stats->structSize == sizeof(AsteriaHostFrameStatsV2) &&
++            stats->apiVersion == ASTERIA_HOST_FRAME_API_VERSION_2;
++    }
++    __except (EXCEPTION_EXECUTE_HANDLER)
++    {
++        return false;
++    }
++}
++
++static bool CopyHostFrameStatsOutput(AsteriaHostFrameStatsV2 *stats, const AsteriaHostFrameStatsV2 *result)
++{
++    __try
++    {
++        *stats = *result;
++        return true;
++    }
++    __except (EXCEPTION_EXECUTE_HANDLER)
++    {
++        return false;
++    }
++}
++
++extern "C" int32_t __stdcall AsteriaQueryHostFrameStatsV2(AsteriaHostFrameStatsV2 *stats)
++{
++    if (!ValidateHostFrameStatsOutput(stats)) return -1;
++    AsteriaHostFrameStatsV2 result{sizeof(AsteriaHostFrameStatsV2), ASTERIA_HOST_FRAME_API_VERSION_2};
++    {
 +        const std::lock_guard<std::mutex> lock(FgCamera.mutex);
-+        AsteriaHostFrameStatsV2 result{sizeof(AsteriaHostFrameStatsV2), ASTERIA_HOST_FRAME_API_VERSION_2};
 +        result.submitted = FgCamera.hostSubmitted; result.accepted = FgCamera.hostAccepted;
 +        result.consumed = FgCamera.hostConsumed; result.rejected = FgCamera.hostRejected;
 +        result.staleAtPresent = FgCamera.hostStaleAtPresent; result.latestGeneration = FgCamera.hostGeneration;
 +        result.latestFrameId = FgCamera.hostFrameId; result.latestConsumedFrameId = FgCamera.latestConsumedHostFrameId;
-+        *stats = result;
-+        return 0;
 +    }
-+    __except (EXCEPTION_EXECUTE_HANDLER)
-+    {
-+        return -1;
-+    }
++    return CopyHostFrameStatsOutput(stats, &result) ? 0 : -1;
 +}
 +
  static bool IsFgSwapchainHandle(VkSwapchainKHR swapchain)
  {
      const std::lock_guard<std::mutex> lock(StateMutex);
-@@ -1816,6 +1924,48 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
+@@ -1816,6 +1943,48 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
      }
  }
  
@@ -282,7 +301,7 @@ index 0476bc7..329f283 100644
  static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCreateInfoKHR *info, const VkAllocationCallbacks *allocator, VkSwapchainKHR *swapchain)
  
  {
-@@ -1875,6 +2025,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
+@@ -1875,6 +2044,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
          if (qIt != FgDeviceQueuesMap.end()) fgQueues = qIt->second;
  
      }
@@ -290,7 +309,7 @@ index 0476bc7..329f283 100644
  if (oldState && !FgSwapchainRuntime.wait(*oldState)) return VK_ERROR_DEVICE_LOST;
  
      const auto retireOld = [&] {
-@@ -2321,6 +2472,7 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2321,6 +2491,7 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
      uint64_t interpolationDispatches = 0;
      uint64_t ffxPresentCount = 0;
      asteria_fg_runtime::FgSwapchainState *fg = nullptr;
@@ -298,7 +317,7 @@ index 0476bc7..329f283 100644
      {
          const std::lock_guard<std::mutex> lock(StateMutex);
          for (uint32_t index = 0; index < info->swapchainCount; ++index)
-@@ -2332,6 +2484,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2332,6 +2503,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  if (info->swapchainCount != 1) return VK_ERROR_FEATURE_NOT_PRESENT;
                  fg = it->second.get();
@@ -309,7 +328,7 @@ index 0476bc7..329f283 100644
              }
              else if (asteria_vk::IsProxyToken(info->pSwapchains[index]))
                  return VK_ERROR_SURFACE_LOST_KHR;
-@@ -2382,6 +2538,15 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2382,6 +2557,15 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
          if (info->pResults) info->pResults[0] = result;
          inputAttempts = fg->frameID;
          interpolationDispatches = fg->interpolationDispatches.load();
@@ -325,7 +344,7 @@ index 0476bc7..329f283 100644
      }
      else
      {
-@@ -2407,6 +2572,22 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2407,6 +2591,22 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              State["fg_camera_valid"] = FgCamera.valid;
              State["fg_camera_in_game"] = FgCamera.inGame;
              State["fg_camera_sample_count"] = FgCamera.sampleCount;
@@ -348,7 +367,7 @@ index 0476bc7..329f283 100644
          }
          Json waits = Json::array();
          for (uint32_t i = 0; i < info->waitSemaphoreCount; ++i) waits.push_back(Id(info->pWaitSemaphores[i]));
-@@ -2426,9 +2607,20 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2426,9 +2626,20 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
                  record["frame_generation_active"] = inputReady && callbackRecorded &&
                      (single_result == VK_SUCCESS || single_result == VK_SUBOPTIMAL_KHR);
                  record["present_count_ffx"] = ffxPresentCount;
