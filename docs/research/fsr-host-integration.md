@@ -7,7 +7,7 @@
 ## 安装与一次测试
 
 1. 解压到独立文件夹，完全退出游戏和两个 Host，运行 `install_fg_test.cmd`。脚本自动定位 L4D2、校验包内 Host、后端与 Vulkan Layer 文件，并将八个目标文件的原内容和哈希保存到游戏目录的 `.ldb-fg-test-backup`；找不到非默认 Steam 库时，把游戏根目录拖到 CMD 上或作为第一个参数传入。
-2. 完全退出 Steam，再运行 `start_fg_test.cmd`，进入地图正常游玩约一分钟，覆盖转头、平移、开枪、换弹及之前出现圆环特效的位置。本轮由 x64 Vulkan Layer 接管 replacement swapchain，旧 Host FG presenter 会被关闭，避免两套插帧链同时运行；无需按 F8 或 F9。
+2. 完全退出 Steam，再运行 `start_fg_test.cmd`，进入地图正常游玩约一分钟，覆盖转头、平移、开枪、换弹及之前出现圆环特效的位置。本轮由 x64 Host 采集主视图相机、真实帧间隔、深度资源身份和 HUD 边界，通过同进程 ABI 控制 Vulkan Layer；只有 Layer 接管 replacement swapchain，Host 不额外 Present；无需按 F8 或 F9。
 3. 正常退出，压缩完整 `fg-results` 上传。启动脚本会在新的会话目录同时收集 Bridge、DXVK 与 FG 日志。无需 `capture.trigger`，也无需先测帧率收益。
 4. 测试结束且游戏和 Host 已退出时运行 `remove_fg_test.cmd`。脚本先确认八个测试文件仍与本包完全相同，再恢复原文件并删除 `.ldb-fg-test-backup`。若文件在测试后被其他工具修改，脚本会停止而不会覆盖后来的文件。
 
@@ -32,7 +32,18 @@
 
 Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有四条 queue。本移植从固定 MIT 源码提交重新构建 AMD64 DLL；创建设备时申请所有 graphics/compute/transfer 候选 queue，拿到真实 Win32 surface 后再检查 present support，并为 game、async compute、present、image acquire 分配四条互不相同的物理 queue。各角色保留自己的 family index，交给官方 FFX 的跨 family ownership-transfer 路径。Arc B580 已观测到的 `1 + 4 + 2` 物理拓扑满足数量要求，最终能否启用由该次 surface 的 present-support 实测决定。
 
-首个闭环使用 Layer 内部的场景深度／相机运动重建和官方 Optical Flow，因此不依赖 Asteria 原有的 x86 ReShade input provider。层会优先接受以后接入的原生 provider；当前的估算输入旨在先验收 replacement swapchain、真实生成帧回调与显示链。`asteria-layer.json` 中出现 swapchain adapter、有效输入和 interpolation dispatch 后，才算这条新路径实际工作。
+当前闭环已把 Asteria/Danyria 的 D3D9 语义采集方式移到 LDB x64 Host。Host 在实际命令序列中识别 HDR 主视图、深度表面、相机 shader 常量、HUD 前边界和 Present 时间，再调用 `AsteriaSubmitHostFrameV2`。Layer 会采用 Host 提交的相机、near/far/FOV、单位、真实 delta 和历史重置信号；图像不经过 IPC 或 CPU 复制。
+
+本版由 Host 在同一个 Vulkan 设备上把主场景深度转换成 `R32F`，并用当前/上一主视图矩阵生成 `RG32F` 相机运动向量。ABI v2 同时携带设备、图像、格式和布局；Layer 逐项核对后直接把资源交给 FFX，拒绝跨设备、空句柄、错误格式或非只读布局。Layer 的 Vulkan 猜测采集仅保留为回退诊断，不参与通过 Host v2 验证的帧。
+
+`LDB_FG_MODE=provider` 表示 Host 只生产数据且只调用一次原始 Present，不再运行旧预览或第二次 Present。`asteria-layer.json` 中同时满足以下条件，才能证明 Host 控制的算法与提交链已工作：
+
+- `host_frame_accepted > 0` 且 `host_frame_consumed > 0`；
+- swapchain 的 `host_camera_control_active=true`、`host_depth_resource_connected=true`，且 `motion_input_source=1`（Engine）；
+- `interpolation_dispatches > 0`，并且没有 native Present 失败；
+- `output_presents_per_input` 接近 2。
+
+Host 日志还会记录 `gpu_motion_pixels`；转头或平移时它应大于零，用来排除全零运动输入。上述条件证明 Host 真深度／运动输入、官方算法调度和约 2:1 输出提交链。它们仍不证明显示器实际扫描了全部帧，也不能单独排除生成图等于相邻原帧。`generated_content_distinctness=unverified_no_gpu_content_probe` 会保持未验证，直到 Layer 的 GPU 内容差异探针完成。分析器当前最高结论为 `host_depth_motion_algorithm_and_extra_present_confirmed`，不会把提交计数写成物理显示验收。
 
 本轮开始迁移 Danyria/Asteria 的 replacement-swapchain 路径。设置 `LDB_FG_PRESENTER=1` 后，配套 x64 DXVK 会从实际 graphics family 按能力请求最多四个 queue，并通过 `LdbFgQueryDeviceInfoV1` 向 x64 Host 返回 Vulkan instance、physical/logical device、game/present/acquire/async queue 及逻辑设备 feature。Host 会把队列数和三项 handle 的所有者一致性写入 `session` 事件。
 
@@ -40,7 +51,7 @@ Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有�
 
 Host 同时按 `LdbFgFrameInputsV1` 形成逐帧输入包。包将 generation/frame ticket、最终颜色、场景深度、可选 HUD-less 颜色、当前/上一帧 view-projection、恢复后的相机参数和真实帧间隔绑定在一起；当前运动输入沿用已验证的 depth + camera reconstruction，动态物体由 FFX Optical Flow 补足。日志出现 `presenter_input.valid=true` 表示这些字段来自同一帧且通过合同校验。
 
-这一轮仍是采集合同验收：`gpu_ready_token=false` 和 `present_ticket=false` 是预期值，表示资源目前在同步 Host 路径完成、尚未绑定 replacement swapchain 的 image index/acquire sequence。
+旧 `LdbFgFrameInputsV1` 的 `gpu_ready_token=false` 和 `present_ticket=false` 仍只用于旧资源接入诊断。实际 Layer 消费走同进程 Host ABI v2：Host 在提交前等待导出计算完成，Layer 在同一次原始 Present 内消费，下一帧 Host 写入前又会等待共用队列，因此不依赖旧 ticket 字段。
 
 B580 首次采集显示当前 DXVK graphics family 只申请到一个 queue，`presenter_reserved_queues=0`。这只能说明当前逻辑设备的该队列族拓扑，不能推断物理设备没有其他 queue family。官方 FFX replacement swapchain 会拒绝 game、async、present、acquire 中任意两个非空 handle 相同；其中 async 可以为空，但 game、present、acquire 仍需三个不同 handle。因此不能把同一个 graphics queue 填进四个角色，也不能直接照搬 Danyria 固定四队列初始化。
 

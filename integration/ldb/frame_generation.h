@@ -6,6 +6,7 @@
 #include "fsr_presenter_api.h"
 #include "frame_math.h"
 #include "resident_frame_generator.h"
+#include "asteria_host_control.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -26,7 +27,8 @@ inline std::wstring readEnv(const wchar_t *key) {
   return s;
 }
 struct Config {
-  bool enabled = false, generatedOnly = false, hotkeys = true;
+  bool enabled = false, generatedOnly = false, providerOnly = false,
+       hotkeys = true;
   bool presenterProbe = false;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
@@ -42,10 +44,12 @@ struct Config {
 
       auto mode = readEnv(L"LDB_FG_MODE");
 
-      if (!mode.empty() && mode != L"paired" && mode != L"generated")
+      if (!mode.empty() && mode != L"paired" && mode != L"generated" &&
+          mode != L"provider")
         throw std::runtime_error("FG mode");
 
       generatedOnly = mode == L"generated";
+      providerOnly = mode == L"provider";
       autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
       auto pacing = readEnv(L"LDB_FG_PACING_MS");
       if (!pacing.empty()) {
@@ -156,6 +160,7 @@ inline std::string presenterTopologyJson(const PresenterDeviceProbe &probe) {
 struct State {
   IDirect3DDevice9 *device = nullptr;
   std::unique_ptr<ResidentFg> gpu;
+  AsteriaHostControl asteria;
 
   ldb_camera::Candidate candidate;
   ldb_camera::Matrix currentMatrix{}, previousMatrix{};
@@ -167,7 +172,8 @@ struct State {
   uint32_t acceptedCaptures = 0, rejectedCaptures = 0;
   uint64_t presenterInputsAccepted = 0, presenterInputsRejected = 0;
   bool scene = false, nearSeen = false, nearCopied = false, uiCopied = false,
-       history = false, paused = false, generatedOnly = false, disabled = false;
+       history = false, paused = false, generatedOnly = false,
+       providerOnly = false, disabled = false;
 
   uint64_t nearTarget = 0, nearDraws = 0, nearCapturedDraws = 0;
   bool nearBeforeCopied = false, nearColourCopied = false, nearInvalid = false;
@@ -194,7 +200,8 @@ struct State {
   }
 
   explicit State(IDirect3DDevice9 *d)
-      : device(d), generatedOnly(config().generatedOnly) {
+      : device(d), generatedOnly(config().generatedOnly),
+        providerOnly(config().providerOnly) {
     captureLimit = config().captures;
     directory = config().root / ("fg-" + std::to_string(GetCurrentProcessId()) +
                                  "-" + std::to_string(GetTickCount64()) + "-" +
@@ -214,7 +221,9 @@ struct State {
          "\"qpc_frequency\":" + std::to_string(frequency.QuadPart) +
              ",\"full_size_gpu_history\":true,\"pixel_cpu_upload\":false,"
              "\"prototype\":true,\"mode\":" +
-             quote(generatedOnly ? "generated" : "paired") + ",\"backend\":" +
+             quote(providerOnly ? "host_provider"
+                                : (generatedOnly ? "generated" : "paired")) +
+             ",\"backend\":" +
              quote(ResidentFg::wantsFsr() ? "fsr_official" : "custom") +
              ",\"motion_source\":" +
              quote(ResidentFg::wantsFsr() ? "camera_plus_bounded_patch"
@@ -241,6 +250,10 @@ struct State {
              presenterTopologyJson(presenter) +
              ",\"presenter_input_api\":" +
              std::to_string(LDB_FG_INPUT_API_VERSION) +
+             ",\"host_layer_control_api\":" +
+             std::to_string(ASTERIA_HOST_FRAME_API_VERSION_2) +
+             ",\"host_layer_control_available\":" +
+             std::string(asteria.available() ? "true" : "false") +
              ",\"local_effect_policy\":" +
              quote(ResidentFg::wantsFsr() ? "regional_current_and_previous"
                                           : "whole_frame_rejection") +
@@ -249,6 +262,8 @@ struct State {
              ",\"pacing_budget_ms\":" + std::to_string(config().pacingMs));
   }
   ~State() {
+    AsteriaHostFrameStatsV2 stats;
+    const bool haveStats = asteria.query(stats);
     gpu.reset();
     if (pacingTimer) {
       CancelWaitableTimer(pacingTimer);
@@ -260,7 +275,17 @@ struct State {
              ",\"presenter_inputs_accepted\":" +
              std::to_string(presenterInputsAccepted) +
              ",\"presenter_inputs_rejected\":" +
-             std::to_string(presenterInputsRejected));
+             std::to_string(presenterInputsRejected) +
+             ",\"host_frames_attempted\":" +
+             std::to_string(asteria.attempted()) +
+             ",\"host_frames_accepted_local\":" +
+             std::to_string(asteria.accepted()) +
+             ",\"host_layer_stats_available\":" +
+             std::string(haveStats ? "true" : "false") +
+             ",\"host_frames_accepted_layer\":" +
+             std::to_string(haveStats ? stats.accepted : 0) +
+             ",\"host_frames_consumed_layer\":" +
+             std::to_string(haveStats ? stats.consumed : 0));
   }
   void emit(const char *event, uint32_t uid,
             const std::string &fields = {}) noexcept {
@@ -328,16 +353,21 @@ struct State {
         scheduleCapture();
       emit("mode", uid,
            "\"enabled\":" + std::string(paused ? "false" : "true") +
-               ",\"mode\":" + quote(generatedOnly ? "generated" : "paired"));
+               ",\"mode\":" +
+               quote(providerOnly ? "host_provider"
+                                  : (generatedOnly ? "generated" : "paired")));
     }
     if (b && !f9) {
-      generatedOnly = !generatedOnly;
+      if (!providerOnly)
+        generatedOnly = !generatedOnly;
       captureLimit = std::min(16u, captures + config().captures);
       if (config().autoCapture)
         scheduleCapture();
       emit("mode", uid,
            "\"enabled\":" + std::string(paused ? "false" : "true") +
-               ",\"mode\":" + quote(generatedOnly ? "generated" : "paired"));
+               ",\"mode\":" +
+               quote(providerOnly ? "host_provider"
+                                  : (generatedOnly ? "generated" : "paired")));
     }
     f8 = a;
     f9 = b;
@@ -675,6 +705,63 @@ struct State {
            "FG final backbuffer");
         transfer(back.get(), ResidentFg::CurrentFinal);
         ready = true;
+        bool providerGpuInputsReady = false;
+        ResidentFg::ProviderImages providerImages{};
+        if (providerOnly) {
+          const bool validHistory =
+              history && previousColor == sceneColor &&
+              previousDepth == sceneDepth;
+          ResidentFg::Params providerParams{};
+          if (ldb_camera::frameTransforms(
+                  validHistory ? previousMatrix : currentMatrix,
+                  currentMatrix, providerParams.rows)) {
+            const uint32_t providerFlags =
+                (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
+                (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u) |
+                (nearColourCopied ? 8u : 0u) |
+                (validHistory ? 32u : 0u);
+            providerParams.flags = {gpu->width, gpu->height, providerFlags,
+                                    previousFlags};
+            providerParams.thresholds[2] = 1.0f;
+            gpu->generate(providerParams, false, true);
+            quality = gpu->readQuality();
+            providerImages = gpu->providerImages();
+            providerGpuInputsReady = true;
+          }
+        }
+        const bool hostFrameAccepted = providerGpuInputsReady && asteria.submit(
+            currentMatrix, uint64_t(generation) + 1, frame + 1,
+            uint64_t(arrival), sourceIntervalMs, sceneColor, sceneDepth,
+            gpu->width, gpu->height, uint32_t(std::min<uint64_t>(draws, UINT32_MAX)),
+            uint32_t(std::min<uint64_t>(nearDraws, UINT32_MAX)), uiCopied,
+            !history, providerImages.device, providerImages.depth,
+            providerImages.motion, providerImages.depthFormat,
+            providerImages.motionFormat, providerImages.depthLayout,
+            providerImages.motionLayout);
+        if (frame < 16 || frame % 120 == 0) {
+          AsteriaHostFrameStatsV2 hostStats;
+          const bool haveHostStats = asteria.query(hostStats);
+          emit("host_layer_frame", uid,
+               "\"accepted\":" +
+                   std::string(hostFrameAccepted ? "true" : "false") +
+                   ",\"main_view\":true,\"scene_depth_observed\":true"
+                   ",\"camera_observed\":true,\"gpu_inputs_ready\":" +
+                   std::string(providerGpuInputsReady ? "true" : "false") +
+                   ",\"gpu_motion_pixels\":" +
+                   std::to_string(providerGpuInputsReady
+                                      ? quality.motionPixels()
+                                      : 0) +
+                   ",\"hud_boundary_observed\":" +
+                   std::string(uiCopied ? "true" : "false") +
+                   ",\"frame_time_ms\":" +
+                   std::to_string(sourceIntervalMs) +
+                   ",\"layer_stats_available\":" +
+                   std::string(haveHostStats ? "true" : "false") +
+                   ",\"layer_accepted_total\":" +
+                   std::to_string(haveHostStats ? hostStats.accepted : 0) +
+                   ",\"layer_consumed_total\":" +
+                   std::to_string(haveHostStats ? hostStats.consumed : 0));
+        }
         if (config().presenterProbe) {
           try {
             auto input = gpu->presenterInputs(
@@ -706,13 +793,13 @@ struct State {
                  "\"message\":" + quote(e.what()));
           }
         }
-        if (ResidentFg::wantsFsr() && !history) {
+        if (!providerOnly && ResidentFg::wantsFsr() && !history) {
           gpu->generateFsr(currentMatrix, currentMatrix, frame,
                            sourceIntervalMs, uiCopied, false);
           emit("fsr_history_primed", uid, "\"backend\":\"fsr_official\"");
         }
 
-        if (history && previousColor == sceneColor &&
+        if (!providerOnly && history && previousColor == sceneColor &&
             previousDepth == sceneDepth) {
           ResidentFg::Params params{};
 
@@ -777,7 +864,8 @@ struct State {
               emit(
                   "capture", uid,
                   "\"index\":" + std::to_string(captures) + ",\"mode\":" +
-                      quote(generatedOnly ? "generated" : "paired") +
+            quote(providerOnly ? "host_provider"
+                               : (generatedOnly ? "generated" : "paired")) +
                       (ResidentFg::wantsFsr()
                            ? ",\"quality_accepted\":" +
                                  std::string(qualityRejected ? "false" : "true")
@@ -949,7 +1037,9 @@ struct State {
                                          : "custom") +
             ",\"gpu_dispatch_scope\":" +
             quote(ResidentFg::wantsFsr() ? "preflight_only" : "generation") +
-            ",\"mode\":" + quote(generatedOnly ? "generated" : "paired") +
+            ",\"mode\":" +
+            quote(providerOnly ? "host_provider"
+                               : (generatedOnly ? "generated" : "paired")) +
             ",\"generated\":" + std::string(generatedFrame ? "true" : "false") +
             ",\"captured\":" + std::string(captured ? "true" : "false") +
             ",\"quality_rejected\":" +

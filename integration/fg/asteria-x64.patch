@@ -1,5 +1,5 @@
 diff --git a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
-index 0476bc7..1b12c1a 100644
+index 0476bc7..329f283 100644
 --- a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
 +++ b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
 @@ -25,6 +25,7 @@
@@ -71,7 +71,7 @@ index 0476bc7..1b12c1a 100644
 +                    priorities[i] = original.pQueuePriorities[i];
 +                modifiedQueues[existing].queueCount = wanted;
 +                modifiedQueues[existing].pQueuePriorities = priorities.data();
-+            }
+             }
 +            else
 +            {
 +                VkDeviceQueueCreateInfo queueInfo{VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
@@ -79,7 +79,7 @@ index 0476bc7..1b12c1a 100644
 +                queueInfo.queueCount = wanted;
 +                queueInfo.pQueuePriorities = priorities.data();
 +                modifiedQueues.push_back(queueInfo);
-             }
++            }
 +            fgFamilies.emplace_back(family, wanted, flags);
 +            if (fgFamily == UINT32_MAX && (flags & VK_QUEUE_GRAPHICS_BIT)) fgFamily = family;
          }
@@ -134,7 +134,106 @@ index 0476bc7..1b12c1a 100644
              }
          }
      }
-@@ -1816,6 +1832,48 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
+@@ -1756,6 +1772,98 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
+     return TRUE;
+ }
+ 
++static bool CopyHostFrameInput(const AsteriaHostFrameV2 *frame, AsteriaHostFrameV2 *outCopy)
++{
++    __try
++    {
++        if (!frame || frame->structSize != sizeof(AsteriaHostFrameV2) ||
++            frame->apiVersion != ASTERIA_HOST_FRAME_API_VERSION_2)
++            return false;
++        *outCopy = *frame;
++        return true;
++    }
++    __except (EXCEPTION_EXECUTE_HANDLER)
++    {
++        return false;
++    }
++}
++
++extern "C" int32_t __stdcall AsteriaSubmitHostFrameV2(const AsteriaHostFrameV2 *frame)
++{
++    AsteriaHostFrameV2 local{};
++    if (!CopyHostFrameInput(frame, &local)) return -1;
++    const std::lock_guard<std::mutex> lock(FgCamera.mutex);
++    ++FgCamera.hostSubmitted;
++    const uint32_t required = ASTERIA_HOST_FRAME_MAIN_VIEW | ASTERIA_HOST_FRAME_SCENE_DEPTH |
++        ASTERIA_HOST_FRAME_CAMERA | ASTERIA_HOST_FRAME_GPU_INPUTS;
++    bool finite = std::isfinite(local.deltaMilliseconds) && local.deltaMilliseconds > 0.0f && local.deltaMilliseconds <= 1000.0f &&
++        std::isfinite(local.cameraNear) && local.cameraNear > 0.0f && std::isfinite(local.cameraFar) && local.cameraFar > local.cameraNear &&
++        std::isfinite(local.cameraVerticalFov) && local.cameraVerticalFov > 0.0f && local.cameraVerticalFov < 3.14159265f &&
++        std::isfinite(local.metersPerUnit) && local.metersPerUnit > 0.0f;
++    for (const float value : local.cameraPosition) finite = finite && std::isfinite(value);
++    for (const float value : local.cameraUp) finite = finite && std::isfinite(value);
++    for (const float value : local.cameraRight) finite = finite && std::isfinite(value);
++    for (const float value : local.cameraForward) finite = finite && std::isfinite(value);
++    if (local.reserved || (local.flags & required) != required || !local.generation || !local.frameId ||
++        !local.qpc || !local.sceneColorId || !local.sceneDepthId || !local.width || !local.height ||
++        local.width > 4096 || local.height > 4096 || !local.worldDraws ||
++        !local.vkDevice || !local.depthImage || !local.motionImage ||
++        local.depthFormat != VK_FORMAT_R32_SFLOAT ||
++        local.motionFormat != VK_FORMAT_R32G32_SFLOAT ||
++        local.depthLayout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
++        local.motionLayout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || !finite)
++    {
++        ++FgCamera.hostRejected;
++        return -1;
++    }
++    if (local.generation < FgCamera.hostGeneration ||
++        (local.generation == FgCamera.hostGeneration && local.frameId <= FgCamera.hostFrameId))
++    {
++        ++FgCamera.hostRejected;
++        return -3;
++    }
++    FgCamera.valid = true; FgCamera.inGame = true;
++    FgCamera.reset = (local.flags & ASTERIA_HOST_FRAME_HISTORY_RESET) != 0;
++    FgCamera.nearPlane = local.cameraNear; FgCamera.farPlane = local.cameraFar;
++    FgCamera.fovVerticalRadians = local.cameraVerticalFov;
++    std::memcpy(FgCamera.position, local.cameraPosition, sizeof(FgCamera.position));
++    std::memcpy(FgCamera.up, local.cameraUp, sizeof(FgCamera.up));
++    std::memcpy(FgCamera.right, local.cameraRight, sizeof(FgCamera.right));
++    std::memcpy(FgCamera.forward, local.cameraForward, sizeof(FgCamera.forward));
++    FgCamera.hostFlags = local.flags; FgCamera.hostWidth = local.width; FgCamera.hostHeight = local.height;
++    FgCamera.hostGeneration = local.generation; FgCamera.hostFrameId = local.frameId; FgCamera.hostQpc = local.qpc;
++    FgCamera.sceneColorId = local.sceneColorId; FgCamera.sceneDepthId = local.sceneDepthId;
++    FgCamera.worldDraws = local.worldDraws; FgCamera.nearDraws = local.nearDraws;
++    FgCamera.hostDeltaMilliseconds = local.deltaMilliseconds; FgCamera.hostMetersPerUnit = local.metersPerUnit;
++    FgCamera.hostVkDevice = local.vkDevice; FgCamera.hostDepthImage = local.depthImage;
++    FgCamera.hostMotionImage = local.motionImage; FgCamera.hostDepthFormat = local.depthFormat;
++    FgCamera.hostMotionFormat = local.motionFormat; FgCamera.hostDepthLayout = local.depthLayout;
++    FgCamera.hostMotionLayout = local.motionLayout;
++    ++FgCamera.hostAccepted; ++FgCamera.sampleCount;
++    return 0;
++}
++
++extern "C" int32_t __stdcall AsteriaQueryHostFrameStatsV2(AsteriaHostFrameStatsV2 *stats)
++{
++    __try
++    {
++        if (!stats || stats->structSize != sizeof(AsteriaHostFrameStatsV2) ||
++            stats->apiVersion != ASTERIA_HOST_FRAME_API_VERSION_2) return -1;
++        const std::lock_guard<std::mutex> lock(FgCamera.mutex);
++        AsteriaHostFrameStatsV2 result{sizeof(AsteriaHostFrameStatsV2), ASTERIA_HOST_FRAME_API_VERSION_2};
++        result.submitted = FgCamera.hostSubmitted; result.accepted = FgCamera.hostAccepted;
++        result.consumed = FgCamera.hostConsumed; result.rejected = FgCamera.hostRejected;
++        result.staleAtPresent = FgCamera.hostStaleAtPresent; result.latestGeneration = FgCamera.hostGeneration;
++        result.latestFrameId = FgCamera.hostFrameId; result.latestConsumedFrameId = FgCamera.latestConsumedHostFrameId;
++        *stats = result;
++        return 0;
++    }
++    __except (EXCEPTION_EXECUTE_HANDLER)
++    {
++        return -1;
++    }
++}
++
+ static bool IsFgSwapchainHandle(VkSwapchainKHR swapchain)
+ {
+     const std::lock_guard<std::mutex> lock(StateMutex);
+@@ -1816,6 +1924,48 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
      }
  }
  
@@ -183,7 +282,7 @@ index 0476bc7..1b12c1a 100644
  static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCreateInfoKHR *info, const VkAllocationCallbacks *allocator, VkSwapchainKHR *swapchain)
  
  {
-@@ -1875,6 +1933,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
+@@ -1875,6 +2025,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
          if (qIt != FgDeviceQueuesMap.end()) fgQueues = qIt->second;
  
      }
@@ -191,7 +290,7 @@ index 0476bc7..1b12c1a 100644
  if (oldState && !FgSwapchainRuntime.wait(*oldState)) return VK_ERROR_DEVICE_LOST;
  
      const auto retireOld = [&] {
-@@ -2321,6 +2380,7 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2321,6 +2472,7 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
      uint64_t interpolationDispatches = 0;
      uint64_t ffxPresentCount = 0;
      asteria_fg_runtime::FgSwapchainState *fg = nullptr;
@@ -199,7 +298,7 @@ index 0476bc7..1b12c1a 100644
      {
          const std::lock_guard<std::mutex> lock(StateMutex);
          for (uint32_t index = 0; index < info->swapchainCount; ++index)
-@@ -2332,6 +2392,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2332,6 +2484,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  if (info->swapchainCount != 1) return VK_ERROR_FEATURE_NOT_PRESENT;
                  fg = it->second.get();
@@ -210,7 +309,7 @@ index 0476bc7..1b12c1a 100644
              }
              else if (asteria_vk::IsProxyToken(info->pSwapchains[index]))
                  return VK_ERROR_SURFACE_LOST_KHR;
-@@ -2382,6 +2446,15 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2382,6 +2538,15 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
          if (info->pResults) info->pResults[0] = result;
          inputAttempts = fg->frameID;
          interpolationDispatches = fg->interpolationDispatches.load();
@@ -226,7 +325,30 @@ index 0476bc7..1b12c1a 100644
      }
      else
      {
-@@ -2426,6 +2499,12 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2407,6 +2572,22 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+             State["fg_camera_valid"] = FgCamera.valid;
+             State["fg_camera_in_game"] = FgCamera.inGame;
+             State["fg_camera_sample_count"] = FgCamera.sampleCount;
++            State["host_frame_api_version"] = ASTERIA_HOST_FRAME_API_VERSION_2;
++            State["host_frame_submitted"] = FgCamera.hostSubmitted;
++            State["host_frame_accepted"] = FgCamera.hostAccepted;
++            State["host_frame_consumed"] = FgCamera.hostConsumed;
++            State["host_frame_rejected"] = FgCamera.hostRejected;
++            State["host_frame_stale_at_present"] = FgCamera.hostStaleAtPresent;
++            State["host_frame_latest_id"] = FgCamera.hostFrameId;
++            State["host_frame_latest_consumed_id"] = FgCamera.latestConsumedHostFrameId;
++            State["host_scene_depth_semantic_observed"] = (FgCamera.hostFlags & ASTERIA_HOST_FRAME_SCENE_DEPTH) != 0;
++            State["host_scene_depth_image_consumed"] = FgCamera.hostConsumed > 0 &&
++                (FgCamera.hostFlags & ASTERIA_HOST_FRAME_GPU_INPUTS) != 0;
++        }
++        uint64_t hostConsumedAtPresent = 0;
++        {
++            const std::lock_guard<std::mutex> camLock(FgCamera.mutex);
++            hostConsumedAtPresent = FgCamera.hostConsumed;
+         }
+         Json waits = Json::array();
+         for (uint32_t i = 0; i < info->waitSemaphoreCount; ++i) waits.push_back(Id(info->pWaitSemaphores[i]));
+@@ -2426,9 +2607,20 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
                  record["frame_generation_active"] = inputReady && callbackRecorded &&
                      (single_result == VK_SUCCESS || single_result == VK_SUBOPTIMAL_KHR);
                  record["present_count_ffx"] = ffxPresentCount;
@@ -239,6 +361,24 @@ index 0476bc7..1b12c1a 100644
                  record["frame_input_ready"] = inputReady;
                  record["motion_input_source"] = motionSource;
                  record["frame_input_status"] = inputReady ? "validated_frame_inputs" : "frame_inputs_unavailable";
++                record["host_camera_control_active"] = hostConsumedAtPresent > 0;
++                record["host_depth_resource_connected"] = hostConsumedAtPresent > 0;
++                record["generated_content_distinctness"] = "unverified_no_gpu_content_probe";
++                record["fg_acceptance_level"] = hostConsumedAtPresent > 0 && interpolationDispatches > 0 && ffxPresentCount > inputAttempts ?
++                    "host_depth_motion_driven_dispatch_and_extra_present" : "incomplete";
+                 const auto liveDiag = asteria_live_scene::GlobalRuntime().QueryDiagnostics();
+                 record["live_depth_snapshots_recorded"] = liveDiag.depthSnapshotsRecorded;
+                 record["live_depth_resolves_dispatched"] = liveDiag.depthResolvesDispatched;
+diff --git a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.def b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.def
+index 8252413..89e429e 100644
+--- a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.def
++++ b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.def
+@@ -15,3 +15,5 @@ EXPORTS
+     AsteriaUnregisterFrameInputProviderV1=_AsteriaUnregisterFrameInputProviderV1@8
+     AsteriaQueryFrameInputTicketV1=_AsteriaQueryFrameInputTicketV1@28
+     AsteriaSubmitFrameInputsV1=_AsteriaSubmitFrameInputsV1@4
++    AsteriaSubmitHostFrameV2=_AsteriaSubmitHostFrameV2@4
++    AsteriaQueryHostFrameStatsV2=_AsteriaQueryHostFrameStatsV2@4
 diff --git a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h b/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
 index 3f56217..328acbf 100644
 --- a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
@@ -278,7 +418,7 @@ index 3f56217..328acbf 100644
                  nodes.clear();
                  return false;
 diff --git a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
-index 54799dd..73b83d6 100644
+index 54799dd..2c0692c 100644
 --- a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
 +++ b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
 @@ -20,9 +20,11 @@
@@ -293,7 +433,67 @@ index 54799dd..73b83d6 100644
  #include <memory>
  #include <mutex>
  #include <vector>
-@@ -48,6 +50,25 @@ struct AsteriaFrameGenerationCameraV1
+@@ -45,9 +47,85 @@ struct AsteriaFrameGenerationCameraV1
+     float camera_forward[3];
+ };
+ 
++#define ASTERIA_HOST_FRAME_API_VERSION_2 2u
++#define ASTERIA_HOST_FRAME_MAIN_VIEW (1u << 0)
++#define ASTERIA_HOST_FRAME_SCENE_DEPTH (1u << 1)
++#define ASTERIA_HOST_FRAME_CAMERA (1u << 2)
++#define ASTERIA_HOST_FRAME_HUD_BOUNDARY (1u << 3)
++#define ASTERIA_HOST_FRAME_HISTORY_RESET (1u << 4)
++#define ASTERIA_HOST_FRAME_GPU_INPUTS (1u << 5)
++
++struct AsteriaHostFrameV2
++{
++    uint32_t structSize;
++    uint32_t apiVersion;
++    uint32_t flags;
++    uint32_t reserved;
++    uint64_t generation;
++    uint64_t frameId;
++    uint64_t qpc;
++    uint64_t sceneColorId;
++    uint64_t sceneDepthId;
++    uint32_t width;
++    uint32_t height;
++    uint32_t worldDraws;
++    uint32_t nearDraws;
++    float deltaMilliseconds;
++    float cameraNear;
++    float cameraFar;
++    float cameraVerticalFov;
++    float metersPerUnit;
++    float cameraPosition[3];
++    float cameraUp[3];
++    float cameraRight[3];
++    float cameraForward[3];
++    uint64_t vkDevice;
++    uint64_t depthImage;
++    uint64_t motionImage;
++    uint32_t depthFormat;
++    uint32_t motionFormat;
++    uint32_t depthLayout;
++    uint32_t motionLayout;
++};
++
++struct AsteriaHostFrameStatsV2
++{
++    uint32_t structSize;
++    uint32_t apiVersion;
++    uint64_t submitted;
++    uint64_t accepted;
++    uint64_t consumed;
++    uint64_t rejected;
++    uint64_t staleAtPresent;
++    uint64_t latestGeneration;
++    uint64_t latestFrameId;
++    uint64_t latestConsumedFrameId;
++};
++static_assert(sizeof(AsteriaHostFrameV2) == 184, "Host frame ABI changed");
++static_assert(sizeof(AsteriaHostFrameStatsV2) == 72, "Host frame stats ABI changed");
++
  namespace asteria_fg_runtime
  {
  
@@ -319,7 +519,23 @@ index 54799dd..73b83d6 100644
  struct GpuImage
  {
      VkImage handle = VK_NULL_HANDLE;
-@@ -74,15 +95,22 @@ struct FgCameraState
+@@ -69,20 +147,38 @@ struct FgCameraState
+     float right[3] = {1.0f, 0.0f, 0.0f};
+     float forward[3] = {0.0f, 1.0f, 0.0f};
+     uint64_t sampleCount = 0;
++    uint32_t hostFlags = 0, hostWidth = 0, hostHeight = 0;
++    uint64_t hostGeneration = 0, hostFrameId = 0, hostQpc = 0;
++    uint64_t sceneColorId = 0, sceneDepthId = 0;
++    uint32_t worldDraws = 0, nearDraws = 0;
++    float hostDeltaMilliseconds = 0.0f, hostMetersPerUnit = 0.0254f;
++    uint64_t hostVkDevice = 0, hostDepthImage = 0, hostMotionImage = 0;
++    uint32_t hostDepthFormat = 0, hostMotionFormat = 0;
++    uint32_t hostDepthLayout = 0, hostMotionLayout = 0;
++    uint64_t hostSubmitted = 0, hostAccepted = 0, hostConsumed = 0;
++    uint64_t hostRejected = 0, hostStaleAtPresent = 0;
++    uint64_t latestConsumedHostFrameId = 0;
+ };
+ 
  struct FgDeviceQueues
  {
      uint32_t graphicsFamily = UINT32_MAX;
@@ -342,7 +558,7 @@ index 54799dd..73b83d6 100644
      VkDevice device = VK_NULL_HANDLE;
      VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
      PFN_vkGetDeviceProcAddr nextGdpa = nullptr;
-@@ -95,6 +123,9 @@ struct FgSwapchainState
+@@ -95,6 +191,9 @@ struct FgSwapchainState
      uint32_t height = 0;
      VkFormat format = VK_FORMAT_UNDEFINED;
      uint64_t frameID = 0;
@@ -352,7 +568,118 @@ index 54799dd..73b83d6 100644
      std::vector<uint8_t> scratch;
      FfxInterface backend{};
      std::unique_ptr<FfxFrameInterpolationContext> interpolation;
-@@ -435,20 +466,22 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -115,6 +214,7 @@ struct FgSwapchainState
+     std::shared_ptr<const FrameInputs> currentInputs;
+     std::atomic<bool> historyReset{true};
+     std::atomic<uint64_t> interpolationDispatches{0};
++    uint64_t consumedHostGeneration = 0, consumedHostFrameId = 0;
+ };
+ 
+ inline bool IsFrameGenerationRequestedByEnv()
+@@ -258,9 +358,6 @@ struct InternalInputLease
+ inline std::shared_ptr<const FrameInputs> MakeEstimatedInternalInputs(FgSwapchainState &state, uint64_t frame)
+ {
+     auto lease = std::make_shared<InternalInputLease>();
+-    lease->depthBox = asteria_vk::Image(state.device, state.internalDepth.handle);
+-    lease->motionBox = asteria_vk::Image(state.device, state.estimatedMotion.handle);
+-    if (!lease->depthBox || !lease->motionBox) return nullptr;
+     asteria_live_scene::GlobalRuntime().EnsureInitialized(
+         state.device, state.physicalDevice, state.nextGdpa,
+         state.width, state.height, state.internalDepth.handle, state.estimatedMotion.handle);
+@@ -269,7 +366,59 @@ inline std::shared_ptr<const FrameInputs> MakeEstimatedInternalInputs(FgSwapchai
+     auto input = std::make_shared<FrameInputs>();
+     input->device = reinterpret_cast<uintptr_t>(state.device); input->frameID = frame;
+     input->width = state.width; input->height = state.height; input->deltaMilliseconds = 16.6667f;
+-    if (committed.valid)
++    bool hostCamera = false, hostGpuInputs = false;
++    VkImage inputDepth = state.internalDepth.handle;
++    VkImage inputMotion = state.estimatedMotion.handle;
++    if (state.cameraState)
++    {
++        const std::lock_guard<std::mutex> lock(state.cameraState->mutex);
++        auto &host = *state.cameraState;
++        const uint32_t required = ASTERIA_HOST_FRAME_MAIN_VIEW | ASTERIA_HOST_FRAME_SCENE_DEPTH | ASTERIA_HOST_FRAME_CAMERA;
++        hostCamera = host.valid && host.inGame && (host.hostFlags & required) == required &&
++            host.hostWidth == state.width && host.hostHeight == state.height;
++        const uint32_t gpuRequired = required | ASTERIA_HOST_FRAME_GPU_INPUTS;
++        hostGpuInputs = host.valid && (host.hostFlags & gpuRequired) == gpuRequired &&
++            host.hostWidth == state.width && host.hostHeight == state.height &&
++            host.hostVkDevice == uint64_t(reinterpret_cast<uintptr_t>(state.device)) &&
++            host.hostDepthImage && host.hostMotionImage &&
++            host.hostDepthFormat == VK_FORMAT_R32_SFLOAT &&
++            host.hostMotionFormat == VK_FORMAT_R32G32_SFLOAT &&
++            host.hostDepthLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
++            host.hostMotionLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
++        hostCamera = hostCamera && hostGpuInputs;
++        if (hostGpuInputs)
++        {
++            inputDepth = reinterpret_cast<VkImage>(uintptr_t(host.hostDepthImage));
++            inputMotion = reinterpret_cast<VkImage>(uintptr_t(host.hostMotionImage));
++        }
++        if (hostCamera)
++        {
++            input->deltaMilliseconds = host.hostDeltaMilliseconds;
++            input->nearPlane = host.nearPlane; input->farPlane = host.farPlane;
++            input->verticalFovRadians = host.fovVerticalRadians; input->metersPerUnit = host.hostMetersPerUnit;
++            std::memcpy(input->position, host.position, sizeof(input->position));
++            std::memcpy(input->up, host.up, sizeof(input->up));
++            std::memcpy(input->right, host.right, sizeof(input->right));
++            std::memcpy(input->forward, host.forward, sizeof(input->forward));
++            const bool fresh = host.hostGeneration > state.consumedHostGeneration ||
++                (host.hostGeneration == state.consumedHostGeneration && host.hostFrameId > state.consumedHostFrameId);
++            if (fresh)
++            {
++                input->historyReset = frame == 0 || (host.hostFlags & ASTERIA_HOST_FRAME_HISTORY_RESET) != 0 ||
++                    (state.consumedHostGeneration && host.hostGeneration != state.consumedHostGeneration);
++                state.consumedHostGeneration = host.hostGeneration; state.consumedHostFrameId = host.hostFrameId;
++                host.latestConsumedHostFrameId = host.hostFrameId; ++host.hostConsumed;
++            }
++            else
++            {
++                input->historyReset = true; ++host.hostStaleAtPresent;
++            }
++        }
++    }
++    lease->depthBox = asteria_vk::Image(state.device, inputDepth);
++    lease->motionBox = asteria_vk::Image(state.device, inputMotion);
++    if (!lease->depthBox || !lease->motionBox) return nullptr;
++    if (!hostCamera && committed.valid)
+     {
+         input->nearPlane = committed.nearPlane;
+         input->farPlane = committed.farPlane;
+@@ -281,17 +430,18 @@ inline std::shared_ptr<const FrameInputs> MakeEstimatedInternalInputs(FgSwapchai
+         std::memcpy(input->forward, committed.forward, sizeof(input->forward));
+         input->historyReset = (frame == 0 || !committed.hasPreviousCamera);
+     }
+-    else
++    else if (!hostCamera)
+     {
+         input->nearPlane = 0.1f; input->farPlane = 5000.0f; input->verticalFovRadians = 1.0f; input->metersPerUnit = 1.0f;
+         input->up[1] = 1.0f; input->right[0] = 1.0f; input->forward[2] = 1.0f;
+         input->historyReset = frame == 0;
+     }
+     input->motionScale = {float(state.width), float(state.height)};
+-    input->motionSource = MotionInputSource::Estimated; input->sceneDepth = true; input->synchronized = true;
++    input->motionSource = hostGpuInputs ? MotionInputSource::Engine : MotionInputSource::Estimated;
++    input->sceneDepth = true; input->synchronized = true;
+     input->hudCompositionVerified = true; input->lifetime = lease;
+-    input->depth.resource = lease->depthBox; input->depth.description = state.internalDepth.description; input->depth.state = FFX_RESOURCE_STATE_COMPUTE_READ;
+-    input->motion.resource = lease->motionBox; input->motion.description = state.estimatedMotion.description; input->motion.state = FFX_RESOURCE_STATE_COMPUTE_READ;
++    input->depth.resource = lease->depthBox; input->depth.description = MakeImageDescription(FFX_SURFACE_FORMAT_R32_FLOAT, state.width, state.height); input->depth.state = FFX_RESOURCE_STATE_COMPUTE_READ;
++    input->motion.resource = lease->motionBox; input->motion.description = MakeImageDescription(FFX_SURFACE_FORMAT_R32G32_FLOAT, state.width, state.height); input->motion.state = FFX_RESOURCE_STATE_COMPUTE_READ;
+     return input;
+ }
+ 
+@@ -348,7 +498,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+     if (currentFrameId == 0 || reset)
+         for (GpuImage *image : {&state.reconstructed, &state.dilatedDepth, &state.dilatedMotion, &state.vectors, &state.scd})
+             RecordImageBarrier(cmd, image->handle, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+-    if (state.estimatedInternalInputs && state.internalDepth.handle && state.estimatedMotion.handle)
++    if (input->motionSource == MotionInputSource::Estimated && state.estimatedInternalInputs && state.internalDepth.handle && state.estimatedMotion.handle)
+     {
+         if (!asteria_live_scene::GlobalRuntime().RecordResolveAndMotion(
+                 state.device, cmd, state.internalDepth.handle, state.estimatedMotion.handle, reset))
+@@ -435,20 +585,22 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
  
  inline void DestroySwapchainResources(FgSwapchainState &state)
  {
@@ -379,7 +706,7 @@ index 54799dd..73b83d6 100644
      }
      else if (state.device != VK_NULL_HANDLE && state.inputSession)
          vkDeviceWaitIdle(state.device);
-@@ -461,16 +494,25 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
+@@ -461,16 +613,25 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
      state.historyReset.store(true);
      if (state.interpolationCreated && state.interpolation)
      {
@@ -405,7 +732,7 @@ index 54799dd..73b83d6 100644
      if (state.device != VK_NULL_HANDLE)
      {
          DestroyGpuImage(state.device, state.reconstructed);
-@@ -494,6 +536,8 @@ inline VkResult InitializeSwapchainResources(
+@@ -494,6 +655,8 @@ inline VkResult InitializeSwapchainResources(
      FgCameraState *cameraState)
  {
      auto provider = CurrentFrameInputProvider();
@@ -414,7 +741,7 @@ index 54799dd..73b83d6 100644
      if (!provider && IsEstimatedInternalInputsRequested()) provider = EstimatedProvider();
      if (!provider || !createInfo) return VK_ERROR_FEATURE_NOT_PRESENT;
      state.device = device;
-@@ -512,9 +556,9 @@ inline VkResult InitializeSwapchainResources(
+@@ -512,9 +675,9 @@ inline VkResult InitializeSwapchainResources(
      fgInfo.device = device;
      fgInfo.physicalDevice = physicalDevice;
      fgInfo.gameQueue = {queues.gameQueue, queues.graphicsFamily, nullptr};
@@ -427,7 +754,7 @@ index 54799dd..73b83d6 100644
      fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;
  
      state.deviceContext = {device, physicalDevice, nextGdpa};
-@@ -545,6 +589,7 @@ inline VkResult InitializeSwapchainResources(
+@@ -545,6 +708,7 @@ inline VkResult InitializeSwapchainResources(
              }
          }
      }
@@ -435,7 +762,7 @@ index 54799dd..73b83d6 100644
      const VkResult scResult = replacement.createSwapchainFFX(device, &ffxCreateInfo, allocator, &state.proxySwapchain, &fgInfo);
      state.nativeCreateAttempted = AsteriaNativeSwapchainCreateAttempted();
      if (scResult != VK_SUCCESS || state.proxySwapchain == VK_NULL_HANDLE)
-@@ -636,6 +681,7 @@ inline VkResult InitializeSwapchainResources(
+@@ -636,6 +800,7 @@ inline VkResult InitializeSwapchainResources(
  
  inline bool WaitForSwapchainIdle(FgSwapchainState &state)
  {

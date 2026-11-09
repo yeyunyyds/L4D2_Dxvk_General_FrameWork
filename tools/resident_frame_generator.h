@@ -28,6 +28,8 @@ public:
     CurrentNearAfter,
     PreviousNearBefore,
     PreviousNearAfter,
+    HostDepth,
+    HostMotion,
     SlotCount
   };
 
@@ -416,9 +418,13 @@ public:
     vkcheck(c.vkCreateFence(c.device, &fence, nullptr, &c.fence), "FG fence");
     for (size_t n = 0; n < SlotCount; n++) {
       auto &i = images[n];
-      const bool ds = n < CurrentUi, out = n == Output || n == Mask;
+      const bool ds = n < CurrentUi;
+      const bool hostDepth = n == HostDepth, hostMotion = n == HostMotion;
+      const bool out = n == Output || n == Mask || hostDepth || hostMotion;
       i.format =
-          ds ? depth
+          hostDepth ? VK_FORMAT_R32_SFLOAT
+          : hostMotion ? VK_FORMAT_R32G32_SFLOAT
+          : ds ? depth
              : (out ? VK_FORMAT_R8G8B8A8_UNORM
                     : (n >= CurrentNearBefore ? VK_FORMAT_R16G16B16A16_SFLOAT
                                               : color));
@@ -480,7 +486,7 @@ public:
         VkClearColorValue value{};
         vkCmdClearColorImage(c.command, i.image, i.layout, &value, 1, &range);
       }
-      transition(i, (n == Output || n == Mask)
+      transition(i, (n == Output || n == Mask || n == HostDepth || n == HostMotion)
                         ? VK_IMAGE_LAYOUT_GENERAL
                         : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
@@ -520,8 +526,8 @@ public:
     sm.codeSize = sizeof(frameGenerateSpirv);
     sm.pCode = frameGenerateSpirv;
     vkcheck(vkCreateShaderModule(c.device, &sm, nullptr, &shader), "FG shader");
-    std::array<VkDescriptorSetLayoutBinding, 16> bindings{};
-    for (uint32_t n = 0; n < 16; n++) {
+    std::array<VkDescriptorSetLayoutBinding, 18> bindings{};
+    for (uint32_t n = 0; n < 18; n++) {
       bindings[n].binding = n;
       bindings[n].descriptorCount = 1;
       bindings[n].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -534,7 +540,7 @@ public:
     }
     VkDescriptorSetLayoutCreateInfo sl{};
     sl.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    sl.bindingCount = 16;
+    sl.bindingCount = uint32_t(bindings.size());
     sl.pBindings = bindings.data();
     vkcheck(vkCreateDescriptorSetLayout(c.device, &sl, nullptr, &setLayout),
             "FG set layout");
@@ -566,7 +572,7 @@ public:
             "FG quality reduction pipeline");
     std::array<VkDescriptorPoolSize, 4> sizes{
         {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 12},
-         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2},
+         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4},
          {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
          {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}}};
     VkDescriptorPoolCreateInfo dp{};
@@ -609,18 +615,19 @@ public:
     counters = {};
     return result;
   }
-  void generate(const Params &params, bool deferSubmit = false) {
+  void generate(const Params &params, bool deferSubmit = false,
+                bool providerInputsOnly = false) {
     std::memcpy(uniformMap, &params, sizeof(params));
     VkMappedMemoryRange range{};
     range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     range.memory = uniformMemory;
     range.size = VK_WHOLE_SIZE;
     vkcheck(vkFlushMappedMemoryRanges(c.device, 1, &range), "FG uniform flush");
-    std::array<VkDescriptorImageInfo, 16> infos{};
-    std::array<VkWriteDescriptorSet, 16> writes{};
+    std::array<VkDescriptorImageInfo, 18> infos{};
+    std::array<VkWriteDescriptorSet, 18> writes{};
     VkDescriptorBufferInfo bufferInfo{uniform, 0, sizeof(Params)};
     VkDescriptorBufferInfo qualityInfo{qualityBuffer, 0, qualityBytes};
-    for (uint32_t n = 0; n < 16; n++) {
+    for (uint32_t n = 0; n < 18; n++) {
       writes[n].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       writes[n].dstSet = set;
       writes[n].dstBinding = n;
@@ -636,14 +643,17 @@ public:
       else if (n == 15)
         writes[n].pBufferInfo = &qualityInfo;
       else {
-        uint32_t slot = n >= 11 ? uint32_t(CurrentNearBefore) + n - 11
-                                : (n == 10 ? uint32_t(Mask) : n);
+        uint32_t slot = n == 16 ? uint32_t(HostDepth)
+                        : n == 17 ? uint32_t(HostMotion)
+                        : n >= 11 ? uint32_t(CurrentNearBefore) + n - 11
+                                  : (n == 10 ? uint32_t(Mask) : n);
         infos[n] = {(n < 8 || n >= 11) ? sampler : VK_NULL_HANDLE,
                     images[slot].view, images[slot].layout};
         writes[n].pImageInfo = &infos[n];
       }
     }
-    vkUpdateDescriptorSets(c.device, 16, writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(c.device, uint32_t(writes.size()), writes.data(), 0,
+                           nullptr);
     begin();
     VkBufferMemoryBarrier b{};
     b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -658,10 +668,12 @@ public:
                            1, &b, 0, nullptr);
     transition(images[Output], VK_IMAGE_LAYOUT_GENERAL);
     transition(images[Mask], VK_IMAGE_LAYOUT_GENERAL);
+    transition(images[HostDepth], VK_IMAGE_LAYOUT_GENERAL);
+    transition(images[HostMotion], VK_IMAGE_LAYOUT_GENERAL);
     vkCmdBindPipeline(c.command, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
     vkCmdBindDescriptorSets(c.command, VK_PIPELINE_BIND_POINT_COMPUTE,
                             pipelineLayout, 0, 1, &set, 0, nullptr);
-    if (timestamps) {
+    if (timestamps && !providerInputsOnly) {
       vkCmdResetQueryPool(c.command, timestamps, 0, 2);
       vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                           timestamps, 0);
@@ -680,7 +692,9 @@ public:
                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
                            1, &clear, 0, nullptr);
     vkCmdDispatch(c.command, (width + 7) / 8, (height + 7) / 8, 1);
-    if (timestamps) {
+    transition(images[HostDepth], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    transition(images[HostMotion], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    if (timestamps && !providerInputsOnly) {
       vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                           timestamps, 1);
       queryPending = true;
@@ -710,6 +724,23 @@ public:
                            0, nullptr);
     if (!deferSubmit)
       end();
+  }
+
+  struct ProviderImages {
+    uintptr_t device = 0;
+    uintptr_t depth = 0;
+    uintptr_t motion = 0;
+    uint32_t depthFormat = 0, motionFormat = 0;
+    uint32_t depthLayout = 0, motionLayout = 0;
+  };
+  ProviderImages providerImages() const {
+    return {reinterpret_cast<uintptr_t>(c.device),
+            reinterpret_cast<uintptr_t>(images[HostDepth].image),
+            reinterpret_cast<uintptr_t>(images[HostMotion].image),
+            uint32_t(images[HostDepth].format),
+            uint32_t(images[HostMotion].format),
+            uint32_t(images[HostDepth].layout),
+            uint32_t(images[HostMotion].layout)};
   }
   static bool wantsFsr() {
     wchar_t value[16]{};

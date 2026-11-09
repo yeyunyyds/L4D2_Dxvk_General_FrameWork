@@ -162,6 +162,8 @@ bool unsafeThinEffect(vec2 screen,vec4 candidate,vec4 current) {
  return bright>=2&&bright<=5;
 }
 layout(set=0,binding=15,std430) buffer FrameQuality { uint counts[]; } quality;
+layout(set=0,binding=16,r32f) writeonly uniform image2D hostDepth;
+layout(set=0,binding=17,rg32f) writeonly uniform image2D hostMotion;
 shared uvec4 groupCounts[64];
 shared uvec4 sourceCounts[64];
 shared uint localRisks[64];
@@ -170,6 +172,19 @@ void main() {
  ivec2 xy=ivec2(gl_GlobalInvocationID.xy);
  if(all(lessThan(xy,ivec2(p.flags.xy)))) {
  vec2 screen=vec2(xy);vec4 fallback=sampleAt(currentFinal,screen),result=fallback;vec4 mark=vec4(1,0,0,1);
+ float exportedDepth=texelFetch(currentDepth,xy,0).r;
+ vec2 exportedMotion=vec2(0);
+ if((p.flags.z&32u)!=0u&&sceneDepth(exportedDepth)) {
+  vec4 mid=project(2u,clipAt(screen,exportedDepth));
+  vec2 previousScreen;float previousZ;
+  if(mid.w>1e-8&&locate(1u,mid,previousScreen,previousZ))
+   exportedMotion=(previousScreen-screen)/vec2(p.flags.xy);
+ }
+ imageStore(hostDepth,xy,vec4(exportedDepth,0,0,0));
+ imageStore(hostMotion,xy,vec4(exportedMotion,0,0));
+ bool providerExport=p.thresholds.z>.5;
+ if(providerExport)mark=vec4(0,1,0,1);
+ else {
  vec2 ndc=vec2(2*screen.x/float(p.flags.x)-1,1-2*screen.y/float(p.flags.y));
  if(foregroundEdge(screen)){mark=vec4(1,1,0,1);}
  else {
@@ -221,12 +236,13 @@ void main() {
   }
 
  }
- if(!(mark.r>.5&&mark.g>.5&&mark.b<.5)&&unsafeThinEffect(screen,result,fallback))risk=1u;
+ }
+ if(!providerExport&&!(mark.r>.5&&mark.g>.5&&mark.b<.5)&&unsafeThinEffect(screen,result,fallback))risk=1u;
  result.a=1;
  if((p.flags.z&4u)!=0u)result=result.bgra;
  imageStore(generated,xy,result);imageStore(classification,xy,risk!=0u?vec4(1,.5,1,1):mark);
- uint raw=foregroundSources(screen,false);
- sources=uvec4(uint((raw&4u)!=0u),uint((raw&1u)!=0u),uint((raw&2u)!=0u),uint(mark.r<.5&&mark.g<.5&&mark.b>.5));
+ uint raw=providerExport?0u:foregroundSources(screen,false);
+ sources=uvec4(uint((raw&4u)!=0u),uint((raw&1u)!=0u),uint((raw&2u)!=0u),providerExport?uint(any(greaterThan(abs(exportedMotion),vec2(1e-7)))):uint(mark.r<.5&&mark.g<.5&&mark.b>.5));
  cell.x=1u;
  if((mark.g>.5&&!(mark.r>.5&&mark.b<.5))||(mark.r<.5&&mark.g<.5&&mark.b>.5)||(mark.r>.5&&mark.g>.1&&mark.g<.75&&mark.b<.5))cell.w=1u;
  if(mark.r>.5&&mark.g<.5&&mark.b<.5)cell.y=1u;

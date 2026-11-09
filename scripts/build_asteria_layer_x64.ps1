@@ -92,6 +92,8 @@ EXPORTS
     AsteriaQueryDrawViewportV1
     AsteriaQueryDrawViewportDiagnosticV1
     AsteriaSubmitFrameGenerationCamera
+    AsteriaSubmitHostFrameV2
+    AsteriaQueryHostFrameStatsV2
     AsteriaRegisterFrameInputProviderV1
     AsteriaUnregisterFrameInputProviderV1
     AsteriaQueryFrameInputTicketV1

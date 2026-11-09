@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from analyze_fg_results import analyze
+from analyze_fg_results import analyze, analyze_layer
 
 
 class SessionResultsTests(unittest.TestCase):
@@ -80,6 +80,31 @@ class SessionResultsTests(unittest.TestCase):
             packets=1,valid=1,gpu_ready=0,present_ticket=0,
             rejected_events=0,motion_source='depth_camera_reconstruction',
             accepted_total=1,rejected_total=0))
+
+    def test_layer_acceptance_separates_dispatch_from_content_proof(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'asteria-layer.json'
+            path.write_text(json.dumps({
+                'host_frame_api_version':2,'host_frame_submitted':121,
+                'host_frame_accepted':120,'host_frame_consumed':119,
+                'host_frame_rejected':1,'host_frame_stale_at_present':0,
+                'host_scene_depth_semantic_observed':True,
+                'host_scene_depth_image_consumed':True,
+                'native_present_successes':240,'native_present_failures':0,
+                'swapchains':{'1':{'live':True,'frame_input_attempts':120,
+                    'interpolation_dispatches':119,'present_count_ffx':239,
+                    'host_camera_control_active':True,
+                    'host_depth_resource_connected':True,
+                    'generated_content_distinctness':'unverified_no_gpu_content_probe',
+                    'motion_input_source':1}}}))
+            result=analyze_layer(path)
+        self.assertTrue(result['host_control']['active'])
+        self.assertTrue(result['host_control']['gpu_inputs_active'])
+        self.assertTrue(result['frame_generation']['algorithm_dispatch_confirmed'])
+        self.assertTrue(result['frame_generation']['extra_present_submission_confirmed'])
+        self.assertEqual(result['frame_generation']['generated_content_distinctness'],
+                         'unverified_no_gpu_content_probe')
+        self.assertFalse(result['frame_generation']['physical_scanout_confirmed'])
 
 
 if __name__=='__main__': unittest.main()
