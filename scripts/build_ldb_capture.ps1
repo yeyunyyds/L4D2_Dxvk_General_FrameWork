@@ -93,8 +93,18 @@ try {
     }
     $tampered = Join-Path $gameFixture $installerFiles[0]
     Set-Content -LiteralPath $tampered -Value 'later-user-change' -Encoding ASCII
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $manager -Action Restore -Game $gameFixture
-    if ($LASTEXITCODE -eq 0 -or -not (Test-Path (Join-Path $gameFixture '.ldb-fg-test-backup'))) {
+    # This invocation must fail. PowerShell 7 may promote a non-zero native
+    # process exit to a terminating error when ErrorActionPreference is Stop,
+    # so temporarily allow it and inspect the exit code ourselves.
+    $savedErrorActionPreference = $ErrorActionPreference
+    try {
+      $ErrorActionPreference = 'Continue'
+      & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $manager -Action Restore -Game $gameFixture
+      $tamperRestoreExit = $LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $savedErrorActionPreference
+    }
+    if ($tamperRestoreExit -eq 0 -or -not (Test-Path (Join-Path $gameFixture '.ldb-fg-test-backup'))) {
       throw 'FG restore did not preserve a tampered installation and its backup'
     }
     Copy-Item -LiteralPath (Join-Path $packageFixture $installerFiles[0]) -Destination $tampered -Force
