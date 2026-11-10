@@ -6,12 +6,16 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($VcVarsVer -notmatch '^\d+\.\d+$') { throw 'Invalid MSVC toolset version' }
 $repo = Split-Path $PSScriptRoot -Parent
-$installerTokens = $null
-$installerErrors = $null
-[System.Management.Automation.Language.Parser]::ParseFile(
-  (Join-Path $PSScriptRoot 'manage_fg_test.ps1'),
-  [ref]$installerTokens, [ref]$installerErrors) | Out-Null
-if ($installerErrors.Count) { throw ('FG installer syntax failed: ' + ($installerErrors -join '; ')) }
+foreach ($scriptName in @('manage_fg_test.ps1','fg_live_hud.ps1')) {
+  $scriptTokens = $null
+  $scriptErrors = $null
+  [System.Management.Automation.Language.Parser]::ParseFile(
+    (Join-Path $PSScriptRoot $scriptName),
+    [ref]$scriptTokens, [ref]$scriptErrors) | Out-Null
+  if ($scriptErrors.Count) {
+    throw ("FG script syntax failed ($scriptName): " + ($scriptErrors -join '; '))
+  }
+}
 & python (Join-Path $PSScriptRoot 'fetch_fsr_assets.py')
 if ($LASTEXITCODE -ne 0) { throw 'FSR asset verification failed' }
 & python (Join-Path $PSScriptRoot 'prepare_asteria_layer.py')

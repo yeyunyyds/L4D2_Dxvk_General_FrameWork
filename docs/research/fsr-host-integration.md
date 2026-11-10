@@ -43,7 +43,7 @@ Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有�
 - `native_interpolation_dispatches > 0`，并且没有 native Present 失败；
 - `output_presents_per_input` 接近 2。
 
-Host 日志还会记录 `gpu_motion_pixels`；转头或平移时它应大于零，用来排除全零运动输入。上述条件证明 Host 真深度／运动/HUD 分层输入、官方算法调度和约 2:1 输出提交链。外置监测窗口显示原生输入率、native 接受率、预计输出率、Host/fence 耗时和 lease 进度，并把每秒样本写入 `fg-live-comparison.csv`。它不会把预计输出当成显示器实际扫描；直接排除“生成内容等于相邻原帧”仍需要后续 GPU 内容差异探针。
+Host 日志还会记录 `gpu_motion_pixels`；转头或平移时它应大于零，用来排除全零运动输入。上述条件证明 Host 真深度／运动/HUD 分层输入、官方算法调度和约 2:1 输出提交链。外置监测窗口会自动发现 Host 创建的 `fg-*` 子目录，并同时读取 Host 事件和 Layer 状态，显示原生输入率、native 接受率、Layer 输入／输出提交率、Host/fence 耗时、lease 进度和 native dispatch 总数；每秒样本写入 `fg-live-comparison.csv`。Layer 输出是 replacement swapchain 的提交率，不代表显示器实际扫描；直接排除“生成内容等于相邻原帧”仍需要后续 GPU 内容差异探针。
 
 本轮开始迁移 Danyria/Asteria 的 replacement-swapchain 路径。设置 `LDB_FG_PRESENTER=1` 后，配套 x64 DXVK 会从实际 graphics family 按能力请求最多四个 queue，并通过 `LdbFgQueryDeviceInfoV1` 向 x64 Host 返回 Vulkan instance、physical/logical device、game/present/acquire/async queue 及逻辑设备 feature。Host 会把队列数和三项 handle 的所有者一致性写入 `session` 事件。
 

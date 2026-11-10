@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.Drawing
 
 $form = New-Object Windows.Forms.Form
 $form.Text = 'GF Frame Generation Monitor'
-$form.Size = New-Object Drawing.Size(430,245)
+$form.Size = New-Object Drawing.Size(450,310)
 $form.StartPosition = 'Manual'
 $form.Location = New-Object Drawing.Point(20,20)
 $form.TopMost = $true
@@ -21,7 +21,7 @@ $form.Controls.Add($label)
 
 $csv = Join-Path $LogDirectory 'fg-live-comparison.csv'
 if (-not (Test-Path $csv)) {
-  'time_utc,input_fps,native_accept_fps,expected_output_fps,accept_ratio,host_work_ms,fence_wait_ms,motion_pixels,native_accepted,native_released,status' | Set-Content -Encoding UTF8 $csv
+  'time_utc,input_fps,native_accept_fps,layer_input_fps,layer_output_fps,output_ratio,accept_ratio,host_work_ms,fence_wait_ms,motion_pixels,native_accepted,native_released,native_dispatches,frame_generation_active,status' | Set-Content -Encoding UTF8 $csv
 }
 
 function Read-RecentEvents([string]$path) {
@@ -46,35 +46,109 @@ function Read-RecentEvents([string]$path) {
   return $events
 }
 
+function Find-EventLog([string]$directory) {
+  $direct = Join-Path $directory 'fg-events.jsonl'
+  if (Test-Path $direct) { return $direct }
+  $candidate = Get-ChildItem -LiteralPath $directory -Filter 'fg-events.jsonl' -File -Recurse |
+    Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+  if ($candidate) { return $candidate.FullName }
+  return $null
+}
+
+function Read-QpcFrequency([string]$path) {
+  if (-not (Test-Path $path)) { return $null }
+  $stream = [IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite)
+  try {
+    $take = [Math]::Min($stream.Length,64KB)
+    $buffer = New-Object byte[] $take
+    $read = $stream.Read($buffer,0,$take)
+    $text = [Text.Encoding]::UTF8.GetString($buffer,0,$read)
+  } finally { $stream.Dispose() }
+  foreach ($line in ($text -split "`r?`n")) {
+    if ($line.StartsWith('{')) {
+      try {
+        $event = $line | ConvertFrom-Json
+        if ($event.event -eq 'session' -and [double]$event.qpc_frequency -gt 0) {
+          return [double]$event.qpc_frequency
+        }
+      } catch {}
+    }
+  }
+  return $null
+}
+
+function Read-LayerState([string]$path) {
+  if (-not (Test-Path $path)) { return $null }
+  $stream = [IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite)
+  try {
+    $take = [int][Math]::Min($stream.Length,8MB)
+    $buffer = New-Object byte[] $take
+    $read = $stream.Read($buffer,0,$buffer.Length)
+    $text = [Text.Encoding]::UTF8.GetString($buffer,0,$read)
+  } finally { $stream.Dispose() }
+  try { $document = $text | ConvertFrom-Json } catch { return $null }
+  $live = $document.swapchains.PSObject.Properties.Value |
+    Where-Object { $_.live -eq $true } | Select-Object -Last 1
+  if (-not $live) { return $null }
+  return [PSCustomObject]@{
+    InputFps = [double]$live.input_present_rate_hz_ema
+    OutputFps = [double]$live.estimated_output_rate_hz
+    OutputRatio = [double]$live.output_presents_per_input
+    NativeDispatches = [uint64]$live.native_interpolation_dispatches
+    NativeBound = $live.native_frame_inputs_bound -eq $true
+    Active = $live.frame_generation_active -eq $true
+  }
+}
+
+$script:EventPath = $null
+$script:QpcFrequency = $null
+$script:LayerState = $null
 $timer = New-Object Windows.Forms.Timer
 $timer.Interval = 1000
 $timer.Add_Tick({
-  $path = Join-Path $LogDirectory 'fg-events.jsonl'
-  $events = @(Read-RecentEvents $path)
+  if (-not $script:EventPath -or -not (Test-Path $script:EventPath)) {
+    $script:EventPath = Find-EventLog $LogDirectory
+  }
+  if (-not $script:EventPath) { return }
+  $events = @(Read-RecentEvents $script:EventPath)
   $session = $events | Where-Object event -eq 'session' | Select-Object -Last 1
+  if ($session -and [double]$session.qpc_frequency -gt 0) {
+    $script:QpcFrequency = [double]$session.qpc_frequency
+  } elseif (-not $script:QpcFrequency) {
+    $script:QpcFrequency = Read-QpcFrequency $script:EventPath
+  }
   $frames = @($events | Where-Object event -eq 'frame_metrics' | Select-Object -Last 240)
-  if ($frames.Count -lt 2 -or -not $session.qpc_frequency) { return }
+  if ($frames.Count -lt 2 -or -not $script:QpcFrequency) { return }
   $first = $frames[0]; $last = $frames[-1]
-  $seconds = ([double]$last.arrival_qpc - [double]$first.arrival_qpc) / [double]$session.qpc_frequency
+  $seconds = ([double]$last.arrival_qpc - [double]$first.arrival_qpc) / $script:QpcFrequency
   if ($seconds -le 0) { return }
   $inputFps = ($frames.Count - 1) / $seconds
   $acceptedDelta = [double]$last.native_accepted_total - [double]$first.native_accepted_total
   $nativeFps = [Math]::Max(0,$acceptedDelta / $seconds)
-  $expected = $nativeFps * 2
   $submittedDelta = [double]$last.native_submitted_total - [double]$first.native_submitted_total
   $ratio = if ($submittedDelta -gt 0) { $acceptedDelta / $submittedDelta } else { 0 }
   $released = [uint64]$last.native_released_total
   $accepted = [uint64]$last.native_accepted_total
+  $layer = Read-LayerState (Join-Path $LogDirectory 'asteria-layer.json')
+  if ($layer) { $script:LayerState = $layer } else { $layer = $script:LayerState }
   $status = if ($last.enabled -ne $true) { 'DISABLED' }
             elseif ($acceptedDelta -le 0) { 'NO NATIVE INPUT' }
             elseif ($ratio -lt 0.95) { 'INPUT DROPS' }
             elseif ($released -gt $accepted) { 'LEASE ERROR' }
+            elseif (-not $layer -or -not $layer.NativeBound) { 'LAYER WAIT' }
+            elseif (-not $layer.Active -or $layer.NativeDispatches -le 0) { 'LAYER NOT DISPATCHING' }
             else { 'NATIVE FG ACTIVE' }
   $label.ForeColor = if ($status -eq 'NATIVE FG ACTIVE') {[Drawing.Color]::LightGreen} else {[Drawing.Color]::Orange}
-  $label.Text = ("{0}`r`n`r`nNative input     {1,7:N1} FPS`r`nFG accepted      {2,7:N1} FPS`r`nExpected presents {3,7:N1} FPS`r`nAccept ratio      {4,7:P1}`r`nHost / fence      {5,5:N2} / {6,5:N2} ms`r`nMotion pixels     {7,10:N0}`r`nLeases A/R        {8} / {9}`r`n`r`nActual scanout is verified in the result log." -f
-    $status,$inputFps,$nativeFps,$expected,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[double]$last.motion_interpolated_pixels,$accepted,$released)
-  $row = '{0:o},{1:F3},{2:F3},{3:F3},{4:F6},{5:F4},{6:F4},{7},{8},{9},{10}' -f
-    [DateTime]::UtcNow,$inputFps,$nativeFps,$expected,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[uint64]$last.motion_interpolated_pixels,$accepted,$released,$status
+  $layerInput = if ($layer) { $layer.InputFps } else { 0 }
+  $layerOutput = if ($layer) { $layer.OutputFps } else { 0 }
+  $outputRatio = if ($layer) { $layer.OutputRatio } else { 0 }
+  $nativeDispatches = if ($layer) { $layer.NativeDispatches } else { 0 }
+  $layerActive = if ($layer -and $layer.Active) { 1 } else { 0 }
+  $label.Text = ("{0}`r`n`r`nSource / accepted {1,6:N1} / {2,6:N1} FPS`r`nLayer in / output {3,6:N1} / {4,6:N1} FPS`r`nOutput / accept    {5,6:N2}x / {6,6:P1}`r`nHost / fence      {7,5:N2} / {8,5:N2} ms`r`nMotion pixels     {9,10:N0}`r`nLeases A/R        {10} / {11}`r`nNative dispatches {12}`r`n`r`nLayer output is submitted presents, not physical scanout." -f
+    $status,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[double]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches)
+  $row = [string]::Format([Globalization.CultureInfo]::InvariantCulture,
+    '{0:o},{1:F3},{2:F3},{3:F3},{4:F3},{5:F6},{6:F6},{7:F4},{8:F4},{9},{10},{11},{12},{13},{14}',
+    @([DateTime]::UtcNow,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[uint64]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches,$layerActive,$status))
   Add-Content -Encoding UTF8 -Path $csv -Value $row
 })
 $form.Add_FormClosed({ $timer.Stop() })
