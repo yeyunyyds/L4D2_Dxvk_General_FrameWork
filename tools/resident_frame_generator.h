@@ -28,8 +28,18 @@ public:
     CurrentNearAfter,
     PreviousNearBefore,
     PreviousNearAfter,
-    HostDepth,
-    HostMotion,
+    HostDepth0,
+    HostMotion0,
+    HostHudless0,
+    HostUi0,
+    HostDepth1,
+    HostMotion1,
+    HostHudless1,
+    HostUi1,
+    HostDepth2,
+    HostMotion2,
+    HostHudless2,
+    HostUi2,
     SlotCount
   };
 
@@ -64,6 +74,24 @@ private:
   };
 
   std::array<OwnedImage, SlotCount> images{};
+  uint32_t activeProviderSlot = 0;
+
+  static constexpr Slot providerDepth(uint32_t slot) {
+    return Slot(uint32_t(HostDepth0) + (slot % 3) * 4);
+  }
+  static constexpr Slot providerMotion(uint32_t slot) {
+    return Slot(uint32_t(HostMotion0) + (slot % 3) * 4);
+  }
+  static constexpr Slot providerHudless(uint32_t slot) {
+    return Slot(uint32_t(HostHudless0) + (slot % 3) * 4);
+  }
+  static constexpr Slot providerUi(uint32_t slot) {
+    return Slot(uint32_t(HostUi0) + (slot % 3) * 4);
+  }
+  static constexpr bool isProviderSlot(size_t n, uint32_t offset) {
+    return n >= HostDepth0 && n < SlotCount &&
+           ((n - HostDepth0) % 4) == offset;
+  }
 
   bool recording = false, queryPending = false;
   VkQueryPool timestamps{};
@@ -117,6 +145,7 @@ public:
 
 private:
   Counters counters;
+  Quality cachedQuality{};
   VkSampler sampler{};
   VkShaderModule shader{}, qualityShader{};
   VkDescriptorSetLayout setLayout{};
@@ -193,29 +222,9 @@ private:
     barrier(image.image, image.aspect, image.layout, layout);
     image.layout = layout;
   }
-  void begin() {
-    if (recording)
+  void waitPending() {
+    if (!c.pending)
       return;
-    vkcheck(c.vkResetCommandPool(c.device, c.pool, 0), "FG command reset");
-    vkcheck(c.vkResetFences(c.device, 1, &c.fence), "FG fence reset");
-    VkCommandBufferBeginInfo b{};
-    b.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    b.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkcheck(c.vkBeginCommandBuffer(c.command, &b), "FG begin");
-    recording = true;
-  }
-  void end() {
-    recording = false;
-    vkcheck(c.vkEndCommandBuffer(c.command), "FG end");
-    VkSubmitInfo s{};
-    s.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    s.commandBufferCount = 1;
-    s.pCommandBuffers = &c.command;
-    c.interop->LockSubmissionQueue();
-    VkResult result = c.vkQueueSubmit(c.queue, 1, &s, c.fence);
-    c.interop->ReleaseSubmissionQueue();
-    vkcheck(result, "FG submit");
-    c.pending = true;
     LARGE_INTEGER start{}, stop{};
     QueryPerformanceCounter(&start);
     vkcheck(c.vkWaitForFences(c.device, 1, &c.fence, VK_TRUE, 5'000'000'000ull),
@@ -225,6 +234,15 @@ private:
     counters.submissions++;
     counters.fenceMs += double(stop.QuadPart - start.QuadPart) * 1000.0 /
                         clockFrequency.QuadPart;
+    if (qualityMap && qualityReadbackMemory) {
+      VkMappedMemoryRange range{};
+      range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+      range.memory = qualityReadbackMemory;
+      range.size = VK_WHOLE_SIZE;
+      vkcheck(c.vkInvalidateMappedMemoryRanges(c.device, 1, &range),
+              "FG quality invalidate");
+      std::memcpy(&cachedQuality, qualityMap, sizeof(cachedQuality));
+    }
     if (queryPending) {
       uint64_t ticks[2]{};
       VkResult q = vkGetQueryPoolResults(c.device, timestamps, 0, 2,
@@ -239,6 +257,33 @@ private:
       }
       queryPending = false;
     }
+  }
+  void begin() {
+    if (recording)
+      return;
+    waitPending();
+    vkcheck(c.vkResetCommandPool(c.device, c.pool, 0), "FG command reset");
+    vkcheck(c.vkResetFences(c.device, 1, &c.fence), "FG fence reset");
+    VkCommandBufferBeginInfo b{};
+    b.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    b.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkcheck(c.vkBeginCommandBuffer(c.command, &b), "FG begin");
+    recording = true;
+  }
+  void end(bool wait = true) {
+    recording = false;
+    vkcheck(c.vkEndCommandBuffer(c.command), "FG end");
+    VkSubmitInfo s{};
+    s.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    s.commandBufferCount = 1;
+    s.pCommandBuffers = &c.command;
+    c.interop->LockSubmissionQueue();
+    VkResult result = c.vkQueueSubmit(c.queue, 1, &s, c.fence);
+    c.interop->ReleaseSubmissionQueue();
+    vkcheck(result, "FG submit");
+    c.pending = true;
+    if (wait)
+      waitPending();
   }
   void buffer(VkBuffer &buffer, VkDeviceMemory &memory, void *&mapped,
               VkDeviceSize bytes, VkBufferUsageFlags usage) {
@@ -419,11 +464,16 @@ public:
     for (size_t n = 0; n < SlotCount; n++) {
       auto &i = images[n];
       const bool ds = n < CurrentUi;
-      const bool hostDepth = n == HostDepth, hostMotion = n == HostMotion;
-      const bool out = n == Output || n == Mask || hostDepth || hostMotion;
+      const bool hostDepth = isProviderSlot(n, 0),
+                 hostMotion = isProviderSlot(n, 1),
+                 hostHudless = isProviderSlot(n, 2),
+                 hostUi = isProviderSlot(n, 3);
+      const bool out = n == Output || n == Mask || hostDepth || hostMotion || hostUi;
       i.format =
           hostDepth ? VK_FORMAT_R32_SFLOAT
           : hostMotion ? VK_FORMAT_R32G32_SFLOAT
+          : hostHudless ? color
+          : hostUi ? VK_FORMAT_R8G8B8A8_UNORM
           : ds ? depth
              : (out ? VK_FORMAT_R8G8B8A8_UNORM
                     : (n >= CurrentNearBefore ? VK_FORMAT_R16G16B16A16_SFLOAT
@@ -486,7 +536,8 @@ public:
         VkClearColorValue value{};
         vkCmdClearColorImage(c.command, i.image, i.layout, &value, 1, &range);
       }
-      transition(i, (n == Output || n == Mask || n == HostDepth || n == HostMotion)
+      transition(i, (n == Output || n == Mask || isProviderSlot(n, 0) ||
+                     isProviderSlot(n, 1) || isProviderSlot(n, 3))
                         ? VK_IMAGE_LAYOUT_GENERAL
                         : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
@@ -616,7 +667,12 @@ public:
     return result;
   }
   void generate(const Params &params, bool deferSubmit = false,
-                bool providerInputsOnly = false) {
+                bool providerInputsOnly = false, uint32_t providerSlot = 0) {
+    // Uniforms, descriptors and the command pool are single-buffered. Waiting
+    // here overlaps the previous export with the game's intervening CPU work,
+    // while still preventing their reuse before the queue finished.
+    waitPending();
+    activeProviderSlot = providerSlot % 3;
     std::memcpy(uniformMap, &params, sizeof(params));
     VkMappedMemoryRange range{};
     range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -643,8 +699,10 @@ public:
       else if (n == 15)
         writes[n].pBufferInfo = &qualityInfo;
       else {
-        uint32_t slot = n == 16 ? uint32_t(HostDepth)
-                        : n == 17 ? uint32_t(HostMotion)
+        uint32_t slot = n == 16 ? uint32_t(providerDepth(activeProviderSlot))
+                        : n == 17 ? uint32_t(providerMotion(activeProviderSlot))
+                        : n == 10 && providerInputsOnly
+                            ? uint32_t(providerUi(activeProviderSlot))
                         : n >= 11 ? uint32_t(CurrentNearBefore) + n - 11
                                   : (n == 10 ? uint32_t(Mask) : n);
         infos[n] = {(n < 8 || n >= 11) ? sampler : VK_NULL_HANDLE,
@@ -668,8 +726,9 @@ public:
                            1, &b, 0, nullptr);
     transition(images[Output], VK_IMAGE_LAYOUT_GENERAL);
     transition(images[Mask], VK_IMAGE_LAYOUT_GENERAL);
-    transition(images[HostDepth], VK_IMAGE_LAYOUT_GENERAL);
-    transition(images[HostMotion], VK_IMAGE_LAYOUT_GENERAL);
+    transition(images[providerDepth(activeProviderSlot)], VK_IMAGE_LAYOUT_GENERAL);
+    transition(images[providerMotion(activeProviderSlot)], VK_IMAGE_LAYOUT_GENERAL);
+    transition(images[providerUi(activeProviderSlot)], VK_IMAGE_LAYOUT_GENERAL);
     vkCmdBindPipeline(c.command, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
     vkCmdBindDescriptorSets(c.command, VK_PIPELINE_BIND_POINT_COMPUTE,
                             pipelineLayout, 0, 1, &set, 0, nullptr);
@@ -692,8 +751,25 @@ public:
                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
                            1, &clear, 0, nullptr);
     vkCmdDispatch(c.command, (width + 7) / 8, (height + 7) / 8, 1);
-    transition(images[HostDepth], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    transition(images[HostMotion], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    transition(images[providerDepth(activeProviderSlot)], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    transition(images[providerMotion(activeProviderSlot)], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    transition(images[providerUi(activeProviderSlot)], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    // The HUD-less image must keep the swapchain format (often BGRA), which
+    // cannot be written through the shader's rgba8 storage binding. Copy the
+    // exact pre-UI snapshot into the leased slot on the same submission.
+    auto &hudless = images[providerHudless(activeProviderSlot)];
+    auto &hudSource = images[(params.flags[2] & 2u) ? CurrentUi : CurrentFinal];
+    const auto sourceLayout = hudSource.layout;
+    transition(hudSource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    transition(hudless, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    VkImageCopy hudCopy{};
+    hudCopy.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    hudCopy.dstSubresource = hudCopy.srcSubresource;
+    hudCopy.extent = {width, height, 1};
+    c.vkCmdCopyImage(c.command, hudSource.image, hudSource.layout,
+                     hudless.image, hudless.layout, 1, &hudCopy);
+    transition(hudSource, sourceLayout);
+    transition(hudless, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     if (timestamps && !providerInputsOnly) {
       vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                           timestamps, 1);
@@ -723,24 +799,33 @@ public:
                            VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &clear,
                            0, nullptr);
     if (!deferSubmit)
-      end();
+      end(!providerInputsOnly);
   }
 
   struct ProviderImages {
-    uintptr_t device = 0;
+    uintptr_t device = 0, queue = 0;
     uintptr_t depth = 0;
-    uintptr_t motion = 0;
-    uint32_t depthFormat = 0, motionFormat = 0;
-    uint32_t depthLayout = 0, motionLayout = 0;
+    uintptr_t motion = 0, hudless = 0, ui = 0;
+    uint32_t depthFormat = 0, motionFormat = 0, hudlessFormat = 0,
+             uiFormat = 0;
+    uint32_t depthLayout = 0, motionLayout = 0, hudlessLayout = 0,
+             uiLayout = 0;
   };
-  ProviderImages providerImages() const {
+  ProviderImages providerImages(uint32_t slot) const {
+    const auto &depth = images[providerDepth(slot)];
+    const auto &motion = images[providerMotion(slot)];
+    const auto &hudless = images[providerHudless(slot)];
+    const auto &ui = images[providerUi(slot)];
     return {reinterpret_cast<uintptr_t>(c.device),
-            reinterpret_cast<uintptr_t>(images[HostDepth].image),
-            reinterpret_cast<uintptr_t>(images[HostMotion].image),
-            uint32_t(images[HostDepth].format),
-            uint32_t(images[HostMotion].format),
-            uint32_t(images[HostDepth].layout),
-            uint32_t(images[HostMotion].layout)};
+            reinterpret_cast<uintptr_t>(c.queue),
+            reinterpret_cast<uintptr_t>(depth.image),
+            reinterpret_cast<uintptr_t>(motion.image),
+            reinterpret_cast<uintptr_t>(hudless.image),
+            reinterpret_cast<uintptr_t>(ui.image),
+            uint32_t(depth.format), uint32_t(motion.format),
+            uint32_t(hudless.format), uint32_t(ui.format),
+            uint32_t(depth.layout), uint32_t(motion.layout),
+            uint32_t(hudless.layout), uint32_t(ui.layout)};
   }
   static bool wantsFsr() {
     wchar_t value[16]{};
@@ -888,6 +973,7 @@ public:
     std::memcpy(&q, qualityMap, sizeof(q));
     return q;
   }
+  Quality lastCompletedQuality() const { return cachedQuality; }
   void writeBack(const ImageInfo &destination, Slot source) {
     if (!matches(destination) || (destination.create.format != finalFormat) ||
         !(destination.create.usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT))

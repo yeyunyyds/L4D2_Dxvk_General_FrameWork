@@ -30,17 +30,23 @@ def analyze_layer(path):
     host_consumed = data.get('host_frame_consumed', 0)
     host_control = (host_accepted > 0 and host_consumed > 0 and
                     swapchain.get('host_camera_control_active', False))
+    native_accepted = data.get('native_v2_accepted', 0)
+    native_released = data.get('native_v2_leases_released', 0)
+    native_dispatches = swapchain.get('native_interpolation_dispatches', 0)
+    native_bound = swapchain.get('native_frame_inputs_bound', False)
     algorithm = attempts > 0 and dispatches > 0 and dispatches <= attempts
+    native_algorithm = (native_bound and native_accepted > 0 and
+                        native_dispatches > 0 and
+                        native_dispatches <= native_accepted)
     ratio = ffx_presents / attempts if attempts else 0
     extra_present = (1.8 <= ratio <= 2.2 and
                      data.get('native_present_failures', 0) == 0)
     content = swapchain.get('generated_content_distinctness', 'unverified')
-    host_gpu = (host_control and
-                data.get('host_scene_depth_image_consumed', False) and
+    host_gpu = (native_algorithm and
                 swapchain.get('host_depth_resource_connected', False) and
                 swapchain.get('motion_input_source') == 1)
-    if host_gpu and algorithm and extra_present:
-        level = 'host_depth_motion_algorithm_and_extra_present_confirmed'
+    if host_gpu and extra_present:
+        level = 'native_v2_ticketed_hudless_ui_algorithm_and_extra_present_confirmed'
     elif host_control and algorithm and extra_present:
         level = 'host_camera_algorithm_and_extra_present_confirmed'
     elif algorithm and extra_present:
@@ -60,10 +66,16 @@ def analyze_layer(path):
             'gpu_inputs_active': host_gpu,
             'scene_depth_semantic_observed': data.get('host_scene_depth_semantic_observed', False),
             'scene_depth_image_consumed': data.get('host_scene_depth_image_consumed', False),
+            'native_v2_ticket_queries_accepted': data.get('native_v2_ticket_queries_accepted', 0),
+            'native_v2_submitted': data.get('native_v2_submitted', 0),
+            'native_v2_accepted': native_accepted,
+            'native_v2_leases_released': native_released,
+            'native_v2_bound': native_bound,
         },
         'frame_generation': {
             'input_attempts': attempts,
             'interpolation_dispatches': dispatches,
+            'native_interpolation_dispatches': native_dispatches,
             'native_present_successes': data.get('native_present_successes', 0),
             'native_present_failures': data.get('native_present_failures', 0),
             'ffx_present_count': ffx_presents,
@@ -72,13 +84,16 @@ def analyze_layer(path):
             'estimated_output_rate_hz': swapchain.get('estimated_output_rate_hz'),
             'motion_input_source': swapchain.get('motion_input_source'),
             'algorithm_dispatch_confirmed': algorithm,
+            'native_algorithm_dispatch_confirmed': native_algorithm,
+            'hudless_ui_composition_bound': native_bound and native_accepted > 0,
             'extra_present_submission_confirmed': extra_present,
             'generated_content_distinctness': content,
             'physical_scanout_confirmed': False,
         },
         'acceptance_level': level,
         'interpretation': [
-            'Host GPU input status requires ABI consumption, the exact Host depth resource, and engine motion input in the Layer.',
+            'Host GPU input status requires accepted native V2 tickets, native-only interpolation dispatches, the exact Host depth resource, and engine motion input in the Layer.',
+            'Native V2 leases prove that depth, motion, HUD-less color and UI overlay stayed owned until the replacement swapchain retired them.',
             'Interpolation dispatch plus extra successful native Presents proves algorithm execution and output submission.',
             'Generated content remains unverified until a GPU content-difference probe reports distinct midpoint pixels.',
             'Present submission counts and EMA rates do not prove physical monitor scanout or perceived FPS.',
@@ -99,8 +114,11 @@ def analyze(path):
     presenter_inputs = {'packets': 0, 'valid': 0, 'gpu_ready': 0,
                         'present_ticket': 0, 'rejected_events': 0}
     complete = False
-    host_provider = {'packets': 0, 'accepted': 0, 'gpu_inputs_ready': 0,
-                     'max_motion_pixels': 0}
+    host_provider = {'packets': 0, 'accepted': 0, 'native_accepted_packets': 0,
+                     'gpu_inputs_ready': 0, 'max_motion_pixels': 0,
+                     'native_queries_total': 0, 'native_tickets_total': 0,
+                     'native_submitted_total': 0, 'native_accepted_total': 0,
+                     'native_released_total': 0, 'native_busy_total': 0}
     successful = 0
     extra_calls = 0
     with path.open(encoding='utf-8') as source:
@@ -136,12 +154,21 @@ def analyze(path):
             elif kind == 'host_layer_frame':
                 host_provider['packets'] += 1
                 host_provider['accepted'] += int(event.get('accepted', False))
+                host_provider['native_accepted_packets'] += int(event.get('native_accepted', False))
                 host_provider['gpu_inputs_ready'] += int(event.get('gpu_inputs_ready', False))
                 host_provider['max_motion_pixels'] = max(
                     host_provider['max_motion_pixels'],
                     event.get('gpu_motion_pixels', 0))
+                for key in ('native_queries_total', 'native_tickets_total',
+                            'native_submitted_total', 'native_accepted_total',
+                            'native_released_total', 'native_busy_total'):
+                    host_provider[key] = max(host_provider[key], event.get(key, 0))
             elif kind == 'summary':
                 summaries.append(event)
+                for key in ('native_queries_total', 'native_tickets_total',
+                            'native_submitted_total', 'native_accepted_total',
+                            'native_released_total', 'native_busy_total'):
+                    host_provider[key] = max(host_provider[key], event.get(key, 0))
                 complete = True
             elif kind == 'fg_error':
                 errors.append(event)
@@ -173,11 +200,35 @@ def analyze(path):
                     value = (event['arrival_qpc']-previous[1]['arrival_qpc'])*1000/frequency
                     if value > 0:
                         data['source_arrival_interval_ms'].append(value)
+                for key in ('native_queries_total', 'native_tickets_total',
+                            'native_submitted_total', 'native_accepted_total',
+                            'native_released_total', 'native_busy_total'):
+                    host_provider[key] = max(host_provider[key], event.get(key, 0))
                 previous = (group, event)
     logical = summaries[-1]['logical_presents'] if summaries else None
     if summaries:
         presenter_inputs['accepted_total'] = summaries[-1].get('presenter_inputs_accepted', 0)
         presenter_inputs['rejected_total'] = summaries[-1].get('presenter_inputs_rejected', 0)
+    native_submitted = host_provider['native_submitted_total']
+    host_provider['native_accept_ratio'] = (host_provider['native_accepted_total'] / native_submitted
+                                             if native_submitted else 0)
+    host_provider['leases_outstanding_at_last_sample'] = max(
+        0, host_provider['native_accepted_total'] - host_provider['native_released_total'])
+    metric_summary = {group: {key: distribution(values) for key, values in data.items()}
+                      for group, data in groups.items()}
+    def median_fps(group):
+        interval = metric_summary.get(group, {}).get('source_arrival_interval_ms')
+        return 1000 / interval['median'] if interval and interval['median'] > 0 else None
+    enabled_fps = median_fps('host_provider')
+    disabled_fps = median_fps('disabled')
+    ab_comparison = {
+        'native_input_fps_median': enabled_fps,
+        'disabled_input_fps_median': disabled_fps,
+        'native_to_disabled_input_ratio': (enabled_fps / disabled_fps
+                                           if enabled_fps and disabled_fps else None),
+        'expected_generated_output_fps': enabled_fps * 2 if enabled_fps else None,
+        'expected_output_is_not_physical_scanout': True,
+    }
     return dict(log=path.name, log_complete=complete, event_counts=dict(counts),
                 backend=backend, local_effect_policy=local_effect_policy, gpu_dispatch_scope='preflight_only' if backend.startswith('fsr') else 'generation',
                 presenter_device=presenter,
@@ -187,8 +238,7 @@ def analyze(path):
                 backend_calls=logical+extra_calls if logical is not None else None,
                 summaries=summaries, errors=errors, mode_changes=changes, captures=captures,
                 rejected_candidates=rejected, rejected_candidate_count=len(rejected),
-                metrics={group: {key: distribution(values) for key, values in data.items()}
-                         for group, data in groups.items()},
+                metrics=metric_summary, ab_comparison=ab_comparison,
                 interpretation=['Capture frames and adjacent arrival intervals are excluded from metrics.',
                                 'Rejected candidates restore the original before Present; candidate PPMs do not prove presentation.',
                                 'GPU dispatch uses device timestamps; -1 means unavailable.',

@@ -42,4 +42,5 @@ echo Starts the x64 Host-controlled Vulkan Layer replacement-swapchain path.
 echo Host collects scene/camera timing; the Layer remains the only presenter.
 echo Automatic capture: delayed bursts throughout this session. No trigger file.
 echo Results: %LDB_FG_LOG_DIR%
+start "GF FG Monitor" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0fg_live_hud.ps1" -LogDirectory "%LDB_FG_LOG_DIR%"
 start "" "%LDB_FG_STEAM_EXE%" -applaunch 550

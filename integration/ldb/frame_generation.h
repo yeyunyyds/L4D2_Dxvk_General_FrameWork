@@ -254,6 +254,8 @@ struct State {
              std::to_string(ASTERIA_HOST_FRAME_API_VERSION_2) +
              ",\"host_layer_control_available\":" +
              std::string(asteria.available() ? "true" : "false") +
+             ",\"qpc_frequency\":" +
+             std::to_string(frequency.QuadPart) +
              ",\"local_effect_policy\":" +
              quote(ResidentFg::wantsFsr() ? "regional_current_and_previous"
                                           : "whole_frame_rejection") +
@@ -264,7 +266,20 @@ struct State {
   ~State() {
     AsteriaHostFrameStatsV2 stats;
     const bool haveStats = asteria.query(stats);
-    gpu.reset();
+    // Stop new provider submissions before considering Host GPU teardown.
+    asteria.shutdown();
+    const uint64_t outstandingLeases =
+        asteria.nativeAccepted() > asteria.nativeReleased()
+            ? asteria.nativeAccepted() - asteria.nativeReleased()
+            : 0;
+    // A callback-owned current input may remain in the Layer until its
+    // swapchain/device teardown runs after Bridge shutdown. Keep the borrowed
+    // Vulkan allocations process-lifetime in that case; device destruction
+    // reclaims them and the late callback uses its own lifetime control block.
+    if (outstandingLeases)
+      (void)gpu.release();
+    else
+      gpu.reset();
     if (pacingTimer) {
       CancelWaitableTimer(pacingTimer);
       CloseHandle(pacingTimer);
@@ -285,7 +300,23 @@ struct State {
              ",\"host_frames_accepted_layer\":" +
              std::to_string(haveStats ? stats.accepted : 0) +
              ",\"host_frames_consumed_layer\":" +
-             std::to_string(haveStats ? stats.consumed : 0));
+             std::to_string(haveStats ? stats.consumed : 0) +
+             ",\"native_queries_total\":" +
+             std::to_string(asteria.nativeQueries()) +
+             ",\"native_tickets_total\":" +
+             std::to_string(asteria.nativeTickets()) +
+             ",\"native_submitted_total\":" +
+             std::to_string(asteria.nativeSubmitted()) +
+             ",\"native_accepted_total\":" +
+             std::to_string(asteria.nativeAccepted()) +
+             ",\"native_released_total\":" +
+             std::to_string(asteria.nativeReleased()) +
+             ",\"native_busy_total\":" +
+             std::to_string(asteria.nativeBusy()) +
+             ",\"native_leases_outstanding\":" +
+             std::to_string(outstandingLeases) +
+             ",\"gpu_resources_retained_for_layer_teardown\":" +
+             std::string(outstandingLeases ? "true" : "false"));
   }
   void emit(const char *event, uint32_t uid,
             const std::string &fields = {}) noexcept {
@@ -706,6 +737,9 @@ struct State {
         transfer(back.get(), ResidentFg::CurrentFinal);
         ready = true;
         bool providerGpuInputsReady = false;
+        bool nativeFrameAccepted = false;
+        int nativeSlot = -1;
+        AsteriaFrameInputTicketV1 nativeTicket{};
         ResidentFg::ProviderImages providerImages{};
         if (providerOnly) {
           const bool validHistory =
@@ -715,18 +749,38 @@ struct State {
           if (ldb_camera::frameTransforms(
                   validHistory ? previousMatrix : currentMatrix,
                   currentMatrix, providerParams.rows)) {
-            const uint32_t providerFlags =
+            nativeSlot = asteria.acquireNativeSlot(
+                reinterpret_cast<uintptr_t>(gpu->providerImages(0).device),
+                nativeTicket);
+            if (nativeSlot >= 0) {
+              const uint32_t providerFlags =
                 (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
                 (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u) |
                 (nearColourCopied ? 8u : 0u) |
                 (validHistory ? 32u : 0u);
-            providerParams.flags = {gpu->width, gpu->height, providerFlags,
-                                    previousFlags};
-            providerParams.thresholds[2] = 1.0f;
-            gpu->generate(providerParams, false, true);
-            quality = gpu->readQuality();
-            providerImages = gpu->providerImages();
-            providerGpuInputsReady = true;
+              providerParams.flags = {gpu->width, gpu->height, providerFlags,
+                                      previousFlags};
+              providerParams.thresholds[2] = 1.0f;
+              try {
+                gpu->generate(providerParams, false, true,
+                              uint32_t(nativeSlot));
+              } catch (...) {
+                asteria.cancelNativeSlot(uint32_t(nativeSlot));
+                throw;
+              }
+              quality = gpu->lastCompletedQuality();
+              providerImages = gpu->providerImages(uint32_t(nativeSlot));
+              providerGpuInputsReady = true;
+              nativeFrameAccepted = asteria.submitNative(
+                  nativeTicket, uint32_t(nativeSlot), currentMatrix,
+                  sourceIntervalMs, !history, providerImages.depth,
+                  providerImages.motion, providerImages.hudless,
+                  providerImages.ui, providerImages.queue,
+                  providerImages.depthFormat,
+                  providerImages.motionFormat, providerImages.hudlessFormat,
+                  providerImages.uiFormat, providerImages.depthLayout);
+              generatedFrame = nativeFrameAccepted;
+            }
           }
         }
         const bool hostFrameAccepted = providerGpuInputsReady && asteria.submit(
@@ -744,6 +798,23 @@ struct State {
           emit("host_layer_frame", uid,
                "\"accepted\":" +
                    std::string(hostFrameAccepted ? "true" : "false") +
+                   ",\"native_accepted\":" +
+                   std::string(nativeFrameAccepted ? "true" : "false") +
+                   ",\"native_ticket_frame\":" +
+                   std::to_string(nativeTicket.frame_id) +
+                   ",\"native_slot\":" + std::to_string(nativeSlot) +
+                   ",\"native_queries_total\":" +
+                   std::to_string(asteria.nativeQueries()) +
+                   ",\"native_tickets_total\":" +
+                   std::to_string(asteria.nativeTickets()) +
+                   ",\"native_submitted_total\":" +
+                   std::to_string(asteria.nativeSubmitted()) +
+                   ",\"native_accepted_total\":" +
+                   std::to_string(asteria.nativeAccepted()) +
+                   ",\"native_released_total\":" +
+                   std::to_string(asteria.nativeReleased()) +
+                   ",\"native_busy_total\":" +
+                   std::to_string(asteria.nativeBusy()) +
                    ",\"main_view\":true,\"scene_depth_observed\":true"
                    ",\"camera_observed\":true,\"gpu_inputs_ready\":" +
                    std::string(providerGpuInputsReady ? "true" : "false") +
@@ -1076,6 +1147,20 @@ struct State {
             ",\"generated_present_ms\":" + std::to_string(generatedPresentMs) +
             ",\"logical_present_ms\":" + std::to_string(logicalPresentMs) +
             ",\"pacing_wait_ms\":" + std::to_string(previousPacingMs) +
+            ",\"source_interval_ms\":" +
+            std::to_string(sourceIntervalMs) +
+            ",\"native_queries_total\":" +
+            std::to_string(asteria.nativeQueries()) +
+            ",\"native_tickets_total\":" +
+            std::to_string(asteria.nativeTickets()) +
+            ",\"native_submitted_total\":" +
+            std::to_string(asteria.nativeSubmitted()) +
+            ",\"native_accepted_total\":" +
+            std::to_string(asteria.nativeAccepted()) +
+            ",\"native_released_total\":" +
+            std::to_string(asteria.nativeReleased()) +
+            ",\"native_busy_total\":" +
+            std::to_string(asteria.nativeBusy()) +
             ",\"presenter_input_valid\":" +
             std::string(presenterInputValid ? "true" : "false") +
             ",\"presenter_input_flags\":" +

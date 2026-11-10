@@ -19,7 +19,8 @@ def verify(dll: Path, source: Path, output: Path) -> None:
     if data[pe:pe + 4] != b"PE\0\0" or struct.unpack_from("<H", data, pe + 4)[0] != 0x8664:
         raise ValueError("Layer is not an x86_64 PE image")
     required = (b"vkNegotiateLoaderLayerInterfaceVersion", b"vkGetInstanceProcAddr",
-                b"vkGetDeviceProcAddr", "ASTERIA_FG_ESTIMATED_INTERNAL".encode("utf-16le"))
+                b"vkGetDeviceProcAddr", b"AsteriaSubmitFrameInputsV2",
+                "ASTERIA_FG_ESTIMATED_INTERNAL".encode("utf-16le"))
     if any(symbol not in data for symbol in required):
         raise ValueError("Layer is missing a required loader/runtime symbol")
     source_receipt = json.loads((source / "gf-x64-layer-source.json").read_text())
@@ -46,7 +47,7 @@ def verify(dll: Path, source: Path, output: Path) -> None:
         "dll_sha256": digest(dll),
         "pe_machine": "AMD64",
         "queue_policy": "surface-selected distinct game/compute/present/acquire queues",
-        "input_policy": "native provider or layer-owned estimated depth/motion",
+        "input_policy": "native provider V2 ticket/lease with separate HUD-less color and UI overlay; estimated inputs are diagnostic fallback only",
     }
     (output / "gf-asteria-layer-build.json").write_text(json.dumps(receipt, indent=2) + "\n")
 

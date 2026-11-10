@@ -98,6 +98,7 @@ EXPORTS
     AsteriaUnregisterFrameInputProviderV1
     AsteriaQueryFrameInputTicketV1
     AsteriaSubmitFrameInputsV1
+    AsteriaSubmitFrameInputsV2
 '@ | Set-Content -LiteralPath $Def -Encoding ASCII
 
 Push-Location (Join-Path $Fg 'Layer')

@@ -56,6 +56,23 @@ class SessionResultsTests(unittest.TestCase):
         self.assertTrue(result['log_complete'])
         self.assertEqual(result['metrics'],{})
 
+    def test_native_and_disabled_windows_report_ab_input_rates_without_claiming_scanout(self):
+        events=[dict(event='session',qpc_frequency=1000)]
+        for frame,arrival,enabled,native in [
+                (0,0,False,0),(1,20,False,0),(2,40,False,0),
+                (3,100,True,1),(4,110,True,2),(5,120,True,3)]:
+            events.append(dict(event='frame_metrics',frame=frame,generation=0,
+                arrival_qpc=arrival,enabled=enabled,generated=enabled,
+                mode='host_provider',captured=False,native_accepted_total=native,
+                host_work_ms=1,gpu_dispatch_ms=-1,fence_wait_ms=0,
+                gpu_submissions=1,generated_present_ms=0,logical_present_ms=0,
+                pacing_wait_ms=0,paired_start_gap_ms=0))
+        result=self.analyze(events)['ab_comparison']
+        self.assertEqual(result['disabled_input_fps_median'],50)
+        self.assertEqual(result['native_input_fps_median'],100)
+        self.assertEqual(result['expected_generated_output_fps'],200)
+        self.assertTrue(result['expected_output_is_not_physical_scanout'])
+
     def test_presenter_device_topology_is_preserved(self):
         result=self.analyze([dict(event='session',qpc_frequency=1000,
             presenter_requested=True,presenter_device_api=True,
@@ -90,9 +107,14 @@ class SessionResultsTests(unittest.TestCase):
                 'host_frame_rejected':1,'host_frame_stale_at_present':0,
                 'host_scene_depth_semantic_observed':True,
                 'host_scene_depth_image_consumed':True,
+                'native_v2_ticket_queries_accepted':120,
+                'native_v2_submitted':120,'native_v2_accepted':119,
+                'native_v2_leases_released':118,
                 'native_present_successes':240,'native_present_failures':0,
                 'swapchains':{'1':{'live':True,'frame_input_attempts':120,
                     'interpolation_dispatches':119,'present_count_ffx':239,
+                    'native_frame_inputs_bound':True,
+                    'native_interpolation_dispatches':119,
                     'host_camera_control_active':True,
                     'host_depth_resource_connected':True,
                     'generated_content_distinctness':'unverified_no_gpu_content_probe',
@@ -101,6 +123,9 @@ class SessionResultsTests(unittest.TestCase):
         self.assertTrue(result['host_control']['active'])
         self.assertTrue(result['host_control']['gpu_inputs_active'])
         self.assertTrue(result['frame_generation']['algorithm_dispatch_confirmed'])
+        self.assertTrue(result['frame_generation']['native_algorithm_dispatch_confirmed'])
+        self.assertEqual(result['acceptance_level'],
+                         'native_v2_ticketed_hudless_ui_algorithm_and_extra_present_confirmed')
         self.assertTrue(result['frame_generation']['extra_present_submission_confirmed'])
         self.assertEqual(result['frame_generation']['generated_content_distinctness'],
                          'unverified_no_gpu_content_probe')

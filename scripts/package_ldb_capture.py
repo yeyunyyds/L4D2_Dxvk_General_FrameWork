@@ -73,6 +73,7 @@ def package(source, build_id, output):
             archive.write(ROOT/'scripts'/name,'scripts/'+name)
         archive.write(ROOT/'scripts/trigger_capture.cmd','trigger_capture.cmd')
         archive.write(ROOT/'scripts/start_fg_test.cmd','start_fg_test.cmd')
+        archive.write(ROOT/'scripts/fg_live_hud.ps1','fg_live_hud.ps1')
         archive.write(ROOT/'scripts/manage_fg_test.ps1','manage_fg_test.ps1')
         archive.write(ROOT/'scripts/install_fg_test.cmd','install_fg_test.cmd')
         archive.write(ROOT/'scripts/remove_fg_test.cmd','remove_fg_test.cmd')

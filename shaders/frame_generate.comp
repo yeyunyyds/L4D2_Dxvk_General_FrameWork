@@ -183,7 +183,12 @@ void main() {
  imageStore(hostDepth,xy,vec4(exportedDepth,0,0,0));
  imageStore(hostMotion,xy,vec4(exportedMotion,0,0));
  bool providerExport=p.thresholds.z>.5;
- if(providerExport)mark=vec4(0,1,0,1);
+ if(providerExport) {
+  vec4 before=(p.flags.z&2u)!=0u?sampleAt(currentUi,screen):fallback;
+  float alpha=any(greaterThan(abs(fallback.rgb-before.rgb),vec3(0.5/255.0)))?1.0:0.0;
+  result=before;
+  mark=vec4(fallback.rgb,alpha);
+ }
  else {
  vec2 ndc=vec2(2*screen.x/float(p.flags.x)-1,1-2*screen.y/float(p.flags.y));
  if(foregroundEdge(screen)){mark=vec4(1,1,0,1);}
