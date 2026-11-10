@@ -34,6 +34,7 @@ def analyze_layer(path):
     native_released = data.get('native_v2_leases_released', 0)
     native_dispatches = swapchain.get('native_interpolation_dispatches', 0)
     native_bound = swapchain.get('native_frame_inputs_bound', False)
+    separate_ui = swapchain.get('separate_ui_composition_active', False)
     algorithm = attempts > 0 and dispatches > 0 and dispatches <= attempts
     native_algorithm = (native_bound and native_accepted > 0 and
                         native_dispatches > 0 and
@@ -46,7 +47,9 @@ def analyze_layer(path):
                 swapchain.get('host_depth_resource_connected', False) and
                 swapchain.get('motion_input_source') == 1)
     if host_gpu and extra_present:
-        level = 'native_v2_ticketed_hudless_ui_algorithm_and_extra_present_confirmed'
+        level = ('native_v2_ticketed_hudless_ui_algorithm_and_extra_present_confirmed'
+                 if separate_ui else
+                 'native_v2_ticketed_swapchain_color_algorithm_and_extra_present_confirmed')
     elif host_control and algorithm and extra_present:
         level = 'host_camera_algorithm_and_extra_present_confirmed'
     elif algorithm and extra_present:
@@ -85,7 +88,8 @@ def analyze_layer(path):
             'motion_input_source': swapchain.get('motion_input_source'),
             'algorithm_dispatch_confirmed': algorithm,
             'native_algorithm_dispatch_confirmed': native_algorithm,
-            'hudless_ui_composition_bound': native_bound and native_accepted > 0,
+            'color_input_source': 'host_hudless' if separate_ui else 'replacement_swapchain_present_color',
+            'hudless_ui_composition_bound': separate_ui,
             'extra_present_submission_confirmed': extra_present,
             'generated_content_distinctness': content,
             'physical_scanout_confirmed': False,
@@ -93,7 +97,7 @@ def analyze_layer(path):
         'acceptance_level': level,
         'interpretation': [
             'Host GPU input status requires accepted native V2 tickets, native-only interpolation dispatches, the exact Host depth resource, and engine motion input in the Layer.',
-            'Native V2 leases prove that depth, motion, HUD-less color and UI overlay stayed owned until the replacement swapchain retired them.',
+            'Native V2 leases prove that submitted GPU resources stayed owned until the replacement swapchain retired them.',
             'Interpolation dispatch plus extra successful native Presents proves algorithm execution and output submission.',
             'Generated content remains unverified until a GPU content-difference probe reports distinct midpoint pixels.',
             'Present submission counts and EMA rates do not prove physical monitor scanout or perceived FPS.',

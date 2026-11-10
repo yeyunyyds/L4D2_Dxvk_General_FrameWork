@@ -33,6 +33,8 @@ if defined VK_LAYER_PATH (
 set "VK_INSTANCE_LAYERS=VK_LAYER_GF_Asteria_FrameGeneration;%VK_INSTANCE_LAYERS%"
 set "ASTERIA_FG_ENABLE=1"
 set "ASTERIA_FG_ESTIMATED_INTERNAL=1"
+set "ASTERIA_FG_ESTIMATED_DISPATCH=0"
+set "ASTERIA_FG_SEPARATE_UI=0"
 set "ASTERIA_FG_PROBE_OUTPUT=%LDB_FG_LOG_DIR%\asteria-layer.json"
 if not exist "%LDB_FG_LOG_DIR%" mkdir "%LDB_FG_LOG_DIR%"
 if not exist "%LDB_FG_LOG_DIR%" exit /b 1

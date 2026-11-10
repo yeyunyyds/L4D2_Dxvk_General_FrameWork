@@ -7,7 +7,7 @@
 ## 安装与一次测试
 
 1. 解压到独立文件夹，完全退出游戏和两个 Host，运行 `install_fg_test.cmd`。脚本自动定位 L4D2、校验包内 Host、后端与 Vulkan Layer 文件，并将八个目标文件的原内容和哈希保存到游戏目录的 `.ldb-fg-test-backup`；找不到非默认 Steam 库时，把游戏根目录拖到 CMD 上或作为第一个参数传入。
-2. 完全退出 Steam，再运行 `start_fg_test.cmd`，进入地图正常游玩约一分钟，覆盖转头、平移、开枪、换弹及之前出现圆环特效的位置。本轮由 x64 Host 采集主视图相机、真实帧间隔、深度、运动、HUD-less 颜色和 UI 覆盖，通过同进程 ticket/lease ABI 交给 Vulkan Layer；只有 Layer 接管 replacement swapchain，Host 不额外 Present；无需按 F8 或 F9。启动时会同时打开外置 `GF Frame Generation Monitor`，它不进入游戏画面，也不会被插帧。
+2. 完全退出 Steam，再运行 `start_fg_test.cmd`，进入地图正常游玩约一分钟，覆盖转头、平移、开枪、换弹及之前出现圆环特效的位置。本轮由 x64 Host 采集主视图相机、真实帧间隔、深度和运动，通过同进程 ticket/lease ABI 交给 Vulkan Layer；颜色默认使用 replacement swapchain 自己的 `presentColor`，只有 Layer 接管 replacement swapchain，Host 不额外 Present；无需按 F8 或 F9。启动时会同时打开外置 `GF Frame Generation Monitor`，它不进入游戏画面，也不会被插帧。
 3. 正常退出，压缩完整 `fg-results` 上传。启动脚本会在新的会话目录同时收集 Bridge、DXVK 与 FG 日志。无需 `capture.trigger`，也无需先测帧率收益。
 4. 测试结束且游戏和 Host 已退出时运行 `remove_fg_test.cmd`。脚本先确认八个测试文件仍与本包完全相同，再恢复原文件并删除 `.ldb-fg-test-backup`。若文件在测试后被其他工具修改，脚本会停止而不会覆盖后来的文件。
 
@@ -19,9 +19,10 @@
 
 - 直接使用 Host GPU 历史，不通过 IPC 传输整幅图像，不为插帧上传/回读整幅游戏画面。有限诊断截图是例外。
 - GPU 转换颜色、深度和运动输入；运动来自相机重建及有限范围图像匹配，官方光流继续处理图像运动。没有取得完整引擎物体/骨骼运动矢量。
-- 通过已定位的 HUD 前快照向 SDK 提供 HUD-less 颜色。当前和前帧武器覆盖区保留当前原帧，完整透明层分解尚未实现。
+- Host 仍采集 HUD 前快照供后续分层实验，但默认不再把启发式 HUD-less/UI 图层替换为 SDK 的颜色输入；设置 `ASTERIA_FG_SEPARATE_UI=1` 才启用该实验路径。
 - 保留深度／覆盖质量预检：过多无效场景、异常前景覆盖仍恢复完整原帧。细特效风险在 FSR 路径改为区域保护：可疑细亮区域及前帧旧位置的邻域保留当前原帧，避免单个风险点导致整帧拒绝和历史反复预热。该识别依据亮线形态，不等同于引擎材质标签，可能保守地保留普通白色细节；透明层仍未完整分解。自研后端继续整帧拒绝细特效风险。SDK 合成后，已验证的前帧遮挡填补区域沿用预检重投影结果；缺乏可靠运动的纯色突变区域也有原帧保护。因此当前交付是官方 FSR 与保守保护的组合。
 - 首帧、帧编号断续、HUD 输入变化或 Reset 时重置历史。预热帧不会增加一次生成帧 Present。
+- 加载阶段的 estimated Provider 只负责建立 replacement swapchain，默认不执行插帧；原生 V2 Provider 接管并重置历史后才开始生成，避免加载画面污染游戏内颜色历史。
 - Host 检查真实 DXVK 逻辑设备已启用的能力，并要求支持区域保护的后端接口 v2；旧版 DLL 会被拒绝，不能只更新 Host。缺少配套模块/能力或 SDK 出错时记录 `fg_error`，停止该会话插帧并保持原始 Present 路径。
 
 配套 DXVK 增加三个 storage-image feature，以及在启用 Vulkan memory model 时使用 Device scope 所需的能力。仅物理 GPU 宣称支持不够，所以使用导出查询检查真实逻辑设备的 enabled features。
@@ -34,7 +35,7 @@ Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有�
 
 当前闭环已把 Asteria/Danyria 的 D3D9 语义采集方式移到 LDB x64 Host。Host 在实际命令序列中识别 HDR 主视图、深度表面、相机 shader 常量、HUD 前边界和 Present 时间。正式路径先向 Layer 查询与本次 acquire 对应的 ticket，再通过 `AsteriaSubmitFrameInputsV2` 提交三槽 GPU 资源；旧 `AsteriaSubmitHostFrameV2` 只保留兼容诊断。图像不经过 IPC 或 CPU 复制。
 
-本版由 Host 在同一个 Vulkan 设备上把主场景深度转换成 `R32F`，并用当前/上一主视图矩阵生成 `RG32F` 相机运动向量。每个槽还包含与 swapchain 同格式的 HUD-less 颜色和 `RGBA8` UI 覆盖。Layer 逐项核对设备、ticket、acquire 序号、图像、格式和布局，FSR3 只插值 HUD-less 世界画面，replacement swapchain 随后叠加 UI；血条、Skeeto HUD 和原生 HUD 不再进入插值输入。槽只有在 Layer 等待 GPU 完成并调用 release lease 后才能复用。
+本版由 Host 在同一个 Vulkan 设备上把主场景深度转换成 `R32F`，并用当前/上一主视图矩阵生成 `RG32F` 相机运动向量。每个槽仍包含与 swapchain 同格式的 HUD-less 颜色和 `RGBA8` UI 覆盖，Layer 逐项核对设备、ticket、acquire 序号、图像、格式和布局。为排除实机发现的固定加载帧交替，默认 FSR3 颜色和 optical flow 改用 replacement swapchain 的当前 `presentColor`；HUD-less/UI 合成保留为显式实验开关。槽只有在 Layer 等待 GPU 完成并调用 release lease 后才能复用。
 
 `LDB_FG_MODE=provider` 表示 Host 只生产数据且只调用一次原始 Present，不再运行旧预览或第二次 Present。`asteria-layer.json` 中同时满足以下条件，才能证明 Host 控制的算法与提交链已工作：
 

@@ -125,7 +125,7 @@ class SessionResultsTests(unittest.TestCase):
         self.assertTrue(result['frame_generation']['algorithm_dispatch_confirmed'])
         self.assertTrue(result['frame_generation']['native_algorithm_dispatch_confirmed'])
         self.assertEqual(result['acceptance_level'],
-                         'native_v2_ticketed_hudless_ui_algorithm_and_extra_present_confirmed')
+                         'native_v2_ticketed_swapchain_color_algorithm_and_extra_present_confirmed')
         self.assertTrue(result['frame_generation']['extra_present_submission_confirmed'])
         self.assertEqual(result['frame_generation']['generated_content_distinctness'],
                          'unverified_no_gpu_content_probe')

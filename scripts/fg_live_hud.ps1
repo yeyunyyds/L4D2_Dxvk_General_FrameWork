@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.Drawing
 
 $form = New-Object Windows.Forms.Form
 $form.Text = 'GF Frame Generation Monitor'
-$form.Size = New-Object Drawing.Size(450,310)
+$form.Size = New-Object Drawing.Size(450,335)
 $form.StartPosition = 'Manual'
 $form.Location = New-Object Drawing.Point(20,20)
 $form.TopMost = $true
@@ -21,7 +21,7 @@ $form.Controls.Add($label)
 
 $csv = Join-Path $LogDirectory 'fg-live-comparison.csv'
 if (-not (Test-Path $csv)) {
-  'time_utc,input_fps,native_accept_fps,layer_input_fps,layer_output_fps,output_ratio,accept_ratio,host_work_ms,fence_wait_ms,motion_pixels,native_accepted,native_released,native_dispatches,frame_generation_active,status' | Set-Content -Encoding UTF8 $csv
+  'time_utc,input_fps,native_accept_fps,layer_input_fps,layer_output_fps,output_ratio,accept_ratio,host_work_ms,fence_wait_ms,motion_pixels,native_accepted,native_released,native_dispatches,frame_generation_active,separate_ui_active,status' | Set-Content -Encoding UTF8 $csv
 }
 
 function Read-RecentEvents([string]$path) {
@@ -97,6 +97,7 @@ function Read-LayerState([string]$path) {
     NativeDispatches = [uint64]$live.native_interpolation_dispatches
     NativeBound = $live.native_frame_inputs_bound -eq $true
     Active = $live.frame_generation_active -eq $true
+    SeparateUi = $live.separate_ui_composition_active -eq $true
   }
 }
 
@@ -144,11 +145,13 @@ $timer.Add_Tick({
   $outputRatio = if ($layer) { $layer.OutputRatio } else { 0 }
   $nativeDispatches = if ($layer) { $layer.NativeDispatches } else { 0 }
   $layerActive = if ($layer -and $layer.Active) { 1 } else { 0 }
-  $label.Text = ("{0}`r`n`r`nSource / accepted {1,6:N1} / {2,6:N1} FPS`r`nLayer in / output {3,6:N1} / {4,6:N1} FPS`r`nOutput / accept    {5,6:N2}x / {6,6:P1}`r`nHost / fence      {7,5:N2} / {8,5:N2} ms`r`nMotion pixels     {9,10:N0}`r`nLeases A/R        {10} / {11}`r`nNative dispatches {12}`r`n`r`nLayer output is submitted presents, not physical scanout." -f
-    $status,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[double]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches)
+  $separateUi = if ($layer -and $layer.SeparateUi) { 1 } else { 0 }
+  $colorSource = if ($separateUi) { 'HOST HUDLESS + UI' } else { 'SWAPCHAIN PRESENT' }
+  $label.Text = ("{0}`r`n`r`nSource / accepted {1,6:N1} / {2,6:N1} FPS`r`nLayer in / output {3,6:N1} / {4,6:N1} FPS`r`nOutput / accept    {5,6:N2}x / {6,6:P1}`r`nHost / fence      {7,5:N2} / {8,5:N2} ms`r`nMotion pixels     {9,10:N0}`r`nLeases A/R        {10} / {11}`r`nNative dispatches {12}`r`nColor source      {13}`r`n`r`nLayer output is submitted presents, not physical scanout." -f
+    $status,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[double]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches,$colorSource)
   $row = [string]::Format([Globalization.CultureInfo]::InvariantCulture,
-    '{0:o},{1:F3},{2:F3},{3:F3},{4:F3},{5:F6},{6:F6},{7:F4},{8:F4},{9},{10},{11},{12},{13},{14}',
-    @([DateTime]::UtcNow,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[uint64]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches,$layerActive,$status))
+    '{0:o},{1:F3},{2:F3},{3:F3},{4:F3},{5:F6},{6:F6},{7:F4},{8:F4},{9},{10},{11},{12},{13},{14},{15}',
+    @([DateTime]::UtcNow,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[uint64]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches,$layerActive,$separateUi,$status))
   Add-Content -Encoding UTF8 -Path $csv -Value $row
 })
 $form.Add_FormClosed({ $timer.Stop() })
