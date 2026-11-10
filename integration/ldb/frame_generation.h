@@ -750,7 +750,7 @@ struct State {
                   validHistory ? previousMatrix : currentMatrix,
                   currentMatrix, providerParams.rows)) {
             nativeSlot = asteria.acquireNativeSlot(
-                reinterpret_cast<uintptr_t>(gpu->providerImages(0).device),
+                gpu->providerImages(0).device,
                 nativeTicket);
             if (nativeSlot >= 0) {
               const uint32_t providerFlags =
