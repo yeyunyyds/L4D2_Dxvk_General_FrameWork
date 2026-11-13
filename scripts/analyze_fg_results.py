@@ -33,6 +33,10 @@ def analyze_layer(path):
     native_accepted = data.get('native_v2_accepted', 0)
     native_released = data.get('native_v2_leases_released', 0)
     native_dispatches = swapchain.get('native_interpolation_dispatches', 0)
+    native_input_presents = swapchain.get('native_input_presents', 0)
+    native_output_presents = swapchain.get('native_output_presents', 0)
+    native_ratio_source = ('layer_native_counters'
+                           if native_input_presents else 'unavailable')
     native_bound = swapchain.get('native_frame_inputs_bound', False)
     separate_ui = swapchain.get('separate_ui_composition_active', False)
     algorithm = attempts > 0 and dispatches > 0 and dispatches <= attempts
@@ -40,8 +44,24 @@ def analyze_layer(path):
                         native_dispatches > 0 and
                         native_dispatches <= native_accepted)
     ratio = ffx_presents / attempts if attempts else 0
-    extra_present = (1.8 <= ratio <= 2.2 and
-                     data.get('native_present_failures', 0) == 0)
+    if (not native_input_presents and native_dispatches > 0 and
+            dispatches == native_dispatches):
+        # Older result files predate the dedicated native counters. With no
+        # estimated dispatches, every extra FFX Present belongs to native V2.
+        native_input_presents = native_dispatches
+        native_output_presents = native_dispatches + min(
+            native_dispatches, max(0, ffx_presents - attempts))
+        native_ratio_source = 'inferred_no_estimated_dispatches'
+    native_ratio = (native_output_presents / native_input_presents
+                    if native_input_presents else None)
+    present_ok = data.get('native_present_failures', 0) == 0
+    native_extra_present = (native_ratio is not None and
+                            1.8 <= native_ratio <= 2.2 and present_ok)
+    global_extra_present = 1.8 <= ratio <= 2.2 and present_ok
+    # Native acceptance must never borrow a whole-session ratio: estimated
+    # loading/menu inputs can make that ratio look healthy by coincidence.
+    extra_present = (native_extra_present if native_algorithm
+                     else global_extra_present)
     content = swapchain.get('generated_content_distinctness', 'unverified')
     host_gpu = (native_algorithm and
                 swapchain.get('host_depth_resource_connected', False) and
@@ -79,6 +99,10 @@ def analyze_layer(path):
             'input_attempts': attempts,
             'interpolation_dispatches': dispatches,
             'native_interpolation_dispatches': native_dispatches,
+            'native_input_presents': native_input_presents,
+            'native_output_presents': native_output_presents,
+            'native_output_presents_per_input': native_ratio,
+            'native_output_ratio_source': native_ratio_source,
             'native_present_successes': data.get('native_present_successes', 0),
             'native_present_failures': data.get('native_present_failures', 0),
             'ffx_present_count': ffx_presents,

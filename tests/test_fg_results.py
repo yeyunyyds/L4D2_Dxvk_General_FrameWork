@@ -115,6 +115,8 @@ class SessionResultsTests(unittest.TestCase):
                     'interpolation_dispatches':119,'present_count_ffx':239,
                     'native_frame_inputs_bound':True,
                     'native_interpolation_dispatches':119,
+                    'native_input_presents':119,
+                    'native_output_presents':238,
                     'host_camera_control_active':True,
                     'host_depth_resource_connected':True,
                     'generated_content_distinctness':'unverified_no_gpu_content_probe',
@@ -124,12 +126,29 @@ class SessionResultsTests(unittest.TestCase):
         self.assertTrue(result['host_control']['gpu_inputs_active'])
         self.assertTrue(result['frame_generation']['algorithm_dispatch_confirmed'])
         self.assertTrue(result['frame_generation']['native_algorithm_dispatch_confirmed'])
+        self.assertEqual(result['frame_generation']['native_output_presents_per_input'],2)
         self.assertEqual(result['acceptance_level'],
                          'native_v2_ticketed_swapchain_color_algorithm_and_extra_present_confirmed')
         self.assertTrue(result['frame_generation']['extra_present_submission_confirmed'])
         self.assertEqual(result['frame_generation']['generated_content_distinctness'],
                          'unverified_no_gpu_content_probe')
         self.assertFalse(result['frame_generation']['physical_scanout_confirmed'])
+
+    def test_native_acceptance_does_not_borrow_mixed_global_ratio(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'asteria-layer.json'
+            path.write_text(json.dumps({
+                'native_v2_accepted':50,'native_v2_leases_released':50,
+                'native_present_failures':0,
+                'swapchains':{'1':{'live':True,'frame_input_attempts':100,
+                    'interpolation_dispatches':75,'native_interpolation_dispatches':50,
+                    'present_count_ffx':200,'native_frame_inputs_bound':True,
+                    'host_depth_resource_connected':True,'motion_input_source':1}}}))
+            result=analyze_layer(path)
+        self.assertEqual(result['frame_generation']['native_output_ratio_source'],
+                         'unavailable')
+        self.assertFalse(result['frame_generation']['extra_present_submission_confirmed'])
+        self.assertEqual(result['acceptance_level'],'frame_generation_not_confirmed')
 
 
 if __name__=='__main__': unittest.main()

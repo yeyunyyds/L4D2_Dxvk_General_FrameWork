@@ -94,6 +94,9 @@ function Read-LayerState([string]$path) {
     InputFps = [double]$live.input_present_rate_hz_ema
     OutputFps = [double]$live.estimated_output_rate_hz
     OutputRatio = [double]$live.output_presents_per_input
+    NativeOutputRatio = [double]$live.native_output_presents_per_input
+    NativeInputs = [uint64]$live.native_input_presents
+    NativeOutputs = [uint64]$live.native_output_presents
     NativeDispatches = [uint64]$live.native_interpolation_dispatches
     NativeBound = $live.native_frame_inputs_bound -eq $true
     Active = $live.frame_generation_active -eq $true
@@ -138,16 +141,17 @@ $timer.Add_Tick({
             elseif ($released -gt $accepted) { 'LEASE ERROR' }
             elseif (-not $layer -or -not $layer.NativeBound) { 'LAYER WAIT' }
             elseif (-not $layer.Active -or $layer.NativeDispatches -le 0) { 'LAYER NOT DISPATCHING' }
+            elseif ($layer.NativeInputs -gt 30 -and $layer.NativeOutputRatio -lt 1.8) { 'OUTPUT BELOW 2X' }
             else { 'NATIVE FG ACTIVE' }
   $label.ForeColor = if ($status -eq 'NATIVE FG ACTIVE') {[Drawing.Color]::LightGreen} else {[Drawing.Color]::Orange}
-  $layerInput = if ($layer) { $layer.InputFps } else { 0 }
-  $layerOutput = if ($layer) { $layer.OutputFps } else { 0 }
-  $outputRatio = if ($layer) { $layer.OutputRatio } else { 0 }
+  $outputRatio = if ($layer) { $layer.NativeOutputRatio } else { 0 }
+  $layerInput = $nativeFps
+  $layerOutput = $nativeFps * $outputRatio
   $nativeDispatches = if ($layer) { $layer.NativeDispatches } else { 0 }
   $layerActive = if ($layer -and $layer.Active) { 1 } else { 0 }
   $separateUi = if ($layer -and $layer.SeparateUi) { 1 } else { 0 }
   $colorSource = if ($separateUi) { 'HOST HUDLESS + UI' } else { 'SWAPCHAIN PRESENT' }
-  $label.Text = ("{0}`r`n`r`nSource / accepted {1,6:N1} / {2,6:N1} FPS`r`nLayer in / output {3,6:N1} / {4,6:N1} FPS`r`nOutput / accept    {5,6:N2}x / {6,6:P1}`r`nHost / fence      {7,5:N2} / {8,5:N2} ms`r`nMotion pixels     {9,10:N0}`r`nLeases A/R        {10} / {11}`r`nNative dispatches {12}`r`nColor source      {13}`r`n`r`nLayer output is submitted presents, not physical scanout." -f
+  $label.Text = ("{0}`r`n`r`nSource / accepted {1,6:N1} / {2,6:N1} FPS`r`nLayer in / output {3,6:N1} / {4,6:N1} FPS`r`nOutput / accept    {5,6:N2}x / {6,6:P1}`r`nHost / fence      {7,5:N2} / {8,5:N2} ms`r`nMotion pixels     {9,10:N0}`r`nLeases A/R        {10} / {11}`r`nNative dispatches {12}`r`nColor source      {13}`r`n`r`nF8 toggles FG. Record about 20 seconds in each mode." -f
     $status,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[double]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches,$colorSource)
   $row = [string]::Format([Globalization.CultureInfo]::InvariantCulture,
     '{0:o},{1:F3},{2:F3},{3:F3},{4:F3},{5:F6},{6:F6},{7:F4},{8:F4},{9},{10},{11},{12},{13},{14},{15}',

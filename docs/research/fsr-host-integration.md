@@ -7,7 +7,7 @@
 ## 安装与一次测试
 
 1. 解压到独立文件夹，完全退出游戏和两个 Host，运行 `install_fg_test.cmd`。脚本自动定位 L4D2、校验包内 Host、后端与 Vulkan Layer 文件，并将八个目标文件的原内容和哈希保存到游戏目录的 `.ldb-fg-test-backup`；找不到非默认 Steam 库时，把游戏根目录拖到 CMD 上或作为第一个参数传入。
-2. 完全退出 Steam，再运行 `start_fg_test.cmd`，进入地图正常游玩约一分钟，覆盖转头、平移、开枪、换弹及之前出现圆环特效的位置。本轮由 x64 Host 采集主视图相机、真实帧间隔、深度和运动，通过同进程 ticket/lease ABI 交给 Vulkan Layer；颜色默认使用 replacement swapchain 自己的 `presentColor`，只有 Layer 接管 replacement swapchain，Host 不额外 Present；无需按 F8 或 F9。启动时会同时打开外置 `GF Frame Generation Monitor`，它不进入游戏画面，也不会被插帧。
+2. 完全退出 Steam，再运行 `start_fg_test.cmd`。脚本以 `+fps_max 60` 启动游戏；进入地图后保持相似的转头或平移，先让 FG 开启约 20 秒，按一次 F8 关闭约 20 秒，再按 F8 开启约 20 秒。无需 F9。本轮由 x64 Host 采集主视图相机、真实帧间隔、深度和运动，通过同进程 ticket/lease ABI 交给 Vulkan Layer；颜色默认使用 replacement swapchain 自己的 `presentColor`，只有 Layer 接管 replacement swapchain，Host 不额外 Present。启动时会同时打开外置 `GF Frame Generation Monitor`，它不进入游戏画面，也不会被插帧。
 3. 正常退出，压缩完整 `fg-results` 上传。启动脚本会在新的会话目录同时收集 Bridge、DXVK 与 FG 日志。无需 `capture.trigger`，也无需先测帧率收益。
 4. 测试结束且游戏和 Host 已退出时运行 `remove_fg_test.cmd`。脚本先确认八个测试文件仍与本包完全相同，再恢复原文件并删除 `.ldb-fg-test-backup`。若文件在测试后被其他工具修改，脚本会停止而不会覆盖后来的文件。
 
@@ -42,9 +42,9 @@ Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有�
 - `native_v2_accepted > 0`，且退出时 `native_v2_leases_released` 已追上接受数；
 - swapchain 的 `native_frame_inputs_bound=true`、`host_depth_resource_connected=true`，且 `motion_input_source=1`（Engine）；
 - `native_interpolation_dispatches > 0`，并且没有 native Present 失败；
-- `output_presents_per_input` 接近 2。
+- `native_output_presents_per_input` 接近 2；全会话 `output_presents_per_input` 包含未插帧的加载阶段，只作诊断。
 
-Host 日志还会记录 `gpu_motion_pixels`；转头或平移时它应大于零，用来排除全零运动输入。上述条件证明 Host 真深度／运动/HUD 分层输入、官方算法调度和约 2:1 输出提交链。外置监测窗口会自动发现 Host 创建的 `fg-*` 子目录，并同时读取 Host 事件和 Layer 状态，显示原生输入率、native 接受率、Layer 输入／输出提交率、Host/fence 耗时、lease 进度和 native dispatch 总数；每秒样本写入 `fg-live-comparison.csv`。Layer 输出是 replacement swapchain 的提交率，不代表显示器实际扫描；直接排除“生成内容等于相邻原帧”仍需要后续 GPU 内容差异探针。
+Host 日志还会记录 `gpu_motion_pixels`；转头或平移时它应大于零，用来排除全零运动输入。上述条件证明 Host 真深度／运动输入、官方算法调度和约 2:1 输出提交链。外置监测窗口会自动发现 Host 创建的 `fg-*` 子目录，并同时读取 Host 事件和 Layer 状态，显示滚动原生输入率、原生阶段输出提交率、Host/fence 耗时、lease 进度和 native dispatch 总数；每秒样本写入 `fg-live-comparison.csv`。Layer 输出是 replacement swapchain 的提交率，不代表显示器实际扫描；直接排除“生成内容等于相邻原帧”仍需要后续 GPU 内容差异探针。
 
 本轮开始迁移 Danyria/Asteria 的 replacement-swapchain 路径。设置 `LDB_FG_PRESENTER=1` 后，配套 x64 DXVK 会从实际 graphics family 按能力请求最多四个 queue，并通过 `LdbFgQueryDeviceInfoV1` 向 x64 Host 返回 Vulkan instance、physical/logical device、game/present/acquire/async queue 及逻辑设备 feature。Host 会把队列数和三项 handle 的所有者一致性写入 `session` 事件。
 
