@@ -458,7 +458,7 @@ index 0476bc7..8e5ba19 100644
          }
          Json waits = Json::array();
          for (uint32_t i = 0; i < info->waitSemaphoreCount; ++i) waits.push_back(Id(info->pWaitSemaphores[i]));
-@@ -2422,13 +2679,107 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2422,13 +2679,109 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  record["frame_input_attempts"] = inputAttempts;
                  record["interpolation_dispatches"] = interpolationDispatches;
@@ -484,6 +484,8 @@ index 0476bc7..8e5ba19 100644
 +                record["async_workloads_available"] = fg->asyncWorkloadsEnabled;
 +                record["async_workloads_enabled"] = fg->asyncWorkloadsActive;
 +                record["graphics_queue_family"] = fg->graphicsFamily;
++                record["ui_composition_queue_family"] = fg->graphicsFamily;
++                record["ui_internal_double_buffering"] = separateUiActive;
 +                record["async_compute_queue_family"] = fg->asyncComputeFamily;
 +                record["present_queue_family"] = fg->presentFamily;
 +                record["image_acquire_queue_family"] = fg->imageAcquireFamily;
@@ -1448,7 +1450,7 @@ index 54799dd..9eff8e5 100644
      state.nextGdpa = nextGdpa;
      state.width = createInfo->imageExtent.width;
      state.height = createInfo->imageExtent.height;
-@@ -512,9 +968,9 @@ inline VkResult InitializeSwapchainResources(
+@@ -512,9 +968,12 @@ inline VkResult InitializeSwapchainResources(
      fgInfo.device = device;
      fgInfo.physicalDevice = physicalDevice;
      fgInfo.gameQueue = {queues.gameQueue, queues.graphicsFamily, nullptr};
@@ -1458,7 +1460,11 @@ index 54799dd..9eff8e5 100644
 +    fgInfo.asyncComputeQueue = {queues.asyncComputeQueue, queues.asyncComputeFamily, nullptr};
 +    fgInfo.presentQueue = {queues.presentQueue, queues.presentFamily, nullptr};
 +    fgInfo.imageAcquireQueue = {queues.imageAcquireQueue, queues.imageAcquireFamily, nullptr};
-     fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;
+-    fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;
++    // UI composition records a graphics render pass. DXVK may expose a
++    // transfer/present-only queue, so compose on the graphics-capable game
++    // queue and let the SDK transfer the finished image for presentation.
++    fgInfo.compositionMode = VK_COMPOSITION_MODE_GAME_QUEUE_FFX;
  
      state.deviceContext = {device, physicalDevice, nextGdpa};
 @@ -545,6 +1001,7 @@ inline VkResult InitializeSwapchainResources(
@@ -1572,7 +1578,7 @@ index 54799dd..9eff8e5 100644
      {
          input = MakeEstimatedInternalInputs(state, frame);
          valid = input && ValidFrameInputs(*input, reinterpret_cast<uintptr_t>(state.device), frame, state.width, state.height) &&
-@@ -674,15 +1165,29 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
+@@ -674,15 +1165,32 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
      }
      if (!valid) { input.reset(); state.historyReset.store(true); }
      std::atomic_store_explicit(&state.currentInputs, std::move(input), std::memory_order_release);
@@ -1584,7 +1590,10 @@ index 54799dd..9eff8e5 100644
 +        !(configuredInput && configuredInput->separateUi);
 +    FfxResource ui{};
 +    if (configuredInput && configuredInput->separateUi && IsSeparateUiCompositionRequested()) ui = configuredInput->ui;
-+    if (ffxRegisterFrameinterpolationUiResourceVK(state.swapchainBox, ui, 0) != FFX_OK)
++    const uint32_t uiFlags = ui.resource
++        ? uint32_t(FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING)
++        : 0u;
++    if (ffxRegisterFrameinterpolationUiResourceVK(state.swapchainBox, ui, uiFlags) != FFX_OK)
 +    {
 +        state.historyReset.store(true);
 +        std::atomic_store_explicit(&state.currentInputs, std::shared_ptr<const FrameInputs>{}, std::memory_order_release);

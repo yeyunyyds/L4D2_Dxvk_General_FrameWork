@@ -127,6 +127,8 @@ def analyze_layer(path):
             'fast_scene_inputs_active': fast_scene_inputs,
             'async_workloads_available': swapchain.get('async_workloads_available', False),
             'async_workloads_enabled': swapchain.get('async_workloads_enabled', False),
+            'ui_composition_queue_family': swapchain.get('ui_composition_queue_family'),
+            'ui_internal_double_buffering': swapchain.get('ui_internal_double_buffering', False),
             'queue_families': {
                 'graphics': swapchain.get('graphics_queue_family'),
                 'async_compute': swapchain.get('async_compute_queue_family'),

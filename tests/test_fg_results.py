@@ -166,6 +166,8 @@ class SessionResultsTests(unittest.TestCase):
                     'fast_scene_inputs_active':True,
                     'async_workloads_available':True,
                     'async_workloads_enabled':True,
+                    'ui_composition_queue_family':0,
+                    'ui_internal_double_buffering':True,
                     'graphics_queue_family':0,'async_compute_queue_family':1,
                     'present_queue_family':0,'image_acquire_queue_family':2,
                     'cpu_timing':{'wait_for_presents':{
@@ -182,6 +184,8 @@ class SessionResultsTests(unittest.TestCase):
         self.assertTrue(performance['fast_scene_inputs_active'])
         self.assertTrue(performance['async_workloads_enabled'])
         self.assertTrue(performance['async_workloads_available'])
+        self.assertEqual(performance['ui_composition_queue_family'],0)
+        self.assertTrue(performance['ui_internal_double_buffering'])
         self.assertEqual(performance['queue_families']['async_compute'],1)
         self.assertEqual(performance['cpu_timing']['wait_for_presents']['average_ms'],.5)
         self.assertEqual(performance['input_retirement']['queue_peak'],2)
