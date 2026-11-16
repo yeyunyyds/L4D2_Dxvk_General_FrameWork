@@ -32,6 +32,7 @@ inline constexpr uint32_t ASTERIA_FG_GPU_COMPLETED = 2u;
 inline constexpr uint32_t ASTERIA_FG_HUD_ABSENT = 4u;
 inline constexpr uint32_t ASTERIA_FG_HISTORY_RESET = 8u;
 inline constexpr uint32_t ASTERIA_FG_GPU_ORDERED = 16u;
+inline constexpr uint32_t ASTERIA_FG_NO_UI_RESOURCES = 32u;
 
 #pragma pack(push, 8)
 struct AsteriaFrameInputRegistrationV1 {
@@ -335,7 +336,7 @@ public:
                     uintptr_t producerQueue,
                     uint32_t depthFormat, uint32_t motionFormat,
                     uint32_t hudlessFormat, uint32_t uiFormat,
-                    uint32_t imageLayout) noexcept {
+                    uint32_t imageLayout, bool sceneOnly) noexcept {
     ++m_nativeSubmitted;
     if (slot >= m_slots->size() || !m_submitInputs) {
       cancelNativeSlot(slot);
@@ -352,23 +353,26 @@ public:
     input.ticket = ticket;
     input.depth_image = uint64_t(depthImage);
     input.motion_image = uint64_t(motionImage);
-    input.hudless_image = uint64_t(hudlessImage);
-    input.ui_image = uint64_t(uiImage);
+    input.hudless_image = sceneOnly ? 0 : uint64_t(hudlessImage);
+    input.ui_image = sceneOnly ? 0 : uint64_t(uiImage);
     input.producer_queue = uint64_t(producerQueue);
     input.depth_format = depthFormat == 100 ? ASTERIA_FG_FORMAT_R32_FLOAT : 0;
     input.motion_format = motionFormat == 103 ? ASTERIA_FG_FORMAT_RG32_FLOAT : 0;
-    input.hudless_format =
-        hudlessFormat == 44 ? ASTERIA_FG_FORMAT_BGRA8_UNORM
-                            : hudlessFormat == 37
-                                  ? ASTERIA_FG_FORMAT_RGBA8_UNORM
-                                  : 0;
-    input.ui_format =
-        uiFormat == 37 ? ASTERIA_FG_FORMAT_RGBA8_UNORM : 0;
+    input.hudless_format = sceneOnly
+        ? 0
+        : hudlessFormat == 44 ? ASTERIA_FG_FORMAT_BGRA8_UNORM
+                              : hudlessFormat == 37
+                                    ? ASTERIA_FG_FORMAT_RGBA8_UNORM
+                                    : 0;
+    input.ui_format = sceneOnly
+        ? 0
+        : uiFormat == 37 ? ASTERIA_FG_FORMAT_RGBA8_UNORM : 0;
     input.image_layout = imageLayout == 5
                              ? ASTERIA_FG_LAYOUT_SHADER_READ_ONLY
                              : 0;
     input.flags = ASTERIA_FG_DEPTH_SCENE | ASTERIA_FG_GPU_ORDERED |
                   ASTERIA_FG_HUD_ABSENT |
+                  (sceneOnly ? ASTERIA_FG_NO_UI_RESOURCES : 0u) |
                   (reset ? ASTERIA_FG_HISTORY_RESET : 0u);
     input.delta_milliseconds = float(deltaMilliseconds);
     input.near_plane = camera.nearPlane;

@@ -28,7 +28,7 @@ inline std::wstring readEnv(const wchar_t *key) {
 }
 struct Config {
   bool enabled = false, generatedOnly = false, providerOnly = false,
-       hotkeys = true;
+       hotkeys = true, fastInputs = false;
   bool presenterProbe = false;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
@@ -50,6 +50,7 @@ struct Config {
 
       generatedOnly = mode == L"generated";
       providerOnly = mode == L"provider";
+      fastInputs = readEnv(L"LDB_FG_FAST_INPUTS") == L"1";
       autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
       auto pacing = readEnv(L"LDB_FG_PACING_MS");
       if (!pacing.empty()) {
@@ -515,7 +516,7 @@ struct State {
                ",\"matching_draws\":" + std::to_string(candidate.matches));
   }
   void nearBegin() {
-    if (!scene || !gpu || nearInvalid)
+    if (config().fastInputs || !scene || !gpu || nearInvalid)
       return;
     Com<IDirect3DSurface9> rt;
     D3DSURFACE_DESC desc{};
@@ -535,7 +536,7 @@ struct State {
     nearBeforeCopied = true;
   }
   void nearCopy(uint32_t uid) {
-    if (!scene || !nearSeen || !gpu || !nearDraws ||
+    if (config().fastInputs || !scene || !nearSeen || !gpu || !nearDraws ||
         nearCapturedDraws == nearDraws)
       return;
     Com<IDirect3DSurface9> rt, ds;
@@ -569,7 +570,8 @@ struct State {
 
     if (next->MinZ == 0 && next->MaxZ > 0 && next->MaxZ <= .2f) {
       sceneCopy(uid);
-      nearSeen = scene;
+      if (!config().fastInputs)
+        nearSeen = scene;
     } else
       nearCopy(uid);
   }
@@ -584,10 +586,15 @@ struct State {
 
     if (v.MinZ == 0 && v.MaxZ > 0 && v.MaxZ <= .2f) {
       sceneCopy(uid);
-      nearSeen = scene;
-      nearBegin();
+      if (!config().fastInputs) {
+        nearSeen = scene;
+        nearBegin();
+      }
     } else if (nearSeen)
       nearCopy(uid);
+
+    if (config().fastInputs)
+      return;
 
     if (!scene || !gpu || uiCopied || v.X || v.Y || v.Width != gpu->width ||
         v.Height != gpu->height)
@@ -619,7 +626,8 @@ struct State {
     if (disabled || paused || FAILED(result))
       return;
     D3DVIEWPORT9 observed{};
-    if (scene && nearSeen && SUCCEEDED(device->GetViewport(&observed)) &&
+    if (!config().fastInputs && scene && nearSeen &&
+        SUCCEEDED(device->GetViewport(&observed)) &&
         observed.MinZ == 0 && observed.MaxZ > 0 && observed.MaxZ <= .2f) {
       nearDraws++;
       nearColourCopied = false;
@@ -731,7 +739,8 @@ struct State {
 
       if (!disabled && !paused && !partial && primaryChain && scene &&
           !candidate.conflict &&
-          (!nearSeen || (nearColourCopied && !nearInvalid)) && gpu) {
+          (config().fastInputs || !nearSeen ||
+           (nearColourCopied && !nearInvalid)) && gpu) {
         hr(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, back.put()),
            "FG final backbuffer");
         transfer(back.get(), ResidentFg::CurrentFinal);
@@ -763,7 +772,7 @@ struct State {
               providerParams.thresholds[2] = 1.0f;
               try {
                 gpu->generate(providerParams, false, true,
-                              uint32_t(nativeSlot));
+                              uint32_t(nativeSlot), config().fastInputs);
               } catch (...) {
                 asteria.cancelNativeSlot(uint32_t(nativeSlot));
                 throw;
@@ -778,7 +787,8 @@ struct State {
                   providerImages.ui, providerImages.queue,
                   providerImages.depthFormat,
                   providerImages.motionFormat, providerImages.hudlessFormat,
-                  providerImages.uiFormat, providerImages.depthLayout);
+                  providerImages.uiFormat, providerImages.depthLayout,
+                  config().fastInputs);
               generatedFrame = nativeFrameAccepted;
             }
           }
@@ -1149,6 +1159,8 @@ struct State {
             ",\"pacing_wait_ms\":" + std::to_string(previousPacingMs) +
             ",\"source_interval_ms\":" +
             std::to_string(sourceIntervalMs) +
+            ",\"fast_inputs\":" +
+            std::string(config().fastInputs ? "true" : "false") +
             ",\"native_queries_total\":" +
             std::to_string(asteria.nativeQueries()) +
             ",\"native_tickets_total\":" +

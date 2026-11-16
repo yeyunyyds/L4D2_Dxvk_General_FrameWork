@@ -150,5 +150,31 @@ class SessionResultsTests(unittest.TestCase):
         self.assertFalse(result['frame_generation']['extra_present_submission_confirmed'])
         self.assertEqual(result['acceptance_level'],'frame_generation_not_confirmed')
 
+    def test_layer_reports_fast_path_and_queue_timing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'asteria-layer.json'
+            path.write_text(json.dumps({
+                'native_v2_accepted':2,'native_v2_leases_released':1,
+                'native_present_failures':0,
+                'swapchains':{'1':{
+                    'live':True,'frame_input_attempts':2,
+                    'interpolation_dispatches':2,
+                    'native_interpolation_dispatches':2,
+                    'native_input_presents':2,'native_output_presents':4,
+                    'present_count_ffx':4,'native_frame_inputs_bound':True,
+                    'host_depth_resource_connected':True,'motion_input_source':1,
+                    'fast_scene_inputs_active':True,
+                    'async_workloads_enabled':True,
+                    'graphics_queue_family':0,'async_compute_queue_family':1,
+                    'present_queue_family':0,'image_acquire_queue_family':2,
+                    'cpu_timing':{'wait_for_presents':{
+                        'calls':2,'total_ms':1.0,'average_ms':.5}}}}}))
+            result=analyze_layer(path)
+        performance=result['performance_path']
+        self.assertTrue(performance['fast_scene_inputs_active'])
+        self.assertTrue(performance['async_workloads_enabled'])
+        self.assertEqual(performance['queue_families']['async_compute'],1)
+        self.assertEqual(performance['cpu_timing']['wait_for_presents']['average_ms'],.5)
+
 
 if __name__=='__main__': unittest.main()

@@ -39,6 +39,7 @@ def analyze_layer(path):
                            if native_input_presents else 'unavailable')
     native_bound = swapchain.get('native_frame_inputs_bound', False)
     separate_ui = swapchain.get('separate_ui_composition_active', False)
+    fast_scene_inputs = swapchain.get('fast_scene_inputs_active', False)
     algorithm = attempts > 0 and dispatches > 0 and dispatches <= attempts
     native_algorithm = (native_bound and native_accepted > 0 and
                         native_dispatches > 0 and
@@ -117,6 +118,17 @@ def analyze_layer(path):
             'extra_present_submission_confirmed': extra_present,
             'generated_content_distinctness': content,
             'physical_scanout_confirmed': False,
+        },
+        'performance_path': {
+            'fast_scene_inputs_active': fast_scene_inputs,
+            'async_workloads_enabled': swapchain.get('async_workloads_enabled', False),
+            'queue_families': {
+                'graphics': swapchain.get('graphics_queue_family'),
+                'async_compute': swapchain.get('async_compute_queue_family'),
+                'present': swapchain.get('present_queue_family'),
+                'image_acquire': swapchain.get('image_acquire_queue_family'),
+            },
+            'cpu_timing': swapchain.get('cpu_timing', {}),
         },
         'acceptance_level': level,
         'interpretation': [

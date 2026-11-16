@@ -667,7 +667,8 @@ public:
     return result;
   }
   void generate(const Params &params, bool deferSubmit = false,
-                bool providerInputsOnly = false, uint32_t providerSlot = 0) {
+                bool providerInputsOnly = false, uint32_t providerSlot = 0,
+                bool providerSceneOnly = false) {
     // Uniforms, descriptors and the command pool are single-buffered. Waiting
     // here overlaps the previous export with the game's intervening CPU work,
     // while still preventing their reuse before the queue finished.
@@ -732,7 +733,7 @@ public:
     vkCmdBindPipeline(c.command, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
     vkCmdBindDescriptorSets(c.command, VK_PIPELINE_BIND_POINT_COMPUTE,
                             pipelineLayout, 0, 1, &set, 0, nullptr);
-    if (timestamps && !providerInputsOnly) {
+    if (timestamps) {
       vkCmdResetQueryPool(c.command, timestamps, 0, 2);
       vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                           timestamps, 0);
@@ -757,23 +758,31 @@ public:
     // The HUD-less image must keep the swapchain format (often BGRA), which
     // cannot be written through the shader's rgba8 storage binding. Copy the
     // exact pre-UI snapshot into the leased slot on the same submission.
-    auto &hudless = images[providerHudless(activeProviderSlot)];
-    auto &hudSource = images[(params.flags[2] & 2u) ? CurrentUi : CurrentFinal];
-    const auto sourceLayout = hudSource.layout;
-    transition(hudSource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    transition(hudless, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    VkImageCopy hudCopy{};
-    hudCopy.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-    hudCopy.dstSubresource = hudCopy.srcSubresource;
-    hudCopy.extent = {width, height, 1};
-    c.vkCmdCopyImage(c.command, hudSource.image, hudSource.layout,
-                     hudless.image, hudless.layout, 1, &hudCopy);
-    transition(hudSource, sourceLayout);
-    transition(hudless, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    if (timestamps && !providerInputsOnly) {
+    if (!providerSceneOnly) {
+      auto &hudless = images[providerHudless(activeProviderSlot)];
+      auto &hudSource = images[(params.flags[2] & 2u) ? CurrentUi : CurrentFinal];
+      const auto sourceLayout = hudSource.layout;
+      transition(hudSource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+      transition(hudless, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+      VkImageCopy hudCopy{};
+      hudCopy.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+      hudCopy.dstSubresource = hudCopy.srcSubresource;
+      hudCopy.extent = {width, height, 1};
+      c.vkCmdCopyImage(c.command, hudSource.image, hudSource.layout,
+                       hudless.image, hudless.layout, 1, &hudCopy);
+      transition(hudSource, sourceLayout);
+      transition(hudless, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+    if (timestamps) {
       vkCmdWriteTimestamp(c.command, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                           timestamps, 1);
       queryPending = true;
+    }
+    if (providerSceneOnly) {
+      cachedQuality = {};
+      if (!deferSubmit)
+        end(!providerInputsOnly);
+      return;
     }
     clear.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     clear.dstAccessMask =
