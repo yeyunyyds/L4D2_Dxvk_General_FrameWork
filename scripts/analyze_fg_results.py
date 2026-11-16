@@ -129,6 +129,7 @@ def analyze_layer(path):
                 'image_acquire': swapchain.get('image_acquire_queue_family'),
             },
             'cpu_timing': swapchain.get('cpu_timing', {}),
+            'input_retirement': swapchain.get('input_retirement', {}),
         },
         'acceptance_level': level,
         'interpretation': [

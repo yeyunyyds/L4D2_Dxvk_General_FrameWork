@@ -168,13 +168,17 @@ class SessionResultsTests(unittest.TestCase):
                     'graphics_queue_family':0,'async_compute_queue_family':1,
                     'present_queue_family':0,'image_acquire_queue_family':2,
                     'cpu_timing':{'wait_for_presents':{
-                        'calls':2,'total_ms':1.0,'average_ms':.5}}}}}))
+                        'calls':2,'total_ms':1.0,'average_ms':.5}},
+                    'input_retirement':{'queue_peak':2,'poll_releases':10,
+                        'forced_waits':1,'forced_wait_average_ms':.1}}}}))
             result=analyze_layer(path)
         performance=result['performance_path']
         self.assertTrue(performance['fast_scene_inputs_active'])
         self.assertTrue(performance['async_workloads_enabled'])
         self.assertEqual(performance['queue_families']['async_compute'],1)
         self.assertEqual(performance['cpu_timing']['wait_for_presents']['average_ms'],.5)
+        self.assertEqual(performance['input_retirement']['queue_peak'],2)
+        self.assertEqual(performance['input_retirement']['poll_releases'],10)
 
 
 if __name__=='__main__': unittest.main()
