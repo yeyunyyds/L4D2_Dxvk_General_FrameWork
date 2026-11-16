@@ -458,7 +458,7 @@ index 0476bc7..8e5ba19 100644
          }
          Json waits = Json::array();
          for (uint32_t i = 0; i < info->waitSemaphoreCount; ++i) waits.push_back(Id(info->pWaitSemaphores[i]));
-@@ -2422,13 +2679,106 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2422,13 +2679,107 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  record["frame_input_attempts"] = inputAttempts;
                  record["interpolation_dispatches"] = interpolationDispatches;
@@ -513,6 +513,7 @@ index 0476bc7..8e5ba19 100644
 +                const uint64_t probedPixels = fg->contentProbePixels.load(std::memory_order_relaxed);
 +                const uint64_t differentPixels = fg->contentProbeDifferentPixels.load(std::memory_order_relaxed);
 +                record["content_probe"] = {
++                    {"enabled", fg->contentProbeBuffer != VK_NULL_HANDLE},
 +                    {"frames", probedFrames},
 +                    {"frames_with_difference", differentFrames},
 +                    {"sampled_pixels", probedPixels},
@@ -1468,12 +1469,13 @@ index 54799dd..9eff8e5 100644
      const VkResult scResult = replacement.createSwapchainFFX(device, &ffxCreateInfo, allocator, &state.proxySwapchain, &fgInfo);
      state.nativeCreateAttempted = AsteriaNativeSwapchainCreateAttempted();
      if (scResult != VK_SUCCESS || state.proxySwapchain == VK_NULL_HANDLE)
-@@ -616,16 +1073,18 @@ inline VkResult InitializeSwapchainResources(
+@@ -616,16 +1073,19 @@ inline VkResult InitializeSwapchainResources(
          DestroySwapchainResources(state);
          return VK_ERROR_OUT_OF_DEVICE_MEMORY;
      }
 +    // Diagnostic only: failure leaves FG active and reports no pixel samples.
-+    (void)AllocateContentProbe(state);
++    if (asteria_live_scene::EnvFlagDefaultTrue("ASTERIA_FG_CONTENT_PROBE"))
++        (void)AllocateContentProbe(state);
  
      FfxFrameGenerationConfig config{};
      config.swapChain = state.swapchainBox;

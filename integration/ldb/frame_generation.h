@@ -28,7 +28,8 @@ inline std::wstring readEnv(const wchar_t *key) {
 }
 struct Config {
   bool enabled = false, generatedOnly = false, providerOnly = false,
-       hotkeys = true, fastInputs = false, hudBypass = false;
+       hotkeys = true, fastInputs = false, hudBypass = false,
+       mergeSubmissions = true;
   bool presenterProbe = false;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
@@ -52,6 +53,7 @@ struct Config {
       providerOnly = mode == L"provider";
       fastInputs = readEnv(L"LDB_FG_FAST_INPUTS") == L"1";
       hudBypass = readEnv(L"LDB_FG_HUD_BYPASS") == L"1";
+      mergeSubmissions = readEnv(L"LDB_FG_MERGE_SUBMISSIONS") != L"0";
       autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
       auto pacing = readEnv(L"LDB_FG_PACING_MS");
       if (!pacing.empty()) {
@@ -261,6 +263,8 @@ struct State {
              std::string(config().fastInputs ? "true" : "false") +
              ",\"hud_bypass_requested\":" +
              std::string(config().hudBypass ? "true" : "false") +
+             ",\"merge_submissions\":" +
+             std::string(config().mergeSubmissions ? "true" : "false") +
              ",\"qpc_frequency\":" +
              std::to_string(frequency.QuadPart) +
              ",\"local_effect_policy\":" +
@@ -756,7 +760,7 @@ struct State {
            (nearColourCopied && !nearInvalid)) && gpu) {
         hr(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, back.put()),
            "FG final backbuffer");
-        if (!providerOnly)
+        if (!providerOnly || !config().mergeSubmissions)
           transfer(back.get(), ResidentFg::CurrentFinal);
         ready = true;
         bool providerGpuInputsReady = false;
@@ -787,14 +791,19 @@ struct State {
                                       previousFlags};
               providerParams.thresholds[2] = 1.0f;
               try {
-                withTransferredSurface(
-                    back.get(), ResidentFg::CurrentFinal, false,
-                    [&](const ImageInfo &info, VkImageAspectFlags aspect) {
-                      gpu->copyInto(info, ResidentFg::CurrentFinal, aspect, true);
-                      gpu->generate(providerParams, false, true,
-                                    uint32_t(nativeSlot), sceneOnly,
-                                    true);
-                    });
+                if (config().mergeSubmissions) {
+                  withTransferredSurface(
+                      back.get(), ResidentFg::CurrentFinal, false,
+                      [&](const ImageInfo &info, VkImageAspectFlags aspect) {
+                        gpu->copyInto(info, ResidentFg::CurrentFinal, aspect,
+                                      true);
+                        gpu->generate(providerParams, false, true,
+                                      uint32_t(nativeSlot), sceneOnly, true);
+                      });
+                } else {
+                  gpu->generate(providerParams, false, true,
+                                uint32_t(nativeSlot), sceneOnly);
+                }
               } catch (...) {
                 asteria.cancelNativeSlot(uint32_t(nativeSlot));
                 throw;
@@ -1190,6 +1199,8 @@ struct State {
             std::string(config().hudBypass ? "true" : "false") +
             ",\"hud_boundary_available\":" +
             std::string(uiCopied ? "true" : "false") +
+            ",\"merge_submissions\":" +
+            std::string(config().mergeSubmissions ? "true" : "false") +
             ",\"native_queries_total\":" +
             std::to_string(asteria.nativeQueries()) +
             ",\"native_tickets_total\":" +

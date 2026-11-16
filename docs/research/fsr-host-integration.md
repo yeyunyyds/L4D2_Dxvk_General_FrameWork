@@ -23,6 +23,7 @@
 - Vulkan Layer 会优先把 FFX async workload 放到独立 compute queue；没有独立队列时自动保持同步模式。`asteria-layer.json` 的 `fast_scene_inputs_active`、`async_workloads_enabled`、四个 queue family 和 `cpu_timing` 用于确认实际选择，并分开统计 `ffxWaitForPresents`、配置、回调与 `vkQueuePresentFFX` 的 CPU 时间。
 - 三个 Host 输入槽按插值队列的 timeline 完成值延迟退休：先无阻塞回收已完成的旧代，只有两个旧租约仍占用、下一帧将缺少空槽时才等待最老一代。它不再为了每个输入调用全队列/设备 idle；`input_retirement` 记录队列峰值、无等待释放和被迫等待耗时。
 - Layer 在同一个插值 command buffer 内抽样比较 16 个固定场景像素的真实输入和生成输出，timeline 完成后才读回极小的环形缓冲；`content_probe` 只在至少一个 RGB 样本确有差异时确认非重复内容。`output_pacing` 从实际 `vkQueuePresentKHR` 调用记录输出间隔、抖动、真实/生成帧数量和交替比例；它比提交计数更强，但仍不等于显示器物理 scanout 测量。
+- 设备丢失隔离包提供三个只改变一个变量的入口：`start_fg_isolate_a_probe_off.cmd` 关闭 GPU 像素探针，`start_fg_isolate_b_hud_off.cmd` 在 A 的基础上关闭 HUD 分层，`start_fg_isolate_c_merge_off.cmd` 再关闭 submission 合并。按 A、B、C 顺序测试即可定位首个不稳定路径；三个入口共用同一套二进制。
 - 保留深度／覆盖质量预检：过多无效场景、异常前景覆盖仍恢复完整原帧。细特效风险在 FSR 路径改为区域保护：可疑细亮区域及前帧旧位置的邻域保留当前原帧，避免单个风险点导致整帧拒绝和历史反复预热。该识别依据亮线形态，不等同于引擎材质标签，可能保守地保留普通白色细节；透明层仍未完整分解。自研后端继续整帧拒绝细特效风险。SDK 合成后，已验证的前帧遮挡填补区域沿用预检重投影结果；缺乏可靠运动的纯色突变区域也有原帧保护。因此当前交付是官方 FSR 与保守保护的组合。
 - 首帧、帧编号断续、HUD 输入变化或 Reset 时重置历史。预热帧不会增加一次生成帧 Present。
 - 加载阶段的 estimated Provider 只负责建立 replacement swapchain，默认不执行插帧；原生 V2 Provider 接管并重置历史后才开始生成，避免加载画面污染游戏内颜色历史。

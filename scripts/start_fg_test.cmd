@@ -22,7 +22,19 @@ set "LDB_FG_PRESENTER=1"
 set "LDB_FG_MODE=provider"
 set "LDB_FG_FAST_INPUTS=1"
 set "LDB_FG_HUD_BYPASS=1"
-set "LDB_FG_LOG_DIR=%~dp0fg-results\session-%RANDOM%-%RANDOM%"
+set "LDB_FG_MERGE_SUBMISSIONS=1"
+set "ASTERIA_FG_CONTENT_PROBE=1"
+set "ASTERIA_FG_SEPARATE_UI=1"
+if not defined GF_FG_ISOLATION set "GF_FG_ISOLATION=FULL"
+if /i "%GF_FG_ISOLATION%"=="A" set "ASTERIA_FG_CONTENT_PROBE=0"
+if /i "%GF_FG_ISOLATION%"=="B" set "ASTERIA_FG_CONTENT_PROBE=0"
+if /i "%GF_FG_ISOLATION%"=="B" set "LDB_FG_HUD_BYPASS=0"
+if /i "%GF_FG_ISOLATION%"=="B" set "ASTERIA_FG_SEPARATE_UI=0"
+if /i "%GF_FG_ISOLATION%"=="C" set "ASTERIA_FG_CONTENT_PROBE=0"
+if /i "%GF_FG_ISOLATION%"=="C" set "LDB_FG_HUD_BYPASS=0"
+if /i "%GF_FG_ISOLATION%"=="C" set "ASTERIA_FG_SEPARATE_UI=0"
+if /i "%GF_FG_ISOLATION%"=="C" set "LDB_FG_MERGE_SUBMISSIONS=0"
+set "LDB_FG_LOG_DIR=%~dp0fg-results\session-%GF_FG_ISOLATION%-%RANDOM%-%RANDOM%"
 set "LDB_FG_CAPTURE_FRAMES=4"
 set "LDB_FG_HOTKEYS=1"
 set "LDB_FG_AUTO_CAPTURE=1"
@@ -36,13 +48,14 @@ set "VK_INSTANCE_LAYERS=VK_LAYER_GF_Asteria_FrameGeneration;%VK_INSTANCE_LAYERS%
 set "ASTERIA_FG_ENABLE=1"
 set "ASTERIA_FG_ESTIMATED_INTERNAL=1"
 set "ASTERIA_FG_ESTIMATED_DISPATCH=0"
-set "ASTERIA_FG_SEPARATE_UI=1"
 set "ASTERIA_FG_PROBE_OUTPUT=%LDB_FG_LOG_DIR%\asteria-layer.json"
 if not exist "%LDB_FG_LOG_DIR%" mkdir "%LDB_FG_LOG_DIR%"
 if not exist "%LDB_FG_LOG_DIR%" exit /b 1
 set "DXVK_LOG_PATH=%LDB_FG_LOG_DIR%"
 set "DXVK_LOG_LEVEL=info"
 echo Starts the x64 Host-controlled Vulkan Layer replacement-swapchain path.
+echo Isolation preset: %GF_FG_ISOLATION%
+echo Content probe=%ASTERIA_FG_CONTENT_PROBE% HUD split=%ASTERIA_FG_SEPARATE_UI% merged submissions=%LDB_FG_MERGE_SUBMISSIONS%
 echo Host collects scene/camera timing; the Layer remains the only presenter.
 echo Automatic capture: delayed bursts throughout this session. No trigger file.
 echo Results: %LDB_FG_LOG_DIR%
