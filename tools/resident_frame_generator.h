@@ -645,7 +645,8 @@ public:
            image.create.extent.height == height &&
            image.create.samples == VK_SAMPLE_COUNT_1_BIT;
   }
-  void copyInto(const ImageInfo &source, Slot slot, VkImageAspectFlags aspect) {
+  void copyInto(const ImageInfo &source, Slot slot, VkImageAspectFlags aspect,
+                bool deferSubmit = false) {
     auto &dst = images[slot];
     if (!matches(source) || source.create.format != dst.format)
       throw std::runtime_error("FG history source changed");
@@ -659,7 +660,8 @@ public:
                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image,
                      dst.layout, 1, &r);
     transition(dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    end();
+    if (!deferSubmit)
+      end();
   }
   Counters takeCounters() {
     auto result = counters;
@@ -668,11 +670,14 @@ public:
   }
   void generate(const Params &params, bool deferSubmit = false,
                 bool providerInputsOnly = false, uint32_t providerSlot = 0,
-                bool providerSceneOnly = false) {
+                bool providerSceneOnly = false, bool appendSubmission = false) {
     // Uniforms, descriptors and the command pool are single-buffered. Waiting
     // here overlaps the previous export with the game's intervening CPU work,
     // while still preventing their reuse before the queue finished.
-    waitPending();
+    if (!appendSubmission)
+      waitPending();
+    else if (!recording)
+      throw std::runtime_error("FG append without recorded copy");
     activeProviderSlot = providerSlot % 3;
     std::memcpy(uniformMap, &params, sizeof(params));
     VkMappedMemoryRange range{};
@@ -713,7 +718,8 @@ public:
     }
     vkUpdateDescriptorSets(c.device, uint32_t(writes.size()), writes.data(), 0,
                            nullptr);
-    begin();
+    if (!appendSubmission)
+      begin();
     VkBufferMemoryBarrier b{};
     b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
     b.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
@@ -778,7 +784,7 @@ public:
                           timestamps, 1);
       queryPending = true;
     }
-    if (providerSceneOnly) {
+    if (providerInputsOnly) {
       cachedQuality = {};
       if (!deferSubmit)
         end(!providerInputsOnly);

@@ -117,10 +117,15 @@ def analyze_layer(path):
             'hudless_ui_composition_bound': separate_ui,
             'extra_present_submission_confirmed': extra_present,
             'generated_content_distinctness': content,
+            'gpu_sampled_pixel_difference_confirmed':
+                content == 'gpu_sampled_generated_pixels_differ',
+            'content_probe': swapchain.get('content_probe', {}),
+            'output_pacing': swapchain.get('output_pacing', {}),
             'physical_scanout_confirmed': False,
         },
         'performance_path': {
             'fast_scene_inputs_active': fast_scene_inputs,
+            'async_workloads_available': swapchain.get('async_workloads_available', False),
             'async_workloads_enabled': swapchain.get('async_workloads_enabled', False),
             'queue_families': {
                 'graphics': swapchain.get('graphics_queue_family'),

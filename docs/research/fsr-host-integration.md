@@ -19,9 +19,10 @@
 
 - 直接使用 Host GPU 历史，不通过 IPC 传输整幅图像，不为插帧上传/回读整幅游戏画面。有限诊断截图是例外。
 - GPU 转换颜色、深度和运动输入；运动来自相机重建及有限范围图像匹配，官方光流继续处理图像运动。没有取得完整引擎物体/骨骼运动矢量。
-- 默认测试设置 `LDB_FG_FAST_INPUTS=1`：Host 只提交深度、运动和相机，颜色直接使用 replacement swapchain 的 `presentColor`，跳过近景/HUD 分析、HUD-less/UI 资源复制及质量回读。HUD 分层仍是独立实验项；清除该变量并设置 `ASTERIA_FG_SEPARATE_UI=1` 才启用旧分层路径。
+- 默认测试设置 `LDB_FG_FAST_INPUTS=1`，跳过近景分析与质量回读。最终画面复制和深度/运动生成现在共用一次 command buffer，使无 HUD 边界时 Host 从三次提交降到两次。`LDB_FG_HUD_BYPASS=1` 只保留低成本的屏幕 alpha HUD 边界检测：检测成功时提交 HUD-less/UI 并由 replacement swapchain 在 FG 后合成；检测不到时自动保持 `presentColor` 快速路径，不伪造 HUD 分层。HUD 资源尚无跨 queue-family 所有权契约，因此分层帧自动回到 game queue，scene-only 帧才使用独立 async compute。该启发式仍不是引擎语义，需实机验收花屏是否消失。
 - Vulkan Layer 会优先把 FFX async workload 放到独立 compute queue；没有独立队列时自动保持同步模式。`asteria-layer.json` 的 `fast_scene_inputs_active`、`async_workloads_enabled`、四个 queue family 和 `cpu_timing` 用于确认实际选择，并分开统计 `ffxWaitForPresents`、配置、回调与 `vkQueuePresentFFX` 的 CPU 时间。
 - 三个 Host 输入槽按插值队列的 timeline 完成值延迟退休：先无阻塞回收已完成的旧代，只有两个旧租约仍占用、下一帧将缺少空槽时才等待最老一代。它不再为了每个输入调用全队列/设备 idle；`input_retirement` 记录队列峰值、无等待释放和被迫等待耗时。
+- Layer 在同一个插值 command buffer 内抽样比较 16 个固定场景像素的真实输入和生成输出，timeline 完成后才读回极小的环形缓冲；`content_probe` 只在至少一个 RGB 样本确有差异时确认非重复内容。`output_pacing` 从实际 `vkQueuePresentKHR` 调用记录输出间隔、抖动、真实/生成帧数量和交替比例；它比提交计数更强，但仍不等于显示器物理 scanout 测量。
 - 保留深度／覆盖质量预检：过多无效场景、异常前景覆盖仍恢复完整原帧。细特效风险在 FSR 路径改为区域保护：可疑细亮区域及前帧旧位置的邻域保留当前原帧，避免单个风险点导致整帧拒绝和历史反复预热。该识别依据亮线形态，不等同于引擎材质标签，可能保守地保留普通白色细节；透明层仍未完整分解。自研后端继续整帧拒绝细特效风险。SDK 合成后，已验证的前帧遮挡填补区域沿用预检重投影结果；缺乏可靠运动的纯色突变区域也有原帧保护。因此当前交付是官方 FSR 与保守保护的组合。
 - 首帧、帧编号断续、HUD 输入变化或 Reset 时重置历史。预热帧不会增加一次生成帧 Present。
 - 加载阶段的 estimated Provider 只负责建立 replacement swapchain，默认不执行插帧；原生 V2 Provider 接管并重置历史后才开始生成，避免加载画面污染游戏内颜色历史。

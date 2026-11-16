@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.Drawing
 
 $form = New-Object Windows.Forms.Form
 $form.Text = 'GF Frame Generation Monitor'
-$form.Size = New-Object Drawing.Size(450,335)
+$form.Size = New-Object Drawing.Size(510,385)
 $form.StartPosition = 'Manual'
 $form.Location = New-Object Drawing.Point(20,20)
 $form.TopMost = $true
@@ -101,6 +101,11 @@ function Read-LayerState([string]$path) {
     NativeBound = $live.native_frame_inputs_bound -eq $true
     Active = $live.frame_generation_active -eq $true
     SeparateUi = $live.separate_ui_composition_active -eq $true
+    ProbeFrames = [uint64]$live.content_probe.frames
+    ProbeDifferentFrames = [uint64]$live.content_probe.frames_with_difference
+    PacingAverageMs = [double]$live.output_pacing.average_interval_ms
+    PacingStddevMs = [double]$live.output_pacing.interval_stddev_ms
+    AlternationRatio = [double]$live.output_pacing.alternation_ratio
   }
 }
 
@@ -151,8 +156,13 @@ $timer.Add_Tick({
   $layerActive = if ($layer -and $layer.Active) { 1 } else { 0 }
   $separateUi = if ($layer -and $layer.SeparateUi) { 1 } else { 0 }
   $colorSource = if ($separateUi) { 'HOST HUDLESS + UI' } else { 'SWAPCHAIN PRESENT' }
-  $label.Text = ("{0}`r`n`r`nSource / accepted {1,6:N1} / {2,6:N1} FPS`r`nLayer in / output {3,6:N1} / {4,6:N1} FPS`r`nOutput / accept    {5,6:N2}x / {6,6:P1}`r`nHost / fence      {7,5:N2} / {8,5:N2} ms`r`nMotion pixels     {9,10:N0}`r`nLeases A/R        {10} / {11}`r`nNative dispatches {12}`r`nColor source      {13}`r`n`r`nF8 toggles FG. Record about 20 seconds in each mode." -f
-    $status,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[double]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches,$colorSource)
+  $probeFrames = if ($layer) { $layer.ProbeFrames } else { 0 }
+  $probeDifferent = if ($layer) { $layer.ProbeDifferentFrames } else { 0 }
+  $pacingAverage = if ($layer) { $layer.PacingAverageMs } else { 0 }
+  $pacingStddev = if ($layer) { $layer.PacingStddevMs } else { 0 }
+  $alternation = if ($layer) { $layer.AlternationRatio } else { 0 }
+  $label.Text = ("{0}`r`n`r`nSource / accepted {1,6:N1} / {2,6:N1} FPS`r`nLayer in / output {3,6:N1} / {4,6:N1} FPS`r`nOutput / accept    {5,6:N2}x / {6,6:P1}`r`nHost / fence      {7,5:N2} / {8,5:N2} ms`r`nMotion pixels     {9,10:N0}`r`nLeases A/R        {10} / {11}`r`nNative dispatches {12}`r`nColor source      {13}`r`nPixel probe F/D   {14} / {15}`r`nPacing avg/std    {16,5:N2} / {17,5:N2} ms`r`nFrame alternation {18,6:P1}`r`n`r`nF8 toggles FG. Record about 20 seconds in each mode." -f
+    $status,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[double]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches,$colorSource,$probeFrames,$probeDifferent,$pacingAverage,$pacingStddev,$alternation)
   $row = [string]::Format([Globalization.CultureInfo]::InvariantCulture,
     '{0:o},{1:F3},{2:F3},{3:F3},{4:F3},{5:F6},{6:F6},{7:F4},{8:F4},{9},{10},{11},{12},{13},{14},{15}',
     @([DateTime]::UtcNow,$inputFps,$nativeFps,$layerInput,$layerOutput,$outputRatio,$ratio,[double]$last.host_work_ms,[double]$last.fence_wait_ms,[uint64]$last.motion_interpolated_pixels,$accepted,$released,$nativeDispatches,$layerActive,$separateUi,$status))

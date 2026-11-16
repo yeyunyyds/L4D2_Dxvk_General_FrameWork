@@ -1,8 +1,16 @@
 diff --git a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
-index 0476bc7..7477878 100644
+index 0476bc7..8e5ba19 100644
 --- a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
 +++ b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
-@@ -25,6 +25,7 @@
+@@ -16,6 +16,7 @@
+ #include <json.hpp>
+ #include <algorithm>
+ #include <chrono>
++#include <cmath>
+ #include <cstring>
+ #include <filesystem>
+ #include <fstream>
+@@ -25,6 +26,7 @@
  #include <type_traits>
  #include <unordered_map>
  #include <vector>
@@ -10,7 +18,7 @@ index 0476bc7..7477878 100644
  
  using Json = nlohmann::json;
  using Clock = std::chrono::steady_clock;
-@@ -668,7 +669,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -668,7 +670,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
      VkDeviceCreateInfo modifiedInfo = *info;
      if (fgRequested) modifiedInfo.pNext = featureChain.Head();
      std::vector<VkDeviceQueueCreateInfo> modifiedQueues;
@@ -20,7 +28,7 @@ index 0476bc7..7477878 100644
      VkPhysicalDeviceFeatures enabledCoreFeatures{};
      VkPhysicalDevice16BitStorageFeatures added16Bit{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES, nullptr, VK_TRUE, VK_TRUE, VK_FALSE, VK_FALSE};
      VkPhysicalDeviceShaderFloat16Int8Features addedFloat16{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES, nullptr, VK_TRUE, VK_TRUE};
-@@ -676,7 +678,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -676,7 +679,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
      VkPhysicalDeviceSubgroupSizeControlFeatures addedSubgroup{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES, nullptr, VK_TRUE, VK_TRUE};
      std::vector<const char *> modifiedExtensions;
      uint32_t fgFamily = UINT32_MAX;
@@ -30,7 +38,7 @@ index 0476bc7..7477878 100644
      if (fgRequested && info->pQueueCreateInfos && info->queueCreateInfoCount > 0)
      {
          const auto getQueueFamilies = Next<PFN_vkGetPhysicalDeviceQueueFamilyProperties>(parent, "vkGetPhysicalDeviceQueueFamilyProperties");
-@@ -688,27 +691,43 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -688,27 +692,43 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
              familyProps.resize(familyCount);
              if (familyCount > 0) getQueueFamilies(physical, &familyCount, familyProps.data());
          }
@@ -90,7 +98,7 @@ index 0476bc7..7477878 100644
          modifiedInfo.pQueueCreateInfos = modifiedQueues.data();
          if (info->ppEnabledExtensionNames && info->enabledExtensionCount > 0)
          {
-@@ -834,29 +853,30 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -834,29 +854,30 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
          AsteriaRegisterSwapchainImagesReplacement(&vkGetSwapchainImagesFFX, &asteria_vk::IsProxyToken);
          try { MappedBuffers.AddDevice(Id(*output), Id(parent->instance)); } catch (...) {}
          try { DescriptorEvidence.AddDevice(Id(*output), Id(parent->instance)); } catch (...) {}
@@ -138,7 +146,7 @@ index 0476bc7..7477878 100644
              }
          }
      }
-@@ -1756,6 +1776,117 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
+@@ -1756,6 +1777,117 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
      return TRUE;
  }
  
@@ -256,7 +264,7 @@ index 0476bc7..7477878 100644
  static bool IsFgSwapchainHandle(VkSwapchainKHR swapchain)
  {
      const std::lock_guard<std::mutex> lock(StateMutex);
-@@ -1816,6 +1947,69 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
+@@ -1816,6 +1948,69 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
      }
  }
  
@@ -326,7 +334,7 @@ index 0476bc7..7477878 100644
  static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCreateInfoKHR *info, const VkAllocationCallbacks *allocator, VkSwapchainKHR *swapchain)
  
  {
-@@ -1875,6 +2069,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
+@@ -1875,6 +2070,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
          if (qIt != FgDeviceQueuesMap.end()) fgQueues = qIt->second;
  
      }
@@ -334,7 +342,7 @@ index 0476bc7..7477878 100644
  if (oldState && !FgSwapchainRuntime.wait(*oldState)) return VK_ERROR_DEVICE_LOST;
  
      const auto retireOld = [&] {
-@@ -2250,7 +2445,11 @@ static void RecordAcquire(const char *method, VkSwapchainKHR swapchain, VkSemaph
+@@ -2250,7 +2446,11 @@ static void RecordAcquire(const char *method, VkSwapchainKHR swapchain, VkSemaph
  
                  record["last_acquired_index"] = *index;
  
@@ -347,7 +355,7 @@ index 0476bc7..7477878 100644
  
                  if (fg != FgSwapchains.end()) session = fg->second->inputSession;
  
-@@ -2319,8 +2518,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2319,8 +2519,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
      VkResult result = VK_ERROR_EXTENSION_NOT_PRESENT;
      uint64_t inputAttempts = 0;
      uint64_t interpolationDispatches = 0;
@@ -358,7 +366,7 @@ index 0476bc7..7477878 100644
      {
          const std::lock_guard<std::mutex> lock(StateMutex);
          for (uint32_t index = 0; index < info->swapchainCount; ++index)
-@@ -2332,6 +2533,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2332,6 +2534,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  if (info->swapchainCount != 1) return VK_ERROR_FEATURE_NOT_PRESENT;
                  fg = it->second.get();
@@ -369,7 +377,7 @@ index 0476bc7..7477878 100644
              }
              else if (asteria_vk::IsProxyToken(info->pSwapchains[index]))
                  return VK_ERROR_SURFACE_LOST_KHR;
-@@ -2359,6 +2564,9 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2359,6 +2565,9 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
      }
      bool inputReady = false;
      bool callbackRecorded = false;
@@ -379,7 +387,7 @@ index 0476bc7..7477878 100644
      uint32_t motionSource = 0;
      if (isFgPresent)
      {
-@@ -2373,15 +2581,43 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2373,15 +2582,43 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              const auto input = std::atomic_load_explicit(&fg->currentInputs, std::memory_order_acquire);
              inputReady = bool(input);
              if (input) motionSource = uint32_t(input->motionSource);
@@ -423,7 +431,7 @@ index 0476bc7..7477878 100644
      }
      else
      {
-@@ -2407,6 +2643,26 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2407,6 +2644,26 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              State["fg_camera_valid"] = FgCamera.valid;
              State["fg_camera_in_game"] = FgCamera.inGame;
              State["fg_camera_sample_count"] = FgCamera.sampleCount;
@@ -450,7 +458,7 @@ index 0476bc7..7477878 100644
          }
          Json waits = Json::array();
          for (uint32_t i = 0; i < info->waitSemaphoreCount; ++i) waits.push_back(Id(info->pWaitSemaphores[i]));
-@@ -2422,13 +2678,66 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2422,13 +2679,106 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  record["frame_input_attempts"] = inputAttempts;
                  record["interpolation_dispatches"] = interpolationDispatches;
@@ -473,7 +481,8 @@ index 0476bc7..7477878 100644
 +                record["native_frame_inputs_bound"] = fg->nativeProviderBound;
 +                record["separate_ui_composition_active"] = separateUiActive;
 +                record["fast_scene_inputs_active"] = fastSceneInputsActive;
-+                record["async_workloads_enabled"] = fg->asyncWorkloadsEnabled;
++                record["async_workloads_available"] = fg->asyncWorkloadsEnabled;
++                record["async_workloads_enabled"] = fg->asyncWorkloadsActive;
 +                record["graphics_queue_family"] = fg->graphicsFamily;
 +                record["async_compute_queue_family"] = fg->asyncComputeFamily;
 +                record["present_queue_family"] = fg->presentFamily;
@@ -499,6 +508,43 @@ index 0476bc7..7477878 100644
 +                    {"forced_wait_average_ms", retireWaits ?
 +                        double(retireWaitNs) / double(retireWaits) / 1000000.0 : 0.0}
 +                };
++                const uint64_t probedFrames = fg->contentProbeFrames.load(std::memory_order_relaxed);
++                const uint64_t differentFrames = fg->contentProbeDifferentFrames.load(std::memory_order_relaxed);
++                const uint64_t probedPixels = fg->contentProbePixels.load(std::memory_order_relaxed);
++                const uint64_t differentPixels = fg->contentProbeDifferentPixels.load(std::memory_order_relaxed);
++                record["content_probe"] = {
++                    {"frames", probedFrames},
++                    {"frames_with_difference", differentFrames},
++                    {"sampled_pixels", probedPixels},
++                    {"different_pixels", differentPixels},
++                    {"different_pixel_ratio", probedPixels ?
++                        double(differentPixels) / double(probedPixels) : 0.0},
++                    {"absolute_rgb_difference", fg->contentProbeAbsoluteDifference.load(std::memory_order_relaxed)}
++                };
++                AsteriaPresentTimingStats presentTiming{};
++                if (getPresentTimingStatsFFX(fg->proxySwapchain, &presentTiming) &&
++                    presentTiming.qpcFrequency && presentTiming.intervalSamples)
++                {
++                    const double frequency = double(presentTiming.qpcFrequency);
++                    const double samples = double(presentTiming.intervalSamples);
++                    const double meanTicks = double(presentTiming.intervalTicks) / samples;
++                    const double meanSquareTicks = double(presentTiming.intervalTicksSquared) / samples;
++                    const double varianceTicks = (std::max)(0.0, meanSquareTicks - meanTicks * meanTicks);
++                    record["output_pacing"] = {
++                        {"interval_samples", presentTiming.intervalSamples},
++                        {"average_interval_ms", meanTicks * 1000.0 / frequency},
++                        {"interval_stddev_ms", std::sqrt(varianceTicks) * 1000.0 / frequency},
++                        {"minimum_interval_ms", double(presentTiming.minimumIntervalTicks) * 1000.0 / frequency},
++                        {"maximum_interval_ms", double(presentTiming.maximumIntervalTicks) * 1000.0 / frequency},
++                        {"interpolated_presents", presentTiming.interpolatedPresents},
++                        {"real_presents", presentTiming.realPresents},
++                        {"typed_transitions", presentTiming.typedTransitions},
++                        {"alternating_transitions", presentTiming.alternatingTransitions},
++                        {"alternation_ratio", presentTiming.typedTransitions ?
++                            double(presentTiming.alternatingTransitions) /
++                                double(presentTiming.typedTransitions) : 0.0}
++                    };
++                }
 +                record["native_v2_accepted"] = asteria_fg_runtime::input_bridge::NativeV2Accepted.load();
 +                record["native_v2_leases_released"] = asteria_fg_runtime::input_bridge::NativeV2LeasesReleased.load();
                  record["motion_input_source"] = motionSource;
@@ -506,7 +552,9 @@ index 0476bc7..7477878 100644
 +                record["host_camera_control_active"] = hostConsumedAtPresent > 0 || fg->nativeProviderBound;
 +                record["host_depth_resource_connected"] = hostConsumedAtPresent > 0 ||
 +                    asteria_fg_runtime::input_bridge::NativeV2Accepted.load() > 0;
-+                record["generated_content_distinctness"] = "unverified_no_gpu_content_probe";
++                record["generated_content_distinctness"] = differentFrames > 0 ?
++                    "gpu_sampled_generated_pixels_differ" :
++                    (probedFrames > 0 ? "gpu_samples_equal_so_far" : "unverified_no_gpu_content_probe");
 +                const double nativeOutputRatio = fg->nativeInputPresents > 0 ?
 +                    double(fg->nativeOutputPresents) / double(fg->nativeInputPresents) : 0.0;
 +                record["fg_acceptance_level"] = fg->nativeProviderBound && nativeInterpolationDispatches > 0 &&
@@ -701,13 +749,14 @@ index 388a517..444a654 100644
      virtual void BeginPresent(uint32_t) {}
  };
 diff --git a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
-index 54799dd..2f7aeaf 100644
+index 54799dd..9eff8e5 100644
 --- a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
 +++ b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
-@@ -20,9 +20,12 @@
+@@ -20,9 +20,13 @@
  #include "LiveSceneMotionRuntime.h"
  
  #include <algorithm>
++#include <array>
 +#include <chrono>
  #include <cmath>
  #include <cstdint>
@@ -717,7 +766,7 @@ index 54799dd..2f7aeaf 100644
  #include <memory>
  #include <mutex>
  #include <vector>
-@@ -45,9 +48,85 @@ struct AsteriaFrameGenerationCameraV1
+@@ -45,9 +49,85 @@ struct AsteriaFrameGenerationCameraV1
      float camera_forward[3];
  };
  
@@ -803,7 +852,7 @@ index 54799dd..2f7aeaf 100644
  struct GpuImage
  {
      VkImage handle = VK_NULL_HANDLE;
-@@ -69,32 +148,59 @@ struct FgCameraState
+@@ -69,32 +149,60 @@ struct FgCameraState
      float right[3] = {1.0f, 0.0f, 0.0f};
      float forward[3] = {0.0f, 1.0f, 0.0f};
      uint64_t sampleCount = 0;
@@ -848,6 +897,7 @@ index 54799dd..2f7aeaf 100644
      bool nativeCreateAttempted = false;
      bool retiredForAcquisition = false;
 +    bool asyncWorkloadsEnabled = false;
++    bool asyncWorkloadsActive = false;
 +    uint32_t graphicsFamily = UINT32_MAX;
 +    uint32_t asyncComputeFamily = UINT32_MAX;
 +    uint32_t presentFamily = UINT32_MAX;
@@ -863,7 +913,7 @@ index 54799dd..2f7aeaf 100644
      std::vector<uint8_t> scratch;
      FfxInterface backend{};
      std::unique_ptr<FfxFrameInterpolationContext> interpolation;
-@@ -112,11 +218,86 @@ struct FgSwapchainState
+@@ -112,11 +220,126 @@ struct FgSwapchainState
      FgCameraState *cameraState = nullptr;
      VkDeviceContext deviceContext{};
      std::shared_ptr<FrameInputSession> inputSession;
@@ -889,6 +939,15 @@ index 54799dd..2f7aeaf 100644
 +    std::atomic<uint64_t> presentCalls{0}, presentNanoseconds{0};
 +    std::atomic<uint64_t> retirePollReleases{0}, retireForcedWaits{0};
 +    std::atomic<uint64_t> retireWaitNanoseconds{0}, retireQueuePeak{0};
++    static constexpr uint32_t ContentProbeSamples = 16;
++    static constexpr VkDeviceSize ContentProbeFrameBytes = ContentProbeSamples * 8;
++    VkBuffer contentProbeBuffer = VK_NULL_HANDLE;
++    VkDeviceMemory contentProbeMemory = VK_NULL_HANDLE;
++    uint8_t *contentProbeMap = nullptr;
++    std::array<uint64_t, 3> contentProbeFrameIds{UINT64_MAX, UINT64_MAX, UINT64_MAX};
++    std::atomic<uint64_t> contentProbeFrames{0}, contentProbeDifferentFrames{0};
++    std::atomic<uint64_t> contentProbePixels{0}, contentProbeDifferentPixels{0};
++    std::atomic<uint64_t> contentProbeAbsoluteDifference{0};
  };
  
 +inline uint64_t ElapsedNanoseconds(const std::chrono::steady_clock::time_point &start)
@@ -921,6 +980,35 @@ index 54799dd..2f7aeaf 100644
 +    return waitForInterpolationCompletionFFX(state.proxySwapchain, value, timeoutNanoseconds) == VK_TRUE;
 +}
 +
++inline void ReadCompletedContentProbe(FgSwapchainState &state, uint64_t frameID)
++{
++    if (!state.contentProbeMap) return;
++    const uint32_t slot = uint32_t(frameID % state.contentProbeFrameIds.size());
++    if (state.contentProbeFrameIds[slot] != frameID) return;
++    const uint8_t *bytes = state.contentProbeMap + slot * FgSwapchainState::ContentProbeFrameBytes;
++    const uint8_t *source = bytes;
++    const uint8_t *generated = bytes + FgSwapchainState::ContentProbeSamples * 4;
++    uint64_t different = 0, absoluteDifference = 0;
++    for (uint32_t sample = 0; sample < FgSwapchainState::ContentProbeSamples; ++sample)
++    {
++        uint32_t pixelDifference = 0;
++        for (uint32_t channel = 0; channel < 3; ++channel)
++        {
++            const uint8_t a = source[sample * 4 + channel];
++            const uint8_t b = generated[sample * 4 + channel];
++            pixelDifference += a > b ? a - b : b - a;
++        }
++        absoluteDifference += pixelDifference;
++        if (pixelDifference > 3) ++different;
++    }
++    state.contentProbeFrames.fetch_add(1, std::memory_order_relaxed);
++    state.contentProbePixels.fetch_add(FgSwapchainState::ContentProbeSamples, std::memory_order_relaxed);
++    state.contentProbeDifferentPixels.fetch_add(different, std::memory_order_relaxed);
++    state.contentProbeAbsoluteDifference.fetch_add(absoluteDifference, std::memory_order_relaxed);
++    if (different) state.contentProbeDifferentFrames.fetch_add(1, std::memory_order_relaxed);
++    state.contentProbeFrameIds[slot] = UINT64_MAX;
++}
++
 +inline void RetireCompletedFrameInputs(FgSwapchainState &state, bool guaranteeFreeSlot)
 +{
 +    while (!state.retiredInputs.empty())
@@ -928,6 +1016,7 @@ index 54799dd..2f7aeaf 100644
 +        auto &oldest = state.retiredInputs.front();
 +        if (WaitForInputCompletion(state, oldest.interpolationCompletionValue, 0))
 +        {
++            ReadCompletedContentProbe(state, oldest.input->frameID);
 +            state.retiredInputs.pop_front();
 +            state.retirePollReleases.fetch_add(1, std::memory_order_relaxed);
 +            continue;
@@ -943,6 +1032,7 @@ index 54799dd..2f7aeaf 100644
 +        state.retireWaitNanoseconds.fetch_add(ElapsedNanoseconds(start), std::memory_order_relaxed);
 +        state.retireForcedWaits.fetch_add(1, std::memory_order_relaxed);
 +        if (!completed) break;
++        ReadCompletedContentProbe(state, oldest.input->frameID);
 +        state.retiredInputs.pop_front();
 +    }
 +}
@@ -950,7 +1040,7 @@ index 54799dd..2f7aeaf 100644
  inline bool IsFrameGenerationRequestedByEnv()
  {
      wchar_t value[64]{};
-@@ -130,6 +311,18 @@ inline bool IsEstimatedInternalInputsRequested()
+@@ -130,6 +353,18 @@ inline bool IsEstimatedInternalInputsRequested()
      const DWORD length = GetEnvironmentVariableW(L"ASTERIA_FG_ESTIMATED_INTERNAL", value, 64);
      return length && length < 64 && (std::wcscmp(value, L"1") == 0 || _wcsicmp(value, L"true") == 0);
  }
@@ -969,7 +1059,142 @@ index 54799dd..2f7aeaf 100644
  
  
  inline VkFormat ToVkFormat(FfxSurfaceFormat format)
-@@ -258,9 +451,6 @@ struct InternalInputLease
+@@ -220,6 +455,134 @@ inline bool AllocateGpuImage(
+     return true;
+ }
+ 
++inline bool AllocateContentProbe(FgSwapchainState &state)
++{
++    VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
++    info.size = FgSwapchainState::ContentProbeFrameBytes * state.contentProbeFrameIds.size();
++    info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
++    info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
++    if (vkCreateBuffer(state.device, &info, nullptr, &state.contentProbeBuffer) != VK_SUCCESS)
++        return false;
++    VkMemoryRequirements requirements{};
++    vkGetBufferMemoryRequirements(state.device, state.contentProbeBuffer, &requirements);
++    VkPhysicalDeviceMemoryProperties properties{};
++    vkGetPhysicalDeviceMemoryProperties(state.physicalDevice, &properties);
++    uint32_t memoryIndex = UINT32_MAX;
++    for (uint32_t index = 0; index < properties.memoryTypeCount; ++index)
++    {
++        const auto flags = properties.memoryTypes[index].propertyFlags;
++        if ((requirements.memoryTypeBits & (1u << index)) &&
++            (flags & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) ==
++                (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
++        {
++            memoryIndex = index;
++            break;
++        }
++    }
++    if (memoryIndex == UINT32_MAX) return false;
++    VkMemoryAllocateInfo allocation{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
++    allocation.allocationSize = requirements.size;
++    allocation.memoryTypeIndex = memoryIndex;
++    if (vkAllocateMemory(state.device, &allocation, nullptr, &state.contentProbeMemory) != VK_SUCCESS ||
++        vkBindBufferMemory(state.device, state.contentProbeBuffer, state.contentProbeMemory, 0) != VK_SUCCESS ||
++        vkMapMemory(state.device, state.contentProbeMemory, 0, VK_WHOLE_SIZE, 0,
++                    reinterpret_cast<void **>(&state.contentProbeMap)) != VK_SUCCESS)
++        return false;
++    std::memset(state.contentProbeMap, 0, size_t(info.size));
++    return true;
++}
++
++inline void DestroyContentProbe(FgSwapchainState &state)
++{
++    if (state.contentProbeMap && state.contentProbeMemory)
++        vkUnmapMemory(state.device, state.contentProbeMemory);
++    state.contentProbeMap = nullptr;
++    if (state.contentProbeBuffer)
++        vkDestroyBuffer(state.device, state.contentProbeBuffer, nullptr);
++    if (state.contentProbeMemory)
++        vkFreeMemory(state.device, state.contentProbeMemory, nullptr);
++    state.contentProbeBuffer = VK_NULL_HANDLE;
++    state.contentProbeMemory = VK_NULL_HANDLE;
++}
++
++inline void RecordContentProbe(FgSwapchainState &state, VkCommandBuffer commandBuffer,
++                               const FfxResource &sourceResource,
++                               const FfxResource &generatedResource, uint64_t frameID)
++{
++    if (!state.contentProbeBuffer || !state.contentProbeMap || !commandBuffer) return;
++    const auto supported = [](FfxSurfaceFormat format) {
++        return format == FFX_SURFACE_FORMAT_R8G8B8A8_UNORM ||
++               format == FFX_SURFACE_FORMAT_B8G8R8A8_UNORM;
++    };
++    if (!supported(sourceResource.description.format) ||
++        sourceResource.description.format != generatedResource.description.format) return;
++    const VkImage source = asteria_vk::Decode<VkImage>(
++        sourceResource.resource, state.device, asteria_vk::HandleKind::Image);
++    const VkImage generated = asteria_vk::Decode<VkImage>(
++        generatedResource.resource, state.device, asteria_vk::HandleKind::Image);
++    if (!source || !generated || source == generated) return;
++    const uint32_t slot = uint32_t(frameID % state.contentProbeFrameIds.size());
++    const VkDeviceSize base = slot * FgSwapchainState::ContentProbeFrameBytes;
++    VkBufferMemoryBarrier beforeBuffer{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
++    beforeBuffer.srcAccessMask = VK_ACCESS_HOST_READ_BIT;
++    beforeBuffer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
++    beforeBuffer.srcQueueFamilyIndex = beforeBuffer.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
++    beforeBuffer.buffer = state.contentProbeBuffer;
++    beforeBuffer.offset = base;
++    beforeBuffer.size = FgSwapchainState::ContentProbeFrameBytes;
++    VkImageMemoryBarrier images[2]{};
++    for (auto &barrier : images)
++    {
++        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
++        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
++        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
++        barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
++        barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
++    }
++    images[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
++    images[0].oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
++    images[0].image = source;
++    images[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
++    images[1].oldLayout = VK_IMAGE_LAYOUT_GENERAL;
++    images[1].image = generated;
++    vkCmdPipelineBarrier(commandBuffer,
++                         VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
++                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
++                         &beforeBuffer, 2, images);
++    std::array<VkBufferImageCopy, FgSwapchainState::ContentProbeSamples> regions{};
++    for (uint32_t sample = 0; sample < regions.size(); ++sample)
++    {
++        const uint32_t x = sample % 4, y = sample / 4;
++        regions[sample].bufferOffset = base + sample * 4;
++        regions[sample].imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
++        regions[sample].imageOffset = {
++            int32_t((2 * x + 1) * state.width / 8),
++            int32_t((2 * y + 1) * state.height / 8), 0};
++        regions[sample].imageExtent = {1, 1, 1};
++    }
++    vkCmdCopyImageToBuffer(commandBuffer, source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
++                           state.contentProbeBuffer, uint32_t(regions.size()), regions.data());
++    for (uint32_t sample = 0; sample < regions.size(); ++sample)
++        regions[sample].bufferOffset = base + FgSwapchainState::ContentProbeSamples * 4 + sample * 4;
++    vkCmdCopyImageToBuffer(commandBuffer, generated, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
++                           state.contentProbeBuffer, uint32_t(regions.size()), regions.data());
++    for (auto &barrier : images)
++    {
++        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
++        barrier.dstAccessMask = barrier.image == source ? VK_ACCESS_SHADER_READ_BIT : VK_ACCESS_SHADER_WRITE_BIT;
++        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
++        barrier.newLayout = barrier.image == source ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
++    }
++    VkBufferMemoryBarrier afterBuffer = beforeBuffer;
++    afterBuffer.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
++    afterBuffer.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
++    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
++                         VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
++                         0, 0, nullptr, 1,
++                         &afterBuffer, 2, images);
++    state.contentProbeFrameIds[slot] = frameID;
++}
++
+ inline void DestroyGpuImage(VkDevice device, GpuImage &img)
+ {
+     if (img.handle != VK_NULL_HANDLE)
+@@ -258,9 +621,6 @@ struct InternalInputLease
  inline std::shared_ptr<const FrameInputs> MakeEstimatedInternalInputs(FgSwapchainState &state, uint64_t frame)
  {
      auto lease = std::make_shared<InternalInputLease>();
@@ -979,7 +1204,7 @@ index 54799dd..2f7aeaf 100644
      asteria_live_scene::GlobalRuntime().EnsureInitialized(
          state.device, state.physicalDevice, state.nextGdpa,
          state.width, state.height, state.internalDepth.handle, state.estimatedMotion.handle);
-@@ -269,7 +459,59 @@ inline std::shared_ptr<const FrameInputs> MakeEstimatedInternalInputs(FgSwapchai
+@@ -269,7 +629,59 @@ inline std::shared_ptr<const FrameInputs> MakeEstimatedInternalInputs(FgSwapchai
      auto input = std::make_shared<FrameInputs>();
      input->device = reinterpret_cast<uintptr_t>(state.device); input->frameID = frame;
      input->width = state.width; input->height = state.height; input->deltaMilliseconds = 16.6667f;
@@ -1040,7 +1265,7 @@ index 54799dd..2f7aeaf 100644
      {
          input->nearPlane = committed.nearPlane;
          input->farPlane = committed.farPlane;
-@@ -281,17 +523,18 @@ inline std::shared_ptr<const FrameInputs> MakeEstimatedInternalInputs(FgSwapchai
+@@ -281,17 +693,18 @@ inline std::shared_ptr<const FrameInputs> MakeEstimatedInternalInputs(FgSwapchai
          std::memcpy(input->forward, committed.forward, sizeof(input->forward));
          input->historyReset = (frame == 0 || !committed.hasPreviousCamera);
      }
@@ -1063,7 +1288,7 @@ index 54799dd..2f7aeaf 100644
      return input;
  }
  
-@@ -324,11 +567,22 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -324,11 +737,22 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
  {
      if (!desc || !userCtx) return FFX_ERROR_INVALID_ARGUMENT;
      auto &state = *static_cast<FgSwapchainState *>(userCtx);
@@ -1087,7 +1312,7 @@ index 54799dd..2f7aeaf 100644
      {
          state.historyReset.store(true);
          return FFX_ERROR_INVALID_ARGUMENT;
-@@ -340,6 +594,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -340,6 +764,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
          ~ResetOnFailure() { if (!successful) state.historyReset.store(true); }
      } recovery{state};
      const uint64_t currentFrameId = input->frameID;
@@ -1095,7 +1320,7 @@ index 54799dd..2f7aeaf 100644
      const bool pendingReset = state.historyReset.exchange(false);
      const bool reset = desc->reset || input->historyReset || pendingReset;
      if (asteria_vk::Decode<VkImage>(input->depth.resource, state.device, asteria_vk::HandleKind::Image) == VK_NULL_HANDLE ||
-@@ -348,7 +603,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -348,7 +773,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
      if (currentFrameId == 0 || reset)
          for (GpuImage *image : {&state.reconstructed, &state.dilatedDepth, &state.dilatedMotion, &state.vectors, &state.scd})
              RecordImageBarrier(cmd, image->handle, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
@@ -1104,7 +1329,7 @@ index 54799dd..2f7aeaf 100644
      {
          if (!asteria_live_scene::GlobalRuntime().RecordResolveAndMotion(
                  state.device, cmd, state.internalDepth.handle, state.estimatedMotion.handle, reset))
-@@ -368,7 +623,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -368,7 +793,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
  
      FfxOpticalflowDispatchDescription flow{};
      flow.commandList = desc->commandList;
@@ -1113,7 +1338,7 @@ index 54799dd..2f7aeaf 100644
      flow.opticalFlowVector = WrapGpuImage(state.device, state.vectors, L"AsteriaFG_OpticalFlowVector", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
      flow.opticalFlowSCD = WrapGpuImage(state.device, state.scd, L"AsteriaFG_OpticalFlowSCD", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
      flow.reset = reset;
-@@ -406,7 +661,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -406,7 +831,7 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
      dispatch.commandList = desc->commandList;
      dispatch.displaySize = {state.width, state.height};
      dispatch.renderSize = {state.width, state.height};
@@ -1122,13 +1347,14 @@ index 54799dd..2f7aeaf 100644
      dispatch.output = desc->outputs[0];
      dispatch.interpolationRect = {0, 0, int32_t(state.width), int32_t(state.height)};
      dispatch.opticalFlowVector = flow.opticalFlowVector;
-@@ -429,30 +684,39 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -429,30 +854,40 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
      dispatch.reconstructedPrevDepth = prepare.reconstructedPrevDepth;
      const auto result = ffxFrameInterpolationDispatch(state.interpolation.get(), &dispatch);
      recovery.successful = result == FFX_OK;
 -    if (recovery.successful) ++state.interpolationDispatches;
 +    if (recovery.successful)
 +    {
++        RecordContentProbe(state, cmd, dispatch.currentBackBuffer, desc->outputs[0], currentFrameId);
 +        ++state.interpolationDispatches;
 +        if (input->motionSource == MotionInputSource::Engine)
 +            ++state.nativeInterpolationDispatches;
@@ -1167,7 +1393,7 @@ index 54799dd..2f7aeaf 100644
      if (state.inputSession)
      {
          try { state.inputSession->RetireAfterGpuIdle(); } catch (...) {}
-@@ -461,16 +725,25 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
+@@ -461,18 +896,28 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
      state.historyReset.store(true);
      if (state.interpolationCreated && state.interpolation)
      {
@@ -1192,8 +1418,11 @@ index 54799dd..2f7aeaf 100644
 +    }
      if (state.device != VK_NULL_HANDLE)
      {
++        DestroyContentProbe(state);
          DestroyGpuImage(state.device, state.reconstructed);
-@@ -494,13 +767,23 @@ inline VkResult InitializeSwapchainResources(
+         DestroyGpuImage(state.device, state.dilatedDepth);
+         DestroyGpuImage(state.device, state.dilatedMotion);
+@@ -494,13 +939,24 @@ inline VkResult InitializeSwapchainResources(
      FgCameraState *cameraState)
  {
      auto provider = CurrentFrameInputProvider();
@@ -1214,10 +1443,11 @@ index 54799dd..2f7aeaf 100644
 +    state.imageAcquireFamily = queues.imageAcquireFamily;
 +    state.asyncWorkloadsEnabled = queues.asyncComputeQueue != VK_NULL_HANDLE &&
 +        queues.asyncComputeQueue != queues.gameQueue;
++    state.asyncWorkloadsActive = state.asyncWorkloadsEnabled;
      state.nextGdpa = nextGdpa;
      state.width = createInfo->imageExtent.width;
      state.height = createInfo->imageExtent.height;
-@@ -512,9 +795,9 @@ inline VkResult InitializeSwapchainResources(
+@@ -512,9 +968,9 @@ inline VkResult InitializeSwapchainResources(
      fgInfo.device = device;
      fgInfo.physicalDevice = physicalDevice;
      fgInfo.gameQueue = {queues.gameQueue, queues.graphicsFamily, nullptr};
@@ -1230,7 +1460,7 @@ index 54799dd..2f7aeaf 100644
      fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;
  
      state.deviceContext = {device, physicalDevice, nextGdpa};
-@@ -545,6 +828,7 @@ inline VkResult InitializeSwapchainResources(
+@@ -545,6 +1001,7 @@ inline VkResult InitializeSwapchainResources(
              }
          }
      }
@@ -1238,7 +1468,15 @@ index 54799dd..2f7aeaf 100644
      const VkResult scResult = replacement.createSwapchainFFX(device, &ffxCreateInfo, allocator, &state.proxySwapchain, &fgInfo);
      state.nativeCreateAttempted = AsteriaNativeSwapchainCreateAttempted();
      if (scResult != VK_SUCCESS || state.proxySwapchain == VK_NULL_HANDLE)
-@@ -622,10 +906,10 @@ inline VkResult InitializeSwapchainResources(
+@@ -616,16 +1073,18 @@ inline VkResult InitializeSwapchainResources(
+         DestroySwapchainResources(state);
+         return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+     }
++    // Diagnostic only: failure leaves FG active and reports no pixel samples.
++    (void)AllocateContentProbe(state);
+ 
+     FfxFrameGenerationConfig config{};
+     config.swapChain = state.swapchainBox;
      config.frameGenerationEnabled = false;
      config.frameGenerationCallback = &LayerFrameGenerationCallback;
      config.frameGenerationCallbackContext = &state;
@@ -1251,7 +1489,7 @@ index 54799dd..2f7aeaf 100644
      {
          DestroySwapchainResources(state);
          return VK_ERROR_INITIALIZATION_FAILED;
-@@ -636,36 +920,68 @@ inline VkResult InitializeSwapchainResources(
+@@ -636,36 +1095,68 @@ inline VkResult InitializeSwapchainResources(
  
  inline bool WaitForSwapchainIdle(FgSwapchainState &state)
  {
@@ -1295,7 +1533,7 @@ index 54799dd..2f7aeaf 100644
 +                }
 +            }
 +        }
-+    }
+     }
 +    auto previousInput = std::atomic_load_explicit(&state.currentInputs, std::memory_order_acquire);
 +    std::atomic_store_explicit(&state.currentInputs, std::shared_ptr<const FrameInputs>{}, std::memory_order_release);
 +    if (previousInput && previousInput->lifetime.get() != &state)
@@ -1305,7 +1543,7 @@ index 54799dd..2f7aeaf 100644
 +        uint64_t peak = state.retireQueuePeak.load(std::memory_order_relaxed);
 +        while (peak < depth && !state.retireQueuePeak.compare_exchange_weak(
 +            peak, depth, std::memory_order_relaxed)) {}
-     }
++    }
 +    state.currentInputCompletionValue = 0;
 +    RetireCompletedFrameInputs(state, true);
      const uint64_t frame = state.frameID++;
@@ -1332,11 +1570,16 @@ index 54799dd..2f7aeaf 100644
      {
          input = MakeEstimatedInternalInputs(state, frame);
          valid = input && ValidFrameInputs(*input, reinterpret_cast<uintptr_t>(state.device), frame, state.width, state.height) &&
-@@ -674,15 +990,24 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
+@@ -674,15 +1165,29 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
      }
      if (!valid) { input.reset(); state.historyReset.store(true); }
      std::atomic_store_explicit(&state.currentInputs, std::move(input), std::memory_order_release);
 +    const auto configuredInput = std::atomic_load_explicit(&state.currentInputs, std::memory_order_acquire);
++    // Host HUD-less/UI images are produced on the game queue family. Keep
++    // those frames on that queue until an explicit cross-family ownership
++    // contract exists; scene-only inputs remain on dedicated async compute.
++    state.asyncWorkloadsActive = state.asyncWorkloadsEnabled &&
++        !(configuredInput && configuredInput->separateUi);
 +    FfxResource ui{};
 +    if (configuredInput && configuredInput->separateUi && IsSeparateUiCompositionRequested()) ui = configuredInput->ui;
 +    if (ffxRegisterFrameinterpolationUiResourceVK(state.swapchainBox, ui, 0) != FFX_OK)
@@ -1351,7 +1594,7 @@ index 54799dd..2f7aeaf 100644
      config.frameGenerationCallback = &LayerFrameGenerationCallback;
      config.frameGenerationCallbackContext = &state;
 -    config.allowAsyncWorkloads = false;
-+    config.allowAsyncWorkloads = state.asyncWorkloadsEnabled;
++    config.allowAsyncWorkloads = state.asyncWorkloadsActive;
      config.frameID = frame;
      config.interpolationRect = {0, 0, int32_t(state.width), int32_t(state.height)};
 -    if (ffxSetFrameGenerationConfigToSwapchainVK(&config) == FFX_OK) return true;
@@ -1689,30 +1932,64 @@ index a98ed8a..198ecda 100644
 +#undef BoxSequence
  }
 diff --git a/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.h b/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.h
-index 757d13b..69f6e45 100644
+index 757d13b..d893a7e 100644
 --- a/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.h
 +++ b/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.h
-@@ -93,6 +93,9 @@ void VKAPI_CALL vkSetHdrMetadataFFX(
+@@ -93,6 +93,24 @@ void VKAPI_CALL vkSetHdrMetadataFFX(
      const VkHdrMetadataEXT* pMetadata);
  
  uint64_t VKAPI_CALL getLastPresentCountFFX(VkSwapchainKHR swapchain);
++typedef struct AsteriaPresentTimingStats
++{
++    uint64_t qpcFrequency;
++    uint64_t intervalSamples;
++    uint64_t intervalTicks;
++    uint64_t intervalTicksSquared;
++    uint64_t minimumIntervalTicks;
++    uint64_t maximumIntervalTicks;
++    uint64_t interpolatedPresents;
++    uint64_t realPresents;
++    uint64_t typedTransitions;
++    uint64_t alternatingTransitions;
++} AsteriaPresentTimingStats;
++VkBool32 VKAPI_CALL getPresentTimingStatsFFX(
++    VkSwapchainKHR swapchain, AsteriaPresentTimingStats* stats);
 +uint64_t VKAPI_CALL getLastInterpolationCompletionValueFFX(VkSwapchainKHR swapchain);
 +VkBool32 VKAPI_CALL waitForInterpolationCompletionFFX(
 +    VkSwapchainKHR swapchain, uint64_t value, uint64_t timeoutNanoseconds);
  
  #ifdef __cplusplus
  }
-@@ -243,6 +246,8 @@ public:  // vulkan functions reimplementation
+@@ -195,6 +213,17 @@ struct FrameinterpolationPresentInfo
+     uint32_t    nextAcquireSemaphoreIndex                                                         = 0;
+ 
+     std::atomic<uint64_t> realPresentCount = 0;
++    std::atomic<uint64_t> lastPresentQpc = 0;
++    std::atomic<uint64_t> presentIntervalSamples = 0;
++    std::atomic<uint64_t> presentIntervalTicks = 0;
++    std::atomic<uint64_t> presentIntervalTicksSquared = 0;
++    std::atomic<uint64_t> minimumPresentIntervalTicks = UINT64_MAX;
++    std::atomic<uint64_t> maximumPresentIntervalTicks = 0;
++    std::atomic<uint64_t> interpolatedPresentCount = 0;
++    std::atomic<uint64_t> realFramePresentCount = 0;
++    std::atomic<uint64_t> typedPresentTransitions = 0;
++    std::atomic<uint64_t> alternatingPresentTransitions = 0;
++    std::atomic<int32_t> lastPresentFrameType = -1;
+ 
+     // using win32 threads to set the priorities
+     HANDLE           presenterThreadHandle         = NULL;
+@@ -243,6 +272,9 @@ public:  // vulkan functions reimplementation
      void setHdrMetadata(VkDevice device, const VkHdrMetadataEXT* pMetadata);
  
      uint64_t getLastPresentCount();
++    void getPresentTimingStats(AsteriaPresentTimingStats& stats) const;
 +    uint64_t getLastInterpolationCompletionValue() const { return interpolationSemaphoreValue; }
 +    bool waitForInterpolationCompletion(uint64_t value, uint64_t timeoutNanoseconds);
      VkDevice device() const { return presentInfo.device; }
      VkSwapchainKHR nativeSwapchain() const { return presentInfo.realSwapchain; }
      bool nativeCreationAttempted() const { return nativeSwapchainCreateAttempted; }
 diff --git a/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.cpp b/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.cpp
-index 041b246..eee41f7 100644
+index 041b246..4d88043 100644
 --- a/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.cpp
 +++ b/Runtime/FrameGeneration/Port/sources/FrameInterpolationSwapchain/FrameInterpolationSwapchainVK.cpp
 @@ -453,7 +453,7 @@ VkResult FrameInterpolationSwapChainVK::createImage(ReplacementResource&
@@ -1724,10 +2001,19 @@ index 041b246..eee41f7 100644
          AsteriaTraceSwapchain(trace.str());
          DebugNameSetter debugNameSetter(presentInfo.device);
          debugNameSetter.setDebugName(resource.image, VK_OBJECT_TYPE_IMAGE, name);  // it's fine if this fails
-@@ -629,6 +629,19 @@ uint64_t VKAPI_CALL getLastPresentCountFFX(VkSwapchainKHR swapchain)
+@@ -629,6 +629,28 @@ uint64_t VKAPI_CALL getLastPresentCountFFX(VkSwapchainKHR swapchain)
      return wrapper ? wrapper->getLastPresentCount() : 0;
  }
  
++VkBool32 VKAPI_CALL getPresentTimingStatsFFX(
++    VkSwapchainKHR swapchain, AsteriaPresentTimingStats* stats)
++{
++    auto* wrapper = static_cast<FrameInterpolationSwapChainVK*>(asteria_vk::ProxyObject(VK_NULL_HANDLE, swapchain));
++    if (!wrapper || !stats) return VK_FALSE;
++    wrapper->getPresentTimingStats(*stats);
++    return VK_TRUE;
++}
++
 +uint64_t VKAPI_CALL getLastInterpolationCompletionValueFFX(VkSwapchainKHR swapchain)
 +{
 +    auto* wrapper = static_cast<FrameInterpolationSwapChainVK*>(asteria_vk::ProxyObject(VK_NULL_HANDLE, swapchain));
@@ -1744,7 +2030,80 @@ index 041b246..eee41f7 100644
  FFX_API FfxErrorCode ffxGetSwapchainReplacementFunctionsVK(FfxDevice ffxDevice, FfxSwapchainReplacementFunctions* functions)
  {
      if (!ffxDevice || !functions) return FFX_ERROR_INVALID_POINTER;
-@@ -1868,7 +1881,7 @@ VkResult FrameInterpolationSwapChainVK::getSwapchainImages(VkDevice device, uint
+@@ -768,7 +790,8 @@ FfxErrorCode ffxFrameInterpolationSwapchainGetGpuMemoryUsageVK(FfxSwapchain game
+ //////////////////////////////////////////////
+ /// Present
+ //////////////////////////////////////////////
+-VkResult presentToSwapChain(FrameinterpolationPresentInfo* pPresenter, uint32_t imageIndex, uint32_t semaphoreIndex = 0)
++VkResult presentToSwapChain(FrameinterpolationPresentInfo* pPresenter, uint32_t imageIndex,
++                            uint32_t semaphoreIndex = 0, int32_t frameType = -1)
+ {
+     VkPresentInfoKHR presentInfoKHR   = {};
+     presentInfoKHR.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+@@ -785,6 +808,43 @@ VkResult presentToSwapChain(FrameinterpolationPresentInfo* pPresenter, uint32_t
+     LeaveCriticalSection(&pPresenter->swapchainCriticalSection);
+ 
+     ++(pPresenter->realPresentCount);
++    if (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR)
++    {
++        LARGE_INTEGER qpc{};
++        QueryPerformanceCounter(&qpc);
++        const uint64_t now = uint64_t(qpc.QuadPart);
++        const uint64_t previous = pPresenter->lastPresentQpc.exchange(now);
++        static const uint64_t qpcFrequency = [] {
++            LARGE_INTEGER value{};
++            QueryPerformanceFrequency(&value);
++            return uint64_t(value.QuadPart);
++        }();
++        if (previous && now > previous && now - previous <= qpcFrequency)
++        {
++            const uint64_t interval = now - previous;
++            pPresenter->presentIntervalSamples.fetch_add(1);
++            pPresenter->presentIntervalTicks.fetch_add(interval);
++            pPresenter->presentIntervalTicksSquared.fetch_add(interval * interval);
++            uint64_t minimum = pPresenter->minimumPresentIntervalTicks.load();
++            while (interval < minimum && !pPresenter->minimumPresentIntervalTicks.compare_exchange_weak(minimum, interval)) {}
++            uint64_t maximum = pPresenter->maximumPresentIntervalTicks.load();
++            while (interval > maximum && !pPresenter->maximumPresentIntervalTicks.compare_exchange_weak(maximum, interval)) {}
++        }
++        if (frameType == int32_t(PacingData::FrameType::Interpolated_1))
++            pPresenter->interpolatedPresentCount.fetch_add(1);
++        else if (frameType == int32_t(PacingData::FrameType::Real))
++            pPresenter->realFramePresentCount.fetch_add(1);
++        if (frameType >= 0)
++        {
++            const int32_t previousType = pPresenter->lastPresentFrameType.exchange(frameType);
++            if (previousType >= 0)
++            {
++                pPresenter->typedPresentTransitions.fetch_add(1);
++                if (previousType != frameType)
++                    pPresenter->alternatingPresentTransitions.fetch_add(1);
++            }
++        }
++    }
+     return res;
+ }
+ 
+@@ -1057,7 +1117,7 @@ DWORD WINAPI copyAndPresent_presenterThread(LPVOID pParam)
+                                 waitForPerformanceCount(previousPresentQpc + frameInfo.presentQpcDelta);
+                                 QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&previousPresentQpc));
+ 
+-                                res = presentToSwapChain(presenter, imageIndex, imageIndex);
++                                res = presentToSwapChain(presenter, imageIndex, imageIndex, int32_t(frameType));
+                                 // VK_SUBOPTIMAL_KHR & VK_ERROR_OUT_OF_DATE_KHR: the swapchain has been recreated
+                                 FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR,
+                                                           "presentToSwapChain failed with error %d",
+@@ -1169,7 +1229,8 @@ DWORD WINAPI composeAndPresent_presenterThread(LPVOID pParam)
+                                 waitForPerformanceCount(previousPresentQpc + frameInfo.presentQpcDelta);
+                                 QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&previousPresentQpc));
+ 
+-                                res = presentToSwapChain(presenter, realSwapchainImageIndex, realSwapchainImageIndex);
++                                res = presentToSwapChain(presenter, realSwapchainImageIndex,
++                                                         realSwapchainImageIndex, int32_t(frameType));
+                                 // VK_SUBOPTIMAL_KHR & VK_ERROR_OUT_OF_DATE_KHR: the swapchain has been recreated
+                                 FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR,
+                                                           "presentToSwapChain failed with error %d",
+@@ -1868,7 +1929,7 @@ VkResult FrameInterpolationSwapChainVK::getSwapchainImages(VkDevice device, uint
          *pSwapchainImageCount = returnedCount;
          std::ostringstream trace;
          trace << "replacement_get count=" << returnedCount << " supplied=" << suppliedCount << " buffers=";
@@ -1753,10 +2112,28 @@ index 041b246..eee41f7 100644
          AsteriaTraceSwapchain(trace.str());
          return suppliedCount < gameBufferCount ? VK_INCOMPLETE : VK_SUCCESS;
      }
-@@ -2846,6 +2859,14 @@ uint64_t FrameInterpolationSwapChainVK::getLastPresentCount()
+@@ -2846,6 +2907,32 @@ uint64_t FrameInterpolationSwapChainVK::getLastPresentCount()
      return presentInfo.realPresentCount;
  }
  
++void FrameInterpolationSwapChainVK::getPresentTimingStats(AsteriaPresentTimingStats& stats) const
++{
++    LARGE_INTEGER frequency{};
++    QueryPerformanceFrequency(&frequency);
++    stats = {};
++    stats.qpcFrequency = uint64_t(frequency.QuadPart);
++    stats.intervalSamples = presentInfo.presentIntervalSamples.load();
++    stats.intervalTicks = presentInfo.presentIntervalTicks.load();
++    stats.intervalTicksSquared = presentInfo.presentIntervalTicksSquared.load();
++    stats.minimumIntervalTicks = presentInfo.minimumPresentIntervalTicks.load();
++    if (stats.minimumIntervalTicks == UINT64_MAX) stats.minimumIntervalTicks = 0;
++    stats.maximumIntervalTicks = presentInfo.maximumPresentIntervalTicks.load();
++    stats.interpolatedPresents = presentInfo.interpolatedPresentCount.load();
++    stats.realPresents = presentInfo.realFramePresentCount.load();
++    stats.typedTransitions = presentInfo.typedPresentTransitions.load();
++    stats.alternatingTransitions = presentInfo.alternatingPresentTransitions.load();
++}
++
 +bool FrameInterpolationSwapChainVK::waitForInterpolationCompletion(
 +    uint64_t value, uint64_t timeoutNanoseconds)
 +{

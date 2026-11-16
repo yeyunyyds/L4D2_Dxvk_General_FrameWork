@@ -28,7 +28,7 @@ inline std::wstring readEnv(const wchar_t *key) {
 }
 struct Config {
   bool enabled = false, generatedOnly = false, providerOnly = false,
-       hotkeys = true, fastInputs = false;
+       hotkeys = true, fastInputs = false, hudBypass = false;
   bool presenterProbe = false;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
@@ -51,6 +51,7 @@ struct Config {
       generatedOnly = mode == L"generated";
       providerOnly = mode == L"provider";
       fastInputs = readEnv(L"LDB_FG_FAST_INPUTS") == L"1";
+      hudBypass = readEnv(L"LDB_FG_HUD_BYPASS") == L"1";
       autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
       auto pacing = readEnv(L"LDB_FG_PACING_MS");
       if (!pacing.empty()) {
@@ -160,6 +161,7 @@ inline std::string presenterTopologyJson(const PresenterDeviceProbe &probe) {
 }
 struct State {
   IDirect3DDevice9 *device = nullptr;
+  Com<ID3D9VkInteropDevice> cachedInterop;
   std::unique_ptr<ResidentFg> gpu;
   AsteriaHostControl asteria;
 
@@ -255,6 +257,10 @@ struct State {
              std::to_string(ASTERIA_HOST_FRAME_API_VERSION_2) +
              ",\"host_layer_control_available\":" +
              std::string(asteria.available() ? "true" : "false") +
+             ",\"fast_inputs\":" +
+             std::string(config().fastInputs ? "true" : "false") +
+             ",\"hud_bypass_requested\":" +
+             std::string(config().hudBypass ? "true" : "false") +
              ",\"qpc_frequency\":" +
              std::to_string(frequency.QuadPart) +
              ",\"local_effect_policy\":" +
@@ -404,14 +410,19 @@ struct State {
     f8 = a;
     f9 = b;
   }
-  void transfer(IDirect3DSurface9 *surface, ResidentFg::Slot slot,
-                bool write = false) {
+  ID3D9VkInteropDevice *interopDevice() {
+    if (!cachedInterop.get())
+      hr(device->QueryInterface(__uuidof(ID3D9VkInteropDevice),
+                                reinterpret_cast<void **>(cachedInterop.put())),
+         "FG interop");
+    return cachedInterop.get();
+  }
+  template <typename Operation>
+  void withTransferredSurface(IDirect3DSurface9 *surface, ResidentFg::Slot slot,
+                              bool write, Operation &&operation) {
     Com<ID3D9VkInteropTexture> texture;
     auto info = imageInfo(surface, texture);
-    Com<ID3D9VkInteropDevice> interop;
-    hr(device->QueryInterface(__uuidof(ID3D9VkInteropDevice),
-                              reinterpret_cast<void **>(interop.put())),
-       "FG interop");
+    auto *interop = interopDevice();
 
     VkImageAspectFlags aspects =
         slot < ResidentFg::CurrentUi
@@ -439,25 +450,31 @@ struct State {
         }
       }
       ~Restore() { apply(); }
-    } restore{interop.get(), texture.get(), range, target, info.layout};
+    } restore{interop, texture.get(), range, target, info.layout};
 
-    interop->TransitionTextureLayout(texture.get(), &range, info.layout,
-                                     target);
+    interop->TransitionTextureLayout(texture.get(), &range, info.layout, target);
     interop->FlushRenderingCommands();
 
     if (!interop->WaitForResource(surface, 0))
       throw std::runtime_error("FG source wait");
 
-    if (write)
-      gpu->writeBack(info, slot);
-    else
-      gpu->copyInto(info, slot,
-                    slot < ResidentFg::CurrentUi ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                                 : VK_IMAGE_ASPECT_COLOR_BIT);
+    operation(info, slot < ResidentFg::CurrentUi
+                        ? VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT)
+                        : VkImageAspectFlags(VK_IMAGE_ASPECT_COLOR_BIT));
     restore.apply();
 
     if (!interop->WaitForResource(surface, 0))
       throw std::runtime_error("FG restore wait");
+  }
+  void transfer(IDirect3DSurface9 *surface, ResidentFg::Slot slot,
+                bool write = false) {
+    withTransferredSurface(surface, slot, write,
+      [&](const ImageInfo &info, VkImageAspectFlags aspect) {
+        if (write)
+          gpu->writeBack(info, slot);
+        else
+          gpu->copyInto(info, slot, aspect);
+      });
   }
   void ensureGpu(IDirect3DSurface9 *depth) {
     Com<IDirect3DSurface9> back;
@@ -477,11 +494,7 @@ struct State {
       invalidate("extent_or_format", 0, true);
 
     if (!gpu) {
-      Com<ID3D9VkInteropDevice> interop;
-      hr(device->QueryInterface(__uuidof(ID3D9VkInteropDevice),
-                                reinterpret_cast<void **>(interop.put())),
-         "FG device interop");
-      gpu = std::make_unique<ResidentFg>(interop.get());
+      gpu = std::make_unique<ResidentFg>(interopDevice());
       gpu->initialize(b.create.extent.width, b.create.extent.height,
                       d.create.format, b.create.format);
       if (config().autoCapture)
@@ -593,7 +606,7 @@ struct State {
     } else if (nearSeen)
       nearCopy(uid);
 
-    if (config().fastInputs)
+    if (config().fastInputs && !config().hudBypass)
       return;
 
     if (!scene || !gpu || uiCopied || v.X || v.Y || v.Width != gpu->width ||
@@ -743,7 +756,8 @@ struct State {
            (nearColourCopied && !nearInvalid)) && gpu) {
         hr(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, back.put()),
            "FG final backbuffer");
-        transfer(back.get(), ResidentFg::CurrentFinal);
+        if (!providerOnly)
+          transfer(back.get(), ResidentFg::CurrentFinal);
         ready = true;
         bool providerGpuInputsReady = false;
         bool nativeFrameAccepted = false;
@@ -762,6 +776,8 @@ struct State {
                 gpu->providerImages(0).device,
                 nativeTicket);
             if (nativeSlot >= 0) {
+              const bool sceneOnly = config().fastInputs &&
+                                     (!config().hudBypass || !uiCopied);
               const uint32_t providerFlags =
                 (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
                 (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u) |
@@ -771,8 +787,14 @@ struct State {
                                       previousFlags};
               providerParams.thresholds[2] = 1.0f;
               try {
-                gpu->generate(providerParams, false, true,
-                              uint32_t(nativeSlot), config().fastInputs);
+                withTransferredSurface(
+                    back.get(), ResidentFg::CurrentFinal, false,
+                    [&](const ImageInfo &info, VkImageAspectFlags aspect) {
+                      gpu->copyInto(info, ResidentFg::CurrentFinal, aspect, true);
+                      gpu->generate(providerParams, false, true,
+                                    uint32_t(nativeSlot), sceneOnly,
+                                    true);
+                    });
               } catch (...) {
                 asteria.cancelNativeSlot(uint32_t(nativeSlot));
                 throw;
@@ -788,20 +810,23 @@ struct State {
                   providerImages.depthFormat,
                   providerImages.motionFormat, providerImages.hudlessFormat,
                   providerImages.uiFormat, providerImages.depthLayout,
-                  config().fastInputs);
+                  sceneOnly);
               generatedFrame = nativeFrameAccepted;
             }
           }
         }
-        const bool hostFrameAccepted = providerGpuInputsReady && asteria.submit(
-            currentMatrix, uint64_t(generation) + 1, frame + 1,
-            uint64_t(arrival), sourceIntervalMs, sceneColor, sceneDepth,
-            gpu->width, gpu->height, uint32_t(std::min<uint64_t>(draws, UINT32_MAX)),
-            uint32_t(std::min<uint64_t>(nearDraws, UINT32_MAX)), uiCopied,
-            !history, providerImages.device, providerImages.depth,
-            providerImages.motion, providerImages.depthFormat,
-            providerImages.motionFormat, providerImages.depthLayout,
-            providerImages.motionLayout);
+        const bool hostFrameAccepted = config().fastInputs && providerOnly
+            ? nativeFrameAccepted
+            : providerGpuInputsReady && asteria.submit(
+                  currentMatrix, uint64_t(generation) + 1, frame + 1,
+                  uint64_t(arrival), sourceIntervalMs, sceneColor, sceneDepth,
+                  gpu->width, gpu->height,
+                  uint32_t(std::min<uint64_t>(draws, UINT32_MAX)),
+                  uint32_t(std::min<uint64_t>(nearDraws, UINT32_MAX)), uiCopied,
+                  !history, providerImages.device, providerImages.depth,
+                  providerImages.motion, providerImages.depthFormat,
+                  providerImages.motionFormat, providerImages.depthLayout,
+                  providerImages.motionLayout);
         if (frame < 16 || frame % 120 == 0) {
           AsteriaHostFrameStatsV2 hostStats;
           const bool haveHostStats = asteria.query(hostStats);
@@ -1161,6 +1186,10 @@ struct State {
             std::to_string(sourceIntervalMs) +
             ",\"fast_inputs\":" +
             std::string(config().fastInputs ? "true" : "false") +
+            ",\"hud_bypass_requested\":" +
+            std::string(config().hudBypass ? "true" : "false") +
+            ",\"hud_boundary_available\":" +
+            std::string(uiCopied ? "true" : "false") +
             ",\"native_queries_total\":" +
             std::to_string(asteria.nativeQueries()) +
             ",\"native_tickets_total\":" +

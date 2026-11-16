@@ -164,21 +164,31 @@ class SessionResultsTests(unittest.TestCase):
                     'present_count_ffx':4,'native_frame_inputs_bound':True,
                     'host_depth_resource_connected':True,'motion_input_source':1,
                     'fast_scene_inputs_active':True,
+                    'async_workloads_available':True,
                     'async_workloads_enabled':True,
                     'graphics_queue_family':0,'async_compute_queue_family':1,
                     'present_queue_family':0,'image_acquire_queue_family':2,
                     'cpu_timing':{'wait_for_presents':{
                         'calls':2,'total_ms':1.0,'average_ms':.5}},
                     'input_retirement':{'queue_peak':2,'poll_releases':10,
-                        'forced_waits':1,'forced_wait_average_ms':.1}}}}))
+                        'forced_waits':1,'forced_wait_average_ms':.1},
+                    'generated_content_distinctness':'gpu_sampled_generated_pixels_differ',
+                    'content_probe':{'frames':2,'frames_with_difference':2,
+                        'sampled_pixels':32,'different_pixels':8},
+                    'output_pacing':{'average_interval_ms':8.33,
+                        'interval_stddev_ms':.2,'alternation_ratio':1.0}}}}))
             result=analyze_layer(path)
         performance=result['performance_path']
         self.assertTrue(performance['fast_scene_inputs_active'])
         self.assertTrue(performance['async_workloads_enabled'])
+        self.assertTrue(performance['async_workloads_available'])
         self.assertEqual(performance['queue_families']['async_compute'],1)
         self.assertEqual(performance['cpu_timing']['wait_for_presents']['average_ms'],.5)
         self.assertEqual(performance['input_retirement']['queue_peak'],2)
         self.assertEqual(performance['input_retirement']['poll_releases'],10)
+        self.assertTrue(result['frame_generation']['gpu_sampled_pixel_difference_confirmed'])
+        self.assertEqual(result['frame_generation']['content_probe']['different_pixels'],8)
+        self.assertEqual(result['frame_generation']['output_pacing']['alternation_ratio'],1.0)
 
 
 if __name__=='__main__': unittest.main()
