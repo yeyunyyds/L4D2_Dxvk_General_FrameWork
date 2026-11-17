@@ -52,7 +52,9 @@ def package(source, build_id, output):
         path = layer / filename
         if not path.is_file():
             raise ValueError(f'Missing compiled x64 Vulkan layer file: {filename}')
-        entries[f'vulkan-layer/{filename}'] = path.read_bytes()
+        entries[f'bin/.l4d2bridge/vulkan-layer/{filename}'] = path.read_bytes()
+    entries['bin/.l4d2bridge/fg-config.ini'] = (ROOT/'integration/ldb/fg-config.ini').read_bytes()
+    entries['bin/.l4d2bridge/fg_live_hud.ps1'] = (ROOT/'scripts/fg_live_hud.ps1').read_bytes()
     receipt.update(fsr_assets_archive_sha256=asset_lock['archive_sha256'],
                    fsr_assets_build='cross_compiled_MinGW_x64; Host trio is native MSVC',
                    native_host_build='compiled_MSVC_Release', build_id=build_id, compile_examples=examples,

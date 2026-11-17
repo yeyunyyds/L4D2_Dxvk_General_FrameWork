@@ -408,7 +408,7 @@ index 0476bc7..8e5ba19 100644
      uint32_t motionSource = 0;
      if (isFgPresent)
      {
-@@ -2373,15 +2603,43 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2373,15 +2603,52 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              const auto input = std::atomic_load_explicit(&fg->currentInputs, std::memory_order_acquire);
              inputReady = bool(input);
              if (input) motionSource = uint32_t(input->motionSource);
@@ -418,12 +418,21 @@ index 0476bc7..8e5ba19 100644
 +            fastSceneInputsActive = input && input->sceneOnly;
              const auto before = fg->interpolationDispatches.load();
 +            const auto presentStart = std::chrono::steady_clock::now();
++            const uint64_t completedBefore = getLastPresentCountFFX(proxySwapchain);
++            fg->scheduledOutputPresents = (std::max)(
++                fg->scheduledOutputPresents, completedBefore);
              result = vkQueuePresentFFX(queue, &ffxPresent);
 +            fg->presentNanoseconds.fetch_add(asteria_fg_runtime::ElapsedNanoseconds(presentStart), std::memory_order_relaxed);
 +            fg->presentCalls.fetch_add(1, std::memory_order_relaxed);
              callbackRecorded = fg->interpolationDispatches.load() > before;
 +            fg->currentInputCompletionValue = callbackRecorded ?
 +                getLastInterpolationCompletionValueFFX(proxySwapchain) : 0;
++            if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
++            {
++                fg->scheduledOutputPresents += callbackRecorded ? 2 : 1;
++                fg->currentInputPresentCompletionValue = callbackRecorded ?
++                    fg->scheduledOutputPresents : 0;
++            }
 +            asteria_fg_runtime::RetireCompletedFrameInputs(*fg, false);
              ffxPresentCount = getLastPresentCountFFX(proxySwapchain);
 +            const uint64_t addedPresents = ffxPresentCount >= fg->lastObservedFfxPresentCount ?
@@ -951,7 +960,7 @@ index 54799dd..9eff8e5 100644
      std::vector<uint8_t> scratch;
      FfxInterface backend{};
      std::unique_ptr<FfxFrameInterpolationContext> interpolation;
-@@ -112,11 +220,126 @@ struct FgSwapchainState
+@@ -112,11 +220,137 @@ struct FgSwapchainState
      FgCameraState *cameraState = nullptr;
      VkDeviceContext deviceContext{};
      std::shared_ptr<FrameInputSession> inputSession;
@@ -961,9 +970,12 @@ index 54799dd..9eff8e5 100644
 +    {
 +        std::shared_ptr<const FrameInputs> input;
 +        uint64_t interpolationCompletionValue = 0;
++        uint64_t presentCompletionValue = 0;
 +    };
 +    std::deque<RetiredFrameInput> retiredInputs;
 +    uint64_t currentInputCompletionValue = 0;
++    uint64_t currentInputPresentCompletionValue = 0;
++    uint64_t scheduledOutputPresents = 0;
      std::atomic<bool> historyReset{true};
      std::atomic<uint64_t> interpolationDispatches{0};
 +    std::atomic<uint64_t> nativeInterpolationDispatches{0};
@@ -1052,24 +1064,32 @@ index 54799dd..9eff8e5 100644
 +    while (!state.retiredInputs.empty())
 +    {
 +        auto &oldest = state.retiredInputs.front();
-+        if (WaitForInputCompletion(state, oldest.interpolationCompletionValue, 0))
++        const bool interpolationCompleted =
++            WaitForInputCompletion(state, oldest.interpolationCompletionValue, 0);
++        const bool presentationCompleted = !oldest.presentCompletionValue ||
++            getLastPresentCountFFX(state.proxySwapchain) >= oldest.presentCompletionValue;
++        if (interpolationCompleted && presentationCompleted)
 +        {
 +            ReadCompletedContentProbe(state, oldest.input->frameID);
 +            state.retiredInputs.pop_front();
 +            state.retirePollReleases.fetch_add(1, std::memory_order_relaxed);
 +            continue;
 +        }
-+        // The Host owns three rotating input slots.  Once two old leases are
-+        // retained alongside the pending/current frame, wait only for the
-+        // oldest interpolation submission so the next Host frame always has
-+        // a free slot.  This replaces the previous all-queue/device-idle wait.
++        // Interpolation completion is not sufficient when separate UI is
++        // active: composition and the presenter may still read the same Host
++        // slot. Keep the lease through the corresponding native presents.
++        // With three Host slots a full presenter drain is only needed when
++        // two older leases would otherwise block the next producer slot.
 +        if (!guaranteeFreeSlot || state.retiredInputs.size() < 2) break;
 +        const auto start = std::chrono::steady_clock::now();
-+        const bool completed = WaitForInputCompletion(
++        const bool interpolationDrained = WaitForInputCompletion(
 +            state, oldest.interpolationCompletionValue, UINT64_MAX);
++        const bool presentationDrained = TimedWaitForPresents(state) == FFX_OK;
 +        state.retireWaitNanoseconds.fetch_add(ElapsedNanoseconds(start), std::memory_order_relaxed);
 +        state.retireForcedWaits.fetch_add(1, std::memory_order_relaxed);
-+        if (!completed) break;
++        if (!interpolationDrained || !presentationDrained ||
++            (oldest.presentCompletionValue &&
++             getLastPresentCountFFX(state.proxySwapchain) < oldest.presentCompletionValue)) break;
 +        ReadCompletedContentProbe(state, oldest.input->frameID);
 +        state.retiredInputs.pop_front();
 +    }
@@ -1078,7 +1098,7 @@ index 54799dd..9eff8e5 100644
  inline bool IsFrameGenerationRequestedByEnv()
  {
      wchar_t value[64]{};
-@@ -130,6 +353,18 @@ inline bool IsEstimatedInternalInputsRequested()
+@@ -130,6 +353,24 @@ inline bool IsEstimatedInternalInputsRequested()
      const DWORD length = GetEnvironmentVariableW(L"ASTERIA_FG_ESTIMATED_INTERNAL", value, 64);
      return length && length < 64 && (std::wcscmp(value, L"1") == 0 || _wcsicmp(value, L"true") == 0);
  }
@@ -1092,6 +1112,12 @@ index 54799dd..9eff8e5 100644
 +{
 +    wchar_t value[64]{};
 +    const DWORD length = GetEnvironmentVariableW(L"ASTERIA_FG_SEPARATE_UI", value, 64);
++    return length && length < 64 && (std::wcscmp(value, L"1") == 0 || _wcsicmp(value, L"true") == 0);
++}
++inline bool IsContentProbeRequested()
++{
++    wchar_t value[64]{};
++    const DWORD length = GetEnvironmentVariableW(L"ASTERIA_FG_CONTENT_PROBE", value, 64);
 +    return length && length < 64 && (std::wcscmp(value, L"1") == 0 || _wcsicmp(value, L"true") == 0);
 +}
  
@@ -1385,7 +1411,7 @@ index 54799dd..9eff8e5 100644
      dispatch.output = desc->outputs[0];
      dispatch.interpolationRect = {0, 0, int32_t(state.width), int32_t(state.height)};
      dispatch.opticalFlowVector = flow.opticalFlowVector;
-@@ -429,30 +854,40 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -429,30 +854,41 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
      dispatch.reconstructedPrevDepth = prepare.reconstructedPrevDepth;
      const auto result = ffxFrameInterpolationDispatch(state.interpolation.get(), &dispatch);
      recovery.successful = result == FFX_OK;
@@ -1427,6 +1453,7 @@ index 54799dd..9eff8e5 100644
          vkDeviceWaitIdle(state.device);
      std::atomic_store_explicit(&state.currentInputs, std::shared_ptr<const FrameInputs>{}, std::memory_order_release);
 +    state.currentInputCompletionValue = 0;
++    state.currentInputPresentCompletionValue = 0;
 +    state.retiredInputs.clear();
      if (state.inputSession)
      {
@@ -1515,7 +1542,7 @@ index 54799dd..9eff8e5 100644
          return VK_ERROR_OUT_OF_DEVICE_MEMORY;
      }
 +    // Diagnostic only: failure leaves FG active and reports no pixel samples.
-+    if (asteria_live_scene::EnvFlagDefaultTrue("ASTERIA_FG_CONTENT_PROBE"))
++    if (IsContentProbeRequested())
 +        (void)AllocateContentProbe(state);
  
      FfxFrameGenerationConfig config{};
@@ -1532,7 +1559,7 @@ index 54799dd..9eff8e5 100644
      {
          DestroySwapchainResources(state);
          return VK_ERROR_INITIALIZATION_FAILED;
-@@ -636,36 +1095,68 @@ inline VkResult InitializeSwapchainResources(
+@@ -636,36 +1095,72 @@ inline VkResult InitializeSwapchainResources(
  
  inline bool WaitForSwapchainIdle(FgSwapchainState &state)
  {
@@ -1542,6 +1569,7 @@ index 54799dd..9eff8e5 100644
 +    if (state.swapchainBox && TimedWaitForPresents(state) != FFX_OK) return false;
 +    std::atomic_store_explicit(&state.currentInputs, std::shared_ptr<const FrameInputs>{}, std::memory_order_release);
 +    state.currentInputCompletionValue = 0;
++    state.currentInputPresentCompletionValue = 0;
 +    state.retiredInputs.clear();
 +    return true;
  }
@@ -1581,13 +1609,16 @@ index 54799dd..9eff8e5 100644
 +    std::atomic_store_explicit(&state.currentInputs, std::shared_ptr<const FrameInputs>{}, std::memory_order_release);
 +    if (previousInput && previousInput->lifetime.get() != &state)
 +    {
-+        state.retiredInputs.push_back({std::move(previousInput), state.currentInputCompletionValue});
++        state.retiredInputs.push_back({std::move(previousInput),
++            state.currentInputCompletionValue,
++            state.currentInputPresentCompletionValue});
 +        const uint64_t depth = state.retiredInputs.size();
 +        uint64_t peak = state.retireQueuePeak.load(std::memory_order_relaxed);
 +        while (peak < depth && !state.retireQueuePeak.compare_exchange_weak(
 +            peak, depth, std::memory_order_relaxed)) {}
 +    }
 +    state.currentInputCompletionValue = 0;
++    state.currentInputPresentCompletionValue = 0;
 +    RetireCompletedFrameInputs(state, true);
      const uint64_t frame = state.frameID++;
      std::shared_ptr<const FrameInputs> input;

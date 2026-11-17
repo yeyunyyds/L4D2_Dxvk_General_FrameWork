@@ -16,9 +16,11 @@ $RelativeFiles = @(
   'bin/.l4d2bridge/L4D2Bridge32.exe',
   'bin/.l4d2bridge/LDBFsrBackend64.dll',
   'bin/.l4d2bridge/d3d9vk_x64.dll',
-  'vulkan-layer/AsteriaFrameGenerationLayer64.dll',
-  'vulkan-layer/VK_LAYER_GF_Asteria_FrameGeneration.json',
-  'vulkan-layer/gf-asteria-layer-build.json'
+  'bin/.l4d2bridge/vulkan-layer/AsteriaFrameGenerationLayer64.dll',
+  'bin/.l4d2bridge/vulkan-layer/VK_LAYER_GF_Asteria_FrameGeneration.json',
+  'bin/.l4d2bridge/vulkan-layer/gf-asteria-layer-build.json',
+  'bin/.l4d2bridge/fg-config.ini',
+  'bin/.l4d2bridge/fg_live_hud.ps1'
 )
 
 function FilePath([string]$Root, [string]$Relative) {

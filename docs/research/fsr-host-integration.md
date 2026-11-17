@@ -6,10 +6,10 @@
 
 ## 安装与一次测试
 
-1. 解压到独立文件夹，完全退出游戏和两个 Host，运行 `install_fg_test.cmd`。脚本自动定位 L4D2、校验包内 Host、后端与 Vulkan Layer 文件，并将八个目标文件的原内容和哈希保存到游戏目录的 `.ldb-fg-test-backup`；找不到非默认 Steam 库时，把游戏根目录拖到 CMD 上或作为第一个参数传入。
-2. 完全退出 Steam，再运行 `start_fg_test.cmd`。脚本以 `+fps_max 60` 启动游戏；进入地图后保持相似的转头或平移，先让 FG 开启约 20 秒，按一次 F8 关闭约 20 秒，再按 F8 开启约 20 秒。无需 F9。本轮由 x64 Host 采集主视图相机、真实帧间隔、深度和运动，通过同进程 ticket/lease ABI 交给 Vulkan Layer；颜色默认使用 replacement swapchain 自己的 `presentColor`，只有 Layer 接管 replacement swapchain，Host 不额外 Present。启动时会同时打开外置 `GF Frame Generation Monitor`，它不进入游戏画面，也不会被插帧。
-3. 正常退出，压缩完整 `fg-results` 上传。启动脚本会在新的会话目录同时收集 Bridge、DXVK 与 FG 日志。无需 `capture.trigger`，也无需先测帧率收益。
-4. 测试结束且游戏和 Host 已退出时运行 `remove_fg_test.cmd`。脚本先确认八个测试文件仍与本包完全相同，再恢复原文件并删除 `.ldb-fg-test-backup`。若文件在测试后被其他工具修改，脚本会停止而不会覆盖后来的文件。
+1. 完全退出 L4D2 和两个 Bridge Host；Steam 可以保持运行。先自行备份原文件，再把包内 `bin` 合并到 L4D2 游戏根目录的 `bin`。本版的 Layer、INI 和 Monitor 都位于 `bin/.l4d2bridge`，不再依赖每次运行安装或启动脚本。
+2. 按需编辑 `bin/.l4d2bridge/fg-config.ini`。默认启用 HUD 分层与 Monitor，关闭逐帧内容探针。随后直接从 Steam 正常启动游戏；x64 Host 在 Vulkan 初始化前加入配套 Layer 搜索路径、创建本次会话目录并自动打开外置 `GF Frame Generation Monitor`。
+3. 进入地图后保持相似的转头或平移，先让 FG 开启约 20 秒，按一次 F8 关闭约 20 秒，再按 F8 开启约 20 秒。无需 F9。正常退出后上传游戏根目录中最新的 `fg-results/session-*`。无需 `capture.trigger`。
+4. `install_fg_test.cmd`、`start_fg_test.cmd` 和恢复脚本只保留给旧式隔离诊断。手动覆盖模式的恢复由用户自己的备份负责。
 
 必须使用 `L4D2Bridge64.exe`。若曾设置 `client.testX86Server=True`，改回 `False`；本包保留现有 `bridge.conf`。32 位 Host 随包保持 Client/Host 版本匹配，未接入 FSR。
 
@@ -21,8 +21,8 @@
 - GPU 转换颜色、深度和运动输入；运动来自相机重建及有限范围图像匹配，官方光流继续处理图像运动。没有取得完整引擎物体/骨骼运动矢量。
 - 默认测试设置 `LDB_FG_FAST_INPUTS=1`，跳过近景分析与质量回读。最终画面复制和深度/运动生成现在共用一次 command buffer，使无 HUD 边界时 Host 从三次提交降到两次。`LDB_FG_HUD_BYPASS=1` 只保留低成本的屏幕 alpha HUD 边界检测：检测成功时提交 HUD-less/UI 并由 replacement swapchain 在 FG 后合成；检测不到时自动保持 `presentColor` 快速路径，不伪造 HUD 分层。三槽 provider 的 depth、motion、HUD-less 与 UI 图像按 graphics/async-compute 两个 family 创建为 concurrent sharing。HUD 最终 render pass 仍在 graphics-capable game queue，但 FSR 插值不再随 HUD 回退到该队列；presenter 使用已有 timeline 与 queue-family transfer 把异步输出交回合成路径。`gpu_initialized.provider_concurrent_sharing` 与 Layer 的 `async_workloads_enabled` 必须同时为真。该 HUD 边界启发式仍不是引擎语义，需实机验收花屏是否消失。
 - Vulkan Layer 会优先把 FFX async workload 放到独立 compute queue；没有独立队列时自动保持同步模式。`asteria-layer.json` 的 `fast_scene_inputs_active`、`async_workloads_enabled`、四个 queue family 和 `cpu_timing` 用于确认实际选择，并分开统计 `ffxWaitForPresents`、配置、回调与 `vkQueuePresentFFX` 的 CPU 时间。
-- 三个 Host 输入槽按插值队列的 timeline 完成值延迟退休：先无阻塞回收已完成的旧代，只有两个旧租约仍占用、下一帧将缺少空槽时才等待最老一代。它不再为了每个输入调用全队列/设备 idle；`input_retirement` 记录队列峰值、无等待释放和被迫等待耗时。
-- Layer 在同一个插值 command buffer 内抽样比较 16 个固定场景像素的真实输入和生成输出，timeline 完成后才读回极小的环形缓冲；`content_probe` 只在至少一个 RGB 样本确有差异时确认非重复内容。`output_pacing` 从实际 `vkQueuePresentKHR` 调用记录输出间隔、抖动、真实/生成帧数量和交替比例；它比提交计数更强，但仍不等于显示器物理 scanout 测量。
+- 三个 Host 输入槽同时以插值 timeline 和实际 native Present 序列延迟退休。仅完成 FSR 计算不再释放 HUD/UI 槽，因为后续合成和 presenter 仍可能读取它；只有两个旧租约将耗尽三槽时才等待 presenter 排空。`input_retirement` 记录队列峰值、无等待释放和被迫等待耗时。
+- 内容差异探针默认关闭，避免它干扰性能基线和 Intel 驱动稳定性；需要验证非重复内容时在 INI 中设置 `content_probe=1`。启用后 Layer 在插值 command buffer 内抽样比较 16 个固定场景像素，timeline 完成后才读回极小的环形缓冲。`output_pacing` 始终从实际 `vkQueuePresentKHR` 记录输出节奏。
 - 设备丢失隔离包提供三个只改变一个变量的入口：`start_fg_isolate_a_probe_off.cmd` 关闭 GPU 像素探针，`start_fg_isolate_b_hud_off.cmd` 在 A 的基础上关闭 HUD 分层，`start_fg_isolate_c_merge_off.cmd` 再关闭 submission 合并。按 A、B、C 顺序测试即可定位首个不稳定路径；三个入口共用同一套二进制。
 - Arc 实测的 present family 2 只有 transfer/present 能力，不能执行 HUD render pass；因此 HUD 合成固定改到 graphics-capable game family，并让 FSR SDK 把完成图像转交 present queue。SDK 内部 UI 双缓冲同时隔离 Host 三槽资源与异步 presenter 生命周期。`ui_composition_queue_family` 和 `ui_internal_double_buffering` 用于验收实际路径。
 - 保留深度／覆盖质量预检：过多无效场景、异常前景覆盖仍恢复完整原帧。细特效风险在 FSR 路径改为区域保护：可疑细亮区域及前帧旧位置的邻域保留当前原帧，避免单个风险点导致整帧拒绝和历史反复预热。该识别依据亮线形态，不等同于引擎材质标签，可能保守地保留普通白色细节；透明层仍未完整分解。自研后端继续整帧拒绝细特效风险。SDK 合成后，已验证的前帧遮挡填补区域沿用预检重投影结果；缺乏可靠运动的纯色突变区域也有原帧保护。因此当前交付是官方 FSR 与保守保护的组合。
@@ -34,7 +34,7 @@
 
 ## Danyria presenter 迁移基线
 
-当前包新增独立的 **x64 Vulkan Layer 完整路径**：`L4D2Bridge64 -> Vulkan loader -> GF/Asteria layer -> Intel Vulkan driver`。它直接拦截 `vkCreateDevice`、swapchain、acquire 与 present，在 Host 进程内创建官方 FSR3 replacement swapchain；不要求客制化 DXVK 暴露私有插帧接口。`start_fg_test.cmd` 会在保留用户现有 Vulkan Layer 搜索路径的同时加入本包、启用 Layer，并将 `asteria-layer.json` 写入本次 `fg-results`。
+当前包新增独立的 **x64 Vulkan Layer 完整路径**：`L4D2Bridge64 -> Vulkan loader -> GF/Asteria layer -> Intel Vulkan driver`。它直接拦截 `vkCreateDevice`、swapchain、acquire 与 present，在 Host 进程内创建官方 FSR3 replacement swapchain；不要求客制化 DXVK 暴露私有插帧接口。现在由 x64 Host 在设备初始化前读取同目录 INI、加入配套 Layer 搜索路径并将 `asteria-layer.json` 写入本次 `fg-results`，无需让 Steam 继承启动脚本环境。
 
 Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有四条 queue。本移植从固定 MIT 源码提交重新构建 AMD64 DLL；创建设备时申请所有 graphics/compute/transfer 候选 queue，拿到真实 Win32 surface 后再检查 present support，并为 game、async compute、present、image acquire 分配四条互不相同的物理 queue。各角色保留自己的 family index，交给官方 FFX 的跨 family ownership-transfer 路径。Arc B580 已观测到的 `1 + 4 + 2` 物理拓扑满足数量要求，最终能否启用由该次 surface 的 present-support 实测决定。
 

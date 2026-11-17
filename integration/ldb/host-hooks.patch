@@ -1,10 +1,11 @@
 --- a/bridge/src/server/main.cpp
 +++ b/bridge/src/server/main.cpp
-@@ -25,6 +25,8 @@
+@@ -25,6 +25,9 @@
   */
  #include "api_wait_commands.h"
  #include <windows.h>
 +#include "host_capture.h"
++#include "fg_bootstrap.h"
 +#include "frame_generation.h"
 
  #include "version.h"
@@ -150,3 +151,12 @@
 
          if (!SUCCEEDED(hresult)) {
            std::stringstream ss;
+@@ -4119,6 +4144,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
+     return 0;
+   }
+ 
++  ldb_fg_bootstrap::initialize();
++
+   if (!initFileSys()) {
+     Logger::err("Failed to initialize rtx filesystem!");
+     LocalFree(argList);

@@ -1,4 +1,7 @@
-param([Parameter(Mandatory=$true)][string]$LogDirectory)
+param(
+  [Parameter(Mandatory=$true)][string]$LogDirectory,
+  [uint32]$HostProcessId = 0
+)
 $ErrorActionPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -115,6 +118,10 @@ $script:LayerState = $null
 $timer = New-Object Windows.Forms.Timer
 $timer.Interval = 1000
 $timer.Add_Tick({
+  if ($HostProcessId -and -not (Get-Process -Id $HostProcessId -ErrorAction SilentlyContinue)) {
+    $form.Close()
+    return
+  }
   if (-not $script:EventPath -or -not (Test-Path $script:EventPath)) {
     $script:EventPath = Find-EventLog $LogDirectory
   }
