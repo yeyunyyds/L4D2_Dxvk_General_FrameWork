@@ -88,7 +88,7 @@ def package(source, build_id, output):
         archive.write(ROOT/'shaders/frame_quality.comp','sources/frame_quality.comp')
         archive.write(ROOT/'shaders/hud_composite.comp','sources/hud_composite.comp')
         archive.write(source/'LICENSE', 'licenses/Remix-LICENSE')
-        archive.write(ROOT/'.research/sources/bridge-131/LICENSE', 'licenses/LDB-LICENSE')
+        archive.write(ROOT/'.research/sources/bridge-134/LICENSE', 'licenses/LDB-LICENSE')
         archive.write(ROOT/'.research/sources/dxvk/LICENSE', 'licenses/DXVK-LICENSE')
         archive.write(ROOT/'.research/sources/vulkan_headers/LICENSE.md', 'licenses/Vulkan-Headers-LICENSE.md')
         archive.write(ROOT/'.research/sources/asteria/LICENSE', 'licenses/Asteria-LICENSE')

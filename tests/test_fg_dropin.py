@@ -1,4 +1,5 @@
 import configparser
+import json
 from pathlib import Path
 import unittest
 
@@ -7,6 +8,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FrameGenerationDropInTests(unittest.TestCase):
+    def test_bridge_baseline_is_ldb_134(self):
+        baseline = json.loads(
+            (ROOT / "integration/ldb/baseline.json").read_text())
+        hooks = (ROOT / "integration/ldb/host-hooks.patch").read_text()
+        self.assertEqual(baseline["bridge_version"], "v1.3.4")
+        self.assertEqual(
+            baseline["bridge_commit"],
+            "78f8c17aa8eb6c752a6d790e166c9ba55ed4a91e")
+        self.assertIn("lookupHostHandle", hooks)
+        self.assertIn("if (pD3DDevice != nullptr)", hooks)
+        self.assertEqual(hooks.count("ldb_fg::beforeDraw"), 4)
+        self.assertEqual(hooks.count("ldb_fg::present"), 2)
+
     def test_safe_drop_in_defaults(self):
         parser = configparser.ConfigParser()
         parser.read(ROOT / "integration/ldb/fg-config.ini", encoding="utf-8")

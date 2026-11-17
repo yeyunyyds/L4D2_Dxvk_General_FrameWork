@@ -85,7 +85,7 @@ def prepare(args):
     shutil.copytree(detours, args.output / 'submodules/Detours', ignore=shutil.ignore_patterns('.git'))
     meson = server / 'meson.build'
     text = meson.read_text()
-    old = 'include_directories : [ bridge_include_path, util_include_path, public_include_path ],'
+    old = 'include_directories : [ bridge_include_path, util_include_path, detours_include_path, public_include_path ],'
     if text.count(old) != 1:
         raise RuntimeError('Unexpected Host Meson includes')
     meson.write_text(text.replace(old, old.replace('public_include_path', "public_include_path, include_directories('.')")))
@@ -104,7 +104,7 @@ def prepare(args):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--bridge', type=Path, default=ROOT / '.research/sources/bridge-131')
+    p.add_argument('--bridge', type=Path, default=ROOT / '.research/sources/bridge-134')
     p.add_argument('--upstream', type=Path, default=ROOT / '.research/sources/bridge-upstream')
     p.add_argument('--dxvk', type=Path, default=ROOT / '.research/sources/dxvk')
     p.add_argument('--headers', type=Path, default=ROOT / '.research/sources/vulkan_headers')

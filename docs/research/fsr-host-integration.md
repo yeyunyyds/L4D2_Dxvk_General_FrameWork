@@ -2,6 +2,8 @@
 
 本包把官方 FSR Optical Flow 与 Frame Interpolation 接到 x64 Host 的实时 Vulkan 资源和实际 Present 路径。配套 DXVK 2.6.1 在 `LDB_FG_BACKEND=fsr` 时启用所需设备能力；不修改游戏渲染线程设置，不引入整套 RTX 兼容层。
 
+当前 Client、Host32 与 Host64 已同步到正式 LDB v1.3.4（提交 `78f8c17aa8eb6c752a6d790e166c9ba55ed4a91e`）。FG hooks 在 v1.3.4 的幂等 Device 生命周期、Steam/ReShade Presenter 处理、Session 日志和异常路径之上手工重放；三个 Bridge 二进制必须继续同批替换。
+
 前版已在 B580 游戏内完成 174 次生成帧 Present；本轮区域保护改动仍待实机验收。尚未证明完整动态场景画质、显示节奏或帧率收益。
 
 ## 安装与一次测试
