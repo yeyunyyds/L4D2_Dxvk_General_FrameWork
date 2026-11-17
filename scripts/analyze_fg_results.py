@@ -168,6 +168,7 @@ def analyze(path):
     backend = 'custom'
     local_effect_policy = 'whole_frame_rejection'
     presenter = {}
+    interop_device = {}
     provider_resources = {}
     viewmodel_overlay = {'requested': False, 'sampled_frames': 0,
                          'available_frames': 0}
@@ -204,6 +205,12 @@ def analyze(path):
                     'topology_api': event.get('presenter_topology_api', False),
                     'queue_families': event.get('presenter_queue_families', []),
                     'input_api': event.get('presenter_input_api', 0),
+                }
+                interop_device = {
+                    'device_api': event.get('interop_device_api', False),
+                    'submission_family': event.get('interop_submission_family'),
+                    'queue_families': event.get('interop_queue_families', []),
+                    'private_dxvk_exports_required': False,
                 }
             elif kind == 'presenter_input':
                 presenter_inputs['packets'] += 1
@@ -307,6 +314,7 @@ def analyze(path):
     return dict(log=path.name, log_complete=complete, event_counts=dict(counts),
                 backend=backend, local_effect_policy=local_effect_policy, gpu_dispatch_scope='preflight_only' if backend.startswith('fsr') else 'generation',
                 presenter_device=presenter,
+                interop_device=interop_device,
                 provider_resources=provider_resources,
                 viewmodel_overlay=viewmodel_overlay,
                 presenter_inputs=presenter_inputs,

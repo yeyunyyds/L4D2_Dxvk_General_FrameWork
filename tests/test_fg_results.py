@@ -116,6 +116,20 @@ class SessionResultsTests(unittest.TestCase):
             rejected_events=0,motion_source='depth_camera_reconstruction',
             accepted_total=1,rejected_total=0))
 
+    def test_standard_interop_topology_is_reported(self):
+        result=self.analyze([dict(event='session',qpc_frequency=1000,
+            interop_device_api=True,interop_submission_family=1,
+            interop_queue_families=[dict(family=1,flags=7,physical=4,
+                                         submission=True)],
+            presenter_input_api=1),
+            dict(event='summary',logical_presents=0,generated_presents=0,
+                 presenter_inputs_accepted=0,presenter_inputs_rejected=0)])
+        self.assertEqual(result['interop_device'],dict(
+            device_api=True,submission_family=1,
+            queue_families=[dict(family=1,flags=7,physical=4,
+                                 submission=True)],
+            private_dxvk_exports_required=False))
+
     def test_layer_acceptance_separates_dispatch_from_content_proof(self):
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)/'asteria-layer.json'

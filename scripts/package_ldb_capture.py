@@ -7,6 +7,7 @@ import struct
 import zipfile
 from prepare_research import ROOT
 from fetch_fsr_assets import obtain_assets
+from fetch_dxvk_runtime import obtain_dxvk_runtime
 
 
 def package(source, build_id, output):
@@ -24,7 +25,11 @@ def package(source, build_id, output):
         raise ValueError('Mismatched development identity')
     entries = {}
     asset_lock,assets=obtain_assets()
-    entries.update({name:data for name,data in assets.items() if name.startswith('bin/')})
+    entries.update({name:data for name,data in assets.items()
+                    if name.startswith('bin/') and
+                    name != 'bin/.l4d2bridge/d3d9vk_x64.dll'})
+    dxvk_lock, dxvk_runtime = obtain_dxvk_runtime()
+    entries['bin/.l4d2bridge/d3d9vk_x64.dll'] = dxvk_runtime
     examples = {}
     targets = [('x86', 'client/d3d9.dll', 'bin/dxvk_d3d9.dll', 0x14c),
                ('x64', 'server/L4D2Bridge64.exe', 'bin/.l4d2bridge/L4D2Bridge64.exe', 0x8664),
@@ -56,7 +61,11 @@ def package(source, build_id, output):
     entries['bin/.l4d2bridge/fg-config.ini'] = (ROOT/'integration/ldb/fg-config.ini').read_bytes()
     entries['bin/.l4d2bridge/fg_live_hud.ps1'] = (ROOT/'scripts/fg_live_hud.ps1').read_bytes()
     receipt.update(fsr_assets_archive_sha256=asset_lock['archive_sha256'],
-                   fsr_assets_build='cross_compiled_MinGW_x64; Host trio is native MSVC',
+                   dxvk_runtime_version=dxvk_lock['version'],
+                   dxvk_runtime_archive_sha256=dxvk_lock['archive_sha256'],
+                   dxvk_runtime_origin='unmodified_upstream_release',
+                   dxvk_private_exports_required=False,
+                   fsr_assets_build='FSR backend cross_compiled_MinGW_x64; official DXVK release; Host trio native MSVC',
                    native_host_build='compiled_MSVC_Release', build_id=build_id, compile_examples=examples,
                    l4d2_game_capture='unrun', b580_integrated_capture='unrun', gpu_fg_execution='unrun_in_game', frame_generation_prototype='compiled_with_real_present_path',
                    binaries_sha256={name: hashlib.sha256(data).hexdigest() for name,data in entries.items()})

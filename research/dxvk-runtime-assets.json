@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "version": "v2.6.1",
+  "url": "https://github.com/doitsujin/dxvk/releases/download/v2.6.1/dxvk-2.6.1.tar.gz",
+  "archive_sha256": "7ee0bef415910c943d3bda47d9d6821b9c8ca7a74f1e9f6151707d268cf3ce7f",
+  "member": "dxvk-2.6.1/x64/d3d9.dll",
+  "member_sha256": "57af7ff9b251268899616997b31082d1111baacbae03c1a4776687e821c1e150"
+}

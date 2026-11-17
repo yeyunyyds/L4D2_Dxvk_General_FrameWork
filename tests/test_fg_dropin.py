@@ -34,14 +34,34 @@ class FrameGenerationDropInTests(unittest.TestCase):
 
     def test_host_bootstraps_layer_results_and_monitor(self):
         source = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
+        hooks = (ROOT / "integration/ldb/host-hooks.patch").read_text()
         self.assertIn('L"fg-config.ini"', source)
         self.assertIn('L"VK_ADD_LAYER_PATH"', source)
         self.assertIn('L"VK_INSTANCE_LAYERS"', source)
-        self.assertIn('L"fg-results"', source)
-        self.assertIn("launchMonitor(monitorPath, session)", source)
+        self.assertIn('ldbSession / L"frame-generation"', source)
+        self.assertIn("launchMonitor(state.monitorPath, directory)", source)
+        self.assertIn("attachLogSession(l4d2_log_session::directory())", hooks)
         self.assertIn('L"ASTERIA_FG_CONTENT_PROBE"', source)
         self.assertIn('L"ASTERIA_FG_SEPARATE_UI"', source)
         self.assertIn('L"LDB_FG_VIEWMODEL"', source)
+
+    def test_disabled_fg_has_a_hard_early_exit(self):
+        source = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
+        disabled = source.index("if (!enabled)")
+        layer = source.index('L"LDB_FG_BACKEND"', disabled)
+        self.assertLess(disabled, layer)
+        self.assertIn("clearManagedEnvironment();", source[disabled:layer])
+        self.assertIn("!state.settings.enabled", source)
+
+    def test_host_uses_only_standard_dxvk_interop(self):
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        package = (ROOT / "scripts/package_ldb_capture.py").read_text()
+        self.assertIn("GetVulkanHandles", host)
+        self.assertIn("GetSubmissionQueue", host)
+        self.assertNotIn("LdbFgQueryDeviceInfoV1", host)
+        self.assertNotIn("LdbFgQueryQueueTopologyV1", host)
+        self.assertIn("obtain_dxvk_runtime", package)
+        self.assertIn("dxvk_private_exports_required=False", package)
 
     def test_hud_composes_on_async_callback_and_retires_on_its_timeline(self):
         patch = (ROOT / "integration/fg/async-hud-x64.patch").read_text()

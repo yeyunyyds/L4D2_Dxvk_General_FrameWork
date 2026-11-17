@@ -184,3 +184,11 @@ index f403650..291aece 100644
    if (!initFileSys()) {
      Logger::err("Failed to initialize rtx filesystem!");
      LocalFree(argList);
+@@ -4191,6 +4252,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
+     "host-x86",
+ #endif
+     BRIDGE_VERSION);
++  ldb_fg_bootstrap::attachLogSession(l4d2_log_session::directory());
+   Logger::init();
+   // NV-DXVK start: Data/resource tracing is opt-in and independent of color/API wait diagnostics.
+   try {

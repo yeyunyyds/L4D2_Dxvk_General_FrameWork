@@ -32,7 +32,6 @@ struct Config {
        hotkeys = true, fastInputs = false, hudBypass = false,
        viewmodel = false,
        mergeSubmissions = true;
-  bool presenterProbe = false;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
   std::filesystem::path root;
@@ -40,7 +39,6 @@ struct Config {
   Config() noexcept {
     try {
       enabled = readEnv(L"LDB_FG_ENABLE") == L"1";
-      presenterProbe = readEnv(L"LDB_FG_PRESENTER") == L"1";
 
       if (!enabled)
         return;
@@ -100,67 +98,65 @@ inline uint64_t id(const void *p) {
   return uint64_t(reinterpret_cast<uintptr_t>(p));
 }
 
-struct PresenterDeviceProbe {
-  LdbFgDeviceInfoV1 info{};
-  LdbFgQueueTopologyV1 topology{};
-  bool apiAvailable = false;
-  bool ownerMatch = false;
-  bool topologyAvailable = false;
+struct InteropDeviceProbe {
+  VkInstance instance = VK_NULL_HANDLE;
+  VkPhysicalDevice physical = VK_NULL_HANDLE;
+  VkDevice device = VK_NULL_HANDLE;
+  VkQueue submissionQueue = VK_NULL_HANDLE;
+  uint32_t submissionFamily = UINT32_MAX;
+  std::vector<VkQueueFamilyProperties> families;
+  bool available = false;
 };
 
-inline PresenterDeviceProbe probePresenterDevice(IDirect3DDevice9 *device) {
-  PresenterDeviceProbe result;
+inline InteropDeviceProbe probeInteropDevice(IDirect3DDevice9 *device) {
+  InteropDeviceProbe result;
   Com<ID3D9VkInteropDevice> interop;
   if (!device || FAILED(device->QueryInterface(
                      __uuidof(ID3D9VkInteropDevice),
                      reinterpret_cast<void **>(interop.put()))))
     return result;
-
-  auto vtable = *reinterpret_cast<void ***>(interop.get());
-  HMODULE dxvk = nullptr;
-  if (!vtable || !GetModuleHandleExW(
-                     GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                     reinterpret_cast<LPCWSTR>(vtable[0]), &dxvk))
+  interop->GetVulkanHandles(&result.instance, &result.physical,
+                            &result.device);
+  interop->GetSubmissionQueue(&result.submissionQueue, nullptr,
+                              &result.submissionFamily);
+  result.available = result.instance && result.physical && result.device &&
+                     result.submissionQueue &&
+                     result.submissionFamily != UINT32_MAX;
+  if (!result.available)
     return result;
-
-  auto query = reinterpret_cast<PFN_LdbFgQueryDeviceInfoV1>(
-      GetProcAddress(dxvk, "LdbFgQueryDeviceInfoV1"));
-  if (!query)
-    return result;
-
-  result.apiAvailable = query(device, &result.info) != 0;
-  if (!result.apiAvailable)
-    return result;
-
-  VkInstance instance{};
-  VkPhysicalDevice physical{};
-  VkDevice logical{};
-  interop->GetVulkanHandles(&instance, &physical, &logical);
-  result.ownerMatch = result.info.instance == reinterpret_cast<uintptr_t>(instance) &&
-                      result.info.physicalDevice == reinterpret_cast<uintptr_t>(physical) &&
-                      result.info.device == reinterpret_cast<uintptr_t>(logical);
-  auto queryTopology = reinterpret_cast<PFN_LdbFgQueryQueueTopologyV1>(
-      GetProcAddress(dxvk, "LdbFgQueryQueueTopologyV1"));
-  if (queryTopology)
-    result.topologyAvailable = queryTopology(device, &result.topology) != 0;
+  HMODULE loader = GetModuleHandleW(L"vulkan-1.dll");
+  auto getInstance = loader ? reinterpret_cast<PFN_vkGetInstanceProcAddr>(
+                                  GetProcAddress(loader, "vkGetInstanceProcAddr"))
+                            : nullptr;
+  auto getFamilies = getInstance
+                         ? reinterpret_cast<PFN_vkGetPhysicalDeviceQueueFamilyProperties>(
+                               getInstance(result.instance,
+                                           "vkGetPhysicalDeviceQueueFamilyProperties"))
+                         : nullptr;
+  if (getFamilies) {
+    uint32_t count = 0;
+    getFamilies(result.physical, &count, nullptr);
+    result.families.resize(count);
+    if (count)
+      getFamilies(result.physical, &count, result.families.data());
+    result.families.resize(count);
+  }
   return result;
 }
 
-inline std::string presenterTopologyJson(const PresenterDeviceProbe &probe) {
-  if (!probe.topologyAvailable)
-    return "[]";
+inline std::string interopTopologyJson(const InteropDeviceProbe &probe) {
   std::string result = "[";
-  for (uint32_t i = 0; i < probe.topology.familyCount; ++i) {
+  for (uint32_t i = 0; i < probe.families.size(); ++i) {
     if (i)
       result += ',';
-    const auto &family = probe.topology.families[i];
+    const auto &family = probe.families[i];
     result += "{\"family\":" + std::to_string(i) +
               ",\"flags\":" + std::to_string(family.queueFlags) +
               ",\"physical\":" +
-              std::to_string(family.physicalQueueCount) +
-              ",\"created\":" +
-              std::to_string(family.createdQueueCount) + '}';
+              std::to_string(family.queueCount) +
+              ",\"submission\":" +
+              std::string(i == probe.submissionFamily ? "true" : "false") +
+              '}';
   }
   return result + ']';
 }
@@ -170,7 +166,7 @@ struct State {
   Com<IDirect3DSurface9> hudSnapshot;
   Com<IDirect3DSurface9> viewmodelBeforeSnapshot, viewmodelAfterSnapshot;
   std::unique_ptr<ResidentFg> gpu;
-  PresenterDeviceProbe presenter;
+  InteropDeviceProbe interopProbe;
   AsteriaHostControl asteria;
 
   ldb_camera::Candidate candidate;
@@ -211,7 +207,7 @@ struct State {
   }
 
   explicit State(IDirect3DDevice9 *d)
-      : device(d), presenter(probePresenterDevice(d)),
+      : device(d), interopProbe(probeInteropDevice(d)),
         generatedOnly(config().generatedOnly),
         providerOnly(config().providerOnly) {
     captureLimit = config().captures;
@@ -238,26 +234,12 @@ struct State {
              ",\"motion_source\":" +
              quote(ResidentFg::wantsFsr() ? "camera_plus_bounded_patch"
                                           : "prototype_patch_matching") +
-             ",\"presenter_requested\":" +
-             std::string(config().presenterProbe ? "true" : "false") +
-             ",\"presenter_device_api\":" +
-             std::string(presenter.apiAvailable ? "true" : "false") +
-             ",\"presenter_owner_match\":" +
-             std::string(presenter.ownerMatch ? "true" : "false") +
-             ",\"presenter_device_flags\":" +
-             std::to_string(presenter.info.flags) +
-             ",\"presenter_feature_flags\":" +
-             std::to_string(presenter.info.featureFlags) +
-             ",\"presenter_graphics_family\":" +
-             std::to_string(presenter.info.graphicsFamily) +
-             ",\"presenter_graphics_queues\":" +
-             std::to_string(presenter.info.requestedGraphicsQueues) +
-             ",\"presenter_reserved_queues\":" +
-             std::to_string(presenter.info.reservedQueueCount) +
-             ",\"presenter_topology_api\":" +
-             std::string(presenter.topologyAvailable ? "true" : "false") +
-             ",\"presenter_queue_families\":" +
-             presenterTopologyJson(presenter) +
+             ",\"interop_device_api\":" +
+             std::string(interopProbe.available ? "true" : "false") +
+             ",\"interop_submission_family\":" +
+             std::to_string(interopProbe.submissionFamily) +
+             ",\"interop_queue_families\":" +
+             interopTopologyJson(interopProbe) +
              ",\"presenter_input_api\":" +
              std::to_string(LDB_FG_INPUT_API_VERSION) +
              ",\"host_layer_control_api\":" +
@@ -584,7 +566,8 @@ struct State {
       gpu = std::make_unique<ResidentFg>(interopDevice());
       gpu->initialize(b.create.extent.width, b.create.extent.height,
                       d.create.format, b.create.format,
-                      asteria.consumerFamily(presenter.info.device));
+                      asteria.consumerFamily(
+                          reinterpret_cast<uintptr_t>(interopProbe.device)));
       if (config().autoCapture)
         scheduleCapture();
       emit("gpu_initialized", 0,
@@ -1047,7 +1030,7 @@ struct State {
                    ",\"layer_consumed_total\":" +
                    std::to_string(haveHostStats ? hostStats.consumed : 0));
         }
-        if (config().presenterProbe) {
+        {
           try {
             auto input = gpu->presenterInputs(
                 currentMatrix, history ? previousMatrix : currentMatrix, frame,
