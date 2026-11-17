@@ -1,0 +1,30 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(set = 0, binding = 0) uniform texture2D uiOverlay;
+// No format qualifier is intentional. Replacement-swapchain outputs can be
+// RGBA8 or BGRA8; the packaged DXVK enables storage read/write without format.
+layout(set = 0, binding = 1) writeonly uniform image2D generatedOutput;
+
+void main() {
+  ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+  ivec2 size = imageSize(generatedOutput);
+  if (any(greaterThanEqual(pixel, size)))
+    return;
+
+  bool covered = false;
+  for (int y = -1; y <= 1 && !covered; ++y)
+    for (int x = -1; x <= 1; ++x) {
+      ivec2 point = clamp(pixel + ivec2(x, y), ivec2(0), size - 1);
+      if (texelFetch(uiOverlay, point, 0).a > 0.5) {
+        covered = true;
+        break;
+      }
+    }
+
+  if (covered) {
+    vec4 exactCurrentPixel = texelFetch(uiOverlay, pixel, 0);
+    imageStore(generatedOutput, pixel, vec4(exactCurrentPixel.rgb, 1.0));
+  }
+}

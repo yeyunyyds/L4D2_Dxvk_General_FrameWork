@@ -49,6 +49,7 @@ def verify(dll: Path, source: Path, output: Path) -> None:
         "pe_machine": "AMD64",
         "queue_policy": "surface-selected distinct game/compute/present/acquire queues",
         "input_policy": "native provider V2 ticket/lease with separate HUD-less color and UI overlay; estimated inputs are diagnostic fallback only",
+        "hud_composite_policy": "exact-pixel UI mask composed after interpolation in the same compute command buffer",
     }
     (output / "gf-asteria-layer-build.json").write_text(json.dumps(receipt, indent=2) + "\n")
 

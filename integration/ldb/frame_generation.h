@@ -164,6 +164,7 @@ inline std::string presenterTopologyJson(const PresenterDeviceProbe &probe) {
 struct State {
   IDirect3DDevice9 *device = nullptr;
   Com<ID3D9VkInteropDevice> cachedInterop;
+  Com<IDirect3DSurface9> hudSnapshot;
   std::unique_ptr<ResidentFg> gpu;
   PresenterDeviceProbe presenter;
   AsteriaHostControl asteria;
@@ -358,12 +359,35 @@ struct State {
     uiCopied = false;
     draws = 0;
   }
+  bool snapshotBeforeHud(IDirect3DSurface9 *back) {
+    if (!back)
+      return false;
+    D3DSURFACE_DESC source{}, snapshot{};
+    if (FAILED(back->GetDesc(&source)))
+      return false;
+    if (hudSnapshot.get() &&
+        (FAILED(hudSnapshot->GetDesc(&snapshot)) ||
+         snapshot.Width != source.Width || snapshot.Height != source.Height ||
+         snapshot.Format != source.Format))
+      hudSnapshot.reset();
+    if (!hudSnapshot.get() &&
+        FAILED(device->CreateRenderTarget(
+            source.Width, source.Height, source.Format, D3DMULTISAMPLE_NONE, 0,
+            FALSE, hudSnapshot.put(), nullptr)))
+      return false;
+    // StretchRect is queued in DXVK's existing game command stream. It takes
+    // the pre-HUD snapshot without an interop flush or a CPU resource wait.
+    return SUCCEEDED(device->StretchRect(back, nullptr, hudSnapshot.get(),
+                                         nullptr, D3DTEXF_NONE));
+  }
   void invalidate(const char *reason, uint32_t uid, bool release = false) {
     history = false;
     clearFrame();
 
-    if (release)
+    if (release) {
+      hudSnapshot.reset();
       gpu.reset();
+    }
     emit("history_invalidated", uid, "\"reason\":" + quote(reason));
   }
   void hotkeys(uint32_t uid) {
@@ -469,6 +493,52 @@ struct State {
 
     if (!interop->WaitForResource(surface, 0))
       throw std::runtime_error("FG restore wait");
+  }
+  template <typename Operation>
+  void withTransferredColorPair(IDirect3DSurface9 *first,
+                                IDirect3DSurface9 *second,
+                                Operation &&operation) {
+    Com<ID3D9VkInteropTexture> firstTexture, secondTexture;
+    auto firstInfo = imageInfo(first, firstTexture);
+    auto secondInfo = imageInfo(second, secondTexture);
+    auto *interop = interopDevice();
+    VkImageSubresourceRange range{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    constexpr VkImageLayout target = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    struct RestorePair {
+      ID3D9VkInteropDevice *device;
+      ID3D9VkInteropTexture *first;
+      ID3D9VkInteropTexture *second;
+      VkImageSubresourceRange range;
+      VkImageLayout firstOriginal, secondOriginal;
+      bool armed = true;
+      void apply() noexcept {
+        if (!armed)
+          return;
+        device->TransitionTextureLayout(first, &range,
+                                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                        firstOriginal);
+        device->TransitionTextureLayout(second, &range,
+                                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                        secondOriginal);
+        device->FlushRenderingCommands();
+        armed = false;
+      }
+      ~RestorePair() { apply(); }
+    } restore{interop, firstTexture.get(), secondTexture.get(), range,
+              firstInfo.layout, secondInfo.layout};
+    interop->TransitionTextureLayout(firstTexture.get(), &range,
+                                     firstInfo.layout, target);
+    interop->TransitionTextureLayout(secondTexture.get(), &range,
+                                     secondInfo.layout, target);
+    interop->FlushRenderingCommands();
+    if (!interop->WaitForResource(first, 0) ||
+        !interop->WaitForResource(second, 0))
+      throw std::runtime_error("FG source pair wait");
+    operation(firstInfo, secondInfo);
+    restore.apply();
+    if (!interop->WaitForResource(first, 0) ||
+        !interop->WaitForResource(second, 0))
+      throw std::runtime_error("FG restore pair wait");
   }
   void transfer(IDirect3DSurface9 *surface, ResidentFg::Slot slot,
                 bool write = false) {
@@ -638,8 +708,10 @@ struct State {
         rt.get() != back.get())
       return;
 
-    transfer(back.get(), ResidentFg::CurrentUi);
-    uiCopied = true;
+    uiCopied = snapshotBeforeHud(back.get());
+
+    if (!uiCopied)
+      return;
 
     if (frame < 16)
       emit("ui_boundary", uid,
@@ -797,15 +869,32 @@ struct State {
                                       previousFlags};
               providerParams.thresholds[2] = 1.0f;
               try {
+                if (!config().mergeSubmissions && uiCopied &&
+                    hudSnapshot.get())
+                  transfer(hudSnapshot.get(), ResidentFg::CurrentUi);
                 if (config().mergeSubmissions) {
-                  withTransferredSurface(
-                      back.get(), ResidentFg::CurrentFinal, false,
-                      [&](const ImageInfo &info, VkImageAspectFlags aspect) {
-                        gpu->copyInto(info, ResidentFg::CurrentFinal, aspect,
-                                      true);
-                        gpu->generate(providerParams, false, true,
-                                      uint32_t(nativeSlot), sceneOnly, true);
-                      });
+                  if (uiCopied && hudSnapshot.get()) {
+                    withTransferredColorPair(
+                        back.get(), hudSnapshot.get(),
+                        [&](const ImageInfo &finalInfo,
+                            const ImageInfo &uiInfo) {
+                          gpu->copyInto(finalInfo, ResidentFg::CurrentFinal,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->copyInto(uiInfo, ResidentFg::CurrentUi,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->generate(providerParams, false, true,
+                                        uint32_t(nativeSlot), sceneOnly, true);
+                        });
+                  } else {
+                    withTransferredSurface(
+                        back.get(), ResidentFg::CurrentFinal, false,
+                        [&](const ImageInfo &info, VkImageAspectFlags aspect) {
+                          gpu->copyInto(info, ResidentFg::CurrentFinal, aspect,
+                                        true);
+                          gpu->generate(providerParams, false, true,
+                                        uint32_t(nativeSlot), sceneOnly, true);
+                        });
+                  }
                 } else {
                   gpu->generate(providerParams, false, true,
                                 uint32_t(nativeSlot), sceneOnly);
@@ -1291,6 +1380,17 @@ inline void reset(IDirect3DDevice9 *d, uint32_t uid, HRESULT result) noexcept {
     s.disabled = false;
   });
 }
+inline void beforeReset(IDirect3DDevice9 *d) noexcept {
+  if (!config().enabled || !d)
+    return;
+  try {
+    std::lock_guard<std::mutex> lock(mutex());
+    auto found = states().find(d);
+    if (found != states().end())
+      found->second->hudSnapshot.reset();
+  } catch (...) {
+  }
+}
 inline void destroy(IDirect3DDevice9 *d) noexcept {
   if (!config().enabled)
     return;
@@ -1331,6 +1431,7 @@ inline void beforeDraw(IDirect3DDevice9 *, uint32_t) noexcept {}
 inline void afterDraw(IDirect3DDevice9 *, uint32_t, HRESULT) noexcept {}
 inline void clear(IDirect3DDevice9 *, uint32_t, HRESULT) noexcept {}
 inline void reset(IDirect3DDevice9 *, uint32_t, HRESULT) noexcept {}
+inline void beforeReset(IDirect3DDevice9 *) noexcept {}
 inline void destroy(IDirect3DDevice9 *) noexcept {}
 template <class F>
 inline HRESULT present(IDirect3DDevice9 *, uint32_t, F &&backend, bool = false,

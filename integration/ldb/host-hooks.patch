@@ -19,8 +19,9 @@
          safeDestroy(pD3DDevice, pD3DDeviceHandle);
          gpD3DDevices.erase(pD3DDeviceHandle);
          break;
-@@ -880,6 +884,8 @@
+@@ -880,6 +884,9 @@
          const auto resetStart = GetTickCount64();
++        ldb_fg::beforeReset(pD3DDevice);
          const HRESULT hresult = !PresentationParameters.Windowed && !bDxvkModuleLoaded
            ? D3DERR_INVALIDCALL : l4d2_api_wait::backend([&]() { return pD3DDevice->Reset(&PresentationParameters); });
 +        ldb_fg::reset(pD3DDevice, currentUID, hresult);
@@ -28,8 +29,9 @@
          char message[768] {};
          sprintf_s(message,
            "event=reset_backend_result api=Reset object_id=0x%x uid=%u hresult=0x%08lx swapchain_hresult=0x%08lx size=%ux%u format=%u backbuffers=%u windowed=%u window=%p window_valid=%u swap_effect=%u multisample=%u quality=%u interval=0x%x duration_ms=%llu surface_queries=%llu query_mismatches=%llu",
-@@ -917,6 +923,8 @@
+@@ -917,6 +924,9 @@
          const auto resetStart = GetTickCount64();
++        ldb_fg::beforeReset(pD3DDevice);
          const HRESULT hresult = !PresentationParameters.Windowed && !bDxvkModuleLoaded
            ? D3DERR_INVALIDCALL : l4d2_api_wait::backend([&]() { return ((IDirect3DDevice9Ex*) pD3DDevice)->ResetEx(&PresentationParameters, pFullscreenDisplayMode); });
 +        ldb_fg::reset(pD3DDevice, currentUID, hresult);

@@ -27,12 +27,24 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('L"ASTERIA_FG_CONTENT_PROBE"', source)
         self.assertIn('L"ASTERIA_FG_SEPARATE_UI"', source)
 
-    def test_hud_lease_waits_for_interpolation_and_present(self):
-        patch = (ROOT / "integration/fg/asteria-x64.patch").read_text()
-        self.assertIn("presentCompletionValue", patch)
-        self.assertIn("interpolationCompleted && presentationCompleted", patch)
-        self.assertIn("TimedWaitForPresents(state) == FFX_OK", patch)
-        self.assertIn("scheduledOutputPresents += callbackRecorded ? 2 : 1", patch)
+    def test_hud_composes_on_async_callback_and_retires_on_its_timeline(self):
+        patch = (ROOT / "integration/fg/async-hud-x64.patch").read_text()
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        hooks = (ROOT / "integration/ldb/host-hooks.patch").read_text()
+        self.assertIn("RecordHudComposite(state, cmd", patch)
+        self.assertIn("+    fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;", patch)
+        self.assertIn("+        if (interpolationCompleted)", patch)
+        self.assertIn("snapshotBeforeHud", host)
+        self.assertIn("device->StretchRect", host)
+        self.assertNotIn("transfer(back.get(), ResidentFg::CurrentUi)", host)
+        self.assertEqual(hooks.count("+        ldb_fg::beforeReset(pD3DDevice);"), 2)
+
+    def test_hud_shader_is_checked_in_as_valid_spirv_words(self):
+        header = (ROOT / "integration/fg/HudCompositeSpirv.h").read_text()
+        shader = (ROOT / "shaders/hud_composite.comp").read_text()
+        self.assertIn("0x07230203u", header)
+        self.assertIn("HudCompositeSpirvSize", header)
+        self.assertIn("writeonly uniform image2D generatedOutput", shader)
 
     def test_package_keeps_drop_in_files_below_bin(self):
         package = (ROOT / "scripts/package_ldb_capture.py").read_text()
@@ -40,6 +52,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn(prefix + "fg-config.ini", package)
         self.assertIn(prefix + "fg_live_hud.ps1", package)
         self.assertIn(prefix + "vulkan-layer/{filename}", package)
+        self.assertIn("sources/hud_composite.comp", package)
 
 
 if __name__ == "__main__":

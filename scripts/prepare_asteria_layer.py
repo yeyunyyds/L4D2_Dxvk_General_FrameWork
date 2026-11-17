@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import tarfile
 
@@ -38,10 +39,19 @@ def prepare(source: Path, output: Path) -> Path:
     output.mkdir(parents=True)
     with tarfile.open(fileobj=io.BytesIO(archive)) as bundle:
         bundle.extractall(output, filter="data")
-    patch = ROOT / "integration/fg/asteria-x64.patch"
+    patches = [
+        ROOT / "integration/fg/asteria-x64.patch",
+        ROOT / "integration/fg/async-hud-x64.patch",
+    ]
     subprocess.run(["git", "init", "-q"], cwd=output, check=True)
-    subprocess.run(["git", "apply", "--check", str(patch)], cwd=output, check=True)
-    subprocess.run(["git", "apply", str(patch)], cwd=output, check=True)
+    for patch in patches:
+        subprocess.run(["git", "apply", "--check", str(patch)], cwd=output, check=True)
+        subprocess.run(["git", "apply", str(patch)], cwd=output, check=True)
+    hud_header = ROOT / "integration/fg/HudCompositeSpirv.h"
+    shutil.copyfile(
+        hud_header,
+        output / "Runtime/FrameGeneration/Layer/HudCompositeSpirv.h",
+    )
     cmake = output / "Runtime/FrameGeneration/Research/CMakeLists.txt"
     text = cmake.read_text()
     marker = "set(FFX_PLATFORM_NAME x86)"
@@ -52,7 +62,13 @@ def prepare(source: Path, output: Path) -> Path:
         "schema": 1,
         "repository": spec["repository"],
         "commit": spec["commit"],
-        "patch_sha256": sha256(patch),
+        "patch_sha256": sha256(patches[0]),
+        "patches": [
+            {"path": str(patch.relative_to(ROOT)), "sha256": sha256(patch)}
+            for patch in patches
+        ],
+        "hud_composite_header_sha256": sha256(hud_header),
+        "hud_composite_shader_sha256": sha256(ROOT / "shaders/hud_composite.comp"),
         "architecture": "x86_64",
         "route": "L4D2Bridge64 -> Vulkan loader -> GF layer -> DXVK/driver",
     }

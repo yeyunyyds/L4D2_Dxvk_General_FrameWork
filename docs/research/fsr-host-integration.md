@@ -19,12 +19,12 @@
 
 - 直接使用 Host GPU 历史，不通过 IPC 传输整幅图像，不为插帧上传/回读整幅游戏画面。有限诊断截图是例外。
 - GPU 转换颜色、深度和运动输入；运动来自相机重建及有限范围图像匹配，官方光流继续处理图像运动。没有取得完整引擎物体/骨骼运动矢量。
-- 默认测试设置 `LDB_FG_FAST_INPUTS=1`，跳过近景分析与质量回读。最终画面复制和深度/运动生成现在共用一次 command buffer，使无 HUD 边界时 Host 从三次提交降到两次。`LDB_FG_HUD_BYPASS=1` 只保留低成本的屏幕 alpha HUD 边界检测：检测成功时提交 HUD-less/UI 并由 replacement swapchain 在 FG 后合成；检测不到时自动保持 `presentColor` 快速路径，不伪造 HUD 分层。三槽 provider 的 depth、motion、HUD-less 与 UI 图像按 graphics/async-compute 两个 family 创建为 concurrent sharing。HUD 最终 render pass 仍在 graphics-capable game queue，但 FSR 插值不再随 HUD 回退到该队列；presenter 使用已有 timeline 与 queue-family transfer 把异步输出交回合成路径。`gpu_initialized.provider_concurrent_sharing` 与 Layer 的 `async_workloads_enabled` 必须同时为真。该 HUD 边界启发式仍不是引擎语义，需实机验收花屏是否消失。
+- 默认测试设置 `LDB_FG_FAST_INPUTS=1`，跳过近景分析与质量回读。`hud=0` 保持纯净三槽基线：不创建 HUD 管线、不注册 SDK UI，也不增加 HUD 图像复制。`hud=1` 在第一次屏幕 alpha 绘制前用 D3D9 `StretchRect` 把快照排进已有游戏命令流，不在 draw 中 Flush/Wait；Present 时最终画面与该快照共用一次 interop transition/flush 和一笔 Host GPU submission。三槽 provider 的 depth、motion、HUD-less 与 UI 图像按 graphics/async-compute 两个 family 创建为 concurrent sharing。FSR 完成后，Layer 在同一个 interpolation command buffer 内执行 exact-pixel compute 覆盖，再把结果交给原本的 present-queue 路径；不再使用 SDK game-queue UI render pass。`gpu_initialized.provider_concurrent_sharing`、Layer 的 `async_workloads_enabled` 与 `hud_compute_composite_dispatches` 必须共同验收。HUD 边界启发式仍不是引擎语义，需实机检查花屏。
 - Vulkan Layer 会优先把 FFX async workload 放到独立 compute queue；没有独立队列时自动保持同步模式。`asteria-layer.json` 的 `fast_scene_inputs_active`、`async_workloads_enabled`、四个 queue family 和 `cpu_timing` 用于确认实际选择，并分开统计 `ffxWaitForPresents`、配置、回调与 `vkQueuePresentFFX` 的 CPU 时间。
-- 三个 Host 输入槽同时以插值 timeline 和实际 native Present 序列延迟退休。仅完成 FSR 计算不再释放 HUD/UI 槽，因为后续合成和 presenter 仍可能读取它；只有两个旧租约将耗尽三槽时才等待 presenter 排空。`input_retirement` 记录队列峰值、无等待释放和被迫等待耗时。
+- HUD 覆盖与 FSR 位于同一 interpolation command buffer，因此三个 Host 输入槽只按 interpolation timeline 延迟退休；完成信号已经包含 HUD 读取，无需再等待 native Present 序列。只有两个旧租约将耗尽三槽时才阻塞等待最旧 timeline。`input_retirement` 记录队列峰值、无等待释放和被迫等待耗时。
 - 内容差异探针默认关闭，避免它干扰性能基线和 Intel 驱动稳定性；需要验证非重复内容时在 INI 中设置 `content_probe=1`。启用后 Layer 在插值 command buffer 内抽样比较 16 个固定场景像素，timeline 完成后才读回极小的环形缓冲。`output_pacing` 始终从实际 `vkQueuePresentKHR` 记录输出节奏。
 - 设备丢失隔离包提供三个只改变一个变量的入口：`start_fg_isolate_a_probe_off.cmd` 关闭 GPU 像素探针，`start_fg_isolate_b_hud_off.cmd` 在 A 的基础上关闭 HUD 分层，`start_fg_isolate_c_merge_off.cmd` 再关闭 submission 合并。按 A、B、C 顺序测试即可定位首个不稳定路径；三个入口共用同一套二进制。
-- Arc 实测的 present family 2 只有 transfer/present 能力，不能执行 HUD render pass；因此 HUD 合成固定改到 graphics-capable game family，并让 FSR SDK 把完成图像转交 present queue。SDK 内部 UI 双缓冲同时隔离 Host 三槽资源与异步 presenter 生命周期。`ui_composition_queue_family` 和 `ui_internal_double_buffering` 用于验收实际路径。
+- Arc 实测的 present family 2 只有 transfer/present 能力，不能执行 HUD render pass。新路径不在 present family 录制 render pass：HUD compute 跟随 FSR 所在的 async-compute family（不可用时才跟随 graphics family），SDK UI 注册与内部双缓冲均关闭。`ui_composition_queue_family`、`ui_internal_double_buffering=false` 和 `hud_compute_composite_dispatches` 用于验收实际路径。
 - 保留深度／覆盖质量预检：过多无效场景、异常前景覆盖仍恢复完整原帧。细特效风险在 FSR 路径改为区域保护：可疑细亮区域及前帧旧位置的邻域保留当前原帧，避免单个风险点导致整帧拒绝和历史反复预热。该识别依据亮线形态，不等同于引擎材质标签，可能保守地保留普通白色细节；透明层仍未完整分解。自研后端继续整帧拒绝细特效风险。SDK 合成后，已验证的前帧遮挡填补区域沿用预检重投影结果；缺乏可靠运动的纯色突变区域也有原帧保护。因此当前交付是官方 FSR 与保守保护的组合。
 - 首帧、帧编号断续、HUD 输入变化或 Reset 时重置历史。预热帧不会增加一次生成帧 Present。
 - 加载阶段的 estimated Provider 只负责建立 replacement swapchain，默认不执行插帧；原生 V2 Provider 接管并重置历史后才开始生成，避免加载画面污染游戏内颜色历史。
@@ -40,7 +40,7 @@ Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有�
 
 当前闭环已把 Asteria/Danyria 的 D3D9 语义采集方式移到 LDB x64 Host。Host 在实际命令序列中识别 HDR 主视图、深度表面、相机 shader 常量、HUD 前边界和 Present 时间。正式路径先向 Layer 查询与本次 acquire 对应的 ticket，再通过 `AsteriaSubmitFrameInputsV2` 提交三槽 GPU 资源；旧 `AsteriaSubmitHostFrameV2` 只保留兼容诊断。图像不经过 IPC 或 CPU 复制。
 
-本版由 Host 在同一个 Vulkan 设备上把主场景深度转换成 `R32F`，并用当前/上一主视图矩阵生成 `RG32F` 相机运动向量。每个槽仍包含与 swapchain 同格式的 HUD-less 颜色和 `RGBA8` UI 覆盖，Layer 逐项核对设备、ticket、acquire 序号、图像、格式和布局。为排除实机发现的固定加载帧交替，默认 FSR3 颜色和 optical flow 改用 replacement swapchain 的当前 `presentColor`；HUD-less/UI 合成保留为显式实验开关。槽只有在 Layer 等待 GPU 完成并调用 release lease 后才能复用。
+本版由 Host 在同一个 Vulkan 设备上把主场景深度转换成 `R32F`，并用当前/上一主视图矩阵生成 `RG32F` 相机运动向量。每个 HUD 槽包含与 swapchain 同格式的 HUD-less 颜色和 `RGBA8` exact-pixel 覆盖（RGB 为当前最终像素，alpha 为 UI mask），Layer 逐项核对设备、ticket、acquire 序号、图像、格式和布局。HUD 开启时 FSR3 颜色和 optical flow 使用 HUD-less 输入，插值结束后 compute pass 按 mask 覆盖当前 UI；HUD 关闭时继续使用 replacement swapchain 的 `presentColor` 纯基线。槽只有在 Layer interpolation timeline 完成并调用 release lease 后才能复用。
 
 `LDB_FG_MODE=provider` 表示 Host 只生产数据且只调用一次原始 Present，不再运行旧预览或第二次 Present。`asteria-layer.json` 中同时满足以下条件，才能证明 Host 控制的算法与提交链已工作：
 

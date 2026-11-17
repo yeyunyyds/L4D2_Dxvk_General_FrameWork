@@ -39,6 +39,10 @@ def analyze_layer(path):
                            if native_input_presents else 'unavailable')
     native_bound = swapchain.get('native_frame_inputs_bound', False)
     separate_ui = swapchain.get('separate_ui_composition_active', False)
+    hud_compute_dispatches = swapchain.get('hud_compute_composite_dispatches')
+    hud_composite_confirmed = (hud_compute_dispatches > 0
+                               if hud_compute_dispatches is not None
+                               else separate_ui)
     fast_scene_inputs = swapchain.get('fast_scene_inputs_active', False)
     algorithm = attempts > 0 and dispatches > 0 and dispatches <= attempts
     native_algorithm = (native_bound and native_accepted > 0 and
@@ -115,6 +119,7 @@ def analyze_layer(path):
             'native_algorithm_dispatch_confirmed': native_algorithm,
             'color_input_source': 'host_hudless' if separate_ui else 'replacement_swapchain_present_color',
             'hudless_ui_composition_bound': separate_ui,
+            'hud_composite_dispatch_confirmed': hud_composite_confirmed,
             'extra_present_submission_confirmed': extra_present,
             'generated_content_distinctness': content,
             'gpu_sampled_pixel_difference_confirmed':
@@ -129,6 +134,10 @@ def analyze_layer(path):
             'async_workloads_enabled': swapchain.get('async_workloads_enabled', False),
             'ui_composition_queue_family': swapchain.get('ui_composition_queue_family'),
             'ui_internal_double_buffering': swapchain.get('ui_internal_double_buffering', False),
+            'hud_composite_strategy': ('async_compute_exact_pixel'
+                                       if hud_compute_dispatches is not None
+                                       else 'legacy_sdk_or_unavailable'),
+            'hud_compute_composite_dispatches': hud_compute_dispatches or 0,
             'queue_families': {
                 'graphics': swapchain.get('graphics_queue_family'),
                 'async_compute': swapchain.get('async_compute_queue_family'),

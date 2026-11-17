@@ -1,0 +1,362 @@
+diff --git a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
+index abcb7f3..6c18068 100644
+--- a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
++++ b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.cpp
+@@ -2727,12 +2727,15 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+                 record["frame_input_ready"] = inputReady;
+                 record["native_frame_inputs_bound"] = fg->nativeProviderBound;
+                 record["separate_ui_composition_active"] = separateUiActive;
++                record["hud_compute_composite_dispatches"] =
++                    fg->hudCompositeDispatches.load(std::memory_order_relaxed);
+                 record["fast_scene_inputs_active"] = fastSceneInputsActive;
+                 record["async_workloads_available"] = fg->asyncWorkloadsEnabled;
+                 record["async_workloads_enabled"] = fg->asyncWorkloadsActive;
+                 record["graphics_queue_family"] = fg->graphicsFamily;
+-                record["ui_composition_queue_family"] = fg->graphicsFamily;
+-                record["ui_internal_double_buffering"] = separateUiActive;
++                record["ui_composition_queue_family"] = fg->asyncWorkloadsActive ?
++                    fg->asyncComputeFamily : fg->graphicsFamily;
++                record["ui_internal_double_buffering"] = false;
+                 record["async_compute_queue_family"] = fg->asyncComputeFamily;
+                 record["present_queue_family"] = fg->presentFamily;
+                 record["image_acquire_queue_family"] = fg->imageAcquireFamily;
+diff --git a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
+index fede970..02e8236 100644
+--- a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
++++ b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
+@@ -18,6 +18,7 @@
+ #include "FrameGenerationInputs.h"
+ #include "FrameInputBridge.h"
+ #include "LiveSceneMotionRuntime.h"
++#include "HudCompositeSpirv.h"
+ 
+ #include <algorithm>
+ #include <array>
+@@ -245,6 +246,21 @@ struct FgSwapchainState
+     std::atomic<uint64_t> presentCalls{0}, presentNanoseconds{0};
+     std::atomic<uint64_t> retirePollReleases{0}, retireForcedWaits{0};
+     std::atomic<uint64_t> retireWaitNanoseconds{0}, retireQueuePeak{0};
++    struct HudCompositeBinding
++    {
++        VkImage uiImage = VK_NULL_HANDLE;
++        VkImage outputImage = VK_NULL_HANDLE;
++        VkImageView uiView = VK_NULL_HANDLE;
++        VkImageView outputView = VK_NULL_HANDLE;
++        VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
++    };
++    std::mutex hudCompositeMutex;
++    VkDescriptorSetLayout hudDescriptorSetLayout = VK_NULL_HANDLE;
++    VkPipelineLayout hudPipelineLayout = VK_NULL_HANDLE;
++    VkPipeline hudPipeline = VK_NULL_HANDLE;
++    VkDescriptorPool hudDescriptorPool = VK_NULL_HANDLE;
++    std::vector<HudCompositeBinding> hudBindings;
++    std::atomic<uint64_t> hudCompositeDispatches{0};
+     static constexpr uint32_t ContentProbeSamples = 16;
+     static constexpr VkDeviceSize ContentProbeFrameBytes = ContentProbeSamples * 8;
+     VkBuffer contentProbeBuffer = VK_NULL_HANDLE;
+@@ -322,30 +338,22 @@ inline void RetireCompletedFrameInputs(FgSwapchainState &state, bool guaranteeFr
+         auto &oldest = state.retiredInputs.front();
+         const bool interpolationCompleted =
+             WaitForInputCompletion(state, oldest.interpolationCompletionValue, 0);
+-        const bool presentationCompleted = !oldest.presentCompletionValue ||
+-            getLastPresentCountFFX(state.proxySwapchain) >= oldest.presentCompletionValue;
+-        if (interpolationCompleted && presentationCompleted)
++        if (interpolationCompleted)
+         {
+             ReadCompletedContentProbe(state, oldest.input->frameID);
+             state.retiredInputs.pop_front();
+             state.retirePollReleases.fetch_add(1, std::memory_order_relaxed);
+             continue;
+         }
+-        // Interpolation completion is not sufficient when separate UI is
+-        // active: composition and the presenter may still read the same Host
+-        // slot. Keep the lease through the corresponding native presents.
+-        // With three Host slots a full presenter drain is only needed when
+-        // two older leases would otherwise block the next producer slot.
++        // HUD composition is recorded in the interpolation command buffer,
++        // so the interpolation timeline is the only lease-retirement fence.
+         if (!guaranteeFreeSlot || state.retiredInputs.size() < 2) break;
+         const auto start = std::chrono::steady_clock::now();
+         const bool interpolationDrained = WaitForInputCompletion(
+             state, oldest.interpolationCompletionValue, UINT64_MAX);
+-        const bool presentationDrained = TimedWaitForPresents(state) == FFX_OK;
+         state.retireWaitNanoseconds.fetch_add(ElapsedNanoseconds(start), std::memory_order_relaxed);
+         state.retireForcedWaits.fetch_add(1, std::memory_order_relaxed);
+-        if (!interpolationDrained || !presentationDrained ||
+-            (oldest.presentCompletionValue &&
+-             getLastPresentCountFFX(state.proxySwapchain) < oldest.presentCompletionValue)) break;
++        if (!interpolationDrained) break;
+         ReadCompletedContentProbe(state, oldest.input->frameID);
+         state.retiredInputs.pop_front();
+     }
+@@ -394,6 +402,7 @@ inline VkFormat ToVkFormat(FfxSurfaceFormat format)
+     case FFX_SURFACE_FORMAT_R16G16_FLOAT: return VK_FORMAT_R16G16_SFLOAT;
+     case FFX_SURFACE_FORMAT_R16G16_SINT: return VK_FORMAT_R16G16_SINT;
+     case FFX_SURFACE_FORMAT_R8G8B8A8_UNORM: return VK_FORMAT_R8G8B8A8_UNORM;
++    case FFX_SURFACE_FORMAT_B8G8R8A8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
+     default: return VK_FORMAT_R8G8B8A8_UNORM;
+     }
+ }
+@@ -600,6 +609,190 @@ inline void RecordContentProbe(FgSwapchainState &state, VkCommandBuffer commandB
+     state.contentProbeFrameIds[slot] = frameID;
+ }
+ 
++inline void DestroyHudComposite(FgSwapchainState &state)
++{
++    const std::lock_guard<std::mutex> lock(state.hudCompositeMutex);
++    for (auto &binding : state.hudBindings)
++    {
++        if (binding.uiView) vkDestroyImageView(state.device, binding.uiView, nullptr);
++        if (binding.outputView) vkDestroyImageView(state.device, binding.outputView, nullptr);
++    }
++    state.hudBindings.clear();
++    if (state.hudDescriptorPool) vkDestroyDescriptorPool(state.device, state.hudDescriptorPool, nullptr);
++    if (state.hudPipeline) vkDestroyPipeline(state.device, state.hudPipeline, nullptr);
++    if (state.hudPipelineLayout) vkDestroyPipelineLayout(state.device, state.hudPipelineLayout, nullptr);
++    if (state.hudDescriptorSetLayout) vkDestroyDescriptorSetLayout(state.device, state.hudDescriptorSetLayout, nullptr);
++    state.hudDescriptorPool = VK_NULL_HANDLE;
++    state.hudPipeline = VK_NULL_HANDLE;
++    state.hudPipelineLayout = VK_NULL_HANDLE;
++    state.hudDescriptorSetLayout = VK_NULL_HANDLE;
++}
++
++inline bool InitializeHudComposite(FgSwapchainState &state)
++{
++    VkDescriptorSetLayoutBinding bindings[2]{};
++    bindings[0].binding = 0;
++    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
++    bindings[0].descriptorCount = 1;
++    bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
++    bindings[1].binding = 1;
++    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
++    bindings[1].descriptorCount = 1;
++    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
++    VkDescriptorSetLayoutCreateInfo setInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
++    setInfo.bindingCount = 2;
++    setInfo.pBindings = bindings;
++    if (vkCreateDescriptorSetLayout(state.device, &setInfo, nullptr,
++                                    &state.hudDescriptorSetLayout) != VK_SUCCESS) return false;
++
++    VkPipelineLayoutCreateInfo layoutInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
++    layoutInfo.setLayoutCount = 1;
++    layoutInfo.pSetLayouts = &state.hudDescriptorSetLayout;
++    if (vkCreatePipelineLayout(state.device, &layoutInfo, nullptr,
++                               &state.hudPipelineLayout) != VK_SUCCESS)
++    {
++        DestroyHudComposite(state);
++        return false;
++    }
++
++    VkShaderModuleCreateInfo shaderInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
++    shaderInfo.codeSize = HudCompositeSpirvSize;
++    shaderInfo.pCode = HudCompositeSpirv;
++    VkShaderModule shader = VK_NULL_HANDLE;
++    if (vkCreateShaderModule(state.device, &shaderInfo, nullptr, &shader) != VK_SUCCESS)
++    {
++        DestroyHudComposite(state);
++        return false;
++    }
++    VkComputePipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
++    pipelineInfo.stage = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
++    pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
++    pipelineInfo.stage.module = shader;
++    pipelineInfo.stage.pName = "main";
++    pipelineInfo.layout = state.hudPipelineLayout;
++    const VkResult pipelineResult = vkCreateComputePipelines(
++        state.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &state.hudPipeline);
++    vkDestroyShaderModule(state.device, shader, nullptr);
++    if (pipelineResult != VK_SUCCESS)
++    {
++        DestroyHudComposite(state);
++        return false;
++    }
++
++    VkDescriptorPoolSize poolSizes[2]{};
++    poolSizes[0] = {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 16};
++    poolSizes[1] = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 16};
++    VkDescriptorPoolCreateInfo poolInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
++    poolInfo.maxSets = 16;
++    poolInfo.poolSizeCount = 2;
++    poolInfo.pPoolSizes = poolSizes;
++    if (vkCreateDescriptorPool(state.device, &poolInfo, nullptr,
++                               &state.hudDescriptorPool) != VK_SUCCESS)
++    {
++        DestroyHudComposite(state);
++        return false;
++    }
++    return true;
++}
++
++inline VkDescriptorSet HudCompositeDescriptorSet(
++    FgSwapchainState &state, const FfxResource &uiResource,
++    const FfxResource &outputResource)
++{
++    const VkImage uiImage = asteria_vk::Decode<VkImage>(
++        uiResource.resource, state.device, asteria_vk::HandleKind::Image);
++    const VkImage outputImage = asteria_vk::Decode<VkImage>(
++        outputResource.resource, state.device, asteria_vk::HandleKind::Image);
++    if (!uiImage || !outputImage) return VK_NULL_HANDLE;
++    const std::lock_guard<std::mutex> lock(state.hudCompositeMutex);
++    for (const auto &binding : state.hudBindings)
++        if (binding.uiImage == uiImage && binding.outputImage == outputImage)
++            return binding.descriptorSet;
++    if (state.hudBindings.size() >= 16) return VK_NULL_HANDLE;
++
++    FgSwapchainState::HudCompositeBinding binding{};
++    binding.uiImage = uiImage;
++    binding.outputImage = outputImage;
++    const auto makeView = [&](VkImage image, VkFormat format, VkImageView &view) {
++        VkImageViewCreateInfo info{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
++        info.image = image;
++        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
++        info.format = format;
++        info.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
++                           VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
++        info.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
++        return vkCreateImageView(state.device, &info, nullptr, &view) == VK_SUCCESS;
++    };
++    if (!makeView(uiImage, ToVkFormat(uiResource.description.format), binding.uiView) ||
++        !makeView(outputImage, ToVkFormat(outputResource.description.format), binding.outputView))
++    {
++        if (binding.uiView) vkDestroyImageView(state.device, binding.uiView, nullptr);
++        if (binding.outputView) vkDestroyImageView(state.device, binding.outputView, nullptr);
++        return VK_NULL_HANDLE;
++    }
++    VkDescriptorSetAllocateInfo allocate{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
++    allocate.descriptorPool = state.hudDescriptorPool;
++    allocate.descriptorSetCount = 1;
++    allocate.pSetLayouts = &state.hudDescriptorSetLayout;
++    if (vkAllocateDescriptorSets(state.device, &allocate, &binding.descriptorSet) != VK_SUCCESS)
++    {
++        vkDestroyImageView(state.device, binding.uiView, nullptr);
++        vkDestroyImageView(state.device, binding.outputView, nullptr);
++        return VK_NULL_HANDLE;
++    }
++    VkDescriptorImageInfo images[2]{};
++    images[0].imageView = binding.uiView;
++    images[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
++    images[1].imageView = binding.outputView;
++    images[1].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
++    VkWriteDescriptorSet writes[2]{};
++    for (uint32_t index = 0; index < 2; ++index)
++    {
++        writes[index].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
++        writes[index].dstSet = binding.descriptorSet;
++        writes[index].dstBinding = index;
++        writes[index].descriptorCount = 1;
++        writes[index].descriptorType = index == 0 ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
++        writes[index].pImageInfo = &images[index];
++    }
++    vkUpdateDescriptorSets(state.device, 2, writes, 0, nullptr);
++    state.hudBindings.push_back(binding);
++    return binding.descriptorSet;
++}
++
++inline bool RecordHudComposite(FgSwapchainState &state, VkCommandBuffer commandBuffer,
++                               const FfxResource &uiResource,
++                               const FfxResource &outputResource)
++{
++    if (!state.hudPipeline || !commandBuffer) return false;
++    const VkDescriptorSet descriptors = HudCompositeDescriptorSet(state, uiResource, outputResource);
++    const VkImage output = asteria_vk::Decode<VkImage>(
++        outputResource.resource, state.device, asteria_vk::HandleKind::Image);
++    if (!descriptors || !output) return false;
++    VkImageMemoryBarrier before{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
++    before.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
++    before.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
++    before.oldLayout = before.newLayout = VK_IMAGE_LAYOUT_GENERAL;
++    before.srcQueueFamilyIndex = before.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
++    before.image = output;
++    before.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
++    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
++                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
++                         0, nullptr, 0, nullptr, 1, &before);
++    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state.hudPipeline);
++    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
++                            state.hudPipelineLayout, 0, 1, &descriptors, 0, nullptr);
++    vkCmdDispatch(commandBuffer, (state.width + 7) / 8, (state.height + 7) / 8, 1);
++    VkImageMemoryBarrier after = before;
++    after.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
++    after.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
++    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
++                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
++                         0, nullptr, 0, nullptr, 1, &after);
++    state.hudCompositeDispatches.fetch_add(1, std::memory_order_relaxed);
++    return true;
++}
++
+ inline void DestroyGpuImage(VkDevice device, GpuImage &img)
+ {
+     if (img.handle != VK_NULL_HANDLE)
+@@ -873,6 +1066,11 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+     recovery.successful = result == FFX_OK;
+     if (recovery.successful)
+     {
++        if (separateUi && !RecordHudComposite(state, cmd, input->ui, desc->outputs[0]))
++        {
++            recovery.successful = false;
++            return FFX_ERROR_BACKEND_API_ERROR;
++        }
+         RecordContentProbe(state, cmd, dispatch.currentBackBuffer, desc->outputs[0], currentFrameId);
+         ++state.interpolationDispatches;
+         if (input->motionSource == MotionInputSource::Engine)
+@@ -935,6 +1133,7 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
+     }
+     if (state.device != VK_NULL_HANDLE)
+     {
++        DestroyHudComposite(state);
+         DestroyContentProbe(state);
+         DestroyGpuImage(state.device, state.reconstructed);
+         DestroyGpuImage(state.device, state.dilatedDepth);
+@@ -989,10 +1188,9 @@ inline VkResult InitializeSwapchainResources(
+     fgInfo.asyncComputeQueue = {queues.asyncComputeQueue, queues.asyncComputeFamily, nullptr};
+     fgInfo.presentQueue = {queues.presentQueue, queues.presentFamily, nullptr};
+     fgInfo.imageAcquireQueue = {queues.imageAcquireQueue, queues.imageAcquireFamily, nullptr};
+-    // UI composition records a graphics render pass. DXVK may expose a
+-    // transfer/present-only queue, so compose on the graphics-capable game
+-    // queue and let the SDK transfer the finished image for presentation.
+-    fgInfo.compositionMode = VK_COMPOSITION_MODE_GAME_QUEUE_FFX;
++    // Generated HUD pixels are composed in the interpolation callback. Keep
++    // the replacement swapchain on its low-overhead present-queue route.
++    fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;
+ 
+     state.deviceContext = {device, physicalDevice, nextGdpa};
+     FfxDevice ffxDevice = ffxGetDeviceVK(&state.deviceContext);
+@@ -1097,6 +1295,11 @@ inline VkResult InitializeSwapchainResources(
+     // Diagnostic only: failure leaves FG active and reports no pixel samples.
+     if (IsContentProbeRequested())
+         (void)AllocateContentProbe(state);
++    if (IsSeparateUiCompositionRequested() && !InitializeHudComposite(state))
++    {
++        DestroySwapchainResources(state);
++        return VK_ERROR_INITIALIZATION_FAILED;
++    }
+ 
+     FfxFrameGenerationConfig config{};
+     config.swapChain = state.swapchainBox;
+@@ -1191,22 +1394,9 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
+     }
+     if (!valid) { input.reset(); state.historyReset.store(true); }
+     std::atomic_store_explicit(&state.currentInputs, std::move(input), std::memory_order_release);
+-    const auto configuredInput = std::atomic_load_explicit(&state.currentInputs, std::memory_order_acquire);
+-    // Provider images use concurrent graphics/async-compute sharing. HUD
+-    // composition stays on the graphics-capable game queue, while the FSR
+-    // interpolation command list remains independent on async compute.
++    // Provider images use concurrent graphics/async-compute sharing. Both
++    // interpolation and the exact-pixel HUD pass stay on async compute.
+     state.asyncWorkloadsActive = state.asyncWorkloadsEnabled;
+-    FfxResource ui{};
+-    if (configuredInput && configuredInput->separateUi && IsSeparateUiCompositionRequested()) ui = configuredInput->ui;
+-    const uint32_t uiFlags = ui.resource
+-        ? uint32_t(FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING)
+-        : 0u;
+-    if (ffxRegisterFrameinterpolationUiResourceVK(state.swapchainBox, ui, uiFlags) != FFX_OK)
+-    {
+-        state.historyReset.store(true);
+-        std::atomic_store_explicit(&state.currentInputs, std::shared_ptr<const FrameInputs>{}, std::memory_order_release);
+-        return false;
+-    }
+     FfxFrameGenerationConfig config{};
+     config.swapChain = state.swapchainBox;
+     config.frameGenerationEnabled = valid;
+
