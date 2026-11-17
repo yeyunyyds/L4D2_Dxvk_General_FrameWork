@@ -165,6 +165,7 @@ struct State {
   IDirect3DDevice9 *device = nullptr;
   Com<ID3D9VkInteropDevice> cachedInterop;
   std::unique_ptr<ResidentFg> gpu;
+  PresenterDeviceProbe presenter;
   AsteriaHostControl asteria;
 
   ldb_camera::Candidate candidate;
@@ -205,7 +206,8 @@ struct State {
   }
 
   explicit State(IDirect3DDevice9 *d)
-      : device(d), generatedOnly(config().generatedOnly),
+      : device(d), presenter(probePresenterDevice(d)),
+        generatedOnly(config().generatedOnly),
         providerOnly(config().providerOnly) {
     captureLimit = config().captures;
     directory = config().root / ("fg-" + std::to_string(GetCurrentProcessId()) +
@@ -220,8 +222,6 @@ struct State {
     QueryPerformanceFrequency(&frequency);
     if (config().autoCapture)
       scheduleCapture();
-    const auto presenter = probePresenterDevice(device);
-
     emit("session", 0,
          "\"qpc_frequency\":" + std::to_string(frequency.QuadPart) +
              ",\"full_size_gpu_history\":true,\"pixel_cpu_upload\":false,"
@@ -500,12 +500,18 @@ struct State {
     if (!gpu) {
       gpu = std::make_unique<ResidentFg>(interopDevice());
       gpu->initialize(b.create.extent.width, b.create.extent.height,
-                      d.create.format, b.create.format);
+                      d.create.format, b.create.format,
+                      asteria.consumerFamily(presenter.info.device));
       if (config().autoCapture)
         scheduleCapture();
       emit("gpu_initialized", 0,
            "\"width\":" + std::to_string(gpu->width) +
                ",\"height\":" + std::to_string(gpu->height) +
+               ",\"provider_consumer_family\":" +
+               std::to_string(gpu->providerConsumerFamily()) +
+               ",\"provider_concurrent_sharing\":" +
+               std::string(gpu->providerConcurrentSharing() ? "true"
+                                                             : "false") +
                ",\"physical_device\":" + quote(gpu->deviceName()));
     }
   }

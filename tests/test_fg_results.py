@@ -82,6 +82,8 @@ class SessionResultsTests(unittest.TestCase):
             presenter_topology_api=True,
             presenter_queue_families=[dict(family=0,flags=7,physical=1,created=1)],
             presenter_input_api=1),
+            dict(event='gpu_initialized',provider_consumer_family=1,
+                 provider_concurrent_sharing=True),
             dict(event='presenter_input',valid=True,flags=151,
                  gpu_ready_token=False,present_ticket=False,
                  motion_source='depth_camera_reconstruction'),
@@ -93,6 +95,8 @@ class SessionResultsTests(unittest.TestCase):
             reserved_queues=3,topology_api=True,
             queue_families=[dict(family=0,flags=7,physical=1,created=1)],
             input_api=1))
+        self.assertEqual(result['provider_resources'],dict(
+            consumer_queue_family=1,concurrent_sharing=True))
         self.assertEqual(result['presenter_inputs'],dict(
             packets=1,valid=1,gpu_ready=0,present_ticket=0,
             rejected_events=0,motion_source='depth_camera_reconstruction',

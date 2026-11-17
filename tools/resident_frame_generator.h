@@ -75,6 +75,7 @@ private:
 
   std::array<OwnedImage, SlotCount> images{};
   uint32_t activeProviderSlot = 0;
+  uint32_t providerConsumerQueueFamily = UINT32_MAX;
 
   static constexpr Slot providerDepth(uint32_t slot) {
     return Slot(uint32_t(HostDepth0) + (slot % 3) * 4);
@@ -305,6 +306,13 @@ private:
 public:
   uint32_t width = 0, height = 0;
   VkFormat depthFormat = VK_FORMAT_UNDEFINED, finalFormat = VK_FORMAT_UNDEFINED;
+  uint32_t providerConsumerFamily() const {
+    return providerConsumerQueueFamily;
+  }
+  bool providerConcurrentSharing() const {
+    return providerConsumerQueueFamily != UINT32_MAX &&
+           providerConsumerQueueFamily != c.family;
+  }
   explicit ResidentFg(ID3D9VkInteropDevice *interop) : c(interop) {
     QueryPerformanceFrequency(&clockFrequency);
     auto gi = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(
@@ -403,7 +411,8 @@ public:
         c.vkFreeMemory(c.device, i.memory, nullptr);
     }
   }
-  void initialize(uint32_t w, uint32_t h, VkFormat depth, VkFormat color) {
+  void initialize(uint32_t w, uint32_t h, VkFormat depth, VkFormat color,
+                  uint32_t providerConsumerFamily = UINT32_MAX) {
     static_assert(sizeof(Params) == 416, "FG uniform ABI");
     if (!w || !h || w > 4096 || h > 4096 || uint64_t(w) * h > 4096ull * 2160)
       throw std::runtime_error("FG extent budget");
@@ -431,6 +440,11 @@ public:
     if (c.family >= count ||
         !(families[c.family].queueFlags & VK_QUEUE_COMPUTE_BIT))
       throw std::runtime_error("FG queue lacks compute");
+    if (providerConsumerFamily < count &&
+        (families[providerConsumerFamily].queueFlags & VK_QUEUE_COMPUTE_BIT))
+      providerConsumerQueueFamily = providerConsumerFamily;
+    else
+      providerConsumerQueueFamily = UINT32_MAX;
     timestampBits = families[c.family].timestampValidBits;
     VkPhysicalDeviceProperties properties{};
     auto getProperties = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(
@@ -505,6 +519,12 @@ public:
           (out ? VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
                : VK_IMAGE_USAGE_SAMPLED_BIT);
       info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+      uint32_t providerFamilies[2]{c.family, providerConsumerQueueFamily};
+      if (n >= HostDepth0 && providerConcurrentSharing()) {
+        info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+        info.queueFamilyIndexCount = 2;
+        info.pQueueFamilyIndices = providerFamilies;
+      }
       vkcheck(c.vkCreateImage(c.device, &info, nullptr, &i.image),
               "FG history image");
       VkMemoryRequirements r{};

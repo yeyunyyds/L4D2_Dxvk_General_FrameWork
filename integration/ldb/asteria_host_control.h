@@ -20,6 +20,7 @@ inline constexpr uint32_t ASTERIA_HOST_FRAME_HISTORY_RESET = 1u << 4;
 inline constexpr uint32_t ASTERIA_HOST_FRAME_GPU_INPUTS = 1u << 5;
 inline constexpr uint32_t ASTERIA_FG_INPUT_API_V1 = 1;
 inline constexpr uint32_t ASTERIA_FG_INPUT_API_V2 = 2;
+inline constexpr uint32_t ASTERIA_FG_CONSUMER_API_V1 = 1;
 inline constexpr int32_t ASTERIA_FG_INPUT_OK = 0;
 inline constexpr uint32_t ASTERIA_FG_MOTION_ENGINE = 1;
 inline constexpr uint32_t ASTERIA_FG_FORMAT_R32_FLOAT = 1;
@@ -68,6 +69,15 @@ struct AsteriaFrameInputSubmissionV2 {
   AsteriaFrameInputLeaseCallbackV1 retain_lease = nullptr,
                                     release_lease = nullptr;
 };
+struct AsteriaFrameInputConsumerV1 {
+  uint32_t struct_size = sizeof(AsteriaFrameInputConsumerV1);
+  uint32_t api_version = ASTERIA_FG_CONSUMER_API_V1;
+  uint64_t device = 0;
+  uint32_t graphics_family = UINT32_MAX;
+  uint32_t async_compute_family = UINT32_MAX;
+  uint32_t flags = 0;
+  uint32_t reserved = 0;
+};
 #pragma pack(pop)
 static_assert(sizeof(AsteriaFrameInputRegistrationV1) == 16,
               "Asteria registration ABI changed");
@@ -75,6 +85,8 @@ static_assert(sizeof(AsteriaFrameInputTicketV1) == 72,
               "Asteria ticket ABI changed");
 static_assert(sizeof(AsteriaFrameInputSubmissionV2) == 256,
               "Asteria native input V2 ABI changed");
+static_assert(sizeof(AsteriaFrameInputConsumerV1) == 32,
+              "Asteria consumer ABI changed");
 
 using PFN_AsteriaRegisterFrameInputProviderV1 =
     int32_t(__stdcall *)(const AsteriaFrameInputRegistrationV1 *, uint64_t *);
@@ -83,6 +95,8 @@ using PFN_AsteriaQueryFrameInputTicketV1 = int32_t(__stdcall *)(
     uint64_t, uint64_t, uint64_t, AsteriaFrameInputTicketV1 *);
 using PFN_AsteriaSubmitFrameInputsV2 =
     int32_t(__stdcall *)(const AsteriaFrameInputSubmissionV2 *);
+using PFN_AsteriaQueryFrameInputConsumerV1 =
+    int32_t(__stdcall *)(AsteriaFrameInputConsumerV1 *);
 
 // Same-process control ABI. Resource identities are diagnostic D3D9 Host
 // identities in v1; Vulkan image ownership remains with the Layer.
@@ -149,6 +163,7 @@ class AsteriaHostControl {
   PFN_AsteriaUnregisterFrameInputProviderV1 m_unregisterProvider = nullptr;
   PFN_AsteriaQueryFrameInputTicketV1 m_queryTicket = nullptr;
   PFN_AsteriaSubmitFrameInputsV2 m_submitInputs = nullptr;
+  PFN_AsteriaQueryFrameInputConsumerV1 m_queryConsumer = nullptr;
   uint64_t m_registration = 0;
   uint64_t m_attempted = 0, m_accepted = 0;
   uint64_t m_nativeQueries = 0, m_nativeTickets = 0,
@@ -197,6 +212,8 @@ class AsteriaHostControl {
         GetProcAddress(m_module, "AsteriaQueryFrameInputTicketV1"));
     m_submitInputs = reinterpret_cast<PFN_AsteriaSubmitFrameInputsV2>(
         GetProcAddress(m_module, "AsteriaSubmitFrameInputsV2"));
+    m_queryConsumer = reinterpret_cast<PFN_AsteriaQueryFrameInputConsumerV1>(
+        GetProcAddress(m_module, "AsteriaQueryFrameInputConsumerV1"));
   }
 
   bool ensureNative() noexcept {
@@ -235,6 +252,17 @@ public:
   bool available() noexcept {
     resolve();
     return m_submit && m_query;
+  }
+
+  uint32_t consumerFamily(uintptr_t device) noexcept {
+    resolve();
+    if (!m_queryConsumer || !device)
+      return UINT32_MAX;
+    AsteriaFrameInputConsumerV1 consumer;
+    consumer.device = uint64_t(device);
+    return m_queryConsumer(&consumer) == ASTERIA_FG_INPUT_OK
+               ? consumer.async_compute_family
+               : UINT32_MAX;
   }
 
   bool submit(const ldb_camera::Matrix &viewProjection, uint64_t generation,

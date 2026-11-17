@@ -19,7 +19,7 @@
 
 - 直接使用 Host GPU 历史，不通过 IPC 传输整幅图像，不为插帧上传/回读整幅游戏画面。有限诊断截图是例外。
 - GPU 转换颜色、深度和运动输入；运动来自相机重建及有限范围图像匹配，官方光流继续处理图像运动。没有取得完整引擎物体/骨骼运动矢量。
-- 默认测试设置 `LDB_FG_FAST_INPUTS=1`，跳过近景分析与质量回读。最终画面复制和深度/运动生成现在共用一次 command buffer，使无 HUD 边界时 Host 从三次提交降到两次。`LDB_FG_HUD_BYPASS=1` 只保留低成本的屏幕 alpha HUD 边界检测：检测成功时提交 HUD-less/UI 并由 replacement swapchain 在 FG 后合成；检测不到时自动保持 `presentColor` 快速路径，不伪造 HUD 分层。HUD 资源尚无跨 queue-family 所有权契约，因此分层帧自动回到 game queue，scene-only 帧才使用独立 async compute。该启发式仍不是引擎语义，需实机验收花屏是否消失。
+- 默认测试设置 `LDB_FG_FAST_INPUTS=1`，跳过近景分析与质量回读。最终画面复制和深度/运动生成现在共用一次 command buffer，使无 HUD 边界时 Host 从三次提交降到两次。`LDB_FG_HUD_BYPASS=1` 只保留低成本的屏幕 alpha HUD 边界检测：检测成功时提交 HUD-less/UI 并由 replacement swapchain 在 FG 后合成；检测不到时自动保持 `presentColor` 快速路径，不伪造 HUD 分层。三槽 provider 的 depth、motion、HUD-less 与 UI 图像按 graphics/async-compute 两个 family 创建为 concurrent sharing。HUD 最终 render pass 仍在 graphics-capable game queue，但 FSR 插值不再随 HUD 回退到该队列；presenter 使用已有 timeline 与 queue-family transfer 把异步输出交回合成路径。`gpu_initialized.provider_concurrent_sharing` 与 Layer 的 `async_workloads_enabled` 必须同时为真。该 HUD 边界启发式仍不是引擎语义，需实机验收花屏是否消失。
 - Vulkan Layer 会优先把 FFX async workload 放到独立 compute queue；没有独立队列时自动保持同步模式。`asteria-layer.json` 的 `fast_scene_inputs_active`、`async_workloads_enabled`、四个 queue family 和 `cpu_timing` 用于确认实际选择，并分开统计 `ffxWaitForPresents`、配置、回调与 `vkQueuePresentFFX` 的 CPU 时间。
 - 三个 Host 输入槽按插值队列的 timeline 完成值延迟退休：先无阻塞回收已完成的旧代，只有两个旧租约仍占用、下一帧将缺少空槽时才等待最老一代。它不再为了每个输入调用全队列/设备 idle；`input_retirement` 记录队列峰值、无等待释放和被迫等待耗时。
 - Layer 在同一个插值 command buffer 内抽样比较 16 个固定场景像素的真实输入和生成输出，timeline 完成后才读回极小的环形缓冲；`content_probe` 只在至少一个 RGB 样本确有差异时确认非重复内容。`output_pacing` 从实际 `vkQueuePresentKHR` 调用记录输出间隔、抖动、真实/生成帧数量和交替比例；它比提交计数更强，但仍不等于显示器物理 scanout 测量。

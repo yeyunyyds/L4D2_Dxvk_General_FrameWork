@@ -146,7 +146,7 @@ index 0476bc7..8e5ba19 100644
              }
          }
      }
-@@ -1756,6 +1777,117 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
+@@ -1756,6 +1777,138 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
      return TRUE;
  }
  
@@ -261,10 +261,31 @@ index 0476bc7..8e5ba19 100644
 +    return CopyHostFrameStatsOutput(stats, &result) ? 0 : -1;
 +}
 +
++extern "C" int32_t __stdcall AsteriaQueryFrameInputConsumerV1(
++    AsteriaFrameInputConsumerV1 *consumer)
++{
++    if (!consumer || consumer->struct_size != sizeof(*consumer) ||
++        consumer->api_version != ASTERIA_FG_CONSUMER_API_V1 || !consumer->device)
++        return ASTERIA_FG_INPUT_INVALID_ARGUMENT;
++    const std::lock_guard<std::mutex> lock(StateMutex);
++    for (const auto &entry : FgSwapchains)
++    {
++        const auto &swapchain = entry.second;
++        if (!swapchain || asteria_vk::Bits(swapchain->device) != consumer->device)
++            continue;
++        consumer->graphics_family = swapchain->graphicsFamily;
++        consumer->async_compute_family = swapchain->asyncComputeFamily;
++        consumer->flags = swapchain->asyncWorkloadsEnabled ? 1u : 0u;
++        consumer->reserved = 0;
++        return ASTERIA_FG_INPUT_OK;
++    }
++    return ASTERIA_FG_INPUT_UNAVAILABLE;
++}
++
  static bool IsFgSwapchainHandle(VkSwapchainKHR swapchain)
  {
      const std::lock_guard<std::mutex> lock(StateMutex);
-@@ -1816,6 +1948,69 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
+@@ -1816,6 +1969,69 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
      }
  }
  
@@ -334,7 +355,7 @@ index 0476bc7..8e5ba19 100644
  static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCreateInfoKHR *info, const VkAllocationCallbacks *allocator, VkSwapchainKHR *swapchain)
  
  {
-@@ -1875,6 +2070,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
+@@ -1875,6 +2091,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
          if (qIt != FgDeviceQueuesMap.end()) fgQueues = qIt->second;
  
      }
@@ -342,7 +363,7 @@ index 0476bc7..8e5ba19 100644
  if (oldState && !FgSwapchainRuntime.wait(*oldState)) return VK_ERROR_DEVICE_LOST;
  
      const auto retireOld = [&] {
-@@ -2250,7 +2446,11 @@ static void RecordAcquire(const char *method, VkSwapchainKHR swapchain, VkSemaph
+@@ -2250,7 +2467,11 @@ static void RecordAcquire(const char *method, VkSwapchainKHR swapchain, VkSemaph
  
                  record["last_acquired_index"] = *index;
  
@@ -355,7 +376,7 @@ index 0476bc7..8e5ba19 100644
  
                  if (fg != FgSwapchains.end()) session = fg->second->inputSession;
  
-@@ -2319,8 +2519,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2319,8 +2540,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
      VkResult result = VK_ERROR_EXTENSION_NOT_PRESENT;
      uint64_t inputAttempts = 0;
      uint64_t interpolationDispatches = 0;
@@ -366,7 +387,7 @@ index 0476bc7..8e5ba19 100644
      {
          const std::lock_guard<std::mutex> lock(StateMutex);
          for (uint32_t index = 0; index < info->swapchainCount; ++index)
-@@ -2332,6 +2534,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2332,6 +2555,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  if (info->swapchainCount != 1) return VK_ERROR_FEATURE_NOT_PRESENT;
                  fg = it->second.get();
@@ -377,7 +398,7 @@ index 0476bc7..8e5ba19 100644
              }
              else if (asteria_vk::IsProxyToken(info->pSwapchains[index]))
                  return VK_ERROR_SURFACE_LOST_KHR;
-@@ -2359,6 +2565,9 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2359,6 +2586,9 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
      }
      bool inputReady = false;
      bool callbackRecorded = false;
@@ -387,7 +408,7 @@ index 0476bc7..8e5ba19 100644
      uint32_t motionSource = 0;
      if (isFgPresent)
      {
-@@ -2373,15 +2582,43 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2373,15 +2603,43 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              const auto input = std::atomic_load_explicit(&fg->currentInputs, std::memory_order_acquire);
              inputReady = bool(input);
              if (input) motionSource = uint32_t(input->motionSource);
@@ -431,7 +452,7 @@ index 0476bc7..8e5ba19 100644
      }
      else
      {
-@@ -2407,6 +2644,26 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2407,6 +2665,26 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              State["fg_camera_valid"] = FgCamera.valid;
              State["fg_camera_in_game"] = FgCamera.inGame;
              State["fg_camera_sample_count"] = FgCamera.sampleCount;
@@ -458,7 +479,7 @@ index 0476bc7..8e5ba19 100644
          }
          Json waits = Json::array();
          for (uint32_t i = 0; i < info->waitSemaphoreCount; ++i) waits.push_back(Id(info->pWaitSemaphores[i]));
-@@ -2422,13 +2679,109 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2422,13 +2700,109 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  record["frame_input_attempts"] = inputAttempts;
                  record["interpolation_dispatches"] = interpolationDispatches;
@@ -572,26 +593,28 @@ diff --git a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.def b/Run
 index 8252413..46c3851 100644
 --- a/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.def
 +++ b/Runtime/FrameGeneration/Layer/AsteriaFrameGenerationLayer.def
-@@ -15,3 +15,6 @@ EXPORTS
+@@ -15,3 +15,7 @@ EXPORTS
      AsteriaUnregisterFrameInputProviderV1=_AsteriaUnregisterFrameInputProviderV1@8
      AsteriaQueryFrameInputTicketV1=_AsteriaQueryFrameInputTicketV1@28
      AsteriaSubmitFrameInputsV1=_AsteriaSubmitFrameInputsV1@4
 +    AsteriaSubmitFrameInputsV2=_AsteriaSubmitFrameInputsV2@4
 +    AsteriaSubmitHostFrameV2=_AsteriaSubmitHostFrameV2@4
 +    AsteriaQueryHostFrameStatsV2=_AsteriaQueryHostFrameStatsV2@4
++    AsteriaQueryFrameInputConsumerV1=_AsteriaQueryFrameInputConsumerV1@4
 diff --git a/Runtime/FrameGeneration/Layer/AsteriaFrameInputApi.h b/Runtime/FrameGeneration/Layer/AsteriaFrameInputApi.h
 index 1d8e39b..aa7c503 100644
 --- a/Runtime/FrameGeneration/Layer/AsteriaFrameInputApi.h
 +++ b/Runtime/FrameGeneration/Layer/AsteriaFrameInputApi.h
-@@ -8,6 +8,7 @@
+@@ -8,6 +8,8 @@
  #endif
  
  #define ASTERIA_FG_INPUT_API_V1 1u
 +#define ASTERIA_FG_INPUT_API_V2 2u
++#define ASTERIA_FG_CONSUMER_API_V1 1u
  #define ASTERIA_FG_INPUT_OK 0
  #define ASTERIA_FG_INPUT_INVALID_ARGUMENT -1
  #define ASTERIA_FG_INPUT_UNAVAILABLE -2
-@@ -19,11 +20,15 @@
+@@ -19,11 +21,15 @@
  #define ASTERIA_FG_FORMAT_R32_FLOAT 1u
  #define ASTERIA_FG_FORMAT_RG16_FLOAT 2u
  #define ASTERIA_FG_FORMAT_RG32_FLOAT 3u
@@ -607,7 +630,7 @@ index 1d8e39b..aa7c503 100644
  
  #pragma pack(push, 8)
  typedef struct AsteriaFrameInputRegistrationV1
-@@ -79,9 +84,54 @@ typedef struct AsteriaFrameInputSubmissionV1
+@@ -79,9 +85,66 @@ typedef struct AsteriaFrameInputSubmissionV1
      AsteriaFrameInputLeaseCallbackV1 retain_lease;
      AsteriaFrameInputLeaseCallbackV1 release_lease;
  } AsteriaFrameInputSubmissionV1;
@@ -650,11 +673,22 @@ index 1d8e39b..aa7c503 100644
 +    AsteriaFrameInputLeaseCallbackV1 retain_lease;
 +    AsteriaFrameInputLeaseCallbackV1 release_lease;
 +} AsteriaFrameInputSubmissionV2;
++typedef struct AsteriaFrameInputConsumerV1
++{
++    uint32_t struct_size;
++    uint32_t api_version;
++    uint64_t device;
++    uint32_t graphics_family;
++    uint32_t async_compute_family;
++    uint32_t flags;
++    uint32_t reserved;
++} AsteriaFrameInputConsumerV1;
  #pragma pack(pop)
  
 +#if defined(__cplusplus)
 +static_assert(sizeof(AsteriaFrameInputTicketV1) == 72, "Asteria frame-input ticket ABI changed");
 +static_assert(sizeof(AsteriaFrameInputSubmissionV2) == 256, "Asteria frame-input V2 ABI changed");
++static_assert(sizeof(AsteriaFrameInputConsumerV1) == 32, "Asteria frame-input consumer ABI changed");
 +#endif
 +
  typedef int32_t (ASTERIA_FG_CALL *PFN_AsteriaRegisterFrameInputProviderV1)(const AsteriaFrameInputRegistrationV1 *, uint64_t *);
@@ -662,6 +696,7 @@ index 1d8e39b..aa7c503 100644
  typedef int32_t (ASTERIA_FG_CALL *PFN_AsteriaQueryFrameInputTicketV1)(uint64_t, uint64_t, uint64_t, AsteriaFrameInputTicketV1 *);
  typedef int32_t (ASTERIA_FG_CALL *PFN_AsteriaSubmitFrameInputsV1)(const AsteriaFrameInputSubmissionV1 *);
 +typedef int32_t (ASTERIA_FG_CALL *PFN_AsteriaSubmitFrameInputsV2)(const AsteriaFrameInputSubmissionV2 *);
++typedef int32_t (ASTERIA_FG_CALL *PFN_AsteriaQueryFrameInputConsumerV1)(AsteriaFrameInputConsumerV1 *);
 diff --git a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h b/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
 index 3f56217..328acbf 100644
 --- a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
@@ -1578,16 +1613,15 @@ index 54799dd..9eff8e5 100644
      {
          input = MakeEstimatedInternalInputs(state, frame);
          valid = input && ValidFrameInputs(*input, reinterpret_cast<uintptr_t>(state.device), frame, state.width, state.height) &&
-@@ -674,15 +1165,32 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
+@@ -674,15 +1165,31 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
      }
      if (!valid) { input.reset(); state.historyReset.store(true); }
      std::atomic_store_explicit(&state.currentInputs, std::move(input), std::memory_order_release);
 +    const auto configuredInput = std::atomic_load_explicit(&state.currentInputs, std::memory_order_acquire);
-+    // Host HUD-less/UI images are produced on the game queue family. Keep
-+    // those frames on that queue until an explicit cross-family ownership
-+    // contract exists; scene-only inputs remain on dedicated async compute.
-+    state.asyncWorkloadsActive = state.asyncWorkloadsEnabled &&
-+        !(configuredInput && configuredInput->separateUi);
++    // Provider images use concurrent graphics/async-compute sharing. HUD
++    // composition stays on the graphics-capable game queue, while the FSR
++    // interpolation command list remains independent on async compute.
++    state.asyncWorkloadsActive = state.asyncWorkloadsEnabled;
 +    FfxResource ui{};
 +    if (configuredInput && configuredInput->separateUi && IsSeparateUiCompositionRequested()) ui = configuredInput->ui;
 +    const uint32_t uiFlags = ui.resource
@@ -2123,7 +2157,24 @@ index 041b246..4d88043 100644
          AsteriaTraceSwapchain(trace.str());
          return suppliedCount < gameBufferCount ? VK_INCOMPLETE : VK_SUCCESS;
      }
-@@ -2846,6 +2907,32 @@ uint64_t FrameInterpolationSwapChainVK::getLastPresentCount()
+@@ -1907,12 +1968,10 @@ void FrameInterpolationSwapChainVK::setFrameGenerationConfig(FfxFrameGeneration
+     {
+         nextFrameGenerationConfig = *config;
+ 
+-        if (presentInfo.compositionMode == FGSwapchainCompositionMode::eComposeOnGameQueue)
+-        {
+-            // since we compose on gameQueue anyway we should run interpolation on it too, to avoid semaphores
+-            nextFrameGenerationConfig.allowAsyncWorkloads = false;
+-            inputInterpolationQueue                       = presentInfo.gameQueue;
+-        }
++        // Composition may still need the graphics-capable game queue, but the
++        // interpolation command list is independent and the presenter already
++        // transfers its output across queue families. Keep FSR on the requested
++        // async-compute queue instead of serializing all work behind the game.
+ 
+         // in case of actual reconfiguration: apply the changes immediately
+         if ( presentInfo.interpolationQueue.queue != inputInterpolationQueue.queue
+@@ -2846,6 +2905,32 @@ uint64_t FrameInterpolationSwapChainVK::getLastPresentCount()
      return presentInfo.realPresentCount;
  }
  

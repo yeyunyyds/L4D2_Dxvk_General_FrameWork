@@ -159,6 +159,7 @@ def analyze(path):
     backend = 'custom'
     local_effect_policy = 'whole_frame_rejection'
     presenter = {}
+    provider_resources = {}
     presenter_inputs = {'packets': 0, 'valid': 0, 'gpu_ready': 0,
                         'present_ticket': 0, 'rejected_events': 0}
     complete = False
@@ -197,6 +198,11 @@ def analyze(path):
                 presenter_inputs['gpu_ready'] += int(event.get('gpu_ready_token', False))
                 presenter_inputs['present_ticket'] += int(event.get('present_ticket', False))
                 presenter_inputs['motion_source'] = event.get('motion_source')
+            elif kind == 'gpu_initialized':
+                provider_resources = {
+                    'consumer_queue_family': event.get('provider_consumer_family'),
+                    'concurrent_sharing': event.get('provider_concurrent_sharing', False),
+                }
             elif kind == 'presenter_input_rejected':
                 presenter_inputs['rejected_events'] += 1
             elif kind == 'host_layer_frame':
@@ -280,6 +286,7 @@ def analyze(path):
     return dict(log=path.name, log_complete=complete, event_counts=dict(counts),
                 backend=backend, local_effect_policy=local_effect_policy, gpu_dispatch_scope='preflight_only' if backend.startswith('fsr') else 'generation',
                 presenter_device=presenter,
+                provider_resources=provider_resources,
                 presenter_inputs=presenter_inputs,
                 host_provider=host_provider,
                 generated_by_mode=dict(by_mode), successful_generated_presents=successful,
