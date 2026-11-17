@@ -7,7 +7,7 @@
 ## 安装与一次测试
 
 1. 完全退出 L4D2 和两个 Bridge Host；Steam 可以保持运行。先自行备份原文件，再把包内 `bin` 合并到 L4D2 游戏根目录的 `bin`。本版的 Layer、INI 和 Monitor 都位于 `bin/.l4d2bridge`，不再依赖每次运行安装或启动脚本。
-2. 按需编辑 `bin/.l4d2bridge/fg-config.ini`。默认启用 HUD 分层与 Monitor，关闭逐帧内容探针。随后直接从 Steam 正常启动游戏；x64 Host 在 Vulkan 初始化前加入配套 Layer 搜索路径、创建本次会话目录并自动打开外置 `GF Frame Generation Monitor`。
+2. 按需编辑 `bin/.l4d2bridge/fg-config.ini`。默认启用 HUD 分层、viewmodel 保护与 Monitor，关闭逐帧内容探针。随后直接从 Steam 正常启动游戏；x64 Host 在 Vulkan 初始化前加入配套 Layer 搜索路径、创建本次会话目录并自动打开外置 `GF Frame Generation Monitor`。
 3. 进入地图后保持相似的转头或平移，先让 FG 开启约 20 秒，按一次 F8 关闭约 20 秒，再按 F8 开启约 20 秒。无需 F9。正常退出后上传游戏根目录中最新的 `fg-results/session-*`。无需 `capture.trigger`。
 4. `install_fg_test.cmd`、`start_fg_test.cmd` 和恢复脚本只保留给旧式隔离诊断。手动覆盖模式的恢复由用户自己的备份负责。
 
@@ -19,7 +19,7 @@
 
 - 直接使用 Host GPU 历史，不通过 IPC 传输整幅图像，不为插帧上传/回读整幅游戏画面。有限诊断截图是例外。
 - GPU 转换颜色、深度和运动输入；运动来自相机重建及有限范围图像匹配，官方光流继续处理图像运动。没有取得完整引擎物体/骨骼运动矢量。
-- 默认测试设置 `LDB_FG_FAST_INPUTS=1`，跳过近景分析与质量回读。`hud=0` 保持纯净三槽基线：不创建 HUD 管线、不注册 SDK UI，也不增加 HUD 图像复制。`hud=1` 在第一次屏幕 alpha 绘制前用 D3D9 `StretchRect` 把快照排进已有游戏命令流，不在 draw 中 Flush/Wait；Present 时最终画面与该快照共用一次 interop transition/flush 和一笔 Host GPU submission。三槽 provider 的 depth、motion、HUD-less 与 UI 图像按 graphics/async-compute 两个 family 创建为 concurrent sharing。FSR 完成后，Layer 在同一个 interpolation command buffer 内执行 exact-pixel compute 覆盖，再把结果交给原本的 present-queue 路径；不再使用 SDK game-queue UI render pass。`gpu_initialized.provider_concurrent_sharing`、Layer 的 `async_workloads_enabled` 与 `hud_compute_composite_dispatches` 必须共同验收。HUD 边界启发式仍不是引擎语义，需实机检查花屏。
+- 默认测试设置 `LDB_FG_FAST_INPUTS=1`。`hud=0` 保持 HUD 关闭；`hud=1` 在第一次屏幕 alpha 绘制前用 D3D9 `StretchRect` 把快照排进已有游戏命令流。`viewmodel=1` 另在近景 viewport 绘制前后各排入一张 HDR 快照，以差分获得手部／持枪遮罩。draw 阶段均不 Flush/Wait；Present 时最终画面、HUD 与两张近景快照共用一次 interop transition/flush 和一笔 Host GPU submission。FSR 完成后，Layer 在同一个 interpolation command buffer 内按当前与上一帧 viewmodel 遮罩的并集覆盖当前真实像素，既保持当前武器清晰，也擦除上一位置的插值残影。第一版的 viewmodel 仍按原生输入率更新，并不伪造手部运动矢量；它优先解决生成帧上的模糊和重影。`viewmodel_overlay_available` 与分析结果中的 `availability_ratio` 用于确认近景遮罩实际取得。Steam Overlay 位于游戏捕获边界之外，本轮不处理其 FPS 文字花屏。
 - Vulkan Layer 会优先把 FFX async workload 放到独立 compute queue；没有独立队列时自动保持同步模式。`asteria-layer.json` 的 `fast_scene_inputs_active`、`async_workloads_enabled`、四个 queue family 和 `cpu_timing` 用于确认实际选择，并分开统计 `ffxWaitForPresents`、配置、回调与 `vkQueuePresentFFX` 的 CPU 时间。
 - HUD 覆盖与 FSR 位于同一 interpolation command buffer，因此三个 Host 输入槽只按 interpolation timeline 延迟退休；完成信号已经包含 HUD 读取，无需再等待 native Present 序列。只有两个旧租约将耗尽三槽时才阻塞等待最旧 timeline。`input_retirement` 记录队列峰值、无等待释放和被迫等待耗时。
 - 内容差异探针默认关闭，避免它干扰性能基线和 Intel 驱动稳定性；需要验证非重复内容时在 INI 中设置 `content_probe=1`。启用后 Layer 在插值 command buffer 内抽样比较 16 个固定场景像素，timeline 完成后才读回极小的环形缓冲。`output_pacing` 始终从实际 `vkQueuePresentKHR` 记录输出节奏。
@@ -40,7 +40,7 @@ Asteria 原版只构建 x86 DLL，并要求同一个 graphics family 至少有�
 
 当前闭环已把 Asteria/Danyria 的 D3D9 语义采集方式移到 LDB x64 Host。Host 在实际命令序列中识别 HDR 主视图、深度表面、相机 shader 常量、HUD 前边界和 Present 时间。正式路径先向 Layer 查询与本次 acquire 对应的 ticket，再通过 `AsteriaSubmitFrameInputsV2` 提交三槽 GPU 资源；旧 `AsteriaSubmitHostFrameV2` 只保留兼容诊断。图像不经过 IPC 或 CPU 复制。
 
-本版由 Host 在同一个 Vulkan 设备上把主场景深度转换成 `R32F`，并用当前/上一主视图矩阵生成 `RG32F` 相机运动向量。每个 HUD 槽包含与 swapchain 同格式的 HUD-less 颜色和 `RGBA8` exact-pixel 覆盖（RGB 为当前最终像素，alpha 为 UI mask），Layer 逐项核对设备、ticket、acquire 序号、图像、格式和布局。HUD 开启时 FSR3 颜色和 optical flow 使用 HUD-less 输入，插值结束后 compute pass 按 mask 覆盖当前 UI；HUD 关闭时继续使用 replacement swapchain 的 `presentColor` 纯基线。槽只有在 Layer interpolation timeline 完成并调用 release lease 后才能复用。
+本版由 Host 在同一个 Vulkan 设备上把主场景深度转换成 `R32F`，并用当前/上一主视图矩阵生成 `RG32F` 相机运动向量。每个槽包含与 swapchain 同格式的 HUD-less 颜色和 `RGBA8` exact-pixel 覆盖（RGB 为当前最终像素，alpha 为 HUD 或 viewmodel mask），Layer 逐项核对设备、ticket、acquire 序号、图像、格式和布局。FSR3 插值结束后 compute pass 按 mask 覆盖当前 HUD／viewmodel；槽只有在 Layer interpolation timeline 完成并调用 release lease 后才能复用。
 
 `LDB_FG_MODE=provider` 表示 Host 只生产数据且只调用一次原始 Present，不再运行旧预览或第二次 Present。`asteria-layer.json` 中同时满足以下条件，才能证明 Host 控制的算法与提交链已工作：
 

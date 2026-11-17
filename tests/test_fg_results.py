@@ -56,6 +56,20 @@ class SessionResultsTests(unittest.TestCase):
         self.assertTrue(result['log_complete'])
         self.assertEqual(result['metrics'],{})
 
+    def test_viewmodel_overlay_availability_is_reported(self):
+        result=self.analyze([
+            dict(event='session',qpc_frequency=1000,
+                 viewmodel_requested=True),
+            dict(event='frame_metrics',frame=0,generation=0,arrival_qpc=0,
+                 enabled=True,generated=True,mode='host_provider',captured=False,
+                 viewmodel_requested=True,viewmodel_overlay_available=True),
+            dict(event='frame_metrics',frame=1,generation=0,arrival_qpc=10,
+                 enabled=True,generated=True,mode='host_provider',captured=False,
+                 viewmodel_requested=True,viewmodel_overlay_available=False)])
+        self.assertEqual(result['viewmodel_overlay'],dict(
+            requested=True,sampled_frames=2,available_frames=1,
+            availability_ratio=.5))
+
     def test_native_and_disabled_windows_report_ab_input_rates_without_claiming_scanout(self):
         events=[dict(event='session',qpc_frequency=1000)]
         for frame,arrival,enabled,native in [

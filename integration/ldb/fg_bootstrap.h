@@ -15,6 +15,7 @@ namespace ldb_fg_bootstrap {
 struct Settings {
   bool enabled = true;
   bool hud = true;
+  bool viewmodel = true;
   bool contentProbe = false;
   bool monitor = true;
   bool mergeSubmissions = true;
@@ -73,6 +74,7 @@ inline Settings readSettings(const std::filesystem::path &path) noexcept {
   Settings result;
   result.enabled = iniBool(path, L"enabled", result.enabled);
   result.hud = iniBool(path, L"hud", result.hud);
+  result.viewmodel = iniBool(path, L"viewmodel", result.viewmodel);
   result.contentProbe =
       iniBool(path, L"content_probe", result.contentProbe);
   result.monitor = iniBool(path, L"monitor", result.monitor);
@@ -160,6 +162,7 @@ inline void initialize() noexcept {
       setEnvironment(L"LDB_FG_MODE", L"provider", replace);
       setEnvironment(L"LDB_FG_FAST_INPUTS", L"1", replace);
       setEnvironment(L"LDB_FG_HUD_BYPASS", flag(settings.hud), replace);
+      setEnvironment(L"LDB_FG_VIEWMODEL", flag(settings.viewmodel), replace);
       setEnvironment(L"LDB_FG_MERGE_SUBMISSIONS",
                      flag(settings.mergeSubmissions), replace);
       setEnvironment(L"LDB_FG_CAPTURE_FRAMES",
@@ -172,7 +175,8 @@ inline void initialize() noexcept {
       setEnvironment(L"ASTERIA_FG_ENABLE", flag(settings.enabled), replace);
       setEnvironment(L"ASTERIA_FG_ESTIMATED_INTERNAL", L"1", replace);
       setEnvironment(L"ASTERIA_FG_ESTIMATED_DISPATCH", L"0", replace);
-      setEnvironment(L"ASTERIA_FG_SEPARATE_UI", flag(settings.hud), replace);
+      setEnvironment(L"ASTERIA_FG_SEPARATE_UI",
+                     flag(settings.hud || settings.viewmodel), replace);
       setEnvironment(L"ASTERIA_FG_CONTENT_PROBE",
                      flag(settings.contentProbe), replace);
 
@@ -205,6 +209,7 @@ inline void initialize() noexcept {
       if (diagnostic)
         diagnostic << "enabled=" << settings.enabled << "\n"
                    << "hud=" << settings.hud << "\n"
+                   << "viewmodel=" << settings.viewmodel << "\n"
                    << "content_probe=" << settings.contentProbe << "\n"
                    << "monitor=" << settings.monitor << "\n"
                    << "script_mode=" << scriptMode << "\n";

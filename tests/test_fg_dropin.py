@@ -13,6 +13,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         settings = parser["frame_generation"]
         self.assertTrue(settings.getboolean("enabled"))
         self.assertTrue(settings.getboolean("hud"))
+        self.assertTrue(settings.getboolean("viewmodel"))
         self.assertFalse(settings.getboolean("content_probe"))
         self.assertTrue(settings.getboolean("monitor"))
         self.assertTrue(settings.getboolean("merge_submissions"))
@@ -26,6 +27,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("launchMonitor(monitorPath, session)", source)
         self.assertIn('L"ASTERIA_FG_CONTENT_PROBE"', source)
         self.assertIn('L"ASTERIA_FG_SEPARATE_UI"', source)
+        self.assertIn('L"LDB_FG_VIEWMODEL"', source)
 
     def test_hud_composes_on_async_callback_and_retires_on_its_timeline(self):
         patch = (ROOT / "integration/fg/async-hud-x64.patch").read_text()
@@ -35,9 +37,22 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("+    fgInfo.compositionMode = VK_COMPOSITION_MODE_PRESENT_QUEUE_FFX;", patch)
         self.assertIn("+        if (interpolationCompleted)", patch)
         self.assertIn("snapshotBeforeHud", host)
+        self.assertIn("viewmodelBeforeSnapshot", host)
+        self.assertIn("viewmodelAfterSnapshot", host)
+        self.assertIn("withTransferredColorSources<4>", host)
         self.assertIn("device->StretchRect", host)
         self.assertNotIn("transfer(back.get(), ResidentFg::CurrentUi)", host)
         self.assertEqual(hooks.count("+        ldb_fg::beforeReset(pD3DDevice);"), 2)
+
+    def test_viewmodel_uses_exact_current_overlay_mask(self):
+        shader = (ROOT / "shaders/frame_generate.comp").read_text()
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        self.assertIn("sampleAt(currentNearBefore,screen).rgb", shader)
+        self.assertIn("sampleAt(currentNearAfter,screen).rgb", shader)
+        self.assertIn("sampleAt(previousNearBefore,screen).rgb", shader)
+        self.assertIn("currentViewmodel||previousViewmodel", shader)
+        self.assertIn("hud||viewmodel", shader)
+        self.assertIn("viewmodel_overlay_available", host)
 
     def test_hud_shader_is_checked_in_as_valid_spirv_words(self):
         header = (ROOT / "integration/fg/HudCompositeSpirv.h").read_text()

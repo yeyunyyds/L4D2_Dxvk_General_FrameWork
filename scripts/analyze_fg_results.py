@@ -169,6 +169,8 @@ def analyze(path):
     local_effect_policy = 'whole_frame_rejection'
     presenter = {}
     provider_resources = {}
+    viewmodel_overlay = {'requested': False, 'sampled_frames': 0,
+                         'available_frames': 0}
     presenter_inputs = {'packets': 0, 'valid': 0, 'gpu_ready': 0,
                         'present_ticket': 0, 'rejected_events': 0}
     complete = False
@@ -188,6 +190,8 @@ def analyze(path):
                 frequency = event['qpc_frequency']
                 backend = event.get('backend','custom')
                 local_effect_policy = event.get('local_effect_policy','whole_frame_rejection')
+                viewmodel_overlay['requested'] = event.get(
+                    'viewmodel_requested', False)
                 presenter = {
                     'requested': event.get('presenter_requested', False),
                     'device_api': event.get('presenter_device_api', False),
@@ -249,6 +253,10 @@ def analyze(path):
                 if event['captured']:
                     previous = None
                     continue
+                if event.get('viewmodel_requested', False):
+                    viewmodel_overlay['sampled_frames'] += 1
+                    viewmodel_overlay['available_frames'] += int(
+                        event.get('viewmodel_overlay_available', False))
                 group = ('disabled' if not event['enabled'] else
                          event['mode'] if event['generated'] else 'enabled_fallback')
                 data = groups[group]
@@ -277,6 +285,10 @@ def analyze(path):
                                              if native_submitted else 0)
     host_provider['leases_outstanding_at_last_sample'] = max(
         0, host_provider['native_accepted_total'] - host_provider['native_released_total'])
+    sampled_viewmodel = viewmodel_overlay['sampled_frames']
+    viewmodel_overlay['availability_ratio'] = (
+        viewmodel_overlay['available_frames'] / sampled_viewmodel
+        if sampled_viewmodel else None)
     metric_summary = {group: {key: distribution(values) for key, values in data.items()}
                       for group, data in groups.items()}
     def median_fps(group):
@@ -296,6 +308,7 @@ def analyze(path):
                 backend=backend, local_effect_policy=local_effect_policy, gpu_dispatch_scope='preflight_only' if backend.startswith('fsr') else 'generation',
                 presenter_device=presenter,
                 provider_resources=provider_resources,
+                viewmodel_overlay=viewmodel_overlay,
                 presenter_inputs=presenter_inputs,
                 host_provider=host_provider,
                 generated_by_mode=dict(by_mode), successful_generated_presents=successful,

@@ -185,7 +185,15 @@ void main() {
  bool providerExport=p.thresholds.z>.5;
  if(providerExport) {
   vec4 before=(p.flags.z&2u)!=0u?sampleAt(currentUi,screen):fallback;
-  float alpha=any(greaterThan(abs(fallback.rgb-before.rgb),vec3(0.5/255.0)))?1.0:0.0;
+  bool hud=any(greaterThan(abs(fallback.rgb-before.rgb),vec3(0.5/255.0)));
+  bool currentViewmodel=(p.flags.z&8u)!=0u&&any(greaterThan(
+   abs(sampleAt(currentNearBefore,screen).rgb-
+       sampleAt(currentNearAfter,screen).rgb),vec3(0.00001)));
+  bool previousViewmodel=(p.flags.w&8u)!=0u&&any(greaterThan(
+   abs(sampleAt(previousNearBefore,screen).rgb-
+       sampleAt(previousNearAfter,screen).rgb),vec3(0.00001)));
+  bool viewmodel=currentViewmodel||previousViewmodel;
+  float alpha=hud||viewmodel?1.0:0.0;
   result=before;
   mark=vec4(fallback.rgb,alpha);
  }

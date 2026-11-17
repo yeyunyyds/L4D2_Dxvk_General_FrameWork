@@ -7,6 +7,7 @@
 #include "frame_math.h"
 #include "resident_frame_generator.h"
 #include "asteria_host_control.h"
+#include <array>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -29,6 +30,7 @@ inline std::wstring readEnv(const wchar_t *key) {
 struct Config {
   bool enabled = false, generatedOnly = false, providerOnly = false,
        hotkeys = true, fastInputs = false, hudBypass = false,
+       viewmodel = false,
        mergeSubmissions = true;
   bool presenterProbe = false;
   uint32_t captures = 4, pacingMs = 0;
@@ -53,6 +55,7 @@ struct Config {
       providerOnly = mode == L"provider";
       fastInputs = readEnv(L"LDB_FG_FAST_INPUTS") == L"1";
       hudBypass = readEnv(L"LDB_FG_HUD_BYPASS") == L"1";
+      viewmodel = readEnv(L"LDB_FG_VIEWMODEL") == L"1";
       mergeSubmissions = readEnv(L"LDB_FG_MERGE_SUBMISSIONS") != L"0";
       autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
       auto pacing = readEnv(L"LDB_FG_PACING_MS");
@@ -165,6 +168,7 @@ struct State {
   IDirect3DDevice9 *device = nullptr;
   Com<ID3D9VkInteropDevice> cachedInterop;
   Com<IDirect3DSurface9> hudSnapshot;
+  Com<IDirect3DSurface9> viewmodelBeforeSnapshot, viewmodelAfterSnapshot;
   std::unique_ptr<ResidentFg> gpu;
   PresenterDeviceProbe presenter;
   AsteriaHostControl asteria;
@@ -264,6 +268,8 @@ struct State {
              std::string(config().fastInputs ? "true" : "false") +
              ",\"hud_bypass_requested\":" +
              std::string(config().hudBypass ? "true" : "false") +
+             ",\"viewmodel_requested\":" +
+             std::string(config().viewmodel ? "true" : "false") +
              ",\"merge_submissions\":" +
              std::string(config().mergeSubmissions ? "true" : "false") +
              ",\"qpc_frequency\":" +
@@ -359,26 +365,31 @@ struct State {
     uiCopied = false;
     draws = 0;
   }
-  bool snapshotBeforeHud(IDirect3DSurface9 *back) {
-    if (!back)
+  bool snapshotSurface(IDirect3DSurface9 *surface,
+                       Com<IDirect3DSurface9> &snapshotSurface) {
+    if (!surface)
       return false;
     D3DSURFACE_DESC source{}, snapshot{};
-    if (FAILED(back->GetDesc(&source)))
+    if (FAILED(surface->GetDesc(&source)))
       return false;
-    if (hudSnapshot.get() &&
-        (FAILED(hudSnapshot->GetDesc(&snapshot)) ||
+    if (snapshotSurface.get() &&
+        (FAILED(snapshotSurface->GetDesc(&snapshot)) ||
          snapshot.Width != source.Width || snapshot.Height != source.Height ||
          snapshot.Format != source.Format))
-      hudSnapshot.reset();
-    if (!hudSnapshot.get() &&
+      snapshotSurface.reset();
+    if (!snapshotSurface.get() &&
         FAILED(device->CreateRenderTarget(
             source.Width, source.Height, source.Format, D3DMULTISAMPLE_NONE, 0,
-            FALSE, hudSnapshot.put(), nullptr)))
+            FALSE, snapshotSurface.put(), nullptr)))
       return false;
-    // StretchRect is queued in DXVK's existing game command stream. It takes
-    // the pre-HUD snapshot without an interop flush or a CPU resource wait.
-    return SUCCEEDED(device->StretchRect(back, nullptr, hudSnapshot.get(),
+    // StretchRect stays in DXVK's game command stream. HUD and viewmodel
+    // snapshots therefore require no interop flush or CPU resource wait at
+    // the draw boundary.
+    return SUCCEEDED(device->StretchRect(surface, nullptr, snapshotSurface.get(),
                                          nullptr, D3DTEXF_NONE));
+  }
+  bool snapshotBeforeHud(IDirect3DSurface9 *back) {
+    return snapshotSurface(back, hudSnapshot);
   }
   void invalidate(const char *reason, uint32_t uid, bool release = false) {
     history = false;
@@ -386,6 +397,8 @@ struct State {
 
     if (release) {
       hudSnapshot.reset();
+      viewmodelBeforeSnapshot.reset();
+      viewmodelAfterSnapshot.reset();
       gpu.reset();
     }
     emit("history_invalidated", uid, "\"reason\":" + quote(reason));
@@ -494,51 +507,51 @@ struct State {
     if (!interop->WaitForResource(surface, 0))
       throw std::runtime_error("FG restore wait");
   }
-  template <typename Operation>
-  void withTransferredColorPair(IDirect3DSurface9 *first,
-                                IDirect3DSurface9 *second,
-                                Operation &&operation) {
-    Com<ID3D9VkInteropTexture> firstTexture, secondTexture;
-    auto firstInfo = imageInfo(first, firstTexture);
-    auto secondInfo = imageInfo(second, secondTexture);
+  template <size_t Count, typename Operation>
+  void withTransferredColorSources(
+      const std::array<IDirect3DSurface9 *, Count> &surfaces,
+      Operation &&operation) {
+    std::array<Com<ID3D9VkInteropTexture>, Count> textures;
+    std::array<ImageInfo, Count> infos;
+    for (size_t i = 0; i < Count; ++i)
+      infos[i] = imageInfo(surfaces[i], textures[i]);
     auto *interop = interopDevice();
     VkImageSubresourceRange range{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
     constexpr VkImageLayout target = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    struct RestorePair {
+    struct RestoreSources {
       ID3D9VkInteropDevice *device;
-      ID3D9VkInteropTexture *first;
-      ID3D9VkInteropTexture *second;
+      std::array<ID3D9VkInteropTexture *, Count> textures;
+      std::array<VkImageLayout, Count> originals;
       VkImageSubresourceRange range;
-      VkImageLayout firstOriginal, secondOriginal;
       bool armed = true;
       void apply() noexcept {
         if (!armed)
           return;
-        device->TransitionTextureLayout(first, &range,
-                                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                        firstOriginal);
-        device->TransitionTextureLayout(second, &range,
-                                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                        secondOriginal);
+        for (size_t i = 0; i < Count; ++i)
+          device->TransitionTextureLayout(textures[i], &range,
+                                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                           originals[i]);
         device->FlushRenderingCommands();
         armed = false;
       }
-      ~RestorePair() { apply(); }
-    } restore{interop, firstTexture.get(), secondTexture.get(), range,
-              firstInfo.layout, secondInfo.layout};
-    interop->TransitionTextureLayout(firstTexture.get(), &range,
-                                     firstInfo.layout, target);
-    interop->TransitionTextureLayout(secondTexture.get(), &range,
-                                     secondInfo.layout, target);
+      ~RestoreSources() { apply(); }
+    } restore{interop, {}, {}, range};
+    for (size_t i = 0; i < Count; ++i) {
+      restore.textures[i] = textures[i].get();
+      restore.originals[i] = infos[i].layout;
+    }
+    for (size_t i = 0; i < Count; ++i)
+      interop->TransitionTextureLayout(textures[i].get(), &range,
+                                       infos[i].layout, target);
     interop->FlushRenderingCommands();
-    if (!interop->WaitForResource(first, 0) ||
-        !interop->WaitForResource(second, 0))
-      throw std::runtime_error("FG source pair wait");
-    operation(firstInfo, secondInfo);
+    for (auto *surface : surfaces)
+      if (!interop->WaitForResource(surface, 0))
+        throw std::runtime_error("FG color source wait");
+    operation(infos);
     restore.apply();
-    if (!interop->WaitForResource(first, 0) ||
-        !interop->WaitForResource(second, 0))
-      throw std::runtime_error("FG restore pair wait");
+    for (auto *surface : surfaces)
+      if (!interop->WaitForResource(surface, 0))
+        throw std::runtime_error("FG color restore wait");
   }
   void transfer(IDirect3DSurface9 *surface, ResidentFg::Slot slot,
                 bool write = false) {
@@ -609,7 +622,8 @@ struct State {
                ",\"matching_draws\":" + std::to_string(candidate.matches));
   }
   void nearBegin() {
-    if (config().fastInputs || !scene || !gpu || nearInvalid)
+    if (!scene || !gpu || nearInvalid ||
+        (config().fastInputs && !config().viewmodel))
       return;
     Com<IDirect3DSurface9> rt;
     D3DSURFACE_DESC desc{};
@@ -624,22 +638,35 @@ struct State {
         nearInvalid = true;
       return;
     }
-    transfer(rt.get(), ResidentFg::CurrentNearBefore);
+    if (config().fastInputs) {
+      if (!snapshotSurface(rt.get(), viewmodelBeforeSnapshot)) {
+        nearInvalid = true;
+        return;
+      }
+    } else
+      transfer(rt.get(), ResidentFg::CurrentNearBefore);
     nearTarget = id(rt.get());
     nearBeforeCopied = true;
   }
   void nearCopy(uint32_t uid) {
-    if (config().fastInputs || !scene || !nearSeen || !gpu || !nearDraws ||
-        nearCapturedDraws == nearDraws)
+    if (!scene || !nearSeen || !gpu || !nearDraws ||
+        nearCapturedDraws == nearDraws ||
+        (config().fastInputs && !config().viewmodel))
       return;
     Com<IDirect3DSurface9> rt, ds;
     if (nearBeforeCopied && !nearInvalid &&
         SUCCEEDED(device->GetRenderTarget(0, rt.put())) && rt.get() &&
         id(rt.get()) == nearTarget) {
-      transfer(rt.get(), ResidentFg::CurrentNearAfter);
-      nearColourCopied = true;
+      if (config().fastInputs)
+        nearColourCopied =
+            snapshotSurface(rt.get(), viewmodelAfterSnapshot);
+      else {
+        transfer(rt.get(), ResidentFg::CurrentNearAfter);
+        nearColourCopied = true;
+      }
     }
-    if (SUCCEEDED(device->GetDepthStencilSurface(ds.put())) && ds.get() &&
+    if (!config().fastInputs &&
+        SUCCEEDED(device->GetDepthStencilSurface(ds.put())) && ds.get() &&
         id(ds.get()) == sceneDepth) {
       transfer(ds.get(), ResidentFg::CurrentNear);
       nearCopied = true;
@@ -663,7 +690,7 @@ struct State {
 
     if (next->MinZ == 0 && next->MaxZ > 0 && next->MaxZ <= .2f) {
       sceneCopy(uid);
-      if (!config().fastInputs)
+      if (!config().fastInputs || config().viewmodel)
         nearSeen = scene;
     } else
       nearCopy(uid);
@@ -679,7 +706,7 @@ struct State {
 
     if (v.MinZ == 0 && v.MaxZ > 0 && v.MaxZ <= .2f) {
       sceneCopy(uid);
-      if (!config().fastInputs) {
+      if (!config().fastInputs || config().viewmodel) {
         nearSeen = scene;
         nearBegin();
       }
@@ -721,7 +748,7 @@ struct State {
     if (disabled || paused || FAILED(result))
       return;
     D3DVIEWPORT9 observed{};
-    if (!config().fastInputs && scene && nearSeen &&
+    if ((!config().fastInputs || config().viewmodel) && scene && nearSeen &&
         SUCCEEDED(device->GetViewport(&observed)) &&
         observed.MinZ == 0 && observed.MaxZ > 0 && observed.MaxZ <= .2f) {
       nearDraws++;
@@ -828,14 +855,17 @@ struct State {
     Com<IDirect3DSurface9> back;
 
     try {
+      // The frame can end while the near-plane viewport is still active.
+      // Finalize its queued after-snapshot before exporting provider inputs.
+      nearCopy(uid);
       Com<IDirect3DSwapChain9> primary;
       hr(device->GetSwapChain(0, primary.put()), "FG primary swapchain");
       bool primaryChain = !chain || chain == primary.get();
 
       if (!disabled && !paused && !partial && primaryChain && scene &&
           !candidate.conflict &&
-          (config().fastInputs || !nearSeen ||
-           (nearColourCopied && !nearInvalid)) && gpu) {
+          (!nearSeen || (nearColourCopied && !nearInvalid) ||
+           (config().fastInputs && !config().viewmodel)) && gpu) {
         hr(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, back.put()),
            "FG final backbuffer");
         if (!providerOnly || !config().mergeSubmissions)
@@ -858,29 +888,74 @@ struct State {
                 gpu->providerImages(0).device,
                 nativeTicket);
             if (nativeSlot >= 0) {
-              const bool sceneOnly = config().fastInputs &&
-                                     (!config().hudBypass || !uiCopied);
+              const bool hudOverlay = config().hudBypass && uiCopied &&
+                                      hudSnapshot.get();
+              const bool viewmodelOverlay =
+                  config().viewmodel && nearColourCopied && !nearInvalid &&
+                  viewmodelBeforeSnapshot.get() &&
+                  viewmodelAfterSnapshot.get();
+              const bool sceneOnly =
+                  config().fastInputs && !hudOverlay && !viewmodelOverlay;
               const uint32_t providerFlags =
                 (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
                 (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u) |
-                (nearColourCopied ? 8u : 0u) |
+                (viewmodelOverlay ? 8u : 0u) |
                 (validHistory ? 32u : 0u);
               providerParams.flags = {gpu->width, gpu->height, providerFlags,
                                       previousFlags};
               providerParams.thresholds[2] = 1.0f;
               try {
-                if (!config().mergeSubmissions && uiCopied &&
-                    hudSnapshot.get())
-                  transfer(hudSnapshot.get(), ResidentFg::CurrentUi);
+                if (!config().mergeSubmissions) {
+                  if (hudOverlay)
+                    transfer(hudSnapshot.get(), ResidentFg::CurrentUi);
+                  if (viewmodelOverlay) {
+                    transfer(viewmodelBeforeSnapshot.get(),
+                             ResidentFg::CurrentNearBefore);
+                    transfer(viewmodelAfterSnapshot.get(),
+                             ResidentFg::CurrentNearAfter);
+                  }
+                }
                 if (config().mergeSubmissions) {
-                  if (uiCopied && hudSnapshot.get()) {
-                    withTransferredColorPair(
-                        back.get(), hudSnapshot.get(),
-                        [&](const ImageInfo &finalInfo,
-                            const ImageInfo &uiInfo) {
-                          gpu->copyInto(finalInfo, ResidentFg::CurrentFinal,
+                  if (hudOverlay && viewmodelOverlay) {
+                    withTransferredColorSources<4>(
+                        {back.get(), hudSnapshot.get(),
+                         viewmodelBeforeSnapshot.get(),
+                         viewmodelAfterSnapshot.get()},
+                        [&](const auto &infos) {
+                          gpu->copyInto(infos[0], ResidentFg::CurrentFinal,
                                         VK_IMAGE_ASPECT_COLOR_BIT, true);
-                          gpu->copyInto(uiInfo, ResidentFg::CurrentUi,
+                          gpu->copyInto(infos[1], ResidentFg::CurrentUi,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->copyInto(infos[2],
+                                        ResidentFg::CurrentNearBefore,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->copyInto(infos[3], ResidentFg::CurrentNearAfter,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->generate(providerParams, false, true,
+                                        uint32_t(nativeSlot), sceneOnly, true);
+                        });
+                  } else if (viewmodelOverlay) {
+                    withTransferredColorSources<3>(
+                        {back.get(), viewmodelBeforeSnapshot.get(),
+                         viewmodelAfterSnapshot.get()},
+                        [&](const auto &infos) {
+                          gpu->copyInto(infos[0], ResidentFg::CurrentFinal,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->copyInto(infos[1],
+                                        ResidentFg::CurrentNearBefore,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->copyInto(infos[2], ResidentFg::CurrentNearAfter,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->generate(providerParams, false, true,
+                                        uint32_t(nativeSlot), sceneOnly, true);
+                        });
+                  } else if (hudOverlay) {
+                    withTransferredColorSources<2>(
+                        {back.get(), hudSnapshot.get()},
+                        [&](const auto &infos) {
+                          gpu->copyInto(infos[0], ResidentFg::CurrentFinal,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, true);
+                          gpu->copyInto(infos[1], ResidentFg::CurrentUi,
                                         VK_IMAGE_ASPECT_COLOR_BIT, true);
                           gpu->generate(providerParams, false, true,
                                         uint32_t(nativeSlot), sceneOnly, true);
@@ -1234,6 +1309,13 @@ struct State {
               std::string(nearCopied ? "true" : "false") +
               ",\"near_colour_mask_valid\":" +
               std::string(nearColourCopied && !nearInvalid ? "true" : "false") +
+              ",\"viewmodel_overlay_available\":" +
+              std::string(config().viewmodel && nearColourCopied &&
+                                  !nearInvalid &&
+                                  viewmodelBeforeSnapshot.get() &&
+                                  viewmodelAfterSnapshot.get()
+                              ? "true"
+                              : "false") +
               ",\"near_draws\":" + std::to_string(nearDraws) +
               ",\"ui_boundary_observed\":" +
               std::string(uiCopied ? "true" : "false"));
@@ -1294,6 +1376,15 @@ struct State {
             std::string(config().hudBypass ? "true" : "false") +
             ",\"hud_boundary_available\":" +
             std::string(uiCopied ? "true" : "false") +
+            ",\"viewmodel_requested\":" +
+            std::string(config().viewmodel ? "true" : "false") +
+            ",\"viewmodel_overlay_available\":" +
+            std::string(config().viewmodel && nearColourCopied &&
+                                !nearInvalid &&
+                                viewmodelBeforeSnapshot.get() &&
+                                viewmodelAfterSnapshot.get()
+                            ? "true"
+                            : "false") +
             ",\"merge_submissions\":" +
             std::string(config().mergeSubmissions ? "true" : "false") +
             ",\"native_queries_total\":" +
@@ -1386,8 +1477,11 @@ inline void beforeReset(IDirect3DDevice9 *d) noexcept {
   try {
     std::lock_guard<std::mutex> lock(mutex());
     auto found = states().find(d);
-    if (found != states().end())
+    if (found != states().end()) {
       found->second->hudSnapshot.reset();
+      found->second->viewmodelBeforeSnapshot.reset();
+      found->second->viewmodelAfterSnapshot.reset();
+    }
   } catch (...) {
   }
 }
