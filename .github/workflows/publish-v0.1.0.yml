@@ -1,0 +1,131 @@
+name: Publish v0.1.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v0.1.0.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the verified Windows package
+        uses: actions/download-artifact@v4
+        with:
+          name: ldb-host-capture-92f0ad1df08fc6ce02aa3b21fc398de7021a0a5e
+          run-id: 44238826701
+          github-token: ${{ github.token }}
+          path: artifact
+
+      - name: Verify and name the release asset
+        shell: python
+        run: |
+          import configparser
+          import hashlib
+          import json
+          from pathlib import Path
+          import struct
+          import zipfile
+
+          matches = list(Path("artifact").rglob("ldb-host-capture-dev.zip"))
+          if len(matches) != 1:
+              raise SystemExit(f"Expected one development ZIP, found: {matches}")
+
+          source = matches[0]
+          expected_sha256 = "9a045d4b7926d503628b39dc850e3492457ef3cfb6bc895f3d24128c79528fa8"
+          actual_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+          if actual_sha256 != expected_sha256:
+              raise SystemExit(f"Unexpected ZIP SHA-256: {actual_sha256}")
+
+          machines = {
+              "bin/dxvk_d3d9.dll": 0x014c,
+              "bin/.l4d2bridge/L4D2Bridge32.exe": 0x014c,
+              "bin/.l4d2bridge/L4D2Bridge64.exe": 0x8664,
+              "bin/.l4d2bridge/LDBFsrBackend64.dll": 0x8664,
+              "bin/.l4d2bridge/d3d9vk_x64.dll": 0x8664,
+              "bin/.l4d2bridge/vulkan-layer/AsteriaFrameGenerationLayer64.dll": 0x8664,
+          }
+
+          with zipfile.ZipFile(source) as archive:
+              if archive.testzip() is not None:
+                  raise SystemExit("ZIP integrity test failed")
+              roots = sorted({name.split("/", 1)[0] for name in archive.namelist() if name})
+              if roots != ["README.md", "bin"]:
+                  raise SystemExit(f"Unexpected ZIP roots: {roots}")
+              for name, expected_machine in machines.items():
+                  data = archive.read(name)
+                  if data[:2] != b"MZ":
+                      raise SystemExit(f"Not a PE image: {name}")
+                  pe_offset = struct.unpack_from("<I", data, 0x3c)[0]
+                  machine = struct.unpack_from("<H", data, pe_offset + 4)[0]
+                  if machine != expected_machine:
+                      raise SystemExit(f"Wrong PE machine for {name}: {machine:#x}")
+
+              receipt = json.loads(archive.read("bin/.l4d2bridge/capture-build.json"))
+              if receipt.get("native_host_build") != "compiled_MSVC_Release":
+                  raise SystemExit("Host is not a native MSVC Release build")
+              if receipt.get("bridge_version") != "v1.3.4":
+                  raise SystemExit("Unexpected L4D2Bridge version")
+              if receipt.get("dxvk_runtime_origin") != "unmodified_upstream_release":
+                  raise SystemExit("DXVK is not the unmodified upstream release")
+
+              config = configparser.ConfigParser()
+              config.read_string(archive.read("bin/.l4d2bridge/fg-config.ini").decode("utf-8-sig"))
+              fg = config["frame_generation"]
+              for key in ("enabled", "hud", "viewmodel", "dynamic_models", "hotkeys"):
+                  if fg.get(key) != "1":
+                      raise SystemExit(f"Expected {key}=1")
+              for key in ("monitor", "auto_capture"):
+                  if fg.get(key) != "0":
+                      raise SystemExit(f"Expected {key}=0")
+
+          target = Path("L4D2-DXVK-General-Framework-v0.1.0.zip")
+          target.write_bytes(source.read_bytes())
+          Path("SHA256SUMS.txt").write_text(
+              f"{actual_sha256}  {target.name}\n", encoding="utf-8"
+          )
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v0.1.0 \
+            L4D2-DXVK-General-Framework-v0.1.0.zip \
+            SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --latest \
+            --title "L4D2 DXVK General Framework v0.1.0" \
+            --notes-file - <<'EOF'
+          L4D2 DXVK General Framework 的首个公开版本，将 L4D2Bridge v1.3.4 x64 Host 与 FidelityFX FSR 3 Frame Generation 集成。
+
+          ## 主要功能
+
+          - x64 Vulkan Layer 帧生成路径，输出比例接近 2:1。
+          - 三槽 GPU 生命周期管理与异步队列。
+          - HUD、第一人称手部与武器、第三人称人物及动态模型保护。
+          - 使用官方未修改的 DXVK v2.6.1；不依赖私有 DXVK 导出。
+          - F8 可在游戏中暂停或恢复帧生成。
+          - 默认启用 FG 与画面保护；Monitor 和自动采集默认关闭。
+
+          ## 安装
+
+          1. 退出游戏和 Bridge Host；Steam 可以保持运行。
+          2. 建议先备份游戏现有的 `bin` 目录。
+          3. 将 ZIP 解压到 Left 4 Dead 2 根目录，合并并覆盖 `bin`。
+          4. 从 Steam 正常启动游戏。
+
+          ## 已验证
+
+          Arc B580 高压正常游玩约 43 分钟：149,201 次原生帧分发，输出比例 1.9801，无 Present 失败、无强制槽等待，资源租约全部正常释放。
+
+          ## 已知问题
+
+          - Steam Overlay 的 FPS 文字在生成帧间仍会闪烁；本版本暂不处理。
+          - 其他 GPU 或替换其他 DXVK 版本不保证兼容。
+          EOF
