@@ -49,3 +49,57 @@ bin/.l4d2bridge/fg-config.ini
 ```text
 L4D2BridgeLogs/<会话 GUID>/frame-generation/
 ```
+
+---
+
+# English
+
+## Introduction
+
+L4D2 DXVK General Framework adds FidelityFX FSR 3 Frame Generation to *Left 4 Dead 2*.
+
+The project uses the L4D2Bridge v1.3.4 x64 Host to obtain scene color, depth, and camera data, then performs frame generation and presentation through an x64 Vulkan Layer. The current version uses the official DXVK v2.6.1 release and protects the HUD, first-person hands and weapons, third-person characters, and dynamic models.
+
+The project is built upon or informed by the following open-source projects:
+
+- [L4D2_Dxvk_32to64_Bridge](https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge)
+- [DXVK](https://github.com/doitsujin/dxvk)
+- [FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK)
+- [L4D2 Asteria Graphics Enhancement](https://github.com/Anokianx/L4D2-Asteria-Graphics-Enhancement)
+- [L4D2 Danyria Integration Tool](https://github.com/Anokianx/L4D2-Danyria-Integration-Tool)
+
+See [THIRD_PARTY.md](THIRD_PARTY.md) for complete credits, pinned versions, and license information.
+
+## Installation
+
+1. Download the latest version from [Releases](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/releases/latest).
+2. Close the game, `L4D2Bridge64.exe`, and `L4D2Bridge32.exe`. Steam may remain open.
+3. Back up the game's existing `bin` directory.
+4. Extract the archive into the *Left 4 Dead 2* game directory, then merge and overwrite matching files in `bin`.
+5. Launch the game normally from Steam.
+
+The Client, Host32, and Host64 included in the archive are a matched set and must be installed together. If `client.testX86Server=True` was previously enabled, change it back to `False`.
+
+## Usage
+
+Frame Generation is enabled automatically at startup. Press `F8` during gameplay to pause or resume it.
+
+Configuration file:
+
+```text
+bin/.l4d2bridge/fg-config.ini
+```
+
+| Option | Default | Description |
+| --- | ---: | --- |
+| `enabled` | `1` | Enables Frame Generation; set to `0` to disable it on the next launch |
+| `hud` | `1` | Protects the game HUD |
+| `viewmodel` | `1` | Protects first-person hands and weapons |
+| `dynamic_models` | `1` | Protects third-person characters and dynamic models |
+| `monitor` | `0` | Enables the live monitoring window |
+
+Runtime logs are stored in:
+
+```text
+L4D2BridgeLogs/<session GUID>/frame-generation/
+```
