@@ -1,6 +1,6 @@
 # L4D2 DXVK General Framework
 
-面向《Left 4 Dead 2》的实验性 x86 → x64 图形扩展框架。目前的首要成果是在 **L4D2Bridge（LDB）x64 Host** 中采集真实场景输入，并通过独立 x64 Vulkan Layer 接入 FidelityFX FSR 3 Frame Interpolation；光线追踪路线保留为后续研究分支。
+面向《Left 4 Dead 2》的实验性 x86 → x64 图形扩展框架。目前的首要成果是在 **L4D2Bridge（LDB）x64 Host** 中采集真实场景输入，并通过独立 x64 Vulkan Layer 接入 FidelityFX FSR 3 Frame Interpolation。
 
 > 本仓库仍处于开发验证阶段，暂未发布 Release。`main` 保存当前已验收的源码基线，不代表面向普通玩家的稳定发行版。
 
@@ -15,13 +15,6 @@
 - HUD 已稳定分层；第一人称武器和手部已完成保护。当前基线进一步保护第三人称与其他动态人物。
 - 已在 Intel Arc B580 上观察到 FG 开启后 GPU 利用率上升，并完成可见画面、节奏和约 2 倍输出链验证。
 - Steam Overlay 不在游戏 HUD 捕获边界内，其 FPS 文本仍可能在生成帧中闪烁。
-- 最近一次长时间验收被自定义 `vphysics.dll` 的 x86 物理回调崩溃中断；日志未发现 Host、Vulkan、Present 或 FG 设备错误。该问题不归入当前 FG 基线。
-
-这仍不是“任意机器即装即用”的成品。完整引擎物体/骨骼运动矢量尚未接入，快速运动、透明物体和第三方 Overlay 仍需持续测试。
-
-### 光线追踪
-
-仓库保留静态世界、材质、模型、跨进程协议和 Remix 运行时实验。独立 B580 静态 RT 已通过，但实时游戏 RT 尚未达到可发布 Beta，当前开发优先级低于帧生成稳定化。历史过程和实机证据保存在 [`docs/research`](docs/research/) 与 [`research`](research/) 中。
 
 ## 架构
 
