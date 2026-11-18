@@ -1,39 +1,34 @@
 # L4D2 DXVK General Framework
 
-面向《Left 4 Dead 2》的实验性 x86 → x64 图形扩展框架。目前的首要成果是在 **L4D2Bridge（LDB）x64 Host** 中采集真实场景输入，并通过独立 x64 Vulkan Layer 接入 FidelityFX FSR 3 Frame Interpolation。
+## 介绍
 
-> 本仓库仍处于开发验证阶段，暂未发布 Release。`main` 保存当前已验收的源码基线，不代表面向普通玩家的稳定发行版。
+L4D2 DXVK General Framework 为《Left 4 Dead 2》提供基于 FidelityFX FSR 3 的帧生成功能。
 
-## 当前状态
+项目使用 L4D2Bridge v1.3.4 x64 Host 获取场景颜色、深度和相机数据，并通过 x64 Vulkan Layer 完成帧生成与显示。当前版本使用官方 DXVK v2.6.1，同时支持 HUD、第一人称手部与武器、第三人称人物及动态模型保护。
 
-### 帧生成
+项目基于或参考以下开源项目：
 
-- 已同步到 LDB v1.3.4，Client、Host32 和 Host64 必须成套使用。
-- x64 Host 从实际 D3D9 命令序列获取 HDR 场景颜色、深度、相机矩阵、HUD 和 viewmodel 边界。
-- 颜色、深度、运动和覆盖资源保持在同一 GPU 内，不通过跨进程 IPC 复制整幅画面。
-- 独立 x64 Vulkan Layer 管理 FSR3 replacement swapchain、三槽输入生命周期、异步队列和约 2:1 的输出提交。
-- HUD 已稳定分层；第一人称武器和手部已完成保护。当前基线进一步保护第三人称与其他动态人物。
-- 已在 Intel Arc B580 上观察到 FG 开启后 GPU 利用率上升，并完成可见画面、节奏和约 2 倍输出链验证。
-- Steam Overlay 不在游戏 HUD 捕获边界内，其 FPS 文本仍可能在生成帧中闪烁。
+- [L4D2_Dxvk_32to64_Bridge](https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge)
+- [DXVK](https://github.com/doitsujin/dxvk)
+- [FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK)
+- [L4D2 Asteria Graphics Enhancement](https://github.com/Anokianx/L4D2-Asteria-Graphics-Enhancement)
+- [L4D2 Danyria Integration Tool](https://github.com/Anokianx/L4D2-Danyria-Integration-Tool)
 
-## 架构
+完整引用、固定版本与许可证信息见 [THIRD_PARTY.md](THIRD_PARTY.md)。
 
-```text
-L4D2 x86
-  -> LDB Client
-  -> LDB x64 Host + official DXVK D3D9
-       |  GPU scene/depth/camera/HUD/viewmodel inputs
-       v
-     GF x64 Vulkan Layer
-       -> FidelityFX FSR3 Frame Interpolation
-       -> Vulkan driver / display
-```
+## 安装
 
-GF 不再要求修改 DXVK 本体。当前包使用官方 DXVK v2.6.1，并只依赖其标准 D3D9/Vulkan interop；理论上允许替换其他官方 DXVK 版本进行实验，但不保证 interop ABI、功能或稳定性兼容。
+1. 从 [Releases](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/releases/latest) 下载最新版本。
+2. 退出游戏以及 `L4D2Bridge64.exe`、`L4D2Bridge32.exe`；Steam 可以保持运行。
+3. 备份游戏现有的 `bin` 文件夹。
+4. 将压缩包解压到 Left 4 Dead 2 游戏根目录，合并并覆盖 `bin` 中的同名文件。
+5. 从 Steam 正常启动游戏。
 
-## 使用方式
+压缩包中的 Client、Host32 与 Host64 为配套版本，应当一并安装。若曾设置 `client.testX86Server=True`，请将其改回 `False`。
 
-当前没有 Release，也不建议把历史 `downloads` 分支中的开发 ZIP 当作正式版本。已构建的开发包采用覆盖式目录结构：退出 L4D2 和 Bridge Host 后，将包内 `bin` 合并到游戏根目录的 `bin`，然后从 Steam 正常启动。Steam 无需退出，旧式安装/启动脚本仅用于隔离诊断。
+## 使用
+
+帧生成在游戏启动时自动启用。运行过程中按 `F8` 可以暂停或恢复帧生成。
 
 配置文件位于：
 
@@ -41,64 +36,16 @@ GF 不再要求修改 DXVK 本体。当前包使用官方 DXVK v2.6.1，并只�
 bin/.l4d2bridge/fg-config.ini
 ```
 
-主要选项：
-
-| 选项 | 默认值 | 作用 |
+| 选项 | 默认值 | 功能 |
 | --- | ---: | --- |
-| `enabled` | `1` | 进程启动时启用 FG；设为 `0` 时不加载 Layer、Monitor 或 FG 日志路径，尽量接近纯净 LDB v1.3.4 |
-| `hud` | `1` | 保护 HUD |
+| `enabled` | `1` | 启用帧生成；设为 `0` 可在下次启动时关闭 |
+| `hud` | `1` | 保护游戏 HUD |
 | `viewmodel` | `1` | 保护第一人称手部与武器 |
-| `dynamic_models` | `1` | 保护第三人称及其他动态人物 |
-| `content_probe` | `0` | 启用小规模生成帧差异探针；诊断用，会增加开销 |
-| `monitor` | `0` | 自动启动实时监测窗口并写入 CSV；发行包默认关闭 |
-| `auto_capture` | `0` | 自动保存诊断截图；发行包默认关闭 |
-| `merge_submissions` | `1` | 合并 Host GPU submission |
+| `dynamic_models` | `1` | 保护第三人称人物及动态模型 |
+| `monitor` | `0` | 启用实时监测窗口 |
 
-运行时按 `F8` 暂停或恢复帧生成。`F8` 只是热切换；只有在启动前设置 `enabled=0` 才是硬关闭。
-
-每次会话的 Host、Layer、DXVK 与 Monitor 数据统一写入：
+运行日志保存在：
 
 ```text
 L4D2BridgeLogs/<会话 GUID>/frame-generation/
 ```
-
-完整安装、验收字段和日志解释见[帧生成 Host 接入文档](docs/research/fsr-host-integration.md)。
-
-## 从源码构建
-
-Windows 原生包需要 Visual Studio 2022、MSVC x86/x64 工具链、Python 3.12、CMake、Meson 和 Ninja。准备脚本会按固定提交拉取依赖并拒绝静默使用错误版本：
-
-```powershell
-python -m pip install meson==1.3.2 ninja==1.11.1.1
-python scripts/prepare_research.py --only dxvk vulkan_headers
-python scripts/prepare_ldb_capture.py
-powershell -NoProfile -File scripts/build_ldb_capture.ps1
-python -m unittest discover -s tests -v
-```
-
-`build_ldb_capture.ps1` 会准备并构建 Asteria x64 Layer、编译 LDB 三件套、调用 `scripts/package_ldb_capture.py` 打包，并校验 ZIP 顶层布局与全部运行文件哈希。构建输出和第三方源码位于被忽略的 `.research/`；当前 CI 工作流仍服务于开发分支和开发制品，不等同于 Release。
-
-Linux 可运行不依赖 Windows/MSVC 的研究和回归检查：
-
-```bash
-bash scripts/setup_research_tools.sh
-python3 scripts/prepare_research.py
-python3 scripts/build_probe.py
-python3 -m unittest discover -s tests -v
-```
-
-## 仓库结构
-
-- `integration/ldb/`：LDB v1.3.4 Host 补丁、FG 配置和输入/生命周期实现。
-- `integration/fg/`：Asteria x64 Vulkan Layer 补丁及 HUD 合成资源。
-- `integration/rt/`：实验性实时光追协议、世界与模型路径。
-- `shaders/`、`tools/`：GPU 输入处理、插值保护和诊断工具。
-- `scripts/`：固定源码准备、Windows 构建、打包和结果分析。
-- `tests/`：Python、x86/x64 原生合同和回归用例。
-- `docs/research/`、`research/`：设计记录、实机分析和机器可读证据。
-
-## 上游项目与许可
-
-本项目实际使用的固定源码、参考实现和各自角色列于 [`THIRD_PARTY.md`](THIRD_PARTY.md)。核心来源包括 L4D2Bridge、DXVK、FidelityFX SDK、Asteria、DXVK Remix 和 l4d2-rtx。
-
-第三方代码和构建产物继续受各自上游许可证约束；本仓库中的补丁不会改变或替代这些许可证。构建包会随对应组件附带上游许可证。L4D2、Source Engine、Steam 及相关商标归其权利人所有。
