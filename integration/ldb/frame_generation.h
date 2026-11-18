@@ -30,7 +30,7 @@ inline std::wstring readEnv(const wchar_t *key) {
 struct Config {
   bool enabled = false, generatedOnly = false, providerOnly = false,
        hotkeys = true, fastInputs = false, hudBypass = false,
-       viewmodel = false,
+       viewmodel = false, dynamicModels = false,
        mergeSubmissions = true;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
@@ -54,6 +54,7 @@ struct Config {
       fastInputs = readEnv(L"LDB_FG_FAST_INPUTS") == L"1";
       hudBypass = readEnv(L"LDB_FG_HUD_BYPASS") == L"1";
       viewmodel = readEnv(L"LDB_FG_VIEWMODEL") == L"1";
+      dynamicModels = readEnv(L"LDB_FG_DYNAMIC_MODELS") == L"1";
       mergeSubmissions = readEnv(L"LDB_FG_MERGE_SUBMISSIONS") != L"0";
       autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
       auto pacing = readEnv(L"LDB_FG_PACING_MS");
@@ -252,6 +253,8 @@ struct State {
              std::string(config().hudBypass ? "true" : "false") +
              ",\"viewmodel_requested\":" +
              std::string(config().viewmodel ? "true" : "false") +
+             ",\"dynamic_model_protection_requested\":" +
+             std::string(config().dynamicModels ? "true" : "false") +
              ",\"merge_submissions\":" +
              std::string(config().mergeSubmissions ? "true" : "false") +
              ",\"qpc_frequency\":" +
@@ -883,10 +886,12 @@ struct State {
                 (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
                 (gpu->finalFormat == VK_FORMAT_B8G8R8A8_UNORM ? 4u : 0u) |
                 (viewmodelOverlay ? 8u : 0u) |
+                (config().dynamicModels ? 16u : 0u) |
                 (validHistory ? 32u : 0u);
               providerParams.flags = {gpu->width, gpu->height, providerFlags,
                                       previousFlags};
               providerParams.thresholds[2] = 1.0f;
+              providerParams.thresholds[3] = 0.08f;
               try {
                 if (!config().mergeSubmissions) {
                   if (hudOverlay)
@@ -1275,8 +1280,10 @@ struct State {
       previousMatrix = currentMatrix;
       previousColor = sceneColor;
       previousDepth = sceneDepth;
-      previousFlags = (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
-                      (nearColourCopied ? 8u : 0u) | 16u;
+      previousFlags =
+          (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
+          (nearColourCopied ? 8u : 0u) |
+          (config().dynamicModels ? 16u : 0u);
       gpu->advance();
       history = true;
     } else
@@ -1322,6 +1329,8 @@ struct State {
             ",\"quality_total_pixels\":" + std::to_string(quality.total) +
             ",\"foreground_pixels\":" + std::to_string(quality.foreground) +
             ",\"near_colour_pixels\":" + std::to_string(quality.nearColour) +
+            ",\"dynamic_protected_pixels\":" +
+            std::to_string(providerOnly ? quality.nearColour : 0) +
             ",\"near_depth_pixels\":" + std::to_string(quality.nearDepth) +
             ",\"ui_pixels\":" + std::to_string(quality.ui) +
             ",\"local_effect_risk\":" +
@@ -1361,6 +1370,8 @@ struct State {
             std::string(uiCopied ? "true" : "false") +
             ",\"viewmodel_requested\":" +
             std::string(config().viewmodel ? "true" : "false") +
+            ",\"dynamic_model_protection_requested\":" +
+            std::string(config().dynamicModels ? "true" : "false") +
             ",\"viewmodel_overlay_available\":" +
             std::string(config().viewmodel && nearColourCopied &&
                                 !nearInvalid &&

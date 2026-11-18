@@ -16,6 +16,7 @@ struct Settings {
   bool enabled = true;
   bool hud = true;
   bool viewmodel = true;
+  bool dynamicModels = true;
   bool contentProbe = false;
   bool monitor = true;
   bool mergeSubmissions = true;
@@ -95,6 +96,8 @@ inline Settings readSettings(const std::filesystem::path &path) noexcept {
   result.enabled = iniBool(path, L"enabled", result.enabled);
   result.hud = iniBool(path, L"hud", result.hud);
   result.viewmodel = iniBool(path, L"viewmodel", result.viewmodel);
+  result.dynamicModels =
+      iniBool(path, L"dynamic_models", result.dynamicModels);
   result.contentProbe =
       iniBool(path, L"content_probe", result.contentProbe);
   result.monitor = iniBool(path, L"monitor", result.monitor);
@@ -162,6 +165,7 @@ inline void clearManagedEnvironment() noexcept {
       L"LDB_FG_BACKEND",          L"LDB_FG_PRESENTER",
       L"LDB_FG_MODE",             L"LDB_FG_FAST_INPUTS",
       L"LDB_FG_HUD_BYPASS",       L"LDB_FG_VIEWMODEL",
+      L"LDB_FG_DYNAMIC_MODELS",
       L"LDB_FG_MERGE_SUBMISSIONS", L"LDB_FG_CAPTURE_FRAMES",
       L"LDB_FG_HOTKEYS",          L"LDB_FG_AUTO_CAPTURE",
       L"LDB_FG_PACING_MS",        L"LDB_FG_LOG_DIR",
@@ -222,6 +226,8 @@ inline void initialize() noexcept {
       setEnvironment(L"LDB_FG_FAST_INPUTS", L"1", replace);
       setEnvironment(L"LDB_FG_HUD_BYPASS", flag(settings.hud), replace);
       setEnvironment(L"LDB_FG_VIEWMODEL", flag(settings.viewmodel), replace);
+      setEnvironment(L"LDB_FG_DYNAMIC_MODELS", flag(settings.dynamicModels),
+                     replace);
       setEnvironment(L"LDB_FG_MERGE_SUBMISSIONS",
                      flag(settings.mergeSubmissions), replace);
       setEnvironment(L"LDB_FG_CAPTURE_FRAMES",
@@ -286,6 +292,7 @@ inline void attachLogSession(const std::filesystem::path &ldbSession) noexcept {
       diagnostic << "enabled=1\n"
                  << "hud=" << state.settings.hud << "\n"
                  << "viewmodel=" << state.settings.viewmodel << "\n"
+                 << "dynamic_models=" << state.settings.dynamicModels << "\n"
                  << "content_probe=" << state.settings.contentProbe << "\n"
                  << "monitor=" << state.settings.monitor << "\n"
                  << "script_mode=" << state.scriptMode << "\n"

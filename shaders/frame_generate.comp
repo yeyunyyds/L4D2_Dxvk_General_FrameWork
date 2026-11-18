@@ -78,6 +78,40 @@ float sourceDepth(vec2 xy,bool previous) {
  return previous?sampleAt(previousDepth,xy).r:sampleAt(currentDepth,xy).r;
 }
 bool sceneDepth(float z){return z>.2&&z<.999999&&!isnan(z)&&!isinf(z);}
+// Conservative current-pixel preservation for animated geometry that cannot
+// be represented by camera-only motion. Static world pixels reproject to the
+// same previous depth and colour, while a moving skinned model normally leaves
+// either a depth mismatch or (for depthless first-person hands) a lower-screen
+// colour residual. This is deliberately a protection mask, not an invented
+// object motion vector.
+bool providerDynamicAt(vec2 screen) {
+ if((p.flags.z&16u)==0u||(p.flags.z&32u)==0u||!inside(screen))return false;
+ float depth=sampleAt(currentDepth,screen).r;
+ if(!sceneDepth(depth))return false;
+ vec4 mid=project(2u,clipAt(screen,depth));
+ vec2 previousScreen;float expectedPreviousDepth;
+ if(mid.w<=1e-8||!locate(1u,mid,previousScreen,expectedPreviousDepth))return false;
+ vec3 currentColour=sampleAt(currentFinal,screen).rgb;
+ vec3 previousColour=sampleAt(previousFinal,previousScreen).rgb;
+ float colourResidual=max(abs(currentColour.r-previousColour.r),
+                      max(abs(currentColour.g-previousColour.g),
+                          abs(currentColour.b-previousColour.b)));
+ if(colourResidual<=p.thresholds.w)return false;
+ float previousDepthValue=sampleAt(previousDepth,previousScreen).r;
+ bool depthResidual=!sceneDepth(previousDepthValue)||
+                    abs(previousDepthValue-expectedPreviousDepth)>
+                        max(0.0005,p.thresholds.x*2.0);
+ bool firstPersonFallback=screen.y>float(p.flags.y)*0.28;
+ // A strong coherent colour change also protects characters when the scene
+ // depth snapshot predates their StudioModel draw.
+ return depthResidual||firstPersonFallback||colourResidual>p.thresholds.w*2.0;
+}
+bool providerDynamic(vec2 screen) {
+ if(providerDynamicAt(screen))return true;
+ const vec2 offsets[4]=vec2[](vec2(1,0),vec2(-1,0),vec2(0,1),vec2(0,-1));
+ for(int i=0;i<4;i++)if(providerDynamicAt(screen+offsets[i]))return true;
+ return false;
+}
 bool gatherDepth(vec2 screen,bool previous,out vec2 source,out float midZ) {
  midZ=sourceDepth(screen,previous);if(!sceneDepth(midZ))return false;
  uint fromMid=previous?1u:0u,toMid=previous?5u:2u;float expected;
@@ -183,6 +217,7 @@ void main() {
  imageStore(hostDepth,xy,vec4(exportedDepth,0,0,0));
  imageStore(hostMotion,xy,vec4(exportedMotion,0,0));
  bool providerExport=p.thresholds.z>.5;
+ bool providerDynamicProtected=false;
  if(providerExport) {
   vec4 before=(p.flags.z&2u)!=0u?sampleAt(currentUi,screen):fallback;
   bool hud=any(greaterThan(abs(fallback.rgb-before.rgb),vec3(0.5/255.0)));
@@ -193,7 +228,9 @@ void main() {
    abs(sampleAt(previousNearBefore,screen).rgb-
        sampleAt(previousNearAfter,screen).rgb),vec3(0.00001)));
   bool viewmodel=currentViewmodel||previousViewmodel;
-  float alpha=hud||viewmodel?1.0:0.0;
+  bool dynamicModel=providerDynamic(screen);
+  providerDynamicProtected=dynamicModel;
+  float alpha=hud||viewmodel||dynamicModel?1.0:0.0;
   result=before;
   mark=vec4(fallback.rgb,alpha);
  }
@@ -255,7 +292,7 @@ void main() {
  if((p.flags.z&4u)!=0u)result=result.bgra;
  imageStore(generated,xy,result);imageStore(classification,xy,risk!=0u?vec4(1,.5,1,1):mark);
  uint raw=providerExport?0u:foregroundSources(screen,false);
- sources=uvec4(uint((raw&4u)!=0u),uint((raw&1u)!=0u),uint((raw&2u)!=0u),providerExport?uint(any(greaterThan(abs(exportedMotion),vec2(1e-7)))):uint(mark.r<.5&&mark.g<.5&&mark.b>.5));
+ sources=uvec4(providerExport?uint(providerDynamicProtected):uint((raw&4u)!=0u),uint((raw&1u)!=0u),uint((raw&2u)!=0u),providerExport?uint(any(greaterThan(abs(exportedMotion),vec2(1e-7)))):uint(mark.r<.5&&mark.g<.5&&mark.b>.5));
  cell.x=1u;
  if((mark.g>.5&&!(mark.r>.5&&mark.b<.5))||(mark.r<.5&&mark.g<.5&&mark.b>.5)||(mark.r>.5&&mark.g>.1&&mark.g<.75&&mark.b<.5))cell.w=1u;
  if(mark.r>.5&&mark.g<.5&&mark.b<.5)cell.y=1u;

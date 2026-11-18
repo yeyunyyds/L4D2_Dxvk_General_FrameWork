@@ -28,6 +28,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertTrue(settings.getboolean("enabled"))
         self.assertTrue(settings.getboolean("hud"))
         self.assertTrue(settings.getboolean("viewmodel"))
+        self.assertTrue(settings.getboolean("dynamic_models"))
         self.assertFalse(settings.getboolean("content_probe"))
         self.assertTrue(settings.getboolean("monitor"))
         self.assertTrue(settings.getboolean("merge_submissions"))
@@ -87,6 +88,16 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("currentViewmodel||previousViewmodel", shader)
         self.assertIn("hud||viewmodel", shader)
         self.assertIn("viewmodel_overlay_available", host)
+
+    def test_dynamic_model_protection_is_gpu_only_and_bounded(self):
+        shader = (ROOT / "shaders/frame_generate.comp").read_text()
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        self.assertIn("bool providerDynamicAt", shader)
+        self.assertIn("depthResidual||firstPersonFallback", shader)
+        self.assertIn("colourResidual>p.thresholds.w*2.0", shader)
+        self.assertIn("dynamic_protected_pixels", host)
+        self.assertIn("config().dynamicModels ? 16u : 0u", host)
+        self.assertNotIn("GetRenderTargetData", host)
 
     def test_hud_shader_is_checked_in_as_valid_spirv_words(self):
         header = (ROOT / "integration/fg/HudCompositeSpirv.h").read_text()

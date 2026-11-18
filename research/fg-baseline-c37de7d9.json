@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "status": "accepted_baseline",
+  "session_guid": "c37de7d9-43fc-4001-a629-62c2d1974d7b",
+  "source_archive": "c37de7d9-43fc-4001-a629-62c2d1974d7b.zip",
+  "source_archive_sha256": "cfcbb56e9201d87e61f38bfd8788e76fb54f618570c5e08e87106c50fb5cae68",
+  "bridge_build": "ldb-capture-dev+30adfb01f69a6543",
+  "project_commit": "8e6d17aa46ab5730e3f23c73637277ec030fa143",
+  "ldb_version": "v1.3.4",
+  "dxvk": {
+    "version": "v2.6.1",
+    "origin": "unmodified_upstream_release",
+    "standard_interop_available": true,
+    "private_exports_required": false,
+    "submission_family": 0
+  },
+  "logging": {
+    "merged_guid_session": true,
+    "frame_generation_subdirectory": true,
+    "host_summary_missing_because_event_log_reached_64_mib": true,
+    "bridge_shutdown_clean": true
+  },
+  "frame_generation": {
+    "native_v2_accepted": 37255,
+    "native_interpolation_dispatches": 37255,
+    "native_input_presents": 37255,
+    "native_output_presents": 74345,
+    "native_output_presents_per_input": 1.9955710642866729,
+    "native_present_failures": 0,
+    "alternation_ratio": 1.0,
+    "content_distinctness": "unverified_content_probe_disabled"
+  },
+  "performance": {
+    "host_provider_input_fps_median": 172.92361963720626,
+    "f8_disabled_input_fps_median": 238.07823250720185,
+    "host_work_ms_median": 1.78,
+    "gpu_dispatch_ms_median": 0.370052,
+    "fence_wait_ms_median": 0.1311,
+    "gpu_submissions_median": 2.0,
+    "forced_retirement_waits": 0,
+    "input_queue_peak": 1
+  },
+  "visual_observations": {
+    "hud": "stable",
+    "weapon": "sharp",
+    "first_person_hands": "intermittently_blurred",
+    "gnome_and_hands": "sharp_together",
+    "third_person_character": "blurred",
+    "steam_fps_overlay": "flickers"
+  },
+  "scope": "Baseline for dynamic-model and expanded viewmodel protection; not proof of physical scanout or distinct generated content."
+}

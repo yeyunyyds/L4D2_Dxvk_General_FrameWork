@@ -177,6 +177,8 @@ def analyze(path):
     complete = False
     host_provider = {'packets': 0, 'accepted': 0, 'native_accepted_packets': 0,
                      'gpu_inputs_ready': 0, 'max_motion_pixels': 0,
+                     'dynamic_protection_frames': 0,
+                     'max_dynamic_protected_pixels': 0,
                      'native_queries_total': 0, 'native_tickets_total': 0,
                      'native_submitted_total': 0, 'native_accepted_total': 0,
                      'native_released_total': 0, 'native_busy_total': 0}
@@ -264,6 +266,10 @@ def analyze(path):
                     viewmodel_overlay['sampled_frames'] += 1
                     viewmodel_overlay['available_frames'] += int(
                         event.get('viewmodel_overlay_available', False))
+                protected = event.get('dynamic_protected_pixels', 0)
+                host_provider['dynamic_protection_frames'] += int(protected > 0)
+                host_provider['max_dynamic_protected_pixels'] = max(
+                    host_provider['max_dynamic_protected_pixels'], protected)
                 group = ('disabled' if not event['enabled'] else
                          event['mode'] if event['generated'] else 'enabled_fallback')
                 data = groups[group]

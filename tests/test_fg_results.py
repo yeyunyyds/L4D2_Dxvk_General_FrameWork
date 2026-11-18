@@ -130,6 +130,20 @@ class SessionResultsTests(unittest.TestCase):
                                  submission=True)],
             private_dxvk_exports_required=False))
 
+    def test_dynamic_protection_telemetry_is_aggregated(self):
+        result=self.analyze([dict(event='session',qpc_frequency=1000),
+            dict(event='frame_metrics',frame=1,generation=1,arrival_qpc=10,
+                 enabled=True,mode='host_provider',generated=True,captured=False,
+                 dynamic_protected_pixels=120),
+            dict(event='frame_metrics',frame=2,generation=1,arrival_qpc=20,
+                 enabled=True,mode='host_provider',generated=True,captured=False,
+                 dynamic_protected_pixels=80),
+            dict(event='summary',logical_presents=2,generated_presents=2,
+                 presenter_inputs_accepted=2,presenter_inputs_rejected=0)])
+        self.assertEqual(result['host_provider']['dynamic_protection_frames'],2)
+        self.assertEqual(
+            result['host_provider']['max_dynamic_protected_pixels'],120)
+
     def test_layer_acceptance_separates_dispatch_from_content_proof(self):
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)/'asteria-layer.json'
