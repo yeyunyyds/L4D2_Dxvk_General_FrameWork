@@ -1,56 +1,110 @@
-# L4D2_Dxvk_General_FrameWork
+# L4D2 DXVK General Framework
 
-目标：在 L4D2 + DXVK + Intel Arc B580 环境研究光追与插帧。当前优先大量复用 l4d2-rtx，保留 Source 的多线程渲染能力。
+面向《Left 4 Dead 2》的实验性 x86 → x64 图形扩展框架。目前的首要成果是在 **L4D2Bridge（LDB）x64 Host** 中采集真实场景输入，并通过独立 x64 Vulkan Layer 接入 FidelityFX FSR 3 Frame Interpolation；光线追踪路线保留为后续研究分支。
 
-[v52 单次渲染上下文取证](docs/research/rt-model-resource-architecture-v47.md)：v51 在未知 context 上反复执行 `GetRenderContext/Release`，实机再次触发 `engine.dll+0xE0940`。v52 恢复 v50 已证明无崩溃的单次获取，并立即持久化实际 context、绑定阶段及槽 128–159；仍不调用候选队列函数或提交人物。
+> 本仓库仍处于开发验证阶段，暂未发布 Release。`main` 保存当前已验收的源码基线，不代表面向普通玩家的稳定发行版。
 
-[v43 四 worker 帧批处理原型](docs/research/rt-world-v43-frame-batch.md)：同一次 F9 先保留 30 帧 GPU-80 正确性 oracle，再把 60 帧 CPU 姿态与几何准备交给四个 Host worker，并在 HUD 注入前将同材质／变换的 Source surface 合并为较少的 Remix Mesh。Source Draw 完整性与 API 批次压缩分别验收，任何部件缺失都会失败。[v42 后的架构重审](docs/research/rt-architecture-reassessment-v42.md)与[实测结果](docs/research/rt-performance-232019-result.md)记录了切换路线的依据。
+## 当前状态
 
-[多线程光追完整实施计划](docs/research/multithreaded-rt-implementation-plan.md)：重构有序帧／绘制数据和线程相关 Hook，沿用匹配 Remix 后端；默认把用户采集合并为 A（兼容性／静态 RT／队列）与 B（动态／画面／生命周期／性能）两批，每批一个入口、一个结果 ZIP。
+### 帧生成
 
-[RT 接入基础进展](docs/research/rt-foundation.md)：已固定 LDB 1.3.2 和自定义 Remix 源码候选，实现有序协议、Device 通道观察与开发采集协调器；x86 client／x64 Host 原生构建和两种架构的执行用例通过。Source 队列 Hook、游戏 RT 和综合包 A 尚未完成。
+- 已同步到 LDB v1.3.4，Client、Host32 和 Host64 必须成套使用。
+- x64 Host 从实际 D3D9 命令序列获取 HDR 场景颜色、深度、相机矩阵、HUD 和 viewmodel 边界。
+- 颜色、深度、运动和覆盖资源保持在同一 GPU 内，不通过跨进程 IPC 复制整幅画面。
+- 独立 x64 Vulkan Layer 管理 FSR3 replacement swapchain、三槽输入生命周期、异步队列和约 2:1 的输出提交。
+- HUD 已稳定分层；第一人称武器和手部已完成保护。当前基线进一步保护第三人称与其他动态人物。
+- 已在 Intel Arc B580 上观察到 FG 开启后 GPU 利用率上升，并完成可见画面、节奏和约 2 倍输出链验证。
+- Steam Overlay 不在游戏 HUD 捕获边界内，其 FPS 文本仍可能在生成帧中闪烁。
+- 最近一次长时间验收被自定义 `vphysics.dll` 的 x86 物理回调崩溃中断；日志未发现 Host、Vulkan、Present 或 FG 设备错误。该问题不归入当前 FG 基线。
 
-[B580 独立静态 RT 已通过](docs/research/rt-preflight-b580-static-pass.md)：v6 实测 13/13 项、26/26 次读回通过，自发光与独立灯光的轮廓/平移均满足原严格判据。游戏 RT、Source 多线程、性能及资源释放仍待验证；下一步转入实际游戏队列与静态世界接入。
+这仍不是“任意机器即装即用”的成品。完整引擎物体/骨骼运动矢量尚未接入，快速运动、透明物体和第三方 Overlay 仍需持续测试。
 
-[真实游戏 Draw 观察接入](docs/research/rt-game-draw-observer.md)：配套 client/Host 把当前矩阵、材质和原 Draw 放进同一 RPC，保留原绘制；一次 F9 合并采集消费顺序、顶点布局与队列 ABI 证据。世界分类与主视图尚未确认，不启用游戏 RT。
+### 光线追踪
 
-[首轮真实 Draw 复核](docs/research/rt-draw-232229-result.md)：120 帧、40,952 次 Draw 的矩阵/视口/跨进程关联通过；发现世界候选实际 stride 48，与原转换器的 40 字节假设不同。收尾打包漏配置已定位，模块/Source 并行和游戏 RT 仍待验证；无需单独重复本段采集。
+仓库保留静态世界、材质、模型、跨进程协议和 Remix 运行时实验。独立 B580 静态 RT 已通过，但实时游戏 RT 尚未达到可发布 Beta，当前开发优先级低于帧生成稳定化。历史过程和实机证据保存在 [`docs/research`](docs/research/) 与 [`research`](research/) 中。
 
-[受限静态世界接入试验](docs/research/rt-world-pilot.md)：适配真实 48 字节布局，按实时材质/相机/深度条件筛选世界候选，以同一版固定 Remix 尝试实际绘制转换；一次 F9 合并控制段、转换段、颜色/深度/法线和模块证据。未改 Source 线程 CVar，实际游戏画面与并行仍待验证。
+## 架构
 
-[光追优先的路线评估](docs/research/ray-tracing-route-review.md)：若跳过内置 FG，先验证匹配的 l4d2-rtx／Remix 在 B580 的兼容性与高压预算；限定硬件 RT 效果与完整路径追踪分别评估。当前已通过独立最小场景，游戏光追仍未验收。
+```text
+L4D2 x86
+  -> LDB Client
+  -> LDB x64 Host + official DXVK D3D9
+       |  GPU scene/depth/camera/HUD/viewmodel inputs
+       v
+     GF x64 Vulkan Layer
+       -> FidelityFX FSR3 Frame Interpolation
+       -> Vulkan driver / display
+```
 
-具体体验目标：原生高压约 60～80 FPS 时，锁定 60 个真实帧，通过插帧稳定呈现 120 帧；以高压最低帧和实际送帧节奏验收。
+GF 不再要求修改 DXVK 本体。当前包使用官方 DXVK v2.6.1，并只依赖其标准 D3D9/Vulkan interop；理论上允许替换其他官方 DXVK 版本进行实验，但不保证 interop ABI、功能或稳定性兼容。
 
-内置插帧扩展暂缓，现有实验包保留，尚未完成 B580 游戏插帧质量或游戏光追验收。
+## 使用方式
 
-[60→120 路线重评](docs/research/project-reassessment-60to120.md)：当前输入可信度、画质、GPU 预算与双呈现仍未达标。建议先验证成品方案是否满足目标；内置路线按明确门槛研发，停止仅围绕通过率小修。
+当前没有 Release，也不建议把历史 `downloads` 分支中的开发 ZIP 当作正式版本。已构建的开发包采用覆盖式目录结构：退出 L4D2 和 Bridge Host 后，将包内 `bin` 合并到游戏根目录的 `bin`，然后从 Steam 正常启动。Steam 无需退出，旧式安装/启动脚本仅用于隔离诊断。
 
-已实现[独立 Host 采集原型](docs/research/host-capture.md)：颜色/深度像素与 Reset 已通过软件 Vulkan 及用户上传的 B580 实机日志检查。
+配置文件位于：
 
-本版合并[可显示生成帧的相机插帧原型](docs/research/frame-generation-prototype.md)：全尺寸 GPU 历史、场景/武器/UI 阶段掩码、中间视角合成和真实 Present。武器/UI 保留当前帧，动态物体、透明边缘与帧节奏仍属原型限制。用户之前的 B580 GPU 重投影验证见[报告](docs/research/gpu-reprojection-user-results.md)。
+```text
+bin/.l4d2bridge/fg-config.ini
+```
 
-- [第一阶段研究结果](docs/research/phase1.md)：源码接入点、必要改动与验证证据。
-- [官方 FSR 组件接入](docs/research/fsr-component-backend.md)：官方光流与插帧组件的移植和验证依据。
-- [区域保护版 B580 分析](docs/research/fsr-regional-b580-result.md)：1534 次生成帧调用成功，接受率 81.47%；人物／机枪残影与墙体错位仍未通过画质验收。
-- [FSR 区域保护修正](docs/research/fsr-regional-protection.md)：局部保留细亮区域，采集成功／拒绝候选并统一日志；本轮 B580 画质待验收。
-- [B580 首次 FSR 游戏运行](docs/research/fsr-b580-first-run.md)：174 次生成帧 Present 成功，但约 95% 候选被保护规则拒绝，画质尚未验收。
-- [地图加载诊断](docs/research/fsr-startup-diagnostics.md)：统一收集 Bridge、DXVK 与 FG 日志，包含关闭 FSR 的进程级对照。
-- [官方 FSR Host 接入](docs/research/fsr-host-integration.md)：实际 Present 接入、安装和一次综合测试。B580 已有游戏执行记录，整体画质验收待完成。 [集成验证记录](research/fsr-regional-validation.json) · [Windows 包校验](research/fsr-regional-package-validation.json)。
-- [Windows / B580 验证步骤](docs/research/windows-validation.md)：GPU 探测与官方 FSR Vulkan 样例验收。
-- [帧输入契约草案](docs/research/frame-input-contract.md)：深度、相机、运动矢量、HUD 与资源生命周期。
-- [固定研究版本](research/sources.lock.json)及[本轮验证记录](research/validation-2026-10-12.json)。
+主要选项：
 
-Linux 云环境复现（Python 3、Git、g++、Debian trixie）：
+| 选项 | 默认值 | 作用 |
+| --- | ---: | --- |
+| `enabled` | `1` | 进程启动时启用 FG；设为 `0` 时不加载 Layer、Monitor 或 FG 日志路径，尽量接近纯净 LDB v1.3.4 |
+| `hud` | `1` | 保护 HUD |
+| `viewmodel` | `1` | 保护第一人称手部与武器 |
+| `dynamic_models` | `1` | 保护第三人称及其他动态人物 |
+| `content_probe` | `0` | 启用小规模生成帧差异探针；诊断用，会增加开销 |
+| `monitor` | `1` | 自动启动实时监测窗口并写入 CSV |
+| `merge_submissions` | `1` | 合并 Host GPU submission |
+
+运行时按 `F8` 暂停或恢复帧生成。`F8` 只是热切换；只有在启动前设置 `enabled=0` 才是硬关闭。
+
+每次会话的 Host、Layer、DXVK 与 Monitor 数据统一写入：
+
+```text
+L4D2BridgeLogs/<会话 GUID>/frame-generation/
+```
+
+完整安装、验收字段和日志解释见[帧生成 Host 接入文档](docs/research/fsr-host-integration.md)。
+
+## 从源码构建
+
+Windows 原生包需要 Visual Studio 2022、MSVC x86/x64 工具链、Python 3.12、CMake、Meson 和 Ninja。准备脚本会按固定提交拉取依赖并拒绝静默使用错误版本：
+
+```powershell
+python -m pip install meson==1.3.2 ninja==1.11.1.1
+python scripts/prepare_research.py --only dxvk vulkan_headers
+python scripts/prepare_ldb_capture.py
+powershell -NoProfile -File scripts/build_ldb_capture.ps1
+python -m unittest discover -s tests -v
+```
+
+`build_ldb_capture.ps1` 会准备并构建 Asteria x64 Layer、编译 LDB 三件套、运行安装/恢复夹具并调用 `scripts/package_ldb_capture.py` 打包。构建输出和第三方源码位于被忽略的 `.research/`；当前 CI 工作流仍服务于开发分支和开发制品，不等同于 Release。
+
+Linux 可运行不依赖 Windows/MSVC 的研究和回归检查：
 
 ```bash
 bash scripts/setup_research_tools.sh
 python3 scripts/prepare_research.py
 python3 scripts/build_probe.py
-python3 scripts/verify_fsr_shaders.py \
-  --glslang .research/tools/root/usr/bin/glslangValidator \
-  --spirv-val .research/tools/root/usr/bin/spirv-val
 python3 -m unittest discover -s tests -v
 ```
 
-工具、依赖源码和完整输出放在被忽略的 `.research/`；准备脚本拒绝覆盖已有依赖改动或错误版本。源码研究缓存不是附加项目仓库。shader 检查只证明 FP32 GLSL 编译及 SPIR-V 验证，不证明 GPU 插帧或整个 SDK 构建成功。
+## 仓库结构
+
+- `integration/ldb/`：LDB v1.3.4 Host 补丁、FG 配置和输入/生命周期实现。
+- `integration/fg/`：Asteria x64 Vulkan Layer 补丁及 HUD 合成资源。
+- `integration/rt/`：实验性实时光追协议、世界与模型路径。
+- `shaders/`、`tools/`：GPU 输入处理、插值保护和诊断工具。
+- `scripts/`：固定源码准备、Windows 构建、打包和结果分析。
+- `tests/`：Python、x86/x64 原生合同和回归用例。
+- `docs/research/`、`research/`：设计记录、实机分析和机器可读证据。
+
+## 上游项目与许可
+
+本项目实际使用的固定源码、参考实现和各自角色列于 [`THIRD_PARTY.md`](THIRD_PARTY.md)。核心来源包括 L4D2Bridge、DXVK、FidelityFX SDK、Asteria、DXVK Remix 和 l4d2-rtx。
+
+第三方代码和构建产物继续受各自上游许可证约束；本仓库中的补丁不会改变或替代这些许可证。构建包会随对应组件附带上游许可证。L4D2、Source Engine、Steam 及相关商标归其权利人所有。
