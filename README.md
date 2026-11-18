@@ -50,7 +50,8 @@ bin/.l4d2bridge/fg-config.ini
 | `viewmodel` | `1` | 保护第一人称手部与武器 |
 | `dynamic_models` | `1` | 保护第三人称及其他动态人物 |
 | `content_probe` | `0` | 启用小规模生成帧差异探针；诊断用，会增加开销 |
-| `monitor` | `1` | 自动启动实时监测窗口并写入 CSV |
+| `monitor` | `0` | 自动启动实时监测窗口并写入 CSV；发行包默认关闭 |
+| `auto_capture` | `0` | 自动保存诊断截图；发行包默认关闭 |
 | `merge_submissions` | `1` | 合并 Host GPU submission |
 
 运行时按 `F8` 暂停或恢复帧生成。`F8` 只是热切换；只有在启动前设置 `enabled=0` 才是硬关闭。
@@ -75,7 +76,7 @@ powershell -NoProfile -File scripts/build_ldb_capture.ps1
 python -m unittest discover -s tests -v
 ```
 
-`build_ldb_capture.ps1` 会准备并构建 Asteria x64 Layer、编译 LDB 三件套、运行安装/恢复夹具并调用 `scripts/package_ldb_capture.py` 打包。构建输出和第三方源码位于被忽略的 `.research/`；当前 CI 工作流仍服务于开发分支和开发制品，不等同于 Release。
+`build_ldb_capture.ps1` 会准备并构建 Asteria x64 Layer、编译 LDB 三件套、调用 `scripts/package_ldb_capture.py` 打包，并校验 ZIP 顶层布局与全部运行文件哈希。构建输出和第三方源码位于被忽略的 `.research/`；当前 CI 工作流仍服务于开发分支和开发制品，不等同于 Release。
 
 Linux 可运行不依赖 Windows/MSVC 的研究和回归检查：
 

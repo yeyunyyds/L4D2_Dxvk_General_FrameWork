@@ -10,6 +10,16 @@ from fetch_fsr_assets import obtain_assets
 from fetch_dxvk_runtime import obtain_dxvk_runtime
 
 
+def validate_package_paths(entries):
+    """Keep the user-facing archive extract-and-run: bin/ plus README only."""
+    if not entries:
+        raise ValueError('Empty package payload')
+    for name in entries:
+        # Every package payload must stay below bin/. README is added separately.
+        if not name.startswith('bin/') or '\\' in name or name.endswith('/'):
+            raise ValueError(f'Non-runtime package path: {name}')
+
+
 def package(source, build_id, output):
     if output.exists():
         raise ValueError('Preserve existing package; choose another --output')
@@ -69,38 +79,26 @@ def package(source, build_id, output):
                    native_host_build='compiled_MSVC_Release', build_id=build_id, compile_examples=examples,
                    l4d2_game_capture='unrun', b580_integrated_capture='unrun', gpu_fg_execution='unrun_in_game', frame_generation_prototype='compiled_with_real_present_path',
                    binaries_sha256={name: hashlib.sha256(data).hexdigest() for name,data in entries.items()})
+    entries['bin/.l4d2bridge/capture-build.json'] = (
+        json.dumps(receipt, indent=2) + '\n').encode()
+    for name, data in assets.items():
+        if name.startswith('licenses/'):
+            entries['bin/.l4d2bridge/' + name] = data
+    licenses = {
+        'Remix-LICENSE': source / 'LICENSE',
+        'LDB-LICENSE': ROOT / '.research/sources/bridge-134/LICENSE',
+        'DXVK-LICENSE': ROOT / '.research/sources/dxvk/LICENSE',
+        'Vulkan-Headers-LICENSE.md':
+            ROOT / '.research/sources/vulkan_headers/LICENSE.md',
+        'Asteria-LICENSE': ROOT / '.research/sources/asteria/LICENSE',
+    }
+    for name, path in licenses.items():
+        entries[f'bin/.l4d2bridge/licenses/{name}'] = path.read_bytes()
+    validate_package_paths(entries)
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for name, data in entries.items(): archive.writestr(name, data)
-        archive.writestr('capture-build.json', json.dumps(receipt, indent=2)+'\n')
-        archive.write(ROOT/'docs/research/fsr-host-integration.md', 'README.md')
-        archive.write(ROOT/'docs/research/frame-generation-prototype.md', 'docs/previous-prototype.md')
-        for name,data in assets.items():
-            if not name.startswith('bin/'):archive.writestr(name,data)
-        archive.write(ROOT/'docs/research/gpu-reprojection.md','docs/gpu-reprojection.md')
-        archive.write(ROOT/'docs/research/capture-series.md','docs/capture-series.md')
-        archive.write(ROOT/'docs/research/ldb-host-capture.md', 'docs/host-capture.md')
-        for name in ['analyze_ldb_capture.py','analyze_capture_series.py','reproject_capture.py','capture_math.py','analyze_gpu_capture.py','analyze_fg_results.py']:
-            archive.write(ROOT/'scripts'/name,'scripts/'+name)
-        archive.write(ROOT/'scripts/trigger_capture.cmd','trigger_capture.cmd')
-        archive.write(ROOT/'scripts/start_fg_test.cmd','start_fg_test.cmd')
-        for name in ('start_fg_isolate_a_probe_off.cmd',
-                     'start_fg_isolate_b_hud_off.cmd',
-                     'start_fg_isolate_c_merge_off.cmd'):
-            archive.write(ROOT/'scripts'/name, name)
-        archive.write(ROOT/'scripts/fg_live_hud.ps1','fg_live_hud.ps1')
-        archive.write(ROOT/'scripts/manage_fg_test.ps1','manage_fg_test.ps1')
-        archive.write(ROOT/'scripts/install_fg_test.cmd','install_fg_test.cmd')
-        archive.write(ROOT/'scripts/remove_fg_test.cmd','remove_fg_test.cmd')
-        archive.write(ROOT/'shaders/camera_reproject.comp','sources/camera_reproject.comp')
-        archive.write(ROOT/'shaders/frame_generate.comp','sources/frame_generate.comp')
-        archive.write(ROOT/'shaders/frame_quality.comp','sources/frame_quality.comp')
-        archive.write(ROOT/'shaders/hud_composite.comp','sources/hud_composite.comp')
-        archive.write(source/'LICENSE', 'licenses/Remix-LICENSE')
-        archive.write(ROOT/'.research/sources/bridge-134/LICENSE', 'licenses/LDB-LICENSE')
-        archive.write(ROOT/'.research/sources/dxvk/LICENSE', 'licenses/DXVK-LICENSE')
-        archive.write(ROOT/'.research/sources/vulkan_headers/LICENSE.md', 'licenses/Vulkan-Headers-LICENSE.md')
-        archive.write(ROOT/'.research/sources/asteria/LICENSE', 'licenses/Asteria-LICENSE')
+        archive.write(ROOT/'docs/package-readme.md', 'README.md')
     print(output)
 
 

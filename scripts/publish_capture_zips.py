@@ -26,7 +26,12 @@ if status.get('native_build_outcome') == 'success':
     package = source / 'ldb-host-capture-dev.zip'
     with zipfile.ZipFile(package) as z:
         if z.testzip() is not None: raise RuntimeError('Corrupt native package')
-        receipt = json.loads(z.read('capture-build.json'))
+        names = z.namelist()
+        if any(name != 'README.md' and not name.startswith('bin/')
+               for name in names):
+            raise RuntimeError('Core package is not bin/ plus README only')
+        receipt = json.loads(z.read(
+            'bin/.l4d2bridge/capture-build.json'))
         if receipt.get('native_host_build') != 'compiled_MSVC_Release':
             raise RuntimeError('No verified native build receipt')
     import hashlib

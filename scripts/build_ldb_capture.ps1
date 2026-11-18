@@ -56,72 +56,30 @@ try {
   } finally { Pop-Location }
   & python (Join-Path $PSScriptRoot 'package_ldb_capture.py') --source $sourcePath --build-id $env:L4D2_BRIDGE_BUILD_ID
   if ($LASTEXITCODE -ne 0) { throw 'Development packaging failed' }
-  # Exercise the scripts from the finished ZIP against an isolated fake game.
-  # This verifies install, tamper refusal and byte-exact restore on Windows.
+  # The user-facing ZIP is deliberately extract-and-run.  Verify that its
+  # root contains only bin/ and README.md and that every runtime hash matches.
   $package = Join-Path $repo '.research/dist/ldb-host-capture-dev.zip'
-  $fixture = Join-Path $sourcePath '_fgInstallerFixture'
+  $fixture = Join-Path $sourcePath '_fgPackageFixture'
   $packageFixture = Join-Path $fixture 'package'
-  $gameFixture = Join-Path $fixture 'game'
   if (Test-Path $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force }
   try {
-    New-Item -ItemType Directory -Path (Join-Path $gameFixture 'bin/.l4d2bridge') -Force | Out-Null
-    Set-Content -LiteralPath (Join-Path $gameFixture 'left4dead2.exe') -Value 'fixture' -Encoding ASCII
-    $installerFiles = @(
-      'bin/dxvk_d3d9.dll',
-      'bin/.l4d2bridge/L4D2Bridge64.exe',
-      'bin/.l4d2bridge/L4D2Bridge32.exe',
-      'bin/.l4d2bridge/LDBFsrBackend64.dll',
-      'bin/.l4d2bridge/d3d9vk_x64.dll',
-      'bin/.l4d2bridge/vulkan-layer/AsteriaFrameGenerationLayer64.dll',
-      'bin/.l4d2bridge/vulkan-layer/VK_LAYER_GF_Asteria_FrameGeneration.json',
-      'bin/.l4d2bridge/vulkan-layer/gf-asteria-layer-build.json',
-      'bin/.l4d2bridge/fg-config.ini',
-      'bin/.l4d2bridge/fg_live_hud.ps1'
-    )
-    $originalHashes = @{}
-    foreach ($relative in $installerFiles) {
-      $path = Join-Path $gameFixture $relative
-      New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
-      Set-Content -LiteralPath $path -Value ('original:' + $relative) -Encoding ASCII
-      $originalHashes[$relative] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
-    }
     Expand-Archive -LiteralPath $package -DestinationPath $packageFixture
-    $manager = Join-Path $packageFixture 'manage_fg_test.ps1'
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $manager -Action Install -Game $gameFixture
-    if ($LASTEXITCODE -ne 0) { throw 'FG installer fixture install failed' }
-    foreach ($relative in $installerFiles) {
-      $installed = Join-Path $gameFixture $relative
-      $packaged = Join-Path $packageFixture $relative
-      if ((Get-FileHash -LiteralPath $installed -Algorithm SHA256).Hash -ne
-          (Get-FileHash -LiteralPath $packaged -Algorithm SHA256).Hash) {
-        throw "FG installer fixture mismatch: $relative"
+    $rootNames = @(Get-ChildItem -LiteralPath $packageFixture | ForEach-Object Name | Sort-Object)
+    if (($rootNames -join ',') -ne 'bin,README.md') {
+      throw "Package root must contain only bin and README.md: $($rootNames -join ', ')"
+    }
+    $receiptPath = Join-Path $packageFixture 'bin/.l4d2bridge/capture-build.json'
+    if (-not (Test-Path -LiteralPath $receiptPath -PathType Leaf)) {
+      throw 'Package build receipt is missing below bin/.l4d2bridge'
+    }
+    $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json
+    foreach ($property in $receipt.binaries_sha256.PSObject.Properties) {
+      $payload = Join-Path $packageFixture $property.Name
+      if (-not (Test-Path -LiteralPath $payload -PathType Leaf) -or
+          (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant() -ne
+          ([string]$property.Value).ToLowerInvariant()) {
+        throw "Package payload checksum mismatch: $($property.Name)"
       }
-    }
-    $tampered = Join-Path $gameFixture $installerFiles[0]
-    Set-Content -LiteralPath $tampered -Value 'later-user-change' -Encoding ASCII
-    # This invocation must fail. PowerShell 7 may promote a non-zero native
-    # process exit to a terminating error when ErrorActionPreference is Stop,
-    # so temporarily allow it and inspect the exit code ourselves.
-    $savedErrorActionPreference = $ErrorActionPreference
-    try {
-      $ErrorActionPreference = 'Continue'
-      & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $manager -Action Restore -Game $gameFixture
-      $tamperRestoreExit = $LASTEXITCODE
-    } finally {
-      $ErrorActionPreference = $savedErrorActionPreference
-    }
-    if ($tamperRestoreExit -eq 0 -or -not (Test-Path (Join-Path $gameFixture '.ldb-fg-test-backup'))) {
-      throw 'FG restore did not preserve a tampered installation and its backup'
-    }
-    Copy-Item -LiteralPath (Join-Path $packageFixture $installerFiles[0]) -Destination $tampered -Force
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $manager -Action Restore -Game $gameFixture
-    if ($LASTEXITCODE -ne 0) { throw 'FG installer fixture restore failed' }
-    foreach ($relative in $installerFiles) {
-      if ((Get-FileHash -LiteralPath (Join-Path $gameFixture $relative) -Algorithm SHA256).Hash -ne
-          $originalHashes[$relative]) { throw "FG restore differs: $relative" }
-    }
-    if (Test-Path (Join-Path $gameFixture '.ldb-fg-test-backup')) {
-      throw 'FG restore left its backup directory behind'
     }
   } finally {
     if (Test-Path $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force }

@@ -30,8 +30,9 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertTrue(settings.getboolean("viewmodel"))
         self.assertTrue(settings.getboolean("dynamic_models"))
         self.assertFalse(settings.getboolean("content_probe"))
-        self.assertTrue(settings.getboolean("monitor"))
+        self.assertFalse(settings.getboolean("monitor"))
         self.assertTrue(settings.getboolean("merge_submissions"))
+        self.assertFalse(settings.getboolean("auto_capture"))
 
     def test_host_bootstraps_layer_results_and_monitor(self):
         source = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
@@ -106,13 +107,20 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("HudCompositeSpirvSize", header)
         self.assertIn("writeonly uniform image2D generatedOutput", shader)
 
-    def test_package_keeps_drop_in_files_below_bin(self):
+    def test_package_is_extract_and_run_layout(self):
         package = (ROOT / "scripts/package_ldb_capture.py").read_text()
         prefix = "bin/.l4d2bridge/"
         self.assertIn(prefix + "fg-config.ini", package)
         self.assertIn(prefix + "fg_live_hud.ps1", package)
         self.assertIn(prefix + "vulkan-layer/{filename}", package)
-        self.assertIn("sources/hud_composite.comp", package)
+        self.assertIn(prefix + "capture-build.json", package)
+        self.assertIn("docs/package-readme.md", package)
+        self.assertIn("Every package payload must stay below bin/", package)
+        for obsolete in (
+                "trigger_capture.cmd", "start_fg_test.cmd",
+                "manage_fg_test.ps1", "sources/hud_composite.comp",
+                "docs/previous-prototype.md"):
+            self.assertNotIn(obsolete, package)
 
 
 if __name__ == "__main__":

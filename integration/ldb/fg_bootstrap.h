@@ -18,9 +18,9 @@ struct Settings {
   bool viewmodel = true;
   bool dynamicModels = true;
   bool contentProbe = false;
-  bool monitor = true;
+  bool monitor = false;
   bool mergeSubmissions = true;
-  bool autoCapture = true;
+  bool autoCapture = false;
   bool hotkeys = true;
   uint32_t captureFrames = 4;
   uint32_t pacingMs = 0;

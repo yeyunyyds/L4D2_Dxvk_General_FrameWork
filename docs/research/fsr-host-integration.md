@@ -9,9 +9,9 @@
 ## 安装与一次测试
 
 1. 完全退出 L4D2 和两个 Bridge Host；Steam 可以保持运行。先自行备份原文件，再把包内 `bin` 合并到 L4D2 游戏根目录的 `bin`。本版的 Layer、INI 和 Monitor 都位于 `bin/.l4d2bridge`，不再依赖每次运行安装或启动脚本。
-2. 按需编辑 `bin/.l4d2bridge/fg-config.ini`。默认启用 HUD 分层、viewmodel 保护与 Monitor，关闭逐帧内容探针。随后直接从 Steam 正常启动游戏；x64 Host 在 Vulkan 初始化前加入配套 Layer 搜索路径，并在 LDB v1.3.4 建立 GUID 会话后把 FG 输出绑定到同一日志树。
+2. 按需编辑 `bin/.l4d2bridge/fg-config.ini`。默认启用 FG、HUD 分层、viewmodel 与动态人物保护；Monitor、自动截图和逐帧内容探针默认关闭。随后直接从 Steam 正常启动游戏；x64 Host 在 Vulkan 初始化前加入配套 Layer 搜索路径，并在 LDB v1.3.4 建立 GUID 会话后把 FG 输出绑定到同一日志树。
 3. 进入地图后保持相似的转头或平移，先让 FG 开启约 20 秒，按一次 F8 暂停约 20 秒，再按 F8 恢复约 20 秒。无需 F9。正常退出后上传 `L4D2BridgeLogs/<本次 GUID>`；FG、Layer、DXVK 和 monitor 数据位于其中的 `frame-generation` 子目录。无需 `capture.trigger`。
-4. `install_fg_test.cmd`、`start_fg_test.cmd` 和恢复脚本只保留给旧式隔离诊断。手动覆盖模式的恢复由用户自己的备份负责。
+4. 核心包只包含 `bin/` 和根目录 `README.md`，不再附带旧式安装、启动、恢复、采集或分析脚本。手动覆盖模式的恢复由用户自己的备份负责。
 
 必须使用 `L4D2Bridge64.exe`。若曾设置 `client.testX86Server=True`，改回 `False`；本包保留现有 `bridge.conf`。32 位 Host 随包保持 Client/Host 版本匹配，未接入 FSR。
 

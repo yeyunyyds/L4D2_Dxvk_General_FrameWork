@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $PackageRoot = Split-Path -Parent $PSScriptRoot
-if (Test-Path (Join-Path $PSScriptRoot 'capture-build.json')) {
+if (Test-Path (Join-Path $PSScriptRoot 'bin/.l4d2bridge/capture-build.json')) {
   $PackageRoot = $PSScriptRoot
 }
 $RelativeFiles = @(
@@ -73,8 +73,8 @@ if ($Action -eq 'Install') {
   if (Test-Path -LiteralPath $BackupRoot) {
     throw "An FG test backup already exists: $BackupRoot`nRun remove_fg_test.cmd before installing another build."
   }
-  $ReceiptPath = Join-Path $PackageRoot 'capture-build.json'
-  if (-not (Test-Path -LiteralPath $ReceiptPath -PathType Leaf)) { throw 'capture-build.json is missing from the package.' }
+  $ReceiptPath = Join-Path $PackageRoot 'bin/.l4d2bridge/capture-build.json'
+  if (-not (Test-Path -LiteralPath $ReceiptPath -PathType Leaf)) { throw 'bin/.l4d2bridge/capture-build.json is missing from the package.' }
   $Receipt = Get-Content -LiteralPath $ReceiptPath -Raw | ConvertFrom-Json
   $Records = @()
   foreach ($Relative in $RelativeFiles) {
