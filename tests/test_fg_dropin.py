@@ -150,7 +150,9 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('config().firstPersonFallbackStart', host)
         self.assertIn('config().dynamicMaskDilation', host)
         self.assertIn('fgShader[758] = encoded;', gpu)
-        self.assertIn('fgShader[706u + i] = zeroVector;', gpu)
+        self.assertIn('fgShader[31858u + 12u + 2u] = zeroArray;', gpu)
+        self.assertIn('fgShader[31860] != 494u', gpu)
+        self.assertNotIn('fgShader[706u + i] = zeroVector;', gpu)
         self.assertIn('L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8', layer)
         self.assertIn('compositeWords[304 + shift] = 0x41u;', layer)
         self.assertIn('compositeWords[347 + shift] = 0x41u;', layer)
@@ -185,8 +187,10 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('L"mask_debug_white"', host)
         self.assertIn('gpu->updateProtectionShader(updated.fallbackStart,', host)
         self.assertIn('providerParams.thresholds[3] = liveProtection.residual;', host)
-        self.assertIn('L"LDB_FG_DYNAMIC_MASK_DILATION",', host)
-        self.assertIn('L"LDB_FG_MASK_DEBUG_WHITE",', host)
+        self.assertIn('L"LDB_FG_RUNTIME_COMPOSITE_MODE",', host)
+        self.assertIn('liveIniRejectedStamp', host)
+        self.assertIn('verifiedStamp != stamp', host)
+        self.assertIn('liveIniStamp = stamp;', host)
         self.assertIn('live_protection_updated', host)
         self.assertIn('live_protection_rejected', host)
         self.assertIn('createTunedGenerateShader(float fallbackStart,', gpu)
@@ -197,9 +201,39 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('for (uint32_t mode = 0; mode < 4; ++mode)', layer)
         self.assertIn('state.hudPipelines[mode]', layer)
         self.assertIn('const VkPipeline activePipeline = state.hudPipelines[mode]', layer)
+        self.assertIn('L"LDB_FG_RUNTIME_COMPOSITE_MODE", modeValue, 8', layer)
         self.assertIn('L"LDB_FG_MASK_DEBUG_WHITE", whiteValue, 8', layer)
         self.assertIn('L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8', layer)
         self.assertIn('VK_PIPELINE_BIND_POINT_COMPUTE, activePipeline', layer)
+
+    def test_no_dilation_preserves_other_shared_offset_users(self):
+        import re
+        gpu = (ROOT / "tools/resident_frame_generator.h").read_text()
+        shader = (ROOT / "tools/frame_generate_spirv.h").read_text()
+        words = [int(x, 16) for x in re.findall(r'0x([0-9a-fA-F]+)', shader)]
+        self.assertEqual(words[31858:31861], [0x0003003e, 3049, 494])
+        self.assertEqual([words[i] for i in (2511, 8263, 8322)], [494, 494, 494])
+        # Exact pinned transformation must replace only the providerDynamic
+        # store, not the shared constant used by foregroundEdge/temporalChange.
+        zero_vector = words[3]
+        zero_array = zero_vector + 1
+        inserted = [0x0005002c, 16, zero_vector, 378, 378,
+                    0x0007002c, 488, zero_array,
+                    zero_vector, zero_vector, zero_vector, zero_vector]
+        patched = words[:698] + inserted + words[698:]
+        patched[3] = zero_array + 1
+        patched[31858 + 12 + 2] = zero_array
+        self.assertEqual(patched[31860 + 12], zero_array)
+        self.assertEqual([patched[i + 12] for i in (2511, 8263, 8322)],
+                         [494, 494, 494])
+        self.assertEqual(patched[698 + 12:705 + 12], words[698:705])
+        self.assertIn('fgShader[31858u + 12u + 2u] = zeroArray;', gpu)
+        i = 5
+        while i < len(patched):
+            instruction_words = patched[i] >> 16
+            self.assertGreater(instruction_words, 0)
+            i += instruction_words
+        self.assertEqual(i, len(patched))
 
     def test_white_debug_visualizes_actual_post_fsr_protection(self):
         ini = (ROOT / "integration/ldb/fg-config.ini").read_text()
