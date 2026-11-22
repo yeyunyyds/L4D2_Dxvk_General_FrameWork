@@ -98,7 +98,7 @@ index fede970..02e8236 100644
      default: return VK_FORMAT_R8G8B8A8_UNORM;
      }
  }
-@@ -600,6 +610,198 @@ inline void RecordContentProbe(FgSwapchainState &state, VkCommandBuffer commandB
+@@ -600,6 +610,227 @@ inline void RecordContentProbe(FgSwapchainState &state, VkCommandBuffer commandB
      state.contentProbeFrameIds[slot] = frameID;
  }
  
@@ -154,11 +154,40 @@ index fede970..02e8236 100644
 +    const DWORD maskDebugLength = GetEnvironmentVariableW(
 +        L"LDB_FG_MASK_DEBUG_WHITE", maskDebugValue, 8);
 +    const bool maskDebugWhite = maskDebugLength == 1 && maskDebugValue[0] == L'1';
++    // The compositing shader already checks a fixed 3x3 neighbourhood. For
++    // mask dilation=0, change both loop initial values and <= bounds to 0.
++    // The full original shader is kept byte-for-byte for dilation=1.
++    wchar_t dilationValue[8]{};
++    const DWORD dilationLength = GetEnvironmentVariableW(
++        L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8);
++    const bool noDilation = dilationLength == 1 && dilationValue[0] == L'0';
++    std::vector<uint32_t> compositeWords = maskDebugWhite
++        ? std::vector<uint32_t>(HudCompositeWhiteSpirv.begin(), HudCompositeWhiteSpirv.end())
++        : std::vector<uint32_t>(HudCompositeSpirv,
++                                HudCompositeSpirv + HudCompositeSpirvSize / sizeof(uint32_t));
++    if (noDilation)
++    {
++        const size_t shift = maskDebugWhite ? 7u : 0u;
++        if (compositeWords[301 + shift] != 0x000700f5u ||
++            compositeWords[308 + shift] != 0x000500b3u ||
++            compositeWords[336 + shift] != 0x000700f5u ||
++            compositeWords[343 + shift] != 0x000500b3u ||
++            compositeWords[304 + shift] != 0x27u ||
++            compositeWords[312 + shift] != 0x2eu ||
++            compositeWords[339 + shift] != 0x27u ||
++            compositeWords[347 + shift] != 0x2eu)
++        {
++            DestroyHudComposite(state);
++            return false;
++        }
++        compositeWords[304 + shift] = 0x41u;
++        compositeWords[312 + shift] = 0x41u;
++        compositeWords[339 + shift] = 0x41u;
++        compositeWords[347 + shift] = 0x41u;
++    }
 +    VkShaderModuleCreateInfo shaderInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-+    shaderInfo.codeSize = maskDebugWhite ? sizeof(HudCompositeWhiteSpirv)
-+                                         : HudCompositeSpirvSize;
-+    shaderInfo.pCode = maskDebugWhite ? HudCompositeWhiteSpirv.data()
-+                                      : HudCompositeSpirv;
++    shaderInfo.codeSize = compositeWords.size() * sizeof(uint32_t);
++    shaderInfo.pCode = compositeWords.data();
 +    VkShaderModule shader = VK_NULL_HANDLE;
 +    if (vkCreateShaderModule(state.device, &shaderInfo, nullptr, &shader) != VK_SUCCESS)
 +    {
@@ -297,7 +326,7 @@ index fede970..02e8236 100644
  inline void DestroyGpuImage(VkDevice device, GpuImage &img)
  {
      if (img.handle != VK_NULL_HANDLE)
-@@ -873,6 +1075,11 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -873,6 +1104,11 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
      recovery.successful = result == FFX_OK;
      if (recovery.successful)
      {
@@ -309,7 +338,7 @@ index fede970..02e8236 100644
          RecordContentProbe(state, cmd, dispatch.currentBackBuffer, desc->outputs[0], currentFrameId);
          ++state.interpolationDispatches;
          if (input->motionSource == MotionInputSource::Engine)
-@@ -935,6 +1142,7 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
+@@ -935,6 +1171,7 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
      }
      if (state.device != VK_NULL_HANDLE)
      {
@@ -317,7 +346,7 @@ index fede970..02e8236 100644
          DestroyContentProbe(state);
          DestroyGpuImage(state.device, state.reconstructed);
          DestroyGpuImage(state.device, state.dilatedDepth);
-@@ -989,10 +1197,9 @@ inline VkResult InitializeSwapchainResources(
+@@ -989,10 +1226,9 @@ inline VkResult InitializeSwapchainResources(
      fgInfo.asyncComputeQueue = {queues.asyncComputeQueue, queues.asyncComputeFamily, nullptr};
      fgInfo.presentQueue = {queues.presentQueue, queues.presentFamily, nullptr};
      fgInfo.imageAcquireQueue = {queues.imageAcquireQueue, queues.imageAcquireFamily, nullptr};
@@ -331,7 +360,7 @@ index fede970..02e8236 100644
  
      state.deviceContext = {device, physicalDevice, nextGdpa};
      FfxDevice ffxDevice = ffxGetDeviceVK(&state.deviceContext);
-@@ -1097,6 +1304,11 @@ inline VkResult InitializeSwapchainResources(
+@@ -1097,6 +1333,11 @@ inline VkResult InitializeSwapchainResources(
      // Diagnostic only: failure leaves FG active and reports no pixel samples.
      if (IsContentProbeRequested())
          (void)AllocateContentProbe(state);
@@ -343,7 +372,7 @@ index fede970..02e8236 100644
  
      FfxFrameGenerationConfig config{};
      config.swapChain = state.swapchainBox;
-@@ -1191,22 +1403,9 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
+@@ -1191,22 +1432,9 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
      }
      if (!valid) { input.reset(); state.historyReset.store(true); }
      std::atomic_store_explicit(&state.currentInputs, std::move(input), std::memory_order_release);
