@@ -102,6 +102,16 @@ inline std::wstring iniText(const std::filesystem::path &path,
   return count ? std::wstring(buffer, count) : std::wstring(fallback);
 }
 
+// INI numeric values are ASCII. Convert explicitly so MSVC /WX does not
+// reject implicit wchar_t -> char narrowing in diagnostic output.
+inline std::string narrowAscii(const std::wstring &value) {
+  std::string result;
+  result.reserve(value.size());
+  for (wchar_t ch : value)
+    result.push_back(ch <= 0x7f ? static_cast<char>(ch) : '?');
+  return result;
+}
+
 inline Settings readSettings(const std::filesystem::path &path) noexcept {
   Settings result;
   result.enabled = iniBool(path, L"enabled", result.enabled);
@@ -317,8 +327,7 @@ inline void attachLogSession(const std::filesystem::path &ldbSession) noexcept {
                  << "dynamic_models=" << state.settings.dynamicModels << "\n"
                  << "fpb_protect=" << state.settings.fpbProtect << "\n"
                  << "dynamic_residual_threshold="
-                 << std::string(state.settings.dynamicResidualThreshold.begin(),
-                                state.settings.dynamicResidualThreshold.end())
+                 << narrowAscii(state.settings.dynamicResidualThreshold)
                  << "\n"
                  << "mask_debug_white=" << state.settings.maskDebugWhite << "\n"
                  << "content_probe=" << state.settings.contentProbe << "\n"
