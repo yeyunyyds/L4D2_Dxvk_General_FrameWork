@@ -30,6 +30,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertTrue(settings.getboolean("viewmodel"))
         self.assertTrue(settings.getboolean("dynamic_models"))
         self.assertTrue(settings.getboolean("fpb_protect"))
+        self.assertFalse(settings.getboolean("mask_debug_white"))
         self.assertFalse(settings.getboolean("content_probe"))
         self.assertFalse(settings.getboolean("monitor"))
         self.assertTrue(settings.getboolean("merge_submissions"))
@@ -113,6 +114,25 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('float alpha=hud||viewmodel||dynamicModel?1.0:0.0;', shader)
         self.assertIn('mark=vec4(fallback.rgb,alpha);', shader)
         self.assertNotIn('GetRenderTargetData', host)
+
+    def test_white_debug_visualizes_actual_post_fsr_protection(self):
+        ini = (ROOT / "integration/ldb/fg-config.ini").read_text()
+        bootstrap = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
+        patch = (ROOT / "integration/fg/async-hud-x64.patch").read_text()
+        shader = (ROOT / "shaders/hud_composite.comp").read_text()
+        white = (ROOT / "integration/fg/HudCompositeWhiteSpirv.h").read_text()
+        prepare = (ROOT / "scripts/prepare_asteria_layer.py").read_text()
+        self.assertIn("mask_debug_white=0", ini)
+        self.assertIn('iniBool(path, L"mask_debug_white", result.maskDebugWhite)', bootstrap)
+        self.assertIn('L"LDB_FG_MASK_DEBUG_WHITE", flag(settings.maskDebugWhite)', bootstrap)
+        self.assertIn('L"LDB_FG_MASK_DEBUG_WHITE", maskDebugValue, 8', patch)
+        self.assertIn("maskDebugWhite ? HudCompositeWhiteSpirv.data()", patch)
+        self.assertIn("HudCompositeWhiteSpirv.h", prepare)
+        self.assertIn("HudCompositeSpirv[494] == 0x00040063u", white)
+        self.assertIn("words[494 + 7 + 3] = 0x0000007au", white)
+        self.assertIn("if (covered)", shader)
+        self.assertIn("for (int y = -1; y <= 1", shader)
+        self.assertIn("if (separateUi && !RecordHudComposite(state, cmd", patch)
 
     def test_hud_shader_is_checked_in_as_valid_spirv_words(self):
         header = (ROOT / "integration/fg/HudCompositeSpirv.h").read_text()
