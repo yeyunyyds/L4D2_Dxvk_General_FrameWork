@@ -483,7 +483,7 @@ public:
     create.stage.module = nextShader;
     create.stage.pName = "main";
     VkPipeline nextPipeline = VK_NULL_HANDLE;
-    const VkResult created = c.vkCreateComputePipelines(
+    const VkResult created = vkCreateComputePipelines(
         c.device, VK_NULL_HANDLE, 1, &create, nullptr, &nextPipeline);
     vkDestroyShaderModule(c.device, nextShader, nullptr);
     if (created != VK_SUCCESS) {
