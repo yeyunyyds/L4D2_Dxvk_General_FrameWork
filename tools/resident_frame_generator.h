@@ -419,6 +419,92 @@ public:
         c.vkFreeMemory(c.device, i.memory, nullptr);
     }
   }
+  VkShaderModule createTunedGenerateShader(float fallbackStart,
+                                            uint32_t maskDilation) {
+    std::vector<uint32_t> fgShader(
+        frameGenerateSpirv,
+        frameGenerateSpirv + sizeof(frameGenerateSpirv) / sizeof(uint32_t));
+    if (fgShader.size() <= 704 ||
+        fgShader[755] != 0x0004002bu || fgShader[756] != 8u ||
+        fgShader[757] != 765u || fgShader[758] != 0x3e8f5c29u ||
+        fgShader[698] != 0x0007002cu || fgShader[699] != 488u ||
+        fgShader[700] != 494u || fgShader[701] != 489u ||
+        fgShader[702] != 491u || fgShader[703] != 492u ||
+        fgShader[704] != 493u)
+      throw std::runtime_error("FG shader parameter layout changed");
+    if (fallbackStart != 0.28f) {
+      uint32_t encoded = 0;
+      static_assert(sizeof(encoded) == sizeof(fallbackStart),
+                    "FG parameter float size");
+      std::memcpy(&encoded, &fallbackStart, sizeof(encoded));
+      fgShader[758] = encoded; // exclusive lower-screen boundary (0..1)
+    }
+    if (maskDilation == 0u) {
+      // Replace the shared vec2[4] cardinal offsets with an all-zero
+      // constant. In Provider mode that disables the 4-neighbour expansion
+      // of dynamic-model candidates. Insert its definition before array ID
+      // 494 so SPIR-V constant use/definition ordering stays valid.
+      if (fgShader[3] != 0xaea0u)
+        throw std::runtime_error("FG shader ID bound changed");
+      const uint32_t zeroVector = fgShader[3];
+      const std::array<uint32_t, 5> zeroDefinition{
+          0x0005002cu, 16u, zeroVector, 378u, 378u};
+      fgShader.insert(fgShader.begin() + 698, zeroDefinition.begin(),
+                      zeroDefinition.end());
+      fgShader[3] = zeroVector + 1u;
+      for (uint32_t i = 0; i < 4u; ++i)
+        fgShader[706u + i] = zeroVector;
+    }
+    VkShaderModuleCreateInfo sm{};
+    sm.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    sm.codeSize = fgShader.size() * sizeof(uint32_t);
+    sm.pCode = fgShader.data();
+    VkShaderModule result = VK_NULL_HANDLE;
+    vkcheck(vkCreateShaderModule(c.device, &sm, nullptr, &result),
+            "FG tuned shader");
+    return result;
+  }
+
+  // INI hot reload is manual/rare. Rebuild only the Host's classification
+  // pipeline, then retire its predecessor after the DXVK submission queue
+  // is drained. Never mutate a pipeline referenced by an in-flight command.
+  void updateProtectionShader(float fallbackStart, uint32_t maskDilation) {
+    if (firstPersonFallbackStart == fallbackStart &&
+        dynamicMaskDilation == maskDilation)
+      return;
+    if (!pipeline || !pipelineLayout || recording)
+      throw std::runtime_error("FG runtime shader not ready");
+    VkShaderModule nextShader = createTunedGenerateShader(fallbackStart, maskDilation);
+    VkComputePipelineCreateInfo create{};
+    create.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    create.layout = pipelineLayout;
+    create.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    create.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    create.stage.module = nextShader;
+    create.stage.pName = "main";
+    VkPipeline nextPipeline = VK_NULL_HANDLE;
+    const VkResult created = c.vkCreateComputePipelines(
+        c.device, VK_NULL_HANDLE, 1, &create, nullptr, &nextPipeline);
+    vkDestroyShaderModule(c.device, nextShader, nullptr);
+    if (created != VK_SUCCESS) {
+      if (nextPipeline)
+        vkDestroyPipeline(c.device, nextPipeline, nullptr);
+      vkcheck(created, "FG tuned pipeline");
+    }
+    c.interop->LockSubmissionQueue();
+    const VkResult drained = c.vkQueueWaitIdle(c.queue);
+    c.interop->ReleaseSubmissionQueue();
+    if (drained != VK_SUCCESS) {
+      vkDestroyPipeline(c.device, nextPipeline, nullptr);
+      vkcheck(drained, "FG shader switch queue drain");
+    }
+    VkPipeline previous = pipeline;
+    pipeline = nextPipeline;
+    vkDestroyPipeline(c.device, previous, nullptr);
+    firstPersonFallbackStart = fallbackStart;
+    dynamicMaskDilation = maskDilation;
+  }
+
   void initialize(uint32_t w, uint32_t h, VkFormat depth, VkFormat color,
                   uint32_t providerConsumerFamily = UINT32_MAX) {
     static_assert(sizeof(Params) == 416, "FG uniform ABI");
@@ -600,49 +686,8 @@ public:
             "FG quality GPU memory");
     buffer(qualityReadback, qualityReadbackMemory, qualityMap, sizeof(Quality),
            VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-    VkShaderModuleCreateInfo sm{};
-    sm.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    // The pinned, validated GLSL shader has two fixed debug parameters.
-    // Patch only its checked SPIR-V constants; this does not add a shader
-    // binding, extra draw, or new Vulkan synchronization. On defaults the
-    // original bytecode is passed through unchanged.
-    std::vector<uint32_t> fgShader(
-        frameGenerateSpirv,
-        frameGenerateSpirv + sizeof(frameGenerateSpirv) / sizeof(uint32_t));
-    if (fgShader.size() <= 704 ||
-        fgShader[755] != 0x0004002bu || fgShader[756] != 8u ||
-        fgShader[757] != 765u || fgShader[758] != 0x3e8f5c29u ||
-        fgShader[698] != 0x0007002cu || fgShader[699] != 488u ||
-        fgShader[700] != 494u || fgShader[701] != 489u ||
-        fgShader[702] != 491u || fgShader[703] != 492u ||
-        fgShader[704] != 493u)
-      throw std::runtime_error("FG shader parameter layout changed");
-    if (firstPersonFallbackStart != 0.28f) {
-      uint32_t encoded = 0;
-      static_assert(sizeof(encoded) == sizeof(firstPersonFallbackStart),
-                    "FG parameter float size");
-      std::memcpy(&encoded, &firstPersonFallbackStart, sizeof(encoded));
-      fgShader[758] = encoded; // exclusive lower-screen boundary (0..1)
-    }
-    if (dynamicMaskDilation == 0u) {
-      // Replace the shared vec2[4] cardinal offsets with an all-zero
-      // constant. In Provider mode that disables the 4-neighbour expansion
-      // of dynamic-model candidates. Insert its definition before array ID
-      // 494 so SPIR-V constant use/definition ordering stays valid.
-      if (fgShader[3] != 0xaea0u)
-        throw std::runtime_error("FG shader ID bound changed");
-      const uint32_t zeroVector = fgShader[3];
-      const std::array<uint32_t, 5> zeroDefinition{
-          0x0005002cu, 16u, zeroVector, 378u, 378u};
-      fgShader.insert(fgShader.begin() + 698, zeroDefinition.begin(),
-                      zeroDefinition.end());
-      fgShader[3] = zeroVector + 1u;
-      for (uint32_t i = 0; i < 4u; ++i)
-        fgShader[706u + i] = zeroVector;
-    }
-    sm.codeSize = fgShader.size() * sizeof(uint32_t);
-    sm.pCode = fgShader.data();
-    vkcheck(vkCreateShaderModule(c.device, &sm, nullptr, &shader), "FG shader");
+    shader = createTunedGenerateShader(firstPersonFallbackStart,
+                                      dynamicMaskDilation);
     std::array<VkDescriptorSetLayoutBinding, 18> bindings{};
     for (uint32_t n = 0; n < 18; n++) {
       bindings[n].binding = n;
