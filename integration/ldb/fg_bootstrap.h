@@ -201,6 +201,7 @@ inline void clearManagedEnvironment() noexcept {
       L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD",
       L"LDB_FG_FIRST_PERSON_FALLBACK_START",
       L"LDB_FG_DYNAMIC_MASK_DILATION",
+      L"LDB_FG_RUNTIME_COMPOSITE_MODE",
       L"LDB_FG_MERGE_SUBMISSIONS", L"LDB_FG_CAPTURE_FRAMES",
       L"LDB_FG_HOTKEYS",          L"LDB_FG_AUTO_CAPTURE",
       L"LDB_FG_PACING_MS",        L"LDB_FG_LOG_DIR",
@@ -272,6 +273,14 @@ inline void initialize() noexcept {
                      std::to_wstring(settings.dynamicMaskDilation), replace);
       setEnvironment(L"LDB_FG_MASK_DEBUG_WHITE", flag(settings.maskDebugWhite),
                      replace);
+      // Publish normal/white x expanded/single-pixel as a single value.
+      // Use effective environment values so diagnostic isolation scripts keep
+      // authority over their explicitly supplied mask controls.
+      const unsigned compositeMode =
+          (environment(L"LDB_FG_MASK_DEBUG_WHITE") == L"1" ? 1u : 0u) |
+          (environment(L"LDB_FG_DYNAMIC_MASK_DILATION") == L"0" ? 2u : 0u);
+      setEnvironment(L"LDB_FG_RUNTIME_COMPOSITE_MODE",
+                     std::to_wstring(compositeMode), replace);
       setEnvironment(L"LDB_FG_MERGE_SUBMISSIONS",
                      flag(settings.mergeSubmissions), replace);
       setEnvironment(L"LDB_FG_CAPTURE_FRAMES",
