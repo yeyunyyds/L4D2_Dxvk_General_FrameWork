@@ -246,6 +246,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertEqual(ini.getfloat("fpb_projection_right"), -1.0)
         self.assertEqual(ini.getfloat("fpb_projection_up"), -1.0)
         self.assertEqual(ini.getfloat("fpb_projection_width"), 1.0)
+        self.assertEqual(ini.getfloat("fpb_projection_torso_screen_width"), 1.0)
         self.assertEqual(ini.getfloat("fpb_projection_eye_height"), 64.0)
 
         host = (ROOT / "integration/ldb/frame_generation.h").read_text()
@@ -253,7 +254,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         gpu = (ROOT / "tools/resident_frame_generator.h").read_text()
         prepare = (ROOT / "scripts/prepare_ldb_capture.py").read_text()
         for key in ("protect", "forward", "right", "up",
-                    "width", "eye_height"):
+                    "width", "torso_screen_width", "eye_height"):
             self.assertIn(f'L"fpb_projection_{key}"', host)
         self.assertIn('readValue(L"fpb_projection_protect", L"0")', host)
         self.assertIn("refreshLiveProtection(uid);", host)
@@ -262,6 +263,9 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("updated.projectedBody.right = parseFloat(", host)
         self.assertIn("updated.projectedBody.up = parseFloat(", host)
         self.assertIn("updated.projectedBody.width = parseFloat(", host)
+        self.assertIn("updated.projectedBody.torsoScreenWidth = parseFloat(", host)
+        self.assertIn("updated.projectedBody.torsoScreenWidth ==", host)
+        self.assertIn('fpb_torso_screen_width', host)
         self.assertIn("updated.projectedBody.eyeHeight = parseFloat(", host)
         self.assertIn("liveProtection = updated;", host)
         self.assertIn("const auto projectedBody = ldb_fpb_projection::project(", host)
@@ -278,6 +282,10 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("if (!s.enabled", model)
         self.assertIn("if (result.upperBoundPixels >", model)
         self.assertIn("result.rejectedCoverage = true;", model)
+        self.assertIn("cropTorsoSides(r, s.torsoScreenWidth);", model)
+        self.assertIn("r.left += (original - target) / 2;", model)
+        self.assertIn("r.right = r.left + target;", model)
+        self.assertIn("s.torsoScreenWidth < .1f || s.torsoScreenWidth > 1.0f", model)
         self.assertNotIn("L4D2Visual", gpu)
         self.assertNotIn("StudioModel", model)
         self.assertIn("'integration/ldb/fpb_projection.h'", prepare)
