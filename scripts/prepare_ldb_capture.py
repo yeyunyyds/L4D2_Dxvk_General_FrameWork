@@ -48,6 +48,15 @@ def prepare(args):
     lock = json.loads((ROOT / 'research/sources.lock.json').read_text())
     if args.output.exists():
         raise RuntimeError('Output already exists; choose a new isolated --output directory')
+    # Source-only edits must not accidentally ship the previous shader binary.
+    provider_shader = ROOT / 'shaders/frame_generate.comp'
+    embedded_shader = ROOT / 'tools/frame_generate_spirv.h'
+    expected_stamp = '// source-sha256: ' + digest(provider_shader)
+    if expected_stamp not in embedded_shader.read_text():
+        raise RuntimeError(
+            'Viewmodel provider SPIR-V is stale: compile shaders/frame_generate.comp '
+            'with glslangValidator and regenerate tools/frame_generate_spirv.h '
+            'using scripts/embed_spirv.py before building')
     checkout(args.bridge, baseline['bridge_repository'], baseline['bridge_commit'])
     checkout(args.upstream, baseline['upstream_repository'], baseline['upstream_commit'], ['bridge', 'public'])
     detours = ROOT / '.research/sources/detours'
