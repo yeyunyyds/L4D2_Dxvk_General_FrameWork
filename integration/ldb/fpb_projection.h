@@ -180,7 +180,13 @@ inline Projection project(const ldb_camera::Matrix &vp,
   double flen = std::hypot(fx, fy);
   // At a straight-up/down camera pitch, forward.xy vanishes; the horizontal
   // projection of camera.up still identifies yaw, with pitch determining sign.
-  if (!std::isfinite(flen) || flen < .001) {
+  // Once the pitch is nearly vertical, the horizontal projection of
+  // camera.forward approaches zero. Switch to the camera.up yaw basis at
+  // the SAME threshold as the validity check below. Previously we only
+  // switched at 0.001 but rejected everything below 0.2, causing every
+  // box to vanish abruptly near ~78.5 degrees pitch.
+  if (!std::isfinite(flen)) return result;
+  if (flen < .2) {
     if (!std::isfinite(cam.forward[2]) ||
         std::abs(cam.forward[2]) < .5) return result;
     const double sign = cam.forward[2] < 0.0f ? 1.0 : -1.0;
