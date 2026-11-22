@@ -297,7 +297,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('auto &dst = images[providerUi(activeProviderSlot)];', gpu)
         self.assertIn('vkCmdDispatchBase(c.command, x, y, 0', gpu)
         self.assertIn('projectionPipeline = VK_NULL_HANDLE;', gpu)
-        self.assertIn('gui' if False else 'ensureProjectionPipeline()', host)
+        self.assertIn('gpu->ensureProjectionPipeline();', host)
         self.assertIn('gpu->canOverlayProjectedBody()', host)
         self.assertIn('gpu_overlay_available', host)
         self.assertIn("'HudCompositeSpirv.h'", prepare)
