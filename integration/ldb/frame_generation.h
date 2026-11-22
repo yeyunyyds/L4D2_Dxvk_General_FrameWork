@@ -253,6 +253,9 @@ struct State {
     float fallbackStart = 1.0f;
     uint32_t dilation = 1;
     bool debugWhite = false;
+    bool syntheticOnly = false;
+    bool viewmodelSweep = true;
+    uint32_t viewmodelSweepRadius = 16;
     ldb_fpb_projection::Settings projectedBody{};
   };
   LiveProtection liveProtection{};
@@ -319,6 +322,19 @@ struct State {
       if (debug != L"0" && debug != L"1")
         throw std::invalid_argument("FG live debug mask must be 0 or 1");
       updated.debugWhite = debug == L"1";
+      const auto syntheticOnly = readValue(L"generated_only", L"0");
+      if (syntheticOnly != L"0" && syntheticOnly != L"1")
+        throw std::invalid_argument("FG generated_only must be 0 or 1");
+      updated.syntheticOnly = syntheticOnly == L"1";
+      const auto sweep = readValue(L"viewmodel_sweep", L"1");
+      if (sweep != L"0" && sweep != L"1")
+        throw std::invalid_argument("FG viewmodel_sweep must be 0 or 1");
+      updated.viewmodelSweep = sweep == L"1";
+      const float radius = parseFloat(
+          readValue(L"viewmodel_sweep_radius", L"16"), 4.0f, 24.0f);
+      if (std::floor(radius) != radius || uint32_t(radius) % 4u != 0u)
+        throw std::invalid_argument("FG viewmodel_sweep_radius must be 4..24, step 4");
+      updated.viewmodelSweepRadius = uint32_t(radius);
       const auto projection = readValue(L"fpb_projection_protect", L"0");
       if (projection != L"0" && projection != L"1")
         throw std::invalid_argument("FG FPB projection enable must be 0 or 1");
@@ -369,6 +385,9 @@ struct State {
           updated.fallbackStart == liveProtection.fallbackStart &&
           updated.dilation == liveProtection.dilation &&
           updated.debugWhite == liveProtection.debugWhite &&
+          updated.syntheticOnly == liveProtection.syntheticOnly &&
+          updated.viewmodelSweep == liveProtection.viewmodelSweep &&
+          updated.viewmodelSweepRadius == liveProtection.viewmodelSweepRadius &&
           updated.projectedBody.enabled == liveProtection.projectedBody.enabled &&
           updated.projectedBody.forward == liveProtection.projectedBody.forward &&
           updated.projectedBody.right == liveProtection.projectedBody.right &&
@@ -384,7 +403,9 @@ struct State {
         return;
       }
       if (gpu) gpu->updateProtectionShader(updated.fallbackStart,
-                                           updated.dilation);
+                                           updated.dilation,
+                                           updated.viewmodelSweep,
+                                           updated.viewmodelSweepRadius);
       // Host and Vulkan Layer share a process environment. The Layer selects
       // among four already-created pipelines at the next generated frame.
       // One atomic mode value avoids a transient white/dilation mismatch
@@ -395,6 +416,9 @@ struct State {
       if (!SetEnvironmentVariableW(L"LDB_FG_RUNTIME_COMPOSITE_MODE",
                                    modeText.c_str()))
         throw std::runtime_error("FG Layer live environment update failed");
+      if (!SetEnvironmentVariableW(L"LDB_FG_SYNTHETIC_ONLY",
+                                   updated.syntheticOnly ? L"1" : L"0"))
+        throw std::runtime_error("FG synthetic-only live environment update failed");
       liveProtection = updated;
       liveIniSeen = true;
       liveIniStamp = stamp;
@@ -415,6 +439,12 @@ struct State {
            ",\"dilation\":" + std::to_string(updated.dilation) +
            ",\"debug_white\":" +
            std::string(updated.debugWhite ? "true" : "false") +
+           ",\"generated_only\":" +
+           std::string(updated.syntheticOnly ? "true" : "false") +
+           ",\"viewmodel_sweep\":" +
+           std::string(updated.viewmodelSweep ? "true" : "false") +
+           ",\"viewmodel_sweep_radius\":" +
+           std::to_string(updated.viewmodelSweepRadius) +
            ",\"fpb_projection\":" +
            std::string(updated.projectedBody.enabled ? "true" : "false") +
            ",\"fpb_forward\":" + std::to_string(updated.projectedBody.forward) +
@@ -1158,6 +1188,12 @@ struct State {
               // requested; the shader, motion vectors and base path stay intact.
               // It is a heuristic, not an exact body segmentation mask.
               providerParams.thresholds[3] = liveProtection.residual;
+              // The separate sweep is opt-in and never changes FPB projection.
+              gpu->updateProtectionShader(liveProtection.fallbackStart,
+                                          liveProtection.dilation,
+                                          liveProtection.viewmodelSweep &&
+                                              viewmodelOverlay,
+                                          liveProtection.viewmodelSweepRadius);
               if (liveProtection.projectedBody.enabled)
                 gpu->ensureProjectionPipeline();
               const auto projectedBody = ldb_fpb_projection::project(
