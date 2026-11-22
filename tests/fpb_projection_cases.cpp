@@ -1,6 +1,7 @@
 #include "fpb_projection.h"
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 
 static void check(bool ok, const char *description) {
@@ -41,7 +42,7 @@ static ldb_camera::Matrix makeVP(float pitch) {
 int main() {
   try {
     ldb_fpb_projection::Settings cfg{};
-    auto forward = makeVP(0.f), down = makeVP(1.0f), up = makeVP(-.5f);
+    auto forward = makeVP(0.f), down = makeVP(1.2f), up = makeVP(-.5f);
     check(!cfg.enabled, "projection must be opt-in");
     check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
           "disabled projection is not empty");
