@@ -283,16 +283,28 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("'integration/ldb/fpb_projection.h'", prepare)
         self.assertIn("'fpb_projection.h'", prepare)
 
-        # Overlay reuse: blit from real Final image to leased RGBA overlay
-        # after classifier dispatch; no extra classifier SPIR-V rebuild.
-        self.assertIn("LOAD(vkCmdBlitImage);", gpu)
-        self.assertIn("projectionBlitSupported =", gpu)
-        self.assertIn("const ldb_fpb_projection::Projection *bodyProjection", gpu)
-        self.assertIn("images[CurrentFinal]", gpu)
-        self.assertIn("images[providerUi(activeProviderSlot)]", gpu)
-        self.assertIn("vkCmdBlitImage(c.command, src.image", gpu)
-        self.assertIn("VK_FILTER_NEAREST", gpu)
-        self.assertNotIn("GetRenderTargetData", host)
+        # The sampled source view forces A=1; the already-vetted compute
+        # compositor explicitly writes RGBA(alpha=1) to the ROI. Never use
+        # a blit that accidentally copies undefined D3D9 backbuffer alpha.
+        self.assertIn('#include "HudCompositeSpirv.h"', gpu)
+        self.assertIn('VK_COMPONENT_SWIZZLE_ONE', gpu)
+        self.assertIn('VK_PIPELINE_CREATE_DISPATCH_BASE_BIT', gpu)
+        self.assertIn('VkDescriptorSet projectionDescriptorSet', gpu)
+        self.assertIn('projectionDescriptorSet != VK_NULL_HANDLE;', gpu)
+        self.assertIn('if (canOverlayProjectedBody()) return true;', gpu)
+        self.assertIn('const ldb_fpb_projection::Projection *bodyProjection', gpu)
+        self.assertIn('auto &src = images[CurrentFinal];', gpu)
+        self.assertIn('auto &dst = images[providerUi(activeProviderSlot)];', gpu)
+        self.assertIn('vkCmdDispatchBase(c.command, x, y, 0', gpu)
+        self.assertIn('projectionPipeline = VK_NULL_HANDLE;', gpu)
+        self.assertIn('gui' if False else 'ensureProjectionPipeline()', host)
+        self.assertIn('gpu->canOverlayProjectedBody()', host)
+        self.assertIn('gpu_overlay_available', host)
+        self.assertIn("'HudCompositeSpirv.h'", prepare)
+        self.assertNotIn('vkCmdBlitImage', gpu)
+        self.assertNotIn('GetRenderTargetData', host)
+        self.assertIn('vec4(exactCurrentPixel.rgb, 1.0)', (
+            ROOT / 'shaders/hud_composite.comp').read_text())
 
     def test_white_debug_visualizes_actual_post_fsr_protection(self):
         ini = (ROOT / "integration/ldb/fg-config.ini").read_text()
