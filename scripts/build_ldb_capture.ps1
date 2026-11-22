@@ -47,7 +47,10 @@ try {
         $ringObj = Join-Path $sourcePath 'fg_input_ring_cases.obj'
         $ringSource = Join-Path $repo 'tests/fg_input_ring_cases.cpp'
         $ringInclude = Join-Path $sourcePath 'bridge/src/server'
-        $mathCheck = "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /I`"$mathInclude`" `"$mathSource`" /Fe:`"$mathExe`" /Fo:`"$mathObj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `"$mathExe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /I`"$ringInclude`" `"$ringSource`" /Fe:`"$ringExe`" /Fo:`"$ringObj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `"$ringExe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; "
+        $fpbExe = Join-Path $sourcePath 'fpb_projection_cases.exe'
+        $fpbObj = Join-Path $sourcePath 'fpb_projection_cases.obj'
+        $fpbSource = Join-Path $repo 'tests/fpb_projection_cases.cpp'
+        $mathCheck = "& cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /I`"$mathInclude`" `"$mathSource`" /Fe:`"$mathExe`" /Fo:`"$mathObj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `"$mathExe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /I`"$ringInclude`" `"$ringSource`" /Fe:`"$ringExe`" /Fo:`"$ringObj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `"$ringExe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & cl.exe /nologo /std:c++17 /EHsc /W4 /WX /O2 /I`"$mathInclude`" `"$fpbSource`" /Fe:`"$fpbExe`" /Fo:`"$fpbObj`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `"$fpbExe`"; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; "
       }
       $command = ". .\build_common.ps1; SetupVS -Platform $arch -VcVarsVer $VcVarsVer; $mathCheck & meson setup _captureRelease_$role --buildtype release --backend ninja $extra; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; Copy-Item Directory.Build.Props _captureRelease_$role; & meson compile -C _captureRelease_$role; exit `$LASTEXITCODE"
       & powershell.exe -NoProfile -Command $command
