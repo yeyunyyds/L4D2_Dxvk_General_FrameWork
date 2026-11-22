@@ -331,6 +331,9 @@ struct State {
           readValue(L"fpb_projection_up", L"-1"), -48.0f, 48.0f);
       updated.projectedBody.width = parseFloat(
           readValue(L"fpb_projection_width", L"1.0"), 0.5f, 2.5f);
+      updated.projectedBody.torsoScreenWidth = parseFloat(
+          readValue(L"fpb_projection_torso_screen_width", L"1.0"),
+          0.1f, 1.0f);
       updated.projectedBody.eyeHeight = parseFloat(
           readValue(L"fpb_projection_eye_height", L"64"), 24.0f, 85.0f);
       // Reject an edit raced with another editor write; do not consume the
@@ -348,6 +351,8 @@ struct State {
           updated.projectedBody.right == liveProtection.projectedBody.right &&
           updated.projectedBody.up == liveProtection.projectedBody.up &&
           updated.projectedBody.width == liveProtection.projectedBody.width &&
+          updated.projectedBody.torsoScreenWidth ==
+              liveProtection.projectedBody.torsoScreenWidth &&
           updated.projectedBody.eyeHeight == liveProtection.projectedBody.eyeHeight) {
         liveIniSeen = true;
         liveIniStamp = stamp;
@@ -382,6 +387,8 @@ struct State {
            ",\"fpb_right\":" + std::to_string(updated.projectedBody.right) +
            ",\"fpb_up\":" + std::to_string(updated.projectedBody.up) +
            ",\"fpb_width\":" + std::to_string(updated.projectedBody.width) +
+           ",\"fpb_torso_screen_width\":" +
+           std::to_string(updated.projectedBody.torsoScreenWidth) +
            ",\"fpb_eye_height\":" +
            std::to_string(updated.projectedBody.eyeHeight));
     } catch (const std::exception &error) {
