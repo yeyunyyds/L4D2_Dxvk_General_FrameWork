@@ -47,6 +47,16 @@ int main() {
     check(!cfg.enabled, "projection must be opt-in");
     check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
           "disabled projection is not empty");
+    // Archive defaults intentionally suppress both leg masks and tune the
+    // torso for an individual setup. Exercise the generic 3-box projection
+    // with an explicit neutral fixture instead of assuming user defaults.
+    check(cfg.width == 2.0f && cfg.torsoScreenWidth == 0.5f,
+          "archived FPB width presets unexpectedly changed");
+    check(cfg.screen[1].width == 0.0f && cfg.screen[2].width == 0.0f,
+          "archived FPB legs must remain disabled by default");
+    cfg.width = 1.0f;
+    cfg.torsoScreenWidth = 1.0f;
+    cfg.screen = {};
     cfg.enabled = true;
     auto visible = ldb_fpb_projection::project(down, 1920, 1080, cfg);
     check(visible.count > 0, "looking down should reveal proxy body");
