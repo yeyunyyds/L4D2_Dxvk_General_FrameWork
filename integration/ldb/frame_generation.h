@@ -36,6 +36,10 @@ struct Config {
        mergeSubmissions = true;
   float dynamicResidualThreshold = 0.08f;
   bool dynamicResidualOverrideRejected = false;
+  float firstPersonFallbackStart = 0.28f;
+  bool firstPersonFallbackOverrideRejected = false;
+  uint32_t dynamicMaskDilation = 1;
+  bool dynamicMaskDilationOverrideRejected = false;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
   std::filesystem::path root;
@@ -74,6 +78,31 @@ struct Config {
         } catch (...) {
           // Bad diagnostic value should not disable frame generation.
           dynamicResidualOverrideRejected = true;
+        }
+      }
+      const auto fallbackOverride = readEnv(L"LDB_FG_FIRST_PERSON_FALLBACK_START");
+      if (!fallbackOverride.empty()) {
+        try {
+          size_t used = 0;
+          const float value = std::stof(fallbackOverride, &used);
+          if (used != fallbackOverride.size() || !std::isfinite(value) ||
+              value < 0.0f || value > 1.0f)
+            throw std::out_of_range("FG first person fallback start");
+          firstPersonFallbackStart = value;
+        } catch (...) {
+          firstPersonFallbackOverrideRejected = true;
+        }
+      }
+      const auto dilationOverride = readEnv(L"LDB_FG_DYNAMIC_MASK_DILATION");
+      if (!dilationOverride.empty()) {
+        try {
+          size_t used = 0;
+          const auto value = std::stoul(dilationOverride, &used);
+          if (used != dilationOverride.size() || value > 1u)
+            throw std::out_of_range("FG dynamic mask dilation");
+          dynamicMaskDilation = uint32_t(value);
+        } catch (...) {
+          dynamicMaskDilationOverrideRejected = true;
         }
       }
       mergeSubmissions = readEnv(L"LDB_FG_MERGE_SUBMISSIONS") != L"0";
@@ -282,6 +311,14 @@ struct State {
              std::to_string(config().dynamicResidualThreshold) +
              ",\"dynamic_residual_override_rejected\":" +
              std::string(config().dynamicResidualOverrideRejected ? "true" : "false") +
+             ",\"first_person_fallback_start\":" +
+             std::to_string(config().firstPersonFallbackStart) +
+             ",\"first_person_fallback_override_rejected\":" +
+             std::string(config().firstPersonFallbackOverrideRejected ? "true" : "false") +
+             ",\"dynamic_mask_dilation\":" +
+             std::to_string(config().dynamicMaskDilation) +
+             ",\"dynamic_mask_dilation_override_rejected\":" +
+             std::string(config().dynamicMaskDilationOverrideRejected ? "true" : "false") +
              ",\"merge_submissions\":" +
              std::string(config().mergeSubmissions ? "true" : "false") +
              ",\"qpc_frequency\":" +
@@ -593,7 +630,9 @@ struct State {
       invalidate("extent_or_format", 0, true);
 
     if (!gpu) {
-      gpu = std::make_unique<ResidentFg>(interopDevice());
+      gpu = std::make_unique<ResidentFg>(
+           interopDevice(), config().firstPersonFallbackStart,
+           config().dynamicMaskDilation);
       gpu->initialize(b.create.extent.width, b.create.extent.height,
                       d.create.format, b.create.format,
                       asteria.consumerFamily(
