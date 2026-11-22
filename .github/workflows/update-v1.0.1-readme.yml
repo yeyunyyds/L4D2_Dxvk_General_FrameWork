@@ -1,0 +1,92 @@
+name: Update v1.0.1 packaged README
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/update-v1.0.1-readme.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: gf-v1.0.1-readme-only
+  cancel-in-progress: false
+
+jobs:
+  refresh-release-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify existing v1.0.1 release and pinned successful CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/45052346712" --jq '.conclusion')" = "success"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/45052346712" --jq '.head_sha')" = "013b002fa6c0a7e5dfb9e70fac065f0806928c80"
+          gh release view v1.0.1 --repo "$GITHUB_REPOSITORY" >/dev/null
+
+      - name: Download the verified v1.0.1 install ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: gf-v1.0.1-candidate-013b002fa6c0a7e5dfb9e70fac065f0806928c80
+          run-id: 45052346712
+          github-token: ${{ github.token }}
+          path: artifact
+
+      - name: Update only the README and regenerate SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/update_release_readme.py \
+            --source artifact/ldb-host-capture-dev.zip \
+            --readme docs/package-readme.md \
+            --output L4D2-DXVK-General-Framework-v1.0.1.zip
+
+      - name: Correct release notes for a README-only repack
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view v1.0.1 --repo "$GITHUB_REPOSITORY" --json body --jq .body > release-notes.md
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("release-notes.md")
+          notes = p.read_text(encoding="utf-8")
+          replacements = {
+              "Release ZIP 与 CI 验证的 ZIP 字节一致，另附 SHA-256 校验和。":
+              "安装包内 README 已更正为正式项目说明；所有二进制与 CI 验证版本一致，ZIP SHA-256 已更新。",
+              "The released installation ZIP is byte-identical to the successful CI artifact; SHA-256 checksums are included.":
+              "The packaged README is corrected; every binary remains identical to the CI-verified build, with updated ZIP SHA-256 checksums.",
+          }
+          for old, new in replacements.items():
+              if old in notes:
+                  notes = notes.replace(old, new)
+              elif new not in notes:
+                  raise SystemExit(f"Unexpected v1.0.1 release notes: {old}")
+          p.write_text(notes, encoding="utf-8")
+          PY
+
+      - name: Replace ZIP and checksum in existing Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload v1.0.1 \
+            L4D2-DXVK-General-Framework-v1.0.1.zip \
+            SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit v1.0.1 --repo "$GITHUB_REPOSITORY" --notes-file release-notes.md
+          gh release view v1.0.1 --repo "$GITHUB_REPOSITORY" \
+            --json assets --jq '.assets[].name' | sort > assets.txt
+          printf '%s\n' L4D2-DXVK-General-Framework-v1.0.1.zip SHA256SUMS.txt | sort > expected.txt
+          diff -u expected.txt assets.txt
