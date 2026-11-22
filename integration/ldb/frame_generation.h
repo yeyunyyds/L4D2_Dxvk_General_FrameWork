@@ -403,11 +403,11 @@ struct State {
       static constexpr const char *boxNames[3] = {"torso", "left_leg", "right_leg"};
       for (size_t i = 0; i < 3; ++i) {
         const auto &r = updated.projectedBody.screen[i];
-        const std::string prefix = std::string(",\\\"fpb_") + boxNames[i];
-        boxLog += prefix + "_width\\\":" + std::to_string(r.width) +
-                  prefix + "_height\\\":" + std::to_string(r.height) +
-                  prefix + "_x\\\":" + std::to_string(r.x) +
-                  prefix + "_y\\\":" + std::to_string(r.y);
+        const std::string prefix = std::string(",\"fpb_") + boxNames[i];
+        boxLog += prefix + "_width\":" + std::to_string(r.width) +
+                  prefix + "_height\":" + std::to_string(r.height) +
+                  prefix + "_x\":" + std::to_string(r.x) +
+                  prefix + "_y\":" + std::to_string(r.y);
       }
       emit("live_protection_updated", uid,
            "\"residual\":" + std::to_string(updated.residual) +
