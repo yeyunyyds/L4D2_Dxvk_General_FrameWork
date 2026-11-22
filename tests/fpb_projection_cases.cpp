@@ -48,6 +48,12 @@ int main() {
     check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
           "disabled projection is not empty");
     cfg.enabled = true;
+    // The archived user-tuned FPB defaults intentionally disable both leg
+    // boxes. This fixture instead exercises all three generic proxy boxes,
+    // so use explicit canonical geometry rather than runtime defaults.
+    cfg.width = 1.0f;
+    cfg.torsoScreenWidth = 1.0f;
+    cfg.screen = {};
     auto visible = ldb_fpb_projection::project(down, 1920, 1080, cfg);
     check(visible.count > 0, "looking down should reveal proxy body");
     check(!visible.rejectedCoverage, "normal view exceeded safe coverage");
