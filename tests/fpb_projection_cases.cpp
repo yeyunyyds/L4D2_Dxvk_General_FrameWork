@@ -142,6 +142,31 @@ int main() {
     check(ldb_fpb_projection::project(
               makeVP(-0.5f, true), 1920, 1080, cfg).count == 0,
           "left-handed up camera should have no body");
+    // Regression for the former near-vertical yaw dead zone:
+    // for pitch > acos(0.2) (~78.46 degrees), forward.xy length is below
+    // 0.2, but the previous fallback only ran below 0.001. Consequently
+    // ALL three body masks disappeared before looking straight down.
+    // Crop the test masks so the separate 70% coverage safety guard cannot
+    // confound this particular camera-basis regression.
+    ldb_fpb_projection::Settings downward = cfg;
+    downward.forward = 0.0f;
+    downward.right = 0.0f;
+    downward.width = 0.5f;
+    for (auto &region : downward.screen) {
+      region.width = .3f;
+      region.height = .3f;
+    }
+    for (bool leftHanded : {false, true}) {
+      for (float pitch : {1.35f, 1.39f, 1.45f, 1.54f,
+                          1.56f, 1.569f, 1.57079632679f}) {
+        const auto projected = ldb_fpb_projection::project(
+            makeVP(pitch, leftHanded), 1920, 1080, downward);
+        check(!projected.rejectedCoverage,
+              "near-vertical continuity test unexpectedly hit area guard");
+        check(projected.count > 0,
+              "near-vertical camera dropped all projected body regions");
+      }
+    }
 
     auto invalid = down;
     invalid[0] = std::numeric_limits<float>::quiet_NaN();
