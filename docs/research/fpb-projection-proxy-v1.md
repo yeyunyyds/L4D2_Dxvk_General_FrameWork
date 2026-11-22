@@ -10,8 +10,12 @@ The 64-bit GF Host already recovers the engine's row-major world-to-clip
 `cViewProj` and camera pose. It estimates a local-player origin as the camera
 position **minus a tunable eye height**, then builds three upright 3D
 bounding volumes for chest/abdomen and two legs. The volumes are shifted in
-horizontal camera yaw (not pitch). Projected 2D rectangles are merged into
-the existing exact-current-frame overlay image after the mask classifier.
+horizontal camera yaw (not pitch). The projected torso rectangle can be
+horizontally trimmed **after** 3D projection, preventing a near-camera torso
+from covering large portions of the floor. The original center and vertical
+range remain unchanged; the leg rectangles are independent. Projected 2D
+rectangles are merged into the existing exact-current-frame overlay image
+after the mask classifier.
 
 This is **not** a measurement of the actual local-player entity position:
 it uses a camera-derived proxy. FPB must be enabled separately by the user.
@@ -20,7 +24,7 @@ pixels. Turn it off if no body is being rendered.
 
 ## Dynamic INI controls
 
-All six new controls are read from
+All seven projection controls are read from
 `bin/.l4d2bridge/fg-config.ini` and **hot-reload** approximately every
 500 ms. Save the file while the game is running; no restart or shader
 recompilation is required for these values:
@@ -31,7 +35,8 @@ recompilation is required for these values:
 | `fpb_projection_forward` | `-13` | `[-48,48]` | Horizontal forward offset, Source units |
 | `fpb_projection_right` | `-1` | `[-48,48]` | Horizontal right offset |
 | `fpb_projection_up` | `-1` | `[-48,48]` | World-vertical offset |
-| `fpb_projection_width` | `1.0` | `[0.5,2.5]` | Scales horizontal chest and leg widths |
+| `fpb_projection_width` | `1.0` | `[0.5,2.5]` | Scales 3D horizontal torso and leg volumes |
+| `fpb_projection_torso_screen_width` | `1.0` | `[0.1,1.0]` | **Crop only the projected torso's left/right sides**; preserve legs, vertical range, and torso center |
 | `fpb_projection_eye_height` | `64` | `[24,85]` | Assumed eye height above entity origin |
 
 The original four dynamic-protection controls retain their semantics.
@@ -48,12 +53,13 @@ fpb_projection_forward=-13
 fpb_projection_right=-1
 fpb_projection_up=-1
 fpb_projection_width=1.0
+fpb_projection_torso_screen_width=1.0
 fpb_projection_eye_height=64
 mask_debug_white=1
 ```
 
 `dynamic_models=0` is startup-only; restart to change it.
-The six `fpb_projection_*` controls and `mask_debug_white` are hot-reloadable.
+All seven `fpb_projection_*` controls and `mask_debug_white` are hot-reloadable.
 The source's `mask_debug_white=1` is a **combined mask**, not an FPB-only
 source view. Toggle `fpb_projection_protect` in game to see the difference.
 
@@ -108,7 +114,31 @@ rebuild the pipeline or upload any pixel bitmap.
 2. With `mask_debug_white=1`, look straight ahead, down and up. The FPB-only
    difference should appear while looking down and disappear when looking up.
 3. Adjust `forward/right/up` one axis at a time to align body; use
-   `width` only if the shape is too narrow/wide.
+   `width` only if the 3D proxy shape is globally too narrow/wide.
+   If the broad lower white rectangle extends far to either side, reduce
+   `fpb_projection_torso_screen_width` from `1.0` to `0.5`, then `0.4`,
+   while leaving existing `forward/up/width` untouched.
 4. Check whether pistol-hand/body overlap is sharp and whether the overlay
    incorrectly covers the floor, HUD or weapon.
 5. If FPS or latency regress, compare with `fpb_projection_protect=0`.
+
+## Side-wing trim notes
+
+A near-plane torso projection can yield a very wide rectangle below the
+narrower leg boxes, even with `fpb_projection_width=0.5`. The new
+`fpb_projection_torso_screen_width` applies a **2D horizontal crop to the
+torso only**, after near-plane clipping, before the maximum-coverage guard.
+It is separate from the 3D `width` setting and is safe to hot reload.
+
+- `1.0`: original full projected torso width (default; preserves baseline)
+- `0.5`: retain the central 50% of the torso rectangle
+- `0.4`: retain the central 40%
+- `0.2`: aggressive trim; may clip actual clothes
+
+If white side panels persist when this value changes, confirm
+`dynamic_models=0` at startup and toggle `fpb_projection_protect` to
+separate the projected-body mask from HUD/viewmodel/legacy protection.
+Also note: the latest branch derives yaw from camera.forward, unlike older
+builds that guessed it from camera.right. An old build calibrated to
+`forward=+8` may require `forward=-8` after upgrading; compare the resulting
+projected rectangles before changing other parameters.
