@@ -40,6 +40,9 @@ bin/.l4d2bridge/fg-config.ini
 | `enabled` | `1` | 启用帧生成；设为 `0` 可在下次启动时关闭 |
 | `hud` | `1` | 保护游戏 HUD |
 | `viewmodel` | `1` | 保护第一人称手部与武器 |
+| `viewmodel_sweep` | `1` | **实验性**：在前后 Viewmodel 掩码之间补充中间帧保护（热更新） |
+| `viewmodel_sweep_radius` | `16` | 扫掠半距离，4–24 像素、步长 4；越高 GPU 开销可能越大 |
+| `generated_only` | `0` | **实验性**：改为只显示生成帧（热更新）；插帧不可用时允许原帧回退 |
 | `dynamic_models` | `1` | 保护第三人称人物及动态模型 |
 | `monitor` | `0` | 启用实时监测窗口 |
 
@@ -93,6 +96,9 @@ bin/.l4d2bridge/fg-config.ini
 | `enabled` | `1` | Enables Frame Generation; set to `0` to disable it on the next launch |
 | `hud` | `1` | Protects the game HUD |
 | `viewmodel` | `1` | Protects first-person hands and weapons |
+| `viewmodel_sweep` | `1` | **Experimental**: bracket A/B masks to cover generated-frame midpoints; hot reload |
+| `viewmodel_sweep_radius` | `16` | Half-distance in pixels, 4–24 in steps of 4; costs extra GPU work |
+| `generated_only` | `0` | **Experimental**: present generated frames only; hot reload; real-frame fallback when FG unavailable |
 | `dynamic_models` | `1` | Protects third-person characters and dynamic models |
 | `monitor` | `0` | Enables the live monitoring window |
 
