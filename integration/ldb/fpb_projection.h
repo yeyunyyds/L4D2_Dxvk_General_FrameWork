@@ -18,6 +18,7 @@ struct Settings {
   float right = -1.0f;
   float up = -1.0f;
   float width = 1.0f;     // Scales torso/leg horizontal dimensions.
+  float torsoScreenWidth = 1.0f; // Post-projection horizontal torso crop (0.1..1).
   float eyeHeight = 64.0f; // Estimated standing eye-to-origin distance.
 };
 struct Rect {
@@ -33,6 +34,18 @@ struct Projection {
   uint64_t upperBoundPixels = 0; // Sum before union, may double count.
   bool rejectedCoverage = false;
 };
+// Crop only the torso rectangle *in screen space*. A near-plane torso can
+// project to an enormous horizontal span even at width=0.5. Changing world
+// width or moving the model also moves the center; this control leaves both
+// the torso's center and its top/bottom unchanged.
+inline void cropTorsoSides(Rect &r, float fraction) {
+  if (!r.valid() || fraction >= 1.0f) return;
+  const int32_t original = r.right - r.left;
+  const int32_t target = std::max<int32_t>(
+      1, int32_t(std::lround(double(original) * double(fraction))));
+  r.left += (original - target) / 2;
+  r.right = r.left + target;
+}
 struct Vec3 { double x = 0, y = 0, z = 0; };
 struct Clip { double x, y, z, w; };
 
@@ -112,7 +125,9 @@ inline Projection project(const ldb_camera::Matrix &vp,
   if (!s.enabled || !width || !height || width > 4096 || height > 4096 ||
       !std::isfinite(s.forward) || !std::isfinite(s.right) ||
       !std::isfinite(s.up) || !std::isfinite(s.width) ||
+      !std::isfinite(s.torsoScreenWidth) ||
       !std::isfinite(s.eyeHeight) || s.width < .5f || s.width > 2.5f ||
+      s.torsoScreenWidth < .1f || s.torsoScreenWidth > 1.0f ||
       s.eyeHeight < 24 || s.eyeHeight > 85) return result;
   ldb_fsr::Camera cam;
   if (!ldb_fsr::cameraFromViewProjection(vp, .0254f, cam)) return result;
@@ -148,8 +163,10 @@ inline Projection project(const ldb_camera::Matrix &vp,
   Rect r;
   // Chest/abdomen + left and right legs: no head/weapon/hands.
   if (boxRect(vp,width,height,base,forward,right,-14*scale,14*scale,
-              -9*scale,9*scale,34,62,r))
+              -9*scale,9*scale,34,62,r)) {
+    cropTorsoSides(r, s.torsoScreenWidth);
     result.regions[result.count++] = r;
+  }
   if (boxRect(vp,width,height,base,forward,right,-12*scale,-1*scale,
               -8*scale,8*scale,2,40,r))
     result.regions[result.count++] = r;
