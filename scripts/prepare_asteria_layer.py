@@ -42,6 +42,7 @@ def prepare(source: Path, output: Path) -> Path:
     patches = [
         ROOT / "integration/fg/asteria-x64.patch",
         ROOT / "integration/fg/async-hud-x64.patch",
+        ROOT / "integration/fg/synthetic-only-x64.patch",
     ]
     subprocess.run(["git", "init", "-q"], cwd=output, check=True)
     for patch in patches:
