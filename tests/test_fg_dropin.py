@@ -300,7 +300,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         # A direct vkCmdPipelineBarrier would compile but fail with LNK2019.
         self.assertIn('c.vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,', gpu)
         import re
-        self.assertIsNone(re.search(r'(?<![.\\w])vkCmdPipelineBarrier\\s*\\(', gpu))
+        self.assertIsNone(re.search(r'(?<![.\w])vkCmdPipelineBarrier\s*\(', gpu))
         self.assertIn('projectionPipeline = VK_NULL_HANDLE;', gpu)
         self.assertIn('gpu->ensureProjectionPipeline();', host)
         self.assertIn('gpu->canOverlayProjectedBody()', host)
