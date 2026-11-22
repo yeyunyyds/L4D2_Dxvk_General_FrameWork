@@ -445,7 +445,7 @@ public:
       // Never overwrite it: that would also weaken unrelated protection.
       // Create a new all-zero array and retarget only providerDynamic's
       // OpStore at the pinned instruction offset (31858).
-      if (fgShader[3] != 0xaea0u ||
+      if (fgShader.size() <= 31860u || fgShader[3] != 0xaea0u ||
           fgShader[31858] != 0x0003003eu ||
           fgShader[31859] != 3049u ||
           fgShader[31860] != 494u)
