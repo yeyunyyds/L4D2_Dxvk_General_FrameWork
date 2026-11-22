@@ -9,10 +9,14 @@
 #include "asteria_host_control.h"
 #include <array>
 #include <cmath>
+#include <filesystem>
 #include <stdexcept>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <string>
+#include <system_error>
+#include <vector>
 namespace ldb_fg {
 using namespace dxvk_capture;
 
