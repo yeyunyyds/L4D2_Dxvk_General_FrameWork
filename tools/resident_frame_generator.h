@@ -1038,7 +1038,7 @@ public:
         const uint32_t yEnd = (uint32_t(r.bottom) + 7u) / 8u;
         if (xEnd <= x || yEnd <= y) continue;
         // Also synchronizes partially overlapping torso/leg dispatches.
-        vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        c.vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0,
                              nullptr, 0, nullptr, 1, &sync);
         vkCmdDispatchBase(c.command, x, y, 0, xEnd - x, yEnd - y, 1);
