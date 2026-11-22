@@ -334,6 +334,22 @@ struct State {
       updated.projectedBody.torsoScreenWidth = parseFloat(
           readValue(L"fpb_projection_torso_screen_width", L"1.0"),
           0.1f, 1.0f);
+      // Independent post-projection box controls. All use the same live
+      // INI read/validation path, so changing any one needs no restart.
+      static constexpr const wchar_t *screenKeys[3][4] = {
+          {L"fpb_projection_torso_width", L"fpb_projection_torso_height",
+           L"fpb_projection_torso_x", L"fpb_projection_torso_y"},
+          {L"fpb_projection_left_leg_width", L"fpb_projection_left_leg_height",
+           L"fpb_projection_left_leg_x", L"fpb_projection_left_leg_y"},
+          {L"fpb_projection_right_leg_width", L"fpb_projection_right_leg_height",
+           L"fpb_projection_right_leg_x", L"fpb_projection_right_leg_y"}};
+      for (size_t i = 0; i < 3; ++i) {
+        auto &r = updated.projectedBody.screen[i];
+        r.width = parseFloat(readValue(screenKeys[i][0], L"1.0"), 0.0f, 3.0f);
+        r.height = parseFloat(readValue(screenKeys[i][1], L"1.0"), 0.0f, 3.0f);
+        r.x = parseFloat(readValue(screenKeys[i][2], L"0"), -1920.0f, 1920.0f);
+        r.y = parseFloat(readValue(screenKeys[i][3], L"0"), -1080.0f, 1080.0f);
+      }
       updated.projectedBody.eyeHeight = parseFloat(
           readValue(L"fpb_projection_eye_height", L"64"), 24.0f, 85.0f);
       // Reject an edit raced with another editor write; do not consume the
@@ -342,6 +358,13 @@ struct State {
       const auto verifiedStamp = std::filesystem::last_write_time(
           liveIniPath, verifiedError);
       if (verifiedError || verifiedStamp != stamp) return;
+      bool sameScreen = true;
+      for (size_t i = 0; i < 3; ++i) {
+        const auto &a = updated.projectedBody.screen[i];
+        const auto &b = liveProtection.projectedBody.screen[i];
+        sameScreen = sameScreen && a.width == b.width &&
+                     a.height == b.height && a.x == b.x && a.y == b.y;
+      }
       if (updated.residual == liveProtection.residual &&
           updated.fallbackStart == liveProtection.fallbackStart &&
           updated.dilation == liveProtection.dilation &&
@@ -353,6 +376,7 @@ struct State {
           updated.projectedBody.width == liveProtection.projectedBody.width &&
           updated.projectedBody.torsoScreenWidth ==
               liveProtection.projectedBody.torsoScreenWidth &&
+          sameScreen &&
           updated.projectedBody.eyeHeight == liveProtection.projectedBody.eyeHeight) {
         liveIniSeen = true;
         liveIniStamp = stamp;
@@ -375,6 +399,16 @@ struct State {
       liveIniSeen = true;
       liveIniStamp = stamp;
       liveIniRejectedSeen = false;
+      std::string boxLog;
+      static constexpr const char *boxNames[3] = {"torso", "left_leg", "right_leg"};
+      for (size_t i = 0; i < 3; ++i) {
+        const auto &r = updated.projectedBody.screen[i];
+        const std::string prefix = std::string(",\\\"fpb_") + boxNames[i];
+        boxLog += prefix + "_width\\\":" + std::to_string(r.width) +
+                  prefix + "_height\\\":" + std::to_string(r.height) +
+                  prefix + "_x\\\":" + std::to_string(r.x) +
+                  prefix + "_y\\\":" + std::to_string(r.y);
+      }
       emit("live_protection_updated", uid,
            "\"residual\":" + std::to_string(updated.residual) +
            ",\"fallback_start\":" + std::to_string(updated.fallbackStart) +
@@ -390,7 +424,7 @@ struct State {
            ",\"fpb_torso_screen_width\":" +
            std::to_string(updated.projectedBody.torsoScreenWidth) +
            ",\"fpb_eye_height\":" +
-           std::to_string(updated.projectedBody.eyeHeight));
+           std::to_string(updated.projectedBody.eyeHeight) + boxLog);
     } catch (const std::exception &error) {
       // Failed edits remain retryable at the next poll. Rate-limit logging
       // for the same malformed INI revision to one event per file timestamp.
