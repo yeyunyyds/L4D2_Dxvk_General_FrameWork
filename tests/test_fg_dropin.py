@@ -97,9 +97,9 @@ class FrameGenerationDropInTests(unittest.TestCase):
     def test_viewmodel_uses_exact_current_overlay_mask(self):
         shader = (ROOT / "shaders/frame_generate.comp").read_text()
         host = (ROOT / "integration/ldb/frame_generation.h").read_text()
-        self.assertIn("sampleAt(currentNearBefore,screen).rgb", shader)
-        self.assertIn("sampleAt(currentNearAfter,screen).rgb", shader)
-        self.assertIn("sampleAt(previousNearBefore,screen).rgb", shader)
+        self.assertIn("sampleAt(currentNearBefore,xy).rgb", shader)
+        self.assertIn("sampleAt(currentNearAfter,xy).rgb", shader)
+        self.assertIn("sampleAt(previousNearBefore,xy).rgb", shader)
         self.assertIn("currentViewmodel||previousViewmodel", shader)
         self.assertIn("hud||viewmodel", shader)
         self.assertIn("viewmodel_overlay_available", host)
