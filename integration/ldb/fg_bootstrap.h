@@ -19,6 +19,7 @@ struct Settings {
   bool dynamicModels = true;
   bool fpbProtect = false; // Experimental stronger dynamic-pixel protection.
   bool maskDebugWhite = false; // Debug: final FG protection pixels become white.
+  std::wstring dynamicResidualThreshold = L"auto";
   bool contentProbe = false;
   bool monitor = false;
   bool mergeSubmissions = true;
@@ -93,6 +94,14 @@ inline uint32_t iniUint(const std::filesystem::path &path, const wchar_t *key,
   return std::min<uint32_t>(value, maximum);
 }
 
+inline std::wstring iniText(const std::filesystem::path &path,
+                            const wchar_t *key, const wchar_t *fallback) {
+  wchar_t buffer[64]{};
+  const DWORD count = GetPrivateProfileStringW(
+      L"frame_generation", key, fallback, buffer, 64, path.c_str());
+  return count ? std::wstring(buffer, count) : std::wstring(fallback);
+}
+
 inline Settings readSettings(const std::filesystem::path &path) noexcept {
   Settings result;
   result.enabled = iniBool(path, L"enabled", result.enabled);
@@ -101,6 +110,8 @@ inline Settings readSettings(const std::filesystem::path &path) noexcept {
   result.dynamicModels =
       iniBool(path, L"dynamic_models", result.dynamicModels);
   result.fpbProtect = iniBool(path, L"fpb_protect", result.fpbProtect);
+  result.dynamicResidualThreshold =
+      iniText(path, L"dynamic_residual_threshold", L"auto");
   result.maskDebugWhite = iniBool(path, L"mask_debug_white", result.maskDebugWhite);
   result.contentProbe =
       iniBool(path, L"content_probe", result.contentProbe);
@@ -171,6 +182,7 @@ inline void clearManagedEnvironment() noexcept {
       L"LDB_FG_HUD_BYPASS",       L"LDB_FG_VIEWMODEL",
       L"LDB_FG_DYNAMIC_MODELS",    L"LDB_FG_FPB_PROTECT",
       L"LDB_FG_MASK_DEBUG_WHITE",
+      L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD",
       L"LDB_FG_MERGE_SUBMISSIONS", L"LDB_FG_CAPTURE_FRAMES",
       L"LDB_FG_HOTKEYS",          L"LDB_FG_AUTO_CAPTURE",
       L"LDB_FG_PACING_MS",        L"LDB_FG_LOG_DIR",
@@ -234,6 +246,8 @@ inline void initialize() noexcept {
       setEnvironment(L"LDB_FG_DYNAMIC_MODELS", flag(settings.dynamicModels),
                      replace);
       setEnvironment(L"LDB_FG_FPB_PROTECT", flag(settings.fpbProtect), replace);
+      setEnvironment(L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD",
+                     settings.dynamicResidualThreshold, replace);
       setEnvironment(L"LDB_FG_MASK_DEBUG_WHITE", flag(settings.maskDebugWhite),
                      replace);
       setEnvironment(L"LDB_FG_MERGE_SUBMISSIONS",
@@ -302,6 +316,10 @@ inline void attachLogSession(const std::filesystem::path &ldbSession) noexcept {
                  << "viewmodel=" << state.settings.viewmodel << "\n"
                  << "dynamic_models=" << state.settings.dynamicModels << "\n"
                  << "fpb_protect=" << state.settings.fpbProtect << "\n"
+                 << "dynamic_residual_threshold="
+                 << std::string(state.settings.dynamicResidualThreshold.begin(),
+                                state.settings.dynamicResidualThreshold.end())
+                 << "\n"
                  << "mask_debug_white=" << state.settings.maskDebugWhite << "\n"
                  << "content_probe=" << state.settings.contentProbe << "\n"
                  << "monitor=" << state.settings.monitor << "\n"
