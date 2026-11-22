@@ -244,6 +244,17 @@ struct State {
   uint32_t burstRemaining = 0;
   HANDLE pacingTimer = nullptr;
   bool pacingUnavailable = false;
+  struct LiveProtection {
+    float residual = 0.08f;
+    float fallbackStart = 0.28f;
+    uint32_t dilation = 1;
+    bool debugWhite = false;
+  };
+  LiveProtection liveProtection{};
+  std::filesystem::path liveIniPath;
+  std::filesystem::file_time_type liveIniStamp{};
+  bool liveIniSeen = false;
+  uint64_t liveIniPollTick = 0;
   int64_t now() const {
     LARGE_INTEGER q{};
     QueryPerformanceCounter(&q);
@@ -257,10 +268,94 @@ struct State {
     burstRemaining = config().captures;
   }
 
+  // Only the four experimental protection parameters are live. Structural
+  // settings (enabled, HUD collection, Layer injection) remain startup-only.
+  // Poll timestamps, not INI text, every 500 ms; avoid per-frame disk IO.
+  void refreshLiveProtection(uint32_t uid) noexcept {
+    if (!providerOnly || liveIniPath.empty()) return;
+    const uint64_t tick = GetTickCount64();
+    if (tick - liveIniPollTick < 500) return;
+    liveIniPollTick = tick;
+    std::error_code ec;
+    const auto stamp = std::filesystem::last_write_time(liveIniPath, ec);
+    if (ec || (liveIniSeen && stamp == liveIniStamp)) return;
+    liveIniSeen = true;
+    liveIniStamp = stamp;
+    try {
+      auto readValue = [&](const wchar_t *key, const wchar_t *fallback) {
+        wchar_t value[96]{};
+        const DWORD n = GetPrivateProfileStringW(
+            L"frame_generation", key, fallback, value, 96, liveIniPath.c_str());
+        if (n >= 95) throw std::runtime_error("FG INI value too long");
+        return std::wstring(value, n);
+      };
+      auto parseFloat = [&](const std::wstring &value, float minimum,
+                            float maximum) {
+        size_t used = 0;
+        const float parsed = std::stof(value, &used);
+        if (used != value.size() || !std::isfinite(parsed) ||
+            parsed < minimum || parsed > maximum)
+          throw std::out_of_range("FG live numeric parameter");
+        return parsed;
+      };
+      LiveProtection updated = liveProtection;
+      const auto residual = readValue(L"dynamic_residual_threshold", L"auto");
+      updated.residual = residual == L"auto"
+          ? (config().dynamicModels && config().fpbProtect ? 0.035f : 0.08f)
+          : parseFloat(residual, 0.001f, 0.5f);
+      updated.fallbackStart = parseFloat(
+          readValue(L"first_person_fallback_start", L"0.28"), 0.0f, 1.0f);
+      const auto dilation = readValue(L"dynamic_mask_dilation", L"1");
+      if (dilation != L"0" && dilation != L"1")
+        throw std::invalid_argument("FG live dilation must be 0 or 1");
+      updated.dilation = dilation == L"1" ? 1u : 0u;
+      const auto debug = readValue(L"mask_debug_white", L"0");
+      if (debug != L"0" && debug != L"1")
+        throw std::invalid_argument("FG live debug mask must be 0 or 1");
+      updated.debugWhite = debug == L"1";
+      if (updated.residual == liveProtection.residual &&
+          updated.fallbackStart == liveProtection.fallbackStart &&
+          updated.dilation == liveProtection.dilation &&
+          updated.debugWhite == liveProtection.debugWhite) return;
+      if (gpu) gpu->updateProtectionShader(updated.fallbackStart,
+                                           updated.dilation);
+      // Host and Vulkan Layer share a process environment. The Layer selects
+      // among four already-created pipelines at the next generated frame.
+      if (!SetEnvironmentVariableW(L"LDB_FG_DYNAMIC_MASK_DILATION",
+                                   updated.dilation ? L"1" : L"0") ||
+          !SetEnvironmentVariableW(L"LDB_FG_MASK_DEBUG_WHITE",
+                                   updated.debugWhite ? L"1" : L"0"))
+        throw std::runtime_error("FG Layer live environment update failed");
+      liveProtection = updated;
+      emit("live_protection_updated", uid,
+           "\"residual\":" + std::to_string(updated.residual) +
+           ",\"fallback_start\":" + std::to_string(updated.fallbackStart) +
+           ",\"dilation\":" + std::to_string(updated.dilation) +
+           ",\"debug_white\":" +
+           std::string(updated.debugWhite ? "true" : "false"));
+    } catch (const std::exception &error) {
+      emit("live_protection_rejected", uid,
+           "\"reason\":" + quote(error.what()));
+    }
+  }
+
   explicit State(IDirect3DDevice9 *d)
       : device(d), interopProbe(probeInteropDevice(d)),
         generatedOnly(config().generatedOnly),
         providerOnly(config().providerOnly) {
+    liveProtection = {config().dynamicResidualThreshold,
+                      config().firstPersonFallbackStart,
+                      config().dynamicMaskDilation,
+                      readEnv(L"LDB_FG_MASK_DEBUG_WHITE") == L"1"};
+    if (readEnv(L"GF_FG_ISOLATION").empty()) {
+      std::array<wchar_t, 32768> hostPath{};
+      const DWORD pathLength = GetModuleFileNameW(
+          nullptr, hostPath.data(), DWORD(hostPath.size()));
+      if (pathLength && pathLength < hostPath.size())
+        liveIniPath = std::filesystem::path(
+            std::wstring(hostPath.data(), pathLength)).parent_path() /
+            L"fg-config.ini";
+    }
     captureLimit = config().captures;
     directory = config().root / ("fg-" + std::to_string(GetCurrentProcessId()) +
                                  "-" + std::to_string(GetTickCount64()) + "-" +
@@ -631,8 +726,8 @@ struct State {
 
     if (!gpu) {
       gpu = std::make_unique<ResidentFg>(
-           interopDevice(), config().firstPersonFallbackStart,
-           config().dynamicMaskDilation);
+           interopDevice(), liveProtection.fallbackStart,
+           liveProtection.dilation);
       gpu->initialize(b.create.extent.width, b.create.extent.height,
                       d.create.format, b.create.format,
                       asteria.consumerFamily(
@@ -896,6 +991,7 @@ struct State {
     previousArrival = arrival;
     previousPacingMs = 0;
     hotkeys(uid);
+    refreshLiveProtection(uid);
     bool captured = false, generatedFrame = false, qualityRejected = false;
     ResidentFg::Quality quality{};
     double captureMs = 0, generatedPresentMs = 0, logicalPresentMs = 0;
@@ -963,7 +1059,7 @@ struct State {
               // This lowers sensitivity only in provider mode when explicitly
               // requested; the shader, motion vectors and base path stay intact.
               // It is a heuristic, not an exact body segmentation mask.
-              providerParams.thresholds[3] = config().dynamicResidualThreshold;
+              providerParams.thresholds[3] = liveProtection.residual;
               try {
                 if (!config().mergeSubmissions) {
                   if (hudOverlay)
