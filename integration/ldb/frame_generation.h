@@ -8,6 +8,8 @@
 #include "resident_frame_generator.h"
 #include "asteria_host_control.h"
 #include <array>
+#include <cmath>
+#include <stdexcept>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -32,6 +34,8 @@ struct Config {
        hotkeys = true, fastInputs = false, hudBypass = false,
        viewmodel = false, dynamicModels = false, fpbProtect = false,
        mergeSubmissions = true;
+  float dynamicResidualThreshold = 0.08f;
+  bool dynamicResidualOverrideRejected = false;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
   std::filesystem::path root;
@@ -56,6 +60,22 @@ struct Config {
       viewmodel = readEnv(L"LDB_FG_VIEWMODEL") == L"1";
       dynamicModels = readEnv(L"LDB_FG_DYNAMIC_MODELS") == L"1";
       fpbProtect = readEnv(L"LDB_FG_FPB_PROTECT") == L"1";
+      dynamicResidualThreshold = dynamicModels && fpbProtect ? 0.035f : 0.08f;
+      const auto residualOverride =
+          readEnv(L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD");
+      if (!residualOverride.empty() && residualOverride != L"auto") {
+        try {
+          size_t used = 0;
+          const float value = std::stof(residualOverride, &used);
+          if (used != residualOverride.size() || !std::isfinite(value) ||
+              value < 0.001f || value > 0.5f)
+            throw std::out_of_range("FG dynamic residual threshold");
+          dynamicResidualThreshold = value;
+        } catch (...) {
+          // Bad diagnostic value should not disable frame generation.
+          dynamicResidualOverrideRejected = true;
+        }
+      }
       mergeSubmissions = readEnv(L"LDB_FG_MERGE_SUBMISSIONS") != L"0";
       autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
       auto pacing = readEnv(L"LDB_FG_PACING_MS");
@@ -258,6 +278,10 @@ struct State {
              std::string(config().dynamicModels ? "true" : "false") +
              ",\"fpb_protection_requested\":" +
              std::string(config().fpbProtect ? "true" : "false") +
+             ",\"dynamic_residual_threshold\":" +
+             std::to_string(config().dynamicResidualThreshold) +
+             ",\"dynamic_residual_override_rejected\":" +
+             std::string(config().dynamicResidualOverrideRejected ? "true" : "false") +
              ",\"merge_submissions\":" +
              std::string(config().mergeSubmissions ? "true" : "false") +
              ",\"qpc_frequency\":" +
@@ -900,8 +924,7 @@ struct State {
               // This lowers sensitivity only in provider mode when explicitly
               // requested; the shader, motion vectors and base path stay intact.
               // It is a heuristic, not an exact body segmentation mask.
-              providerParams.thresholds[3] =
-                  config().dynamicModels && config().fpbProtect ? 0.035f : 0.08f;
+              providerParams.thresholds[3] = config().dynamicResidualThreshold;
               try {
                 if (!config().mergeSubmissions) {
                   if (hudOverlay)
