@@ -19,12 +19,18 @@ This branch tries the smallest GF-only compatibility change for L4D2Visual's fir
 dynamic_models=1
 fpb_protect=1
 dynamic_residual_threshold=0.05
+first_person_fallback_start=0.28
+dynamic_mask_dilation=1
 mask_debug_white=1
 ```
 
 A lower threshold protects more changed pixels, possibly reducing real FG coverage. Higher values protect fewer pixels, possibly increasing body blur/ghosting. Invalid entries fall back to the preset instead of disabling GF; the session log reports `dynamic_residual_threshold` and `dynamic_residual_override_rejected`. A full restart is required. This setting does not alter HUD/viewmodel thresholds or change the underlying scene-depth gate.
 
-Other potentially useful experimental controls not implemented in this branch: `first_person_fallback_start` (hardcoded `0.28`, i.e. lower 72% uses relaxed residual protection), dynamic-neighbour expansion (four-neighbour test plus the final 3x3 composite dilation), and the effective depth residual tolerance (`0.0005` at current shader defaults). Exposing them requires separate shader changes; do not confuse them with the currently editable colour threshold.
+`first_person_fallback_start` is configurable within `0.0..1.0`, default `0.28`. It determines the vertical position below which the lower-screen relaxed colour-change protection is used. `1.0` essentially disables that fallback (other colour/depth criteria still protect pixels). The pinned FG SPIR-V has its unique 0.28 literal patched at shader-module creation; the default passes the original binary unchanged.
+
+`dynamic_mask_dilation` supports **0 or 1** (default `1`). At `1`, the dynamic candidate test additionally checks four adjacent pixels and final composite further expands the combined HUD/viewmodel/dynamic overlay to a 3x3 neighbourhood. At `0`, the pinned FG shader's cardinal offset array is replaced by zero offsets and both final-composite neighbourhood loops operate only at (0,0). This affects all overlay types in the final stage; it is not an FPB-only dilation. The normal, white-debug and no-dilation compositor variants are generated from the same checked-in SPIR-V with exact opcode/offset assertions; the existing bytecode is unchanged on default settings. Invalid values fall back to defaults, with reject flags in the Host session log.
+
+The effective depth residual tolerance (currently at least `0.0005`) remains internal and is **not** configurable in this experiment. The current INI only accepts dilation `0/1`, not arbitrary radii.
 
 ## Why the experiment may help
 
@@ -43,7 +49,8 @@ every pixel that would have been replaced by the original real-frame colour
 unchanged. Disable it again (`mask_debug_white=0`) after inspecting the coverage.
 
 The white output represents the combined HUD, viewmodel, and dynamic-model
-protection mask **after its 3x3 dilation**, not just FPB or the pre-dilation
+protection mask **after the optional 3x3 dilation (when dynamic_mask_dilation=1)**,
+not just FPB or the pre-dilation
 `dynamic_protected_pixels` counter. It shows where interpolation was overwritten,
 but **does not prove that nonwhite pixels were interpolated correctly**.
 The mask may flicker between source frames because FPB is only heuristically
