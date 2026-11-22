@@ -296,6 +296,11 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('auto &src = images[CurrentFinal];', gpu)
         self.assertIn('auto &dst = images[providerUi(activeProviderSlot)];', gpu)
         self.assertIn('vkCmdDispatchBase(c.command, x, y, 0', gpu)
+        # Host links Vulkan functions through its DXVK interop dispatch table.
+        # A direct vkCmdPipelineBarrier would compile but fail with LNK2019.
+        self.assertIn('c.vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,', gpu)
+        import re
+        self.assertIsNone(re.search(r'(?<![.\\w])vkCmdPipelineBarrier\\s*\\(', gpu))
         self.assertIn('projectionPipeline = VK_NULL_HANDLE;', gpu)
         self.assertIn('gpu->ensureProjectionPipeline();', host)
         self.assertIn('gpu->canOverlayProjectedBody()', host)
