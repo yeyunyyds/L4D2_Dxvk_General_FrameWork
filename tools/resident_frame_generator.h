@@ -440,20 +440,26 @@ public:
       fgShader[758] = encoded; // exclusive lower-screen boundary (0..1)
     }
     if (maskDilation == 0u) {
-      // Replace the shared vec2[4] cardinal offsets with an all-zero
-      // constant. In Provider mode that disables the 4-neighbour expansion
-      // of dynamic-model candidates. Insert its definition before array ID
-      // 494 so SPIR-V constant use/definition ordering stays valid.
-      if (fgShader[3] != 0xaea0u)
-        throw std::runtime_error("FG shader ID bound changed");
+      // The original vec2[4] constant (ID 494) is shared by foregroundEdge,
+      // temporalChange and providerDynamic after GLSL constant folding.
+      // Never overwrite it: that would also weaken unrelated protection.
+      // Create a new all-zero array and retarget only providerDynamic's
+      // OpStore at the pinned instruction offset (31858).
+      if (fgShader[3] != 0xaea0u ||
+          fgShader[31858] != 0x0003003eu ||
+          fgShader[31859] != 3049u ||
+          fgShader[31860] != 494u)
+        throw std::runtime_error("FG dynamic offset shader layout changed");
       const uint32_t zeroVector = fgShader[3];
-      const std::array<uint32_t, 5> zeroDefinition{
-          0x0005002cu, 16u, zeroVector, 378u, 378u};
+      const uint32_t zeroArray = zeroVector + 1u;
+      const std::array<uint32_t, 12> zeroDefinition{
+          0x0005002cu, 16u, zeroVector, 378u, 378u,
+          0x0007002cu, 488u, zeroArray,
+          zeroVector, zeroVector, zeroVector, zeroVector};
       fgShader.insert(fgShader.begin() + 698, zeroDefinition.begin(),
                       zeroDefinition.end());
-      fgShader[3] = zeroVector + 1u;
-      for (uint32_t i = 0; i < 4u; ++i)
-        fgShader[706u + i] = zeroVector;
+      fgShader[3] = zeroArray + 1u;
+      fgShader[31858u + 12u + 2u] = zeroArray;
     }
     VkShaderModuleCreateInfo sm{};
     sm.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
