@@ -116,11 +116,29 @@ inline Projection project(const ldb_camera::Matrix &vp,
       s.eyeHeight < 24 || s.eyeHeight > 85) return result;
   ldb_fsr::Camera cam;
   if (!ldb_fsr::cameraFromViewProjection(vp, .0254f, cam)) return result;
+  // Use the camera's *actual* forward axis. Rotating camera.right by a
+  // hardcoded 90 degrees assumes a specific handedness; Source/D3D-style
+  // left-handed view matrices reverse that guess and can put the body in
+  // front of the camera, filling the *top* of the screen on look-down.
   double rx = cam.right[0], ry = cam.right[1];
+  double fx = cam.forward[0], fy = cam.forward[1];
   const double rlen = std::hypot(rx, ry);
   if (!std::isfinite(rlen) || rlen < .2) return result;
+  double flen = std::hypot(fx, fy);
+  // At a straight-up/down camera pitch, forward.xy vanishes; the horizontal
+  // projection of camera.up still identifies yaw, with pitch determining sign.
+  if (!std::isfinite(flen) || flen < .001) {
+    if (!std::isfinite(cam.forward[2]) ||
+        std::abs(cam.forward[2]) < .5) return result;
+    const double sign = cam.forward[2] < 0.0f ? 1.0 : -1.0;
+    fx = sign * cam.up[0];
+    fy = sign * cam.up[1];
+    flen = std::hypot(fx, fy);
+  }
+  if (!std::isfinite(flen) || flen < .2) return result;
   rx /= rlen; ry /= rlen;
-  const Vec3 right{rx, ry, 0}, forward{ry, -rx, 0};
+  fx /= flen; fy /= flen;
+  const Vec3 right{rx, ry, 0}, forward{fx, fy, 0};
   const Vec3 base{
     double(cam.position[0]) + s.forward * forward.x + s.right * right.x,
     double(cam.position[1]) + s.forward * forward.y + s.right * right.y,
