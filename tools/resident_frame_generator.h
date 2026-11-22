@@ -6,6 +6,7 @@
 #include "fsr_backend_api.h"
 #include "fsr_camera.h"
 #include "fsr_presenter_api.h"
+#include "fpb_projection.h"
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -56,6 +57,7 @@ private:
   Capture c;
   float firstPersonFallbackStart = 0.28f;
   uint32_t dynamicMaskDilation = 1;
+  bool projectionBlitSupported = false;
   struct FsrLibrary {
     HMODULE module{};
     const LdbFsrApi *api{};
@@ -171,6 +173,7 @@ private:
 #define FN(name) PFN_##name name = nullptr
   FN(vkCmdFillBuffer);
   FN(vkCmdCopyBuffer);
+  FN(vkCmdBlitImage);
   FN(vkCreateQueryPool);
   FN(vkDestroyQueryPool);
   FN(vkCmdResetQueryPool);
@@ -318,6 +321,7 @@ public:
     return providerConsumerQueueFamily != UINT32_MAX &&
            providerConsumerQueueFamily != c.family;
   }
+  bool canBlitProjectedBody() const { return projectionBlitSupported; }
   explicit ResidentFg(ID3D9VkInteropDevice *interop,
                       float fallbackStart = 0.28f, uint32_t maskDilation = 1)
       : c(interop), firstPersonFallbackStart(fallbackStart),
@@ -333,6 +337,7 @@ public:
   throw std::runtime_error(#name " missing")
     LOAD(vkCmdFillBuffer);
     LOAD(vkCmdCopyBuffer);
+    LOAD(vkCmdBlitImage);
     LOAD(vkCreateQueryPool);
     LOAD(vkDestroyQueryPool);
     LOAD(vkCmdResetQueryPool);
@@ -546,6 +551,16 @@ public:
     else
       providerConsumerQueueFamily = UINT32_MAX;
     timestampBits = families[c.family].timestampValidBits;
+    // Optional post-classification FPB projection uses an ordinary Vulkan
+    // blit, preserving the exact current-frame RGB, including UI overlaps.
+    // Alpha originates from the backbuffer; white-debug exposes any alpha
+    // incompatibility rather than silently changing the existing FG shader.
+    VkFormatProperties sourceProperties{}, maskProperties{};
+    props(c.physical, finalFormat, &sourceProperties);
+    props(c.physical, VK_FORMAT_R8G8B8A8_UNORM, &maskProperties);
+    projectionBlitSupported =
+        (sourceProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) &&
+        (maskProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT);
     VkPhysicalDeviceProperties properties{};
     auto getProperties = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(
         gi(c.instance, "vkGetPhysicalDeviceProperties"));
@@ -787,7 +802,8 @@ public:
   }
   void generate(const Params &params, bool deferSubmit = false,
                 bool providerInputsOnly = false, uint32_t providerSlot = 0,
-                bool providerSceneOnly = false, bool appendSubmission = false) {
+                bool providerSceneOnly = false, bool appendSubmission = false,
+                const ldb_fpb_projection::Projection *bodyProjection = nullptr) {
     // Uniforms, descriptors and the command pool are single-buffered. Waiting
     // here overlaps the previous export with the game's intervening CPU work,
     // while still preventing their reuse before the queue finished.
@@ -875,9 +891,36 @@ public:
                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
                            1, &clear, 0, nullptr);
     vkCmdDispatch(c.command, (width + 7) / 8, (height + 7) / 8, 1);
+    // Override just the approximate visible FPB rectangles in the existing
+    // current-frame RGB+alpha protection texture. No FSR shader change and no
+    // full-frame CPU upload. A blit converts BGRA backbuffers to RGBA masks.
+    // Source backbuffer alpha is preserved; inspect white debug on hardware.
+    if (providerInputsOnly && bodyProjection && bodyProjection->count &&
+        projectionBlitSupported) {
+      auto &src = images[CurrentFinal];
+      auto &dst = images[providerUi(activeProviderSlot)];
+      transition(src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+      transition(dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+      std::array<VkImageBlit, 3> blits{};
+      for (uint32_t n = 0; n < bodyProjection->count; ++n) {
+        const auto &rect = bodyProjection->regions[n];
+        auto &blit = blits[n];
+        blit.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+        blit.dstSubresource = blit.srcSubresource;
+        blit.srcOffsets[0] = {rect.left, rect.top, 0};
+        blit.srcOffsets[1] = {rect.right, rect.bottom, 1};
+        blit.dstOffsets[0] = blit.srcOffsets[0];
+        blit.dstOffsets[1] = blit.srcOffsets[1];
+      }
+      vkCmdBlitImage(c.command, src.image, src.layout, dst.image, dst.layout,
+                     bodyProjection->count, blits.data(), VK_FILTER_NEAREST);
+      transition(src, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+      transition(dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    } else
+      transition(images[providerUi(activeProviderSlot)],
+                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     transition(images[providerDepth(activeProviderSlot)], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     transition(images[providerMotion(activeProviderSlot)], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    transition(images[providerUi(activeProviderSlot)], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     // The HUD-less image must keep the swapchain format (often BGRA), which
     // cannot be written through the shader's rgba8 storage binding. Copy the
     // exact pre-UI snapshot into the leased slot on the same submission.
