@@ -247,6 +247,11 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertEqual(ini.getfloat("fpb_projection_up"), -1.0)
         self.assertEqual(ini.getfloat("fpb_projection_width"), 1.0)
         self.assertEqual(ini.getfloat("fpb_projection_torso_screen_width"), 1.0)
+        for region in ("torso", "left_leg", "right_leg"):
+            for field, expected in (("width", 1.0), ("height", 1.0),
+                                    ("x", 0.0), ("y", 0.0)):
+                self.assertEqual(
+                    ini.getfloat(f"fpb_projection_{region}_{field}"), expected)
         self.assertEqual(ini.getfloat("fpb_projection_eye_height"), 64.0)
 
         host = (ROOT / "integration/ldb/frame_generation.h").read_text()
@@ -265,6 +270,15 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("updated.projectedBody.width = parseFloat(", host)
         self.assertIn("updated.projectedBody.torsoScreenWidth = parseFloat(", host)
         self.assertIn("updated.projectedBody.torsoScreenWidth ==", host)
+        for region in ("torso", "left_leg", "right_leg"):
+            for field in ("width", "height", "x", "y"):
+                self.assertIn(f'L"fpb_projection_{region}_{field}"', host)
+        self.assertIn("static constexpr const wchar_t *screenKeys[3][4]", host)
+        self.assertIn("updated.projectedBody.screen[i]", host)
+        self.assertIn("liveProtection.projectedBody.screen[i]", host)
+        self.assertIn("sameScreen &&", host)
+        for field in ("width", "height", "x", "y"):
+            self.assertIn(f"r.{field} = parseFloat(", host)
         self.assertIn('fpb_torso_screen_width', host)
         self.assertIn("updated.projectedBody.eyeHeight = parseFloat(", host)
         self.assertIn("liveProtection = updated;", host)
@@ -283,6 +297,12 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("if (result.upperBoundPixels >", model)
         self.assertIn("result.rejectedCoverage = true;", model)
         self.assertIn("cropTorsoSides(r, s.torsoScreenWidth);", model)
+        self.assertIn("inline bool adjustScreenRect(", model)
+        for n in range(3):
+            self.assertIn(f"adjustScreenRect(r, s.screen[{n}], width, height)", model)
+        self.assertIn("s.width <= 0.0f || s.height <= 0.0f", model)
+        self.assertIn("double(s.x) * screenWidth / 1920.0", model)
+        self.assertIn("double(s.y) * screenHeight / 1080.0", model)
         self.assertIn("r.left += (original - target) / 2;", model)
         self.assertIn("r.right = r.left + target;", model)
         self.assertIn("s.torsoScreenWidth < .1f || s.torsoScreenWidth > 1.0f", model)
