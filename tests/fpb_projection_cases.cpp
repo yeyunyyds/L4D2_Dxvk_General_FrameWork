@@ -51,6 +51,31 @@ int main() {
     auto visible = ldb_fpb_projection::project(down, 1920, 1080, cfg);
     check(visible.count > 0, "looking down should reveal proxy body");
     check(!visible.rejectedCoverage, "normal view exceeded safe coverage");
+    // Side wings are the torso's oversized near-camera projection, not
+    // necessarily left/right legs. Crop just the torso after projection,
+    // preserving its vertical span and both leg masks byte-for-byte.
+    check(visible.count == 3, "synthetic camera should show 3 FPB boxes");
+    cfg.torsoScreenWidth = 0.4f;
+    const auto trimmed = ldb_fpb_projection::project(
+        down, 1920, 1080, cfg);
+    check(trimmed.count == visible.count, "torso crop removed body boxes");
+    check(trimmed.regions[0].right - trimmed.regions[0].left <
+          visible.regions[0].right - visible.regions[0].left,
+          "torso horizontal wings did not shrink");
+    check(trimmed.regions[0].top == visible.regions[0].top &&
+          trimmed.regions[0].bottom == visible.regions[0].bottom,
+          "torso screen crop unexpectedly changed vertical position");
+    check(std::abs(trimmed.regions[0].left + trimmed.regions[0].right -
+                   visible.regions[0].left - visible.regions[0].right) <= 1,
+          "torso screen crop moved the rectangle center");
+    for (uint32_t i = 1; i < visible.count; ++i) {
+      const auto &before = visible.regions[i], &after = trimmed.regions[i];
+      check(before.left == after.left && before.right == after.right &&
+            before.top == after.top && before.bottom == after.bottom,
+            "torso-only crop changed a leg projection");
+    }
+    cfg.torsoScreenWidth = 1.0f;
+
     for (unsigned i = 0; i < visible.count; ++i) {
       const auto &r = visible.regions[i];
       check(r.valid() && r.left >= 0 && r.top >= 0 &&
@@ -80,6 +105,13 @@ int main() {
     invalid[0] = std::numeric_limits<float>::quiet_NaN();
     check(ldb_fpb_projection::project(invalid, 1920, 1080, cfg).count == 0,
           "invalid camera should fail closed");
+    cfg.torsoScreenWidth = .05f;
+    check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
+          "too-small torso crop should fail closed");
+    cfg.torsoScreenWidth = 1.1f;
+    check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
+          "too-large torso crop should fail closed");
+    cfg.torsoScreenWidth = 1.0f;
     cfg.width = 3.0f;
     check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
           "invalid width should fail closed");
