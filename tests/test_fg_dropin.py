@@ -30,6 +30,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertTrue(settings.getboolean("viewmodel"))
         self.assertTrue(settings.getboolean("dynamic_models"))
         self.assertTrue(settings.getboolean("fpb_protect"))
+        self.assertEqual(settings["dynamic_residual_threshold"], "auto")
         self.assertFalse(settings.getboolean("mask_debug_white"))
         self.assertFalse(settings.getboolean("content_probe"))
         self.assertFalse(settings.getboolean("monitor"))
@@ -50,6 +51,8 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('L"LDB_FG_VIEWMODEL"', source)
         self.assertIn('L"LDB_FG_FPB_PROTECT"', source)
         self.assertIn('iniBool(path, L"fpb_protect"', source)
+        self.assertIn('iniText(path, L"dynamic_residual_threshold", L"auto")', source)
+        self.assertIn('L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD"', source)
 
     def test_disabled_fg_has_a_hard_early_exit(self):
         source = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
@@ -109,11 +112,22 @@ class FrameGenerationDropInTests(unittest.TestCase):
         shader = (ROOT / "shaders/frame_generate.comp").read_text()
         bootstrap = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
         self.assertIn('fpbProtect = readEnv(L"LDB_FG_FPB_PROTECT") == L"1"', host)
-        self.assertIn('config().dynamicModels && config().fpbProtect ? 0.035f : 0.08f', host)
+        self.assertIn('dynamicResidualThreshold = dynamicModels && fpbProtect ? 0.035f : 0.08f', host)
+        self.assertIn('providerParams.thresholds[3] = config().dynamicResidualThreshold;', host)
         self.assertIn('L"LDB_FG_FPB_PROTECT", flag(settings.fpbProtect)', bootstrap)
         self.assertIn('float alpha=hud||viewmodel||dynamicModel?1.0:0.0;', shader)
         self.assertIn('mark=vec4(fallback.rgb,alpha);', shader)
         self.assertNotIn('GetRenderTargetData', host)
+
+    def test_dynamic_residual_ini_numeric_range_is_validated(self):
+        bootstrap = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        self.assertIn('setEnvironment(L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD"', bootstrap)
+        self.assertIn('readEnv(L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD")', host)
+        self.assertIn('std::stof(residualOverride, &used)', host)
+        self.assertIn('value < 0.001f || value > 0.5f', host)
+        self.assertIn('dynamicResidualOverrideRejected = true;', host)
+        self.assertIn('dynamic_residual_threshold', host)
 
     def test_white_debug_visualizes_actual_post_fsr_protection(self):
         ini = (ROOT / "integration/ldb/fg-config.ini").read_text()
