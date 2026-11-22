@@ -10,11 +10,12 @@ static void check(bool ok, const char *description) {
 
 // Synthetic Source-like camera at (0,0,64), looking +X at pitch=0.
 // Positive pitch looks down, Z is world-up.
-static ldb_camera::Matrix makeVP(float pitch) {
+static ldb_camera::Matrix makeVP(float pitch, bool d3dLeftHanded = false) {
   const float cp = std::cos(pitch), sp = std::sin(pitch);
   const std::array<float, 3> pos{0.f, 0.f, 64.f};
   const std::array<float, 3> axes[3]{
-    {0.f, 1.f, 0.f}, {sp, 0.f, cp}, {cp, 0.f, -sp}
+    {0.f, d3dLeftHanded ? -1.f : 1.f, 0.f},
+    {sp, 0.f, cp}, {cp, 0.f, -sp}
   };
   ldb_camera::Matrix view{}, projection{}, vp{};
   for (int r = 0; r < 3; ++r) {
@@ -60,6 +61,21 @@ int main() {
           "looking up should not protect the body");
     check(ldb_fpb_projection::project(forward, 1920, 1080, cfg).count == 0,
           "level forward camera should not see behind-camera body");
+    // Regression: the real Source/D3D camera may have the opposite camera
+    // handedness from our synthetic right-handed control fixture. Before
+    // this fix a 90-degree rotation of camera.right reversed the proxy
+    // forward direction and painted a large rectangle across screen TOP.
+    auto sourceDown = ldb_fpb_projection::project(
+        makeVP(1.2f, true), 1920, 1080, cfg);
+    check(sourceDown.count > 0, "left-handed down camera lost body");
+    check(sourceDown.regions[0].top > 1080 / 2,
+          "left-handed down camera projected torso over TOP of screen");
+    check(sourceDown.regions[0].bottom <= 1080,
+          "left-handed torso exceeded screen boundary");
+    check(ldb_fpb_projection::project(
+              makeVP(-0.5f, true), 1920, 1080, cfg).count == 0,
+          "left-handed up camera should have no body");
+
     auto invalid = down;
     invalid[0] = std::numeric_limits<float>::quiet_NaN();
     check(ldb_fpb_projection::project(invalid, 1920, 1080, cfg).count == 0,
