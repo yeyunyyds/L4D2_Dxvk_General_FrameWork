@@ -330,7 +330,10 @@ public:
     return providerConsumerQueueFamily != UINT32_MAX &&
            providerConsumerQueueFamily != c.family;
   }
-  bool canOverlayProjectedBody() const { return projectionPipeline != VK_NULL_HANDLE; }
+  bool canOverlayProjectedBody() const {
+    return !projectionUnavailable && projectionPipeline != VK_NULL_HANDLE &&
+           projectionDescriptorSet != VK_NULL_HANDLE;
+  }
   explicit ResidentFg(ID3D9VkInteropDevice *interop,
                       float fallbackStart = 0.28f, uint32_t maskDilation = 1)
       : c(interop), firstPersonFallbackStart(fallbackStart),
@@ -536,7 +539,7 @@ public:
   // Creates only when the user enables the new projection at runtime.
   // Any failure disables this *optional* feature without disabling FG.
   bool ensureProjectionPipeline() noexcept {
-    if (projectionPipeline) return true;
+    if (canOverlayProjectedBody()) return true;
     if (projectionUnavailable || !vkCmdDispatchBase || !width || !height)
       return false;
     auto failure = [&]() {
@@ -990,7 +993,7 @@ public:
     // alpha to ONE, and it writes vec4(exactCurrent.rgb, 1.0). This avoids the
     // undefined D3D9 backbuffer-alpha prerequisite of a raw Vulkan blit.
     if (providerInputsOnly && bodyProjection && bodyProjection->count &&
-        projectionPipeline) {
+        canOverlayProjectedBody()) {
       auto &src = images[CurrentFinal];
       auto &dst = images[providerUi(activeProviderSlot)];
       std::array<VkDescriptorImageInfo, 2> ii{};
