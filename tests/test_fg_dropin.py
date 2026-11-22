@@ -338,6 +338,30 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("HudCompositeSpirvSize", header)
         self.assertIn("writeonly uniform image2D generatedOutput", shader)
 
+    def test_ci_zip_embeds_required_notices_in_readme(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from package_ldb_capture import readme_with_notices
+
+        readme = readme_with_notices(
+            b"# Installation\n",
+            {"DXVK-LICENSE": b"Copyright DXVK\nUse terms\n",
+             "licenses/FidelityFX-LICENSE.txt": b"Copyright FidelityFX\n"})
+        self.assertIn(b"# Installation\n", readme)
+        self.assertIn(b"### DXVK-LICENSE\n", readme)
+        self.assertIn(b"Copyright DXVK\nUse terms\n", readme)
+        self.assertIn(b"### licenses/FidelityFX-LICENSE.txt\n", readme)
+        self.assertIn(b"Copyright FidelityFX\n", readme)
+        with self.assertRaisesRegex(ValueError, "Empty required"):
+            readme_with_notices(b"# Installation", {"x": b""})
+
+        source = (ROOT / "scripts/package_ldb_capture.py").read_text()
+        self.assertIn("archive.writestr('README.md', readme)", source)
+        self.assertNotIn("entries[f'bin/.l4d2bridge/licenses/", source)
+        self.assertNotIn("archive.write(ROOT/'docs/package-readme.md'", source)
+        self.assertIn("notices[name] = data", source)
+        self.assertIn("readme_with_notices(", source)
+
     def test_package_is_extract_and_run_layout(self):
         package = (ROOT / "scripts/package_ldb_capture.py").read_text()
         prefix = "bin/.l4d2bridge/"
