@@ -10,7 +10,9 @@
 #include "HudCompositeSpirv.h"
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
+#include <stdexcept>
 #include <memory>
 #include <vector>
 namespace dxvk_capture {
