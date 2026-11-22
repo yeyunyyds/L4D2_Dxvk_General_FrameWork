@@ -19,8 +19,8 @@ struct Settings {
   bool dynamicModels = true;
   bool fpbProtect = false; // Experimental stronger dynamic-pixel protection.
   bool maskDebugWhite = false; // Debug: final FG protection pixels become white.
-  std::wstring dynamicResidualThreshold = L"auto";
-  std::wstring firstPersonFallbackStart = L"0.28";
+  std::wstring dynamicResidualThreshold = L"0.2";
+  std::wstring firstPersonFallbackStart = L"1";
   uint32_t dynamicMaskDilation = 1; // 0=no dilation; 1=legacy radius.
   bool contentProbe = false;
   bool monitor = false;
@@ -123,9 +123,9 @@ inline Settings readSettings(const std::filesystem::path &path) noexcept {
       iniBool(path, L"dynamic_models", result.dynamicModels);
   result.fpbProtect = iniBool(path, L"fpb_protect", result.fpbProtect);
   result.dynamicResidualThreshold =
-      iniText(path, L"dynamic_residual_threshold", L"auto");
+      iniText(path, L"dynamic_residual_threshold", L"0.2");
   result.firstPersonFallbackStart =
-      iniText(path, L"first_person_fallback_start", L"0.28");
+      iniText(path, L"first_person_fallback_start", L"1");
   result.dynamicMaskDilation =
       iniUint(path, L"dynamic_mask_dilation", 1, 1);
   result.maskDebugWhite = iniBool(path, L"mask_debug_white", result.maskDebugWhite);
