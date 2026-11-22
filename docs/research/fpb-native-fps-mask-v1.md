@@ -5,10 +5,26 @@ This branch tries the smallest GF-only compatibility change for L4D2Visual's fir
 ## What changes
 
 - `bin/.l4d2bridge/fg-config.ini` adds `fpb_protect=1` in this **experimental branch**.
-- The existing GPU dynamic-model protection path uses a colour residual threshold of **0.035** instead of **0.08** when both `dynamic_models=1` and `fpb_protect=1`.
+- The existing GPU dynamic-model protection path uses a colour residual threshold of **0.035** instead of **0.08** when both `dynamic_models=1` and `fpb_protect=1`. A numeric `dynamic_residual_threshold` setting can override either preset.
 - Protected pixels continue through the existing exact-current-frame overlay (the shader's `dynamicModel` alpha mask). No new body hook, draw callback, IPC, motion-vector prediction, framebuffer readback, shader interface, or SPIR-V recompilation.
-- Set `fpb_protect=0` to restore the previous 0.08 threshold with no other behaviour change. `dynamic_models=0` also disables the new sensitivity.
+- Set `fpb_protect=0` to restore the previous 0.08 preset with no other behaviour change. `dynamic_models=0` disables this dynamic protection irrespective of the numeric threshold.
 - If the INI lacks `fpb_protect`, the bootstrap defaults it to **off**.
+
+## Editable residual threshold
+
+`dynamic_residual_threshold=auto` is backward compatible: `0.035` when `dynamic_models=1` and `fpb_protect=1`, otherwise `0.08`. An explicit decimal between `0.001` and `0.5` replaces this preset. For example:
+
+```ini
+[frame_generation]
+dynamic_models=1
+fpb_protect=1
+dynamic_residual_threshold=0.05
+mask_debug_white=1
+```
+
+A lower threshold protects more changed pixels, possibly reducing real FG coverage. Higher values protect fewer pixels, possibly increasing body blur/ghosting. Invalid entries fall back to the preset instead of disabling GF; the session log reports `dynamic_residual_threshold` and `dynamic_residual_override_rejected`. A full restart is required. This setting does not alter HUD/viewmodel thresholds or change the underlying scene-depth gate.
+
+Other potentially useful experimental controls not implemented in this branch: `first_person_fallback_start` (hardcoded `0.28`, i.e. lower 72% uses relaxed residual protection), dynamic-neighbour expansion (four-neighbour test plus the final 3x3 composite dilation), and the effective depth residual tolerance (`0.0005` at current shader defaults). Exposing them requires separate shader changes; do not confuse them with the currently editable colour threshold.
 
 ## Why the experiment may help
 
