@@ -235,6 +235,65 @@ class FrameGenerationDropInTests(unittest.TestCase):
             i += instruction_words
         self.assertEqual(i, len(patched))
 
+    def test_fpb_projection_is_opt_in_and_every_setting_is_hot(self):
+        import re
+        import math
+        config = configparser.ConfigParser()
+        config.read(ROOT / "integration/ldb/fg-config.ini", encoding="utf-8")
+        ini = config["frame_generation"]
+        self.assertFalse(ini.getboolean("fpb_projection_protect"))
+        self.assertEqual(ini.getfloat("fpb_projection_forward"), -13.0)
+        self.assertEqual(ini.getfloat("fpb_projection_right"), -1.0)
+        self.assertEqual(ini.getfloat("fpb_projection_up"), -1.0)
+        self.assertEqual(ini.getfloat("fpb_projection_width"), 1.0)
+        self.assertEqual(ini.getfloat("fpb_projection_eye_height"), 64.0)
+
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        model = (ROOT / "integration/ldb/fpb_projection.h").read_text()
+        gpu = (ROOT / "tools/resident_frame_generator.h").read_text()
+        prepare = (ROOT / "scripts/prepare_ldb_capture.py").read_text()
+        for key in ("protect", "forward", "right", "up",
+                    "width", "eye_height"):
+            self.assertIn(f'L"fpb_projection_{key}"', host)
+        self.assertIn('readValue(L"fpb_projection_protect", L"0")', host)
+        self.assertIn("refreshLiveProtection(uid);", host)
+        self.assertIn("updated.projectedBody.enabled =", host)
+        self.assertIn("updated.projectedBody.forward = parseFloat(", host)
+        self.assertIn("updated.projectedBody.right = parseFloat(", host)
+        self.assertIn("updated.projectedBody.up = parseFloat(", host)
+        self.assertIn("updated.projectedBody.width = parseFloat(", host)
+        self.assertIn("updated.projectedBody.eyeHeight = parseFloat(", host)
+        self.assertIn("liveProtection = updated;", host)
+        self.assertIn("const auto projectedBody = ldb_fpb_projection::project(", host)
+        self.assertIn("if (projectedBody.count && gpu->canBlitProjectedBody())", host)
+        self.assertIn("sceneOnly = false;", host)
+        self.assertIn("&projectedBody);", host)
+        self.assertIn('emit("fpb_projection"', host)
+
+        # True 3D region projection, not a screen-height fallback or fixed
+        # rectangle; no connection to Visual/Studio/32-bit model hooks.
+        self.assertIn("cameraFromViewProjection", model)
+        self.assertIn("cam.position[2]) - s.eyeHeight + s.up", model)
+        self.assertIn("for (int bit : {1, 2, 4})", model)
+        self.assertIn("if (!s.enabled", model)
+        self.assertIn("if (result.upperBoundPixels >", model)
+        self.assertIn("result.rejectedCoverage = true;", model)
+        self.assertNotIn("L4D2Visual", gpu)
+        self.assertNotIn("StudioModel", model)
+        self.assertIn("'integration/ldb/fpb_projection.h'", prepare)
+        self.assertIn("'fpb_projection.h'", prepare)
+
+        # Overlay reuse: blit from real Final image to leased RGBA overlay
+        # after classifier dispatch; no extra classifier SPIR-V rebuild.
+        self.assertIn("LOAD(vkCmdBlitImage);", gpu)
+        self.assertIn("projectionBlitSupported =", gpu)
+        self.assertIn("const ldb_fpb_projection::Projection *bodyProjection", gpu)
+        self.assertIn("images[CurrentFinal]", gpu)
+        self.assertIn("images[providerUi(activeProviderSlot)]", gpu)
+        self.assertIn("vkCmdBlitImage(c.command, src.image", gpu)
+        self.assertIn("VK_FILTER_NEAREST", gpu)
+        self.assertNotIn("GetRenderTargetData", host)
+
     def test_white_debug_visualizes_actual_post_fsr_protection(self):
         ini = (ROOT / "integration/ldb/fg-config.ini").read_text()
         bootstrap = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
