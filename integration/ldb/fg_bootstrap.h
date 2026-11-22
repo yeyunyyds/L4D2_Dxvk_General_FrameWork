@@ -20,6 +20,8 @@ struct Settings {
   bool fpbProtect = false; // Experimental stronger dynamic-pixel protection.
   bool maskDebugWhite = false; // Debug: final FG protection pixels become white.
   std::wstring dynamicResidualThreshold = L"auto";
+  std::wstring firstPersonFallbackStart = L"0.28";
+  uint32_t dynamicMaskDilation = 1; // 0=no dilation; 1=legacy radius.
   bool contentProbe = false;
   bool monitor = false;
   bool mergeSubmissions = true;
@@ -122,6 +124,10 @@ inline Settings readSettings(const std::filesystem::path &path) noexcept {
   result.fpbProtect = iniBool(path, L"fpb_protect", result.fpbProtect);
   result.dynamicResidualThreshold =
       iniText(path, L"dynamic_residual_threshold", L"auto");
+  result.firstPersonFallbackStart =
+      iniText(path, L"first_person_fallback_start", L"0.28");
+  result.dynamicMaskDilation =
+      iniUint(path, L"dynamic_mask_dilation", 1, 1);
   result.maskDebugWhite = iniBool(path, L"mask_debug_white", result.maskDebugWhite);
   result.contentProbe =
       iniBool(path, L"content_probe", result.contentProbe);
@@ -193,6 +199,8 @@ inline void clearManagedEnvironment() noexcept {
       L"LDB_FG_DYNAMIC_MODELS",    L"LDB_FG_FPB_PROTECT",
       L"LDB_FG_MASK_DEBUG_WHITE",
       L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD",
+      L"LDB_FG_FIRST_PERSON_FALLBACK_START",
+      L"LDB_FG_DYNAMIC_MASK_DILATION",
       L"LDB_FG_MERGE_SUBMISSIONS", L"LDB_FG_CAPTURE_FRAMES",
       L"LDB_FG_HOTKEYS",          L"LDB_FG_AUTO_CAPTURE",
       L"LDB_FG_PACING_MS",        L"LDB_FG_LOG_DIR",
@@ -258,6 +266,10 @@ inline void initialize() noexcept {
       setEnvironment(L"LDB_FG_FPB_PROTECT", flag(settings.fpbProtect), replace);
       setEnvironment(L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD",
                      settings.dynamicResidualThreshold, replace);
+      setEnvironment(L"LDB_FG_FIRST_PERSON_FALLBACK_START",
+                     settings.firstPersonFallbackStart, replace);
+      setEnvironment(L"LDB_FG_DYNAMIC_MASK_DILATION",
+                     std::to_wstring(settings.dynamicMaskDilation), replace);
       setEnvironment(L"LDB_FG_MASK_DEBUG_WHITE", flag(settings.maskDebugWhite),
                      replace);
       setEnvironment(L"LDB_FG_MERGE_SUBMISSIONS",
@@ -329,6 +341,11 @@ inline void attachLogSession(const std::filesystem::path &ldbSession) noexcept {
                  << "dynamic_residual_threshold="
                  << narrowAscii(state.settings.dynamicResidualThreshold)
                  << "\n"
+                 << "first_person_fallback_start="
+                 << narrowAscii(state.settings.firstPersonFallbackStart)
+                 << "\n"
+                 << "dynamic_mask_dilation="
+                 << state.settings.dynamicMaskDilation << "\n"
                  << "mask_debug_white=" << state.settings.maskDebugWhite << "\n"
                  << "content_probe=" << state.settings.contentProbe << "\n"
                  << "monitor=" << state.settings.monitor << "\n"
