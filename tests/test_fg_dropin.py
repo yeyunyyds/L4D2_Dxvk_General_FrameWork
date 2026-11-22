@@ -28,6 +28,9 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertTrue(settings.getboolean("enabled"))
         self.assertTrue(settings.getboolean("hud"))
         self.assertTrue(settings.getboolean("viewmodel"))
+        self.assertTrue(settings.getboolean("viewmodel_sweep"))
+        self.assertEqual(settings.getint("viewmodel_sweep_radius"), 16)
+        self.assertFalse(settings.getboolean("generated_only"))
         self.assertTrue(settings.getboolean("dynamic_models"))
         self.assertTrue(settings.getboolean("fpb_protect"))
         self.assertEqual(settings["dynamic_residual_threshold"], "0.2")
@@ -149,29 +152,25 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('value > 1u', host)
         self.assertIn('config().firstPersonFallbackStart', host)
         self.assertIn('config().dynamicMaskDilation', host)
-        self.assertIn('fgShader[758] = encoded;', gpu)
-        self.assertIn('fgShader[31858u + 12u + 2u] = zeroArray;', gpu)
-        self.assertIn('fgShader[31860] != 494u', gpu)
-        self.assertNotIn('fgShader[706u + i] = zeroVector;', gpu)
+        self.assertIn('liveParams.liveProtection =', gpu)
+        self.assertIn('p.liveProtection.x', (ROOT / "shaders/frame_generate.comp").read_text())
+        self.assertIn('p.liveProtection.y', (ROOT / "shaders/frame_generate.comp").read_text())
+        self.assertNotIn('fgShader[758]', gpu)
         self.assertIn('L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8', layer)
         self.assertIn('compositeWords[304 + shift] = 0x41u;', layer)
         self.assertIn('compositeWords[347 + shift] = 0x41u;', layer)
 
-    def test_pinned_shader_patching_targets_exact_spirv_instructions(self):
-        import re
-        fg = (ROOT / "tools/frame_generate_spirv.h").read_text()
-        hud = (ROOT / "integration/fg/HudCompositeSpirv.h").read_text()
-        fw = [int(s, 16) for s in re.findall(r'0x([0-9a-fA-F]+)', fg)]
-        hw = [int(s, 16) for s in re.findall(r'0x([0-9a-fA-F]+)u', hud)]
-        self.assertEqual(fw[755:759], [0x0004002b, 8, 765, 0x3e8f5c29])
-        self.assertEqual(fw[698:705], [0x0007002c, 488, 494, 489, 491, 492, 493])
-        self.assertEqual(fw[3], 0xaea0)
-        self.assertEqual(hw[301], 0x000700f5)
-        self.assertEqual(hw[308], 0x000500b3)
-        self.assertEqual(hw[336], 0x000700f5)
-        self.assertEqual(hw[343], 0x000500b3)
-        self.assertEqual([hw[i] for i in (304, 339)], [0x27, 0x27])
-        self.assertEqual([hw[i] for i in (312, 347)], [0x2e, 0x2e])
+    def test_runtime_uniforms_replace_fixed_spirv_word_mutations(self):
+        shader = (ROOT / "shaders/frame_generate.comp").read_text()
+        gpu = (ROOT / "tools/resident_frame_generator.h").read_text()
+        self.assertIn("vec4 thresholds;vec4 liveProtection;", shader)
+        self.assertIn("std::array<float, 4> liveProtection", gpu)
+        self.assertIn("static_assert(sizeof(Params) == 432", gpu)
+        self.assertIn("void updateProtectionShader(float fallbackStart", gpu)
+        self.assertIn("createGenerateShader()", gpu)
+        self.assertNotIn("fgShader[", gpu)
+        self.assertNotIn("vkDestroyPipeline(c.device, previous", gpu)
+        self.assertIn("const unsigned mode", (ROOT / "integration/ldb/frame_generation.h").read_text())
 
     def test_all_four_inis_hot_reload_without_game_restart(self):
         host = (ROOT / "integration/ldb/frame_generation.h").read_text()
@@ -185,6 +184,9 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('L"first_person_fallback_start"', host)
         self.assertIn('L"dynamic_mask_dilation"', host)
         self.assertIn('L"mask_debug_white"', host)
+        self.assertIn('L"viewmodel_sweep"', host)
+        self.assertIn('L"viewmodel_sweep_radius"', host)
+        self.assertIn('L"generated_only"', host)
         self.assertIn('gpu->updateProtectionShader(updated.fallbackStart,', host)
         self.assertIn('providerParams.thresholds[3] = liveProtection.residual;', host)
         self.assertIn('L"LDB_FG_RUNTIME_COMPOSITE_MODE",', host)
@@ -193,10 +195,10 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('liveIniStamp = stamp;', host)
         self.assertIn('live_protection_updated', host)
         self.assertIn('live_protection_rejected', host)
-        self.assertIn('createTunedGenerateShader(float fallbackStart,', gpu)
+        self.assertIn('createGenerateShader()', gpu)
         self.assertIn('updateProtectionShader(float fallbackStart,', gpu)
-        self.assertIn('c.vkQueueWaitIdle(c.queue)', gpu)
-        self.assertIn('VkPipeline previous = pipeline;', gpu)
+        self.assertIn('liveParams.liveProtection =', gpu)
+        self.assertIn('firstPersonFallbackStart = fallbackStart;', gpu)
         self.assertIn('std::array<VkPipeline, 4> hudPipelines{};', layer)
         self.assertIn('for (uint32_t mode = 0; mode < 4; ++mode)', layer)
         self.assertIn('state.hudPipelines[mode]', layer)
@@ -206,34 +208,32 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8', layer)
         self.assertIn('VK_PIPELINE_BIND_POINT_COMPUTE, activePipeline', layer)
 
-    def test_no_dilation_preserves_other_shared_offset_users(self):
-        import re
-        gpu = (ROOT / "tools/resident_frame_generator.h").read_text()
-        shader = (ROOT / "tools/frame_generate_spirv.h").read_text()
-        words = [int(x, 16) for x in re.findall(r'0x([0-9a-fA-F]+)', shader)]
-        self.assertEqual(words[31858:31861], [0x0003003e, 3049, 494])
-        self.assertEqual([words[i] for i in (2511, 8263, 8322)], [494, 494, 494])
-        # Exact pinned transformation must replace only the providerDynamic
-        # store, not the shared constant used by foregroundEdge/temporalChange.
-        zero_vector = words[3]
-        zero_array = zero_vector + 1
-        inserted = [0x0005002c, 16, zero_vector, 378, 378,
-                    0x0007002c, 488, zero_array,
-                    zero_vector, zero_vector, zero_vector, zero_vector]
-        patched = words[:698] + inserted + words[698:]
-        patched[3] = zero_array + 1
-        patched[31858 + 12 + 2] = zero_array
-        self.assertEqual(patched[31860 + 12], zero_array)
-        self.assertEqual([patched[i + 12] for i in (2511, 8263, 8322)],
-                         [494, 494, 494])
-        self.assertEqual(patched[698 + 12:705 + 12], words[698:705])
-        self.assertIn('fgShader[31858u + 12u + 2u] = zeroArray;', gpu)
-        i = 5
-        while i < len(patched):
-            instruction_words = patched[i] >> 16
-            self.assertGreater(instruction_words, 0)
-            i += instruction_words
-        self.assertEqual(i, len(patched))
+    def test_provider_dilation_and_sweep_do_not_change_legacy_masks(self):
+        shader = (ROOT / "shaders/frame_generate.comp").read_text()
+        self.assertIn("if(p.liveProtection.y<0.5)return false;", shader)
+        self.assertIn("if(foreground(xy,false))return true;", shader)
+        self.assertIn("bool providerSweptViewmodel(vec2 screen)", shader)
+        self.assertIn("if((p.flags.z&8u)==0u||(p.flags.w&8u)==0u)return false;", shader)
+        self.assertIn("p.liveProtection.w", shader)
+        self.assertIn("providerViewmodelAt(screen-v,true)", shader)
+        self.assertIn("providerViewmodelAt(screen+v,false)", shader)
+        self.assertIn("p.liveProtection.z>0.5&&providerSweptViewmodel(screen)", shader)
+        self.assertIn("bool viewmodel=currentViewmodel||previousViewmodel||", shader)
+
+    def test_generated_only_is_hot_and_fallback_safe(self):
+        cfg = (ROOT / "integration/ldb/fg-config.ini").read_text()
+        bootstrap = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        patch = (ROOT / "integration/fg/synthetic-only-x64.patch").read_text()
+        prepare = (ROOT / "scripts/prepare_asteria_layer.py").read_text()
+        self.assertIn("generated_only=0", cfg)
+        self.assertIn('iniBool(path, L"generated_only", result.generatedOnly)', bootstrap)
+        self.assertIn('L"LDB_FG_SYNTHETIC_ONLY"', bootstrap)
+        self.assertIn('readValue(L"generated_only", L"0")', host)
+        self.assertIn('SetEnvironmentVariableW(L"LDB_FG_SYNTHETIC_ONLY"', host)
+        self.assertIn('config.onlyPresentInterpolated = valid', patch)
+        self.assertIn("synthetic-only-x64.patch", prepare)
+        self.assertIn("generated_only", host)
 
     def test_fpb_projection_is_opt_in_and_every_setting_is_hot(self):
         import re
