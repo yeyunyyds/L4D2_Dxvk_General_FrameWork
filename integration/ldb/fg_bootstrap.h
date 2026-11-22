@@ -19,6 +19,7 @@ struct Settings {
   bool dynamicModels = true;
   bool fpbProtect = false; // Experimental stronger dynamic-pixel protection.
   bool maskDebugWhite = false; // Debug: final FG protection pixels become white.
+  bool generatedOnly = false; // FSR swapchain synthetic-only presentation.
   std::wstring dynamicResidualThreshold = L"0.2";
   std::wstring firstPersonFallbackStart = L"1";
   uint32_t dynamicMaskDilation = 1; // 0=no dilation; 1=legacy radius.
@@ -129,6 +130,7 @@ inline Settings readSettings(const std::filesystem::path &path) noexcept {
   result.dynamicMaskDilation =
       iniUint(path, L"dynamic_mask_dilation", 1, 1);
   result.maskDebugWhite = iniBool(path, L"mask_debug_white", result.maskDebugWhite);
+  result.generatedOnly = iniBool(path, L"generated_only", result.generatedOnly);
   result.contentProbe =
       iniBool(path, L"content_probe", result.contentProbe);
   result.monitor = iniBool(path, L"monitor", result.monitor);
@@ -202,6 +204,7 @@ inline void clearManagedEnvironment() noexcept {
       L"LDB_FG_FIRST_PERSON_FALLBACK_START",
       L"LDB_FG_DYNAMIC_MASK_DILATION",
       L"LDB_FG_RUNTIME_COMPOSITE_MODE",
+      L"LDB_FG_SYNTHETIC_ONLY",
       L"LDB_FG_MERGE_SUBMISSIONS", L"LDB_FG_CAPTURE_FRAMES",
       L"LDB_FG_HOTKEYS",          L"LDB_FG_AUTO_CAPTURE",
       L"LDB_FG_PACING_MS",        L"LDB_FG_LOG_DIR",
@@ -272,6 +275,8 @@ inline void initialize() noexcept {
       setEnvironment(L"LDB_FG_DYNAMIC_MASK_DILATION",
                      std::to_wstring(settings.dynamicMaskDilation), replace);
       setEnvironment(L"LDB_FG_MASK_DEBUG_WHITE", flag(settings.maskDebugWhite),
+                     replace);
+      setEnvironment(L"LDB_FG_SYNTHETIC_ONLY", flag(settings.generatedOnly),
                      replace);
       // Publish normal/white x expanded/single-pixel as a single value.
       // Use effective environment values so diagnostic isolation scripts keep
