@@ -52,6 +52,10 @@ def prepare(source: Path, output: Path) -> Path:
         hud_header,
         output / "Runtime/FrameGeneration/Layer/HudCompositeSpirv.h",
     )
+    shutil.copyfile(
+        ROOT / "integration/fg/HudCompositeWhiteSpirv.h",
+        output / "Runtime/FrameGeneration/Layer/HudCompositeWhiteSpirv.h",
+    )
     cmake = output / "Runtime/FrameGeneration/Research/CMakeLists.txt"
     text = cmake.read_text()
     marker = "set(FFX_PLATFORM_NAME x86)"
