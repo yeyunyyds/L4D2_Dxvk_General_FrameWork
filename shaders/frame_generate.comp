@@ -9,7 +9,7 @@ layout(set=0,binding=5) uniform sampler2D previousUi;
 layout(set=0,binding=6) uniform sampler2D currentFinal;
 layout(set=0,binding=7) uniform sampler2D previousFinal;
 layout(set=0,binding=8,rgba8) writeonly uniform image2D generated;
-layout(set=0,binding=9,std140) uniform Parameters { vec4 rows[24];uvec4 flags;vec4 thresholds; } p;
+layout(set=0,binding=9,std140) uniform Parameters { vec4 rows[24];uvec4 flags;vec4 thresholds;vec4 liveProtection; } p;
 layout(set=0,binding=10,rgba8) writeonly uniform image2D classification;
 layout(set=0,binding=11) uniform sampler2D currentNearBefore;
 layout(set=0,binding=12) uniform sampler2D currentNearAfter;
@@ -101,13 +101,14 @@ bool providerDynamicAt(vec2 screen) {
  bool depthResidual=!sceneDepth(previousDepthValue)||
                     abs(previousDepthValue-expectedPreviousDepth)>
                         max(0.0005,p.thresholds.x*2.0);
- bool firstPersonFallback=screen.y>float(p.flags.y)*0.28;
+ bool firstPersonFallback=screen.y>float(p.flags.y)*p.liveProtection.x;
  // A strong coherent colour change also protects characters when the scene
  // depth snapshot predates their StudioModel draw.
  return depthResidual||firstPersonFallback||colourResidual>p.thresholds.w*2.0;
 }
 bool providerDynamic(vec2 screen) {
  if(providerDynamicAt(screen))return true;
+ if(p.liveProtection.y<0.5)return false;
  const vec2 offsets[4]=vec2[](vec2(1,0),vec2(-1,0),vec2(0,1),vec2(0,-1));
  for(int i=0;i<4;i++)if(providerDynamicAt(screen+offsets[i]))return true;
  return false;
@@ -198,6 +199,41 @@ bool unsafeThinEffect(vec2 screen,vec4 candidate,vec4 current) {
 layout(set=0,binding=15,std430) buffer FrameQuality { uint counts[]; } quality;
 layout(set=0,binding=16,r32f) writeonly uniform image2D hostDepth;
 layout(set=0,binding=17,rg32f) writeonly uniform image2D hostMotion;
+// Provider-only Viewmodel midpoint experiment: two captured outlines can
+// surround the actual interpolated outline without covering it themselves.
+// Only fill pixels bracketed by opposite-time Viewmodel evidence; this is
+// deliberately NOT an unconstrained dilation of the HUD, FPB or scenery.
+bool providerViewmodelAt(vec2 xy,bool previous) {
+ if(!inside(xy))return false;
+ uint f=previous?p.flags.w:p.flags.z;
+ if((f&8u)==0u)return false;
+ vec3 a=previous?sampleAt(previousNearBefore,xy).rgb:
+                 sampleAt(currentNearBefore,xy).rgb;
+ vec3 b=previous?sampleAt(previousNearAfter,xy).rgb:
+                 sampleAt(currentNearAfter,xy).rgb;
+ return any(greaterThan(abs(a-b),vec3(0.00001)));
+}
+bool providerSweptViewmodel(vec2 screen) {
+ if((p.flags.z&8u)==0u||(p.flags.w&8u)==0u)return false;
+ // Limit the expensive search to the weapon-facing part of the screen.
+ if(screen.y<float(p.flags.y)*0.20)return false;
+ const vec2 dirs[4]=vec2[](vec2(1,0),vec2(0,1),
+                            vec2(1,1),vec2(1,-1));
+ // A/B endpoint masks bracket a midpoint at +/- d, max |d|=24px.
+ // d=4,8,12,...; equivalent source travel can reach 2*d.
+ for(int d=4;d<=24;d+=4) {
+  if(float(d)>p.liveProtection.w)break;
+  for(int k=0;k<4;k++) {
+   vec2 v=dirs[k]*float(d);
+   if(!inside(screen-v)||!inside(screen+v))continue;
+   if(providerViewmodelAt(screen-v,true)&&
+      providerViewmodelAt(screen+v,false))return true;
+   if(providerViewmodelAt(screen+v,true)&&
+      providerViewmodelAt(screen-v,false))return true;
+  }
+ }
+ return false;
+}
 shared uvec4 groupCounts[64];
 shared uvec4 sourceCounts[64];
 shared uint localRisks[64];
@@ -221,13 +257,10 @@ void main() {
  if(providerExport) {
   vec4 before=(p.flags.z&2u)!=0u?sampleAt(currentUi,screen):fallback;
   bool hud=any(greaterThan(abs(fallback.rgb-before.rgb),vec3(0.5/255.0)));
-  bool currentViewmodel=(p.flags.z&8u)!=0u&&any(greaterThan(
-   abs(sampleAt(currentNearBefore,screen).rgb-
-       sampleAt(currentNearAfter,screen).rgb),vec3(0.00001)));
-  bool previousViewmodel=(p.flags.w&8u)!=0u&&any(greaterThan(
-   abs(sampleAt(previousNearBefore,screen).rgb-
-       sampleAt(previousNearAfter,screen).rgb),vec3(0.00001)));
-  bool viewmodel=currentViewmodel||previousViewmodel;
+  bool currentViewmodel=providerViewmodelAt(screen,false);
+  bool previousViewmodel=providerViewmodelAt(screen,true);
+  bool viewmodel=currentViewmodel||previousViewmodel||
+    (p.liveProtection.z>0.5&&providerSweptViewmodel(screen));
   bool dynamicModel=providerDynamic(screen);
   providerDynamicProtected=dynamicModel;
   float alpha=hud||viewmodel||dynamicModel?1.0:0.0;
