@@ -29,6 +29,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertTrue(settings.getboolean("hud"))
         self.assertTrue(settings.getboolean("viewmodel"))
         self.assertTrue(settings.getboolean("dynamic_models"))
+        self.assertTrue(settings.getboolean("fpb_protect"))
         self.assertFalse(settings.getboolean("content_probe"))
         self.assertFalse(settings.getboolean("monitor"))
         self.assertTrue(settings.getboolean("merge_submissions"))
@@ -46,6 +47,8 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('L"ASTERIA_FG_CONTENT_PROBE"', source)
         self.assertIn('L"ASTERIA_FG_SEPARATE_UI"', source)
         self.assertIn('L"LDB_FG_VIEWMODEL"', source)
+        self.assertIn('L"LDB_FG_FPB_PROTECT"', source)
+        self.assertIn('iniBool(path, L"fpb_protect"', source)
 
     def test_disabled_fg_has_a_hard_early_exit(self):
         source = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
@@ -99,6 +102,17 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("dynamic_protected_pixels", host)
         self.assertIn("config().dynamicModels ? 16u : 0u", host)
         self.assertNotIn("GetRenderTargetData", host)
+
+    def test_fpb_compat_uses_existing_gpu_overlay_without_new_hooks(self):
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        shader = (ROOT / "shaders/frame_generate.comp").read_text()
+        bootstrap = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
+        self.assertIn('fpbProtect = readEnv(L"LDB_FG_FPB_PROTECT") == L"1"', host)
+        self.assertIn('config().dynamicModels && config().fpbProtect ? 0.035f : 0.08f', host)
+        self.assertIn('L"LDB_FG_FPB_PROTECT", flag(settings.fpbProtect)', bootstrap)
+        self.assertIn('float alpha=hud||viewmodel||dynamicModel?1.0:0.0;', shader)
+        self.assertIn('mark=vec4(fallback.rgb,alpha);', shader)
+        self.assertNotIn('GetRenderTargetData', host)
 
     def test_hud_shader_is_checked_in_as_valid_spirv_words(self):
         header = (ROOT / "integration/fg/HudCompositeSpirv.h").read_text()
