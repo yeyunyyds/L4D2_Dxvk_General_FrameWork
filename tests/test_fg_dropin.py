@@ -31,6 +31,8 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertTrue(settings.getboolean("dynamic_models"))
         self.assertTrue(settings.getboolean("fpb_protect"))
         self.assertEqual(settings["dynamic_residual_threshold"], "auto")
+        self.assertEqual(settings["first_person_fallback_start"], "0.28")
+        self.assertEqual(settings.getint("dynamic_mask_dilation"), 1)
         self.assertFalse(settings.getboolean("mask_debug_white"))
         self.assertFalse(settings.getboolean("content_probe"))
         self.assertFalse(settings.getboolean("monitor"))
@@ -53,6 +55,8 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('iniBool(path, L"fpb_protect"', source)
         self.assertIn('iniText(path, L"dynamic_residual_threshold", L"auto")', source)
         self.assertIn('L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD"', source)
+        self.assertIn('L"LDB_FG_FIRST_PERSON_FALLBACK_START"', source)
+        self.assertIn('L"LDB_FG_DYNAMIC_MASK_DILATION"', source)
 
     def test_disabled_fg_has_a_hard_early_exit(self):
         source = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
@@ -131,6 +135,41 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('value < 0.001f || value > 0.5f', host)
         self.assertIn('dynamicResidualOverrideRejected = true;', host)
         self.assertIn('dynamic_residual_threshold', host)
+
+    def test_fallback_and_dilation_are_validated_and_reach_gpu_pipeline(self):
+        bootstrap = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        gpu = (ROOT / "tools/resident_frame_generator.h").read_text()
+        layer = (ROOT / "integration/fg/async-hud-x64.patch").read_text()
+        self.assertIn('iniText(path, L"first_person_fallback_start", L"0.28")', bootstrap)
+        self.assertIn('iniUint(path, L"dynamic_mask_dilation", 1, 1)', bootstrap)
+        self.assertIn('readEnv(L"LDB_FG_FIRST_PERSON_FALLBACK_START")', host)
+        self.assertIn('readEnv(L"LDB_FG_DYNAMIC_MASK_DILATION")', host)
+        self.assertIn('value < 0.0f || value > 1.0f', host)
+        self.assertIn('value > 1u', host)
+        self.assertIn('config().firstPersonFallbackStart', host)
+        self.assertIn('config().dynamicMaskDilation', host)
+        self.assertIn('fgShader[758] = encoded;', gpu)
+        self.assertIn('fgShader[706u + i] = zeroVector;', gpu)
+        self.assertIn('L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8', layer)
+        self.assertIn('compositeWords[304 + shift] = 0x41u;', layer)
+        self.assertIn('compositeWords[347 + shift] = 0x41u;', layer)
+
+    def test_pinned_shader_patching_targets_exact_spirv_instructions(self):
+        import re
+        fg = (ROOT / "tools/frame_generate_spirv.h").read_text()
+        hud = (ROOT / "integration/fg/HudCompositeSpirv.h").read_text()
+        fw = [int(s, 16) for s in re.findall(r'0x([0-9a-fA-F]+)', fg)]
+        hw = [int(s, 16) for s in re.findall(r'0x([0-9a-fA-F]+)u', hud)]
+        self.assertEqual(fw[755:759], [0x0004002b, 8, 765, 0x3e8f5c29])
+        self.assertEqual(fw[698:705], [0x0007002c, 488, 494, 489, 491, 492, 493])
+        self.assertEqual(fw[3], 0xaea0)
+        self.assertEqual(hw[301], 0x000700f5)
+        self.assertEqual(hw[308], 0x000500b3)
+        self.assertEqual(hw[336], 0x000700f5)
+        self.assertEqual(hw[343], 0x000500b3)
+        self.assertEqual([hw[i] for i in (304, 339)], [0x27, 0x27])
+        self.assertEqual([hw[i] for i in (312, 347)], [0x2e, 0x2e])
 
     def test_white_debug_visualizes_actual_post_fsr_protection(self):
         ini = (ROOT / "integration/ldb/fg-config.ini").read_text()
