@@ -68,6 +68,8 @@ Client、Host32、Host64、DXVK 与 Vulkan Layer 必须使用安装包内的配�
 
 本项目使用或参考 [L4D2Bridge](https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge)、[DXVK](https://github.com/doitsujin/dxvk)、[AMD FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK)、[Asteria Graphics Enhancement](https://github.com/Anokianx/L4D2-Asteria-Graphics-Enhancement) 和 [Danyria Integration Tool](https://github.com/Anokianx/L4D2-Danyria-Integration-Tool)。
 
+GF 中由本项目有权授权的新增代码与修改部分采用 [MIT 许可证](LICENSE)。第三方源码、SDK、库及打包组件仍分别遵循原有许可证，不因本仓库新增 MIT 声明而被重新授权。
+
 第三方依赖、固定版本与许可证见 [THIRD_PARTY.md](THIRD_PARTY.md)。发布包 README 附有相应的第三方再分发声明。
 
 ---
@@ -135,5 +137,7 @@ For black screens, freezes, artifacts or unexpected performance, collect the GPU
 ### Credits and licenses
 
 Built upon or informed by [L4D2Bridge](https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge), [DXVK](https://github.com/doitsujin/dxvk), [AMD FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK), [Asteria Graphics Enhancement](https://github.com/Anokianx/L4D2-Asteria-Graphics-Enhancement), and [Danyria Integration Tool](https://github.com/Anokianx/L4D2-Danyria-Integration-Tool).
+
+GF's project-owned additions and modifications are licensed under the [MIT License](LICENSE). Third-party source code, SDKs, libraries, and bundled components retain their respective upstream licenses and are not relicensed by this repository.
 
 See [THIRD_PARTY.md](THIRD_PARTY.md) for pinned dependencies and licensing. Required redistribution notices are also included in the release package README.
