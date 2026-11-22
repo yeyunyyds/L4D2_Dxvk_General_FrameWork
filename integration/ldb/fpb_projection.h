@@ -24,10 +24,13 @@ struct Settings {
   float forward = -13.0f; // Source world units, horizontal camera yaw only.
   float right = -1.0f;
   float up = -1.0f;
-  float width = 1.0f;     // Scales torso/leg horizontal dimensions.
-  float torsoScreenWidth = 1.0f; // Legacy torso horizontal crop (0.1..1).
+  float width = 2.0f;     // Archived tuned horizontal proxy scale.
+  float torsoScreenWidth = 0.5f; // Archived tuned torso horizontal crop (0.1..1).
   // Ordered as: torso, left leg, right leg. No game/Studio hooks required.
-  std::array<ScreenAdjust, 3> screen{};
+  std::array<ScreenAdjust, 3> screen{{
+      ScreenAdjust{1.4f, 0.7f, 0.0f, 200.0f},
+      ScreenAdjust{0.0f, 1.0f, 0.0f, 0.0f},
+      ScreenAdjust{0.0f, 1.0f, 0.0f, 0.0f}}};
   float eyeHeight = 64.0f; // Estimated standing eye-to-origin distance.
 };
 struct Rect {
