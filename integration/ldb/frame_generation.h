@@ -1117,12 +1117,14 @@ struct State {
               // requested; the shader, motion vectors and base path stay intact.
               // It is a heuristic, not an exact body segmentation mask.
               providerParams.thresholds[3] = liveProtection.residual;
+              if (liveProtection.projectedBody.enabled)
+                gpu->ensureProjectionPipeline();
               const auto projectedBody = ldb_fpb_projection::project(
                   currentMatrix, gpu->width, gpu->height,
                   liveProtection.projectedBody);
               // Even without HUD/viewmodel, the projected body requires the
               // provider UI composite. Do not mark its input scene-only.
-              if (projectedBody.count && gpu->canBlitProjectedBody())
+              if (projectedBody.count && gpu->canOverlayProjectedBody())
                 sceneOnly = false;
               if (liveProtection.projectedBody.enabled &&
                   (frame < 16 || frame % 120 == 0))
@@ -1132,8 +1134,8 @@ struct State {
                      std::to_string(projectedBody.upperBoundPixels) +
                      ",\"coverage_rejected\":" +
                      std::string(projectedBody.rejectedCoverage ? "true" : "false") +
-                     ",\"blit_supported\":" +
-                     std::string(gpu->canBlitProjectedBody() ? "true" : "false"));
+                     ",\"gpu_overlay_available\":" +
+                     std::string(gpu->canOverlayProjectedBody() ? "true" : "false"));
               try {
                 if (!config().mergeSubmissions) {
                   if (hudOverlay)
