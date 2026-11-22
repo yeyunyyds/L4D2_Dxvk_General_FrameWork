@@ -30,8 +30,8 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertTrue(settings.getboolean("viewmodel"))
         self.assertTrue(settings.getboolean("dynamic_models"))
         self.assertTrue(settings.getboolean("fpb_protect"))
-        self.assertEqual(settings["dynamic_residual_threshold"], "auto")
-        self.assertEqual(settings["first_person_fallback_start"], "0.28")
+        self.assertEqual(settings["dynamic_residual_threshold"], "0.2")
+        self.assertEqual(settings["first_person_fallback_start"], "1")
         self.assertEqual(settings.getint("dynamic_mask_dilation"), 1)
         self.assertFalse(settings.getboolean("mask_debug_white"))
         self.assertFalse(settings.getboolean("content_probe"))
@@ -53,7 +53,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn('L"LDB_FG_VIEWMODEL"', source)
         self.assertIn('L"LDB_FG_FPB_PROTECT"', source)
         self.assertIn('iniBool(path, L"fpb_protect"', source)
-        self.assertIn('iniText(path, L"dynamic_residual_threshold", L"auto")', source)
+        self.assertIn('iniText(path, L"dynamic_residual_threshold", L"0.2")', source)
         self.assertIn('L"LDB_FG_DYNAMIC_RESIDUAL_THRESHOLD"', source)
         self.assertIn('L"LDB_FG_FIRST_PERSON_FALLBACK_START"', source)
         self.assertIn('L"LDB_FG_DYNAMIC_MASK_DILATION"', source)
@@ -141,7 +141,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         host = (ROOT / "integration/ldb/frame_generation.h").read_text()
         gpu = (ROOT / "tools/resident_frame_generator.h").read_text()
         layer = (ROOT / "integration/fg/async-hud-x64.patch").read_text()
-        self.assertIn('iniText(path, L"first_person_fallback_start", L"0.28")', bootstrap)
+        self.assertIn('iniText(path, L"first_person_fallback_start", L"1")', bootstrap)
         self.assertIn('iniUint(path, L"dynamic_mask_dilation", 1, 1)', bootstrap)
         self.assertIn('readEnv(L"LDB_FG_FIRST_PERSON_FALLBACK_START")', host)
         self.assertIn('readEnv(L"LDB_FG_DYNAMIC_MASK_DILATION")', host)
@@ -245,11 +245,15 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertEqual(ini.getfloat("fpb_projection_forward"), -13.0)
         self.assertEqual(ini.getfloat("fpb_projection_right"), -1.0)
         self.assertEqual(ini.getfloat("fpb_projection_up"), -1.0)
-        self.assertEqual(ini.getfloat("fpb_projection_width"), 1.0)
-        self.assertEqual(ini.getfloat("fpb_projection_torso_screen_width"), 1.0)
-        for region in ("torso", "left_leg", "right_leg"):
-            for field, expected in (("width", 1.0), ("height", 1.0),
-                                    ("x", 0.0), ("y", 0.0)):
+        self.assertEqual(ini.getfloat("fpb_projection_width"), 2.0)
+        self.assertEqual(ini.getfloat("fpb_projection_torso_screen_width"), 0.5)
+        expected_regions = {
+            "torso": {"width": 1.4, "height": 0.7, "x": 0.0, "y": 200.0},
+            "left_leg": {"width": 0.0, "height": 1.0, "x": 0.0, "y": 0.0},
+            "right_leg": {"width": 0.0, "height": 1.0, "x": 0.0, "y": 0.0},
+        }
+        for region, fields in expected_regions.items():
+            for field, expected in fields.items():
                 self.assertEqual(
                     ini.getfloat(f"fpb_projection_{region}_{field}"), expected)
         self.assertEqual(ini.getfloat("fpb_projection_eye_height"), 64.0)
