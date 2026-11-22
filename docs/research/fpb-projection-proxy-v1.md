@@ -24,7 +24,7 @@ pixels. Turn it off if no body is being rendered.
 
 ## Dynamic INI controls
 
-All seven projection controls are read from
+All projection controls are read from
 `bin/.l4d2bridge/fg-config.ini` and **hot-reload** approximately every
 500 ms. Save the file while the game is running; no restart or shader
 recompilation is required for these values:
@@ -38,6 +38,11 @@ recompilation is required for these values:
 | `fpb_projection_width` | `1.0` | `[0.5,2.5]` | Scales 3D horizontal torso and leg volumes |
 | `fpb_projection_torso_screen_width` | `1.0` | `[0.1,1.0]` | **Crop only the projected torso's left/right sides**; preserve legs, vertical range, and torso center |
 | `fpb_projection_eye_height` | `64` | `[24,85]` | Assumed eye height above entity origin |
+| `fpb_projection_{torso,left_leg,right_leg}_width` | `1.0` | `[0,3]` | Independent screen rectangle horizontal scale; zero hides this box |
+| `fpb_projection_{torso,left_leg,right_leg}_height` | `1.0` | `[0,3]` | Independent screen rectangle vertical scale; zero hides this box |
+| `fpb_projection_{torso,left_leg,right_leg}_x` | `0` | `[-1920,1920]` | Screen X offset (+ moves right) at 1920px reference |
+| `fpb_projection_{torso,left_leg,right_leg}_y` | `0` | `[-1080,1080]` | Screen Y offset (+ moves down) at 1080px reference |
+
 
 The original four dynamic-protection controls retain their semantics.
 In particular `fpb_protect` (legacy residual preset) remains startup-only,
@@ -59,7 +64,7 @@ mask_debug_white=1
 ```
 
 `dynamic_models=0` is startup-only; restart to change it.
-All seven `fpb_projection_*` controls and `mask_debug_white` are hot-reloadable.
+All `fpb_projection_*` controls and `mask_debug_white` are hot-reloadable.
 The source's `mask_debug_white=1` is a **combined mask**, not an FPB-only
 source view. Toggle `fpb_projection_protect` in game to see the difference.
 
@@ -142,3 +147,58 @@ Also note: the latest branch derives yaw from camera.forward, unlike older
 builds that guessed it from camera.right. An old build calibrated to
 `forward=+8` may require `forward=-8` after upgrading; compare the resulting
 projected rectangles before changing other parameters.
+
+## Fine-tune the three mask boxes independently (new)
+
+The 3D body proxy produces up to three projected rectangles in order:
+`torso` (chest/abdomen), `left_leg`, and `right_leg`. The new twelve
+`fpb_projection_<box>_<field>` INI keys alter only the corresponding
+**2D projected rectangle**, after camera projection and near-plane clipping.
+This is intentionally much more aggressive than changing the world-space
+body dimensions. It doesn't change camera yaw/pitch or the other boxes.
+
+For example, starting from a good base calibration, trim the large torso
+side wings but preserve the two leg rectangles:
+
+```ini
+fpb_projection_torso_width=0.35
+fpb_projection_torso_height=1.0
+fpb_projection_torso_x=0
+fpb_projection_torso_y=0
+
+fpb_projection_left_leg_width=1.0
+fpb_projection_left_leg_height=1.0
+fpb_projection_left_leg_x=0
+fpb_projection_left_leg_y=0
+
+fpb_projection_right_leg_width=1.0
+fpb_projection_right_leg_height=1.0
+fpb_projection_right_leg_x=0
+fpb_projection_right_leg_y=0
+```
+
+- `width=1.0` retains the original width; `0.35` keeps the central 35%;
+  `2.0` doubles the horizontal extent; `0` disables that box.
+- `height` does likewise along screen Y. It does not resize width.
+- `x=+40` moves the box 40 px right at 1920×1080 reference resolution;
+  `y=-30` moves it 30 px up. At higher/lower resolutions, offsets scale
+  proportionally in the corresponding axis.
+- All widths/heights scale about their own rectangle center, then offsets
+  translate the result; coordinates are clipped to the actual viewport.
+- The previous `fpb_projection_torso_screen_width` option is kept for
+  backward compatibility. Its value multiplies the new
+  `fpb_projection_torso_width` effect; keep the legacy value at `1.0`
+  while tuning the new option to avoid double shrinking.
+- The white debug view includes HUD/viewmodel and any remaining dynamic
+  protection, not only the three FPB boxes. Toggle the projection protection
+  off to distinguish unrelated white regions.
+- A single box may represent only an **approximate** torso or leg volume;
+  mask regions can overlap. To identify which box creates the broad side
+  wings, set the corresponding box's width to zero and compare.
+- New tuning fields are hot-reloaded alongside the previous controls and
+  default to identity transforms, so previous saved calibrations remain valid.
+
+**Direction compatibility:** Older builds using camera.right to derive yaw
+can require the opposite `fpb_projection_forward` sign from this branch,
+which now uses cam.forward. Keep this in mind when carrying a legacy
+`forward=8` configuration into a newer build.
