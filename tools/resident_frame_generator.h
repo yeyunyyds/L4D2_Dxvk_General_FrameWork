@@ -7,6 +7,7 @@
 #include "fsr_camera.h"
 #include "fsr_presenter_api.h"
 #include "fpb_projection.h"
+#include "HudCompositeSpirv.h"
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -57,7 +58,14 @@ private:
   Capture c;
   float firstPersonFallbackStart = 0.28f;
   uint32_t dynamicMaskDilation = 1;
-  bool projectionBlitSupported = false;
+  // Opt-in, lazy-initialized ROI composer. Alpha is explicitly written as 1
+  // through the already-tested HUD compositor shader, never copied from D3D9.
+  bool projectionUnavailable = false;
+  VkDescriptorSetLayout projectionSetLayout = VK_NULL_HANDLE;
+  VkPipelineLayout projectionPipelineLayout = VK_NULL_HANDLE;
+  VkPipeline projectionPipeline = VK_NULL_HANDLE;
+  VkDescriptorPool projectionDescriptorPool = VK_NULL_HANDLE;
+  VkDescriptorSet projectionDescriptorSet = VK_NULL_HANDLE;
   struct FsrLibrary {
     HMODULE module{};
     const LdbFsrApi *api{};
@@ -74,6 +82,7 @@ private:
   struct OwnedImage {
     VkImage image{};
     VkImageView view{};
+    VkImageView projectionView{};
     VkDeviceMemory memory{};
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -173,7 +182,7 @@ private:
 #define FN(name) PFN_##name name = nullptr
   FN(vkCmdFillBuffer);
   FN(vkCmdCopyBuffer);
-  FN(vkCmdBlitImage);
+  FN(vkCmdDispatchBase);
   FN(vkCreateQueryPool);
   FN(vkDestroyQueryPool);
   FN(vkCmdResetQueryPool);
@@ -321,7 +330,7 @@ public:
     return providerConsumerQueueFamily != UINT32_MAX &&
            providerConsumerQueueFamily != c.family;
   }
-  bool canBlitProjectedBody() const { return projectionBlitSupported; }
+  bool canOverlayProjectedBody() const { return projectionPipeline != VK_NULL_HANDLE; }
   explicit ResidentFg(ID3D9VkInteropDevice *interop,
                       float fallbackStart = 0.28f, uint32_t maskDilation = 1)
       : c(interop), firstPersonFallbackStart(fallbackStart),
@@ -337,7 +346,10 @@ public:
   throw std::runtime_error(#name " missing")
     LOAD(vkCmdFillBuffer);
     LOAD(vkCmdCopyBuffer);
-    LOAD(vkCmdBlitImage);
+    // Optional. On old device dispatchers without Vulkan 1.1 or device-group,
+    // simply keep projected-body protection disabled; baseline FG still works.
+    vkCmdDispatchBase = reinterpret_cast<PFN_vkCmdDispatchBase>(
+        get(c.device, "vkCmdDispatchBase"));
     LOAD(vkCreateQueryPool);
     LOAD(vkDestroyQueryPool);
     LOAD(vkCmdResetQueryPool);
@@ -375,6 +387,10 @@ public:
       c.pending = false;
     }
     fsr.reset(); // Borrowed image views must die before their Host histories.
+    if (projectionPipeline) vkDestroyPipeline(c.device, projectionPipeline, nullptr);
+    if (projectionDescriptorPool) vkDestroyDescriptorPool(c.device, projectionDescriptorPool, nullptr);
+    if (projectionPipelineLayout) vkDestroyPipelineLayout(c.device, projectionPipelineLayout, nullptr);
+    if (projectionSetLayout) vkDestroyDescriptorSetLayout(c.device, projectionSetLayout, nullptr);
     if (timestamps)
       vkDestroyQueryPool(c.device, timestamps, nullptr);
     if (qualityPipeline)
@@ -416,6 +432,7 @@ public:
     if (readbackMemory)
       c.vkFreeMemory(c.device, readbackMemory, nullptr);
     for (auto &i : images) {
+      if (i.projectionView) vkDestroyImageView(c.device, i.projectionView, nullptr);
       if (i.view)
         vkDestroyImageView(c.device, i.view, nullptr);
       if (i.image)
@@ -516,6 +533,93 @@ public:
     dynamicMaskDilation = maskDilation;
   }
 
+  // Creates only when the user enables the new projection at runtime.
+  // Any failure disables this *optional* feature without disabling FG.
+  bool ensureProjectionPipeline() noexcept {
+    if (projectionPipeline) return true;
+    if (projectionUnavailable || !vkCmdDispatchBase || !width || !height)
+      return false;
+    auto failure = [&]() {
+      projectionUnavailable = true;
+      return false;
+    };
+    try {
+      for (Slot n : {CurrentFinal, PreviousFinal}) {
+        auto &src = images[n];
+        if (src.projectionView) continue;
+        VkImageViewCreateInfo vi{};
+        vi.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        vi.image = src.image;
+        vi.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        vi.format = src.format;
+        vi.components = {VK_COMPONENT_SWIZZLE_IDENTITY,
+                         VK_COMPONENT_SWIZZLE_IDENTITY,
+                         VK_COMPONENT_SWIZZLE_IDENTITY,
+                         VK_COMPONENT_SWIZZLE_ONE};
+        vi.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        if (vkCreateImageView(c.device, &vi, nullptr, &src.projectionView) != VK_SUCCESS)
+          return failure();
+      }
+      std::array<VkDescriptorSetLayoutBinding, 2> bindings{};
+      bindings[0] = {0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1,
+                     VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
+      bindings[1] = {1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1,
+                     VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
+      VkDescriptorSetLayoutCreateInfo si{};
+      si.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+      si.bindingCount = uint32_t(bindings.size());
+      si.pBindings = bindings.data();
+      if (vkCreateDescriptorSetLayout(c.device, &si, nullptr,
+                                      &projectionSetLayout) != VK_SUCCESS)
+        return failure();
+      VkPipelineLayoutCreateInfo li{};
+      li.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+      li.setLayoutCount = 1;
+      li.pSetLayouts = &projectionSetLayout;
+      if (vkCreatePipelineLayout(c.device, &li, nullptr,
+                                 &projectionPipelineLayout) != VK_SUCCESS)
+        return failure();
+      VkShaderModuleCreateInfo sm{};
+      sm.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+      sm.codeSize = asteria_fg_runtime::HudCompositeSpirvSize;
+      sm.pCode = asteria_fg_runtime::HudCompositeSpirv;
+      VkShaderModule module = VK_NULL_HANDLE;
+      if (vkCreateShaderModule(c.device, &sm, nullptr, &module) != VK_SUCCESS)
+        return failure();
+      VkComputePipelineCreateInfo pi{};
+      pi.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+      pi.flags = VK_PIPELINE_CREATE_DISPATCH_BASE_BIT;
+      pi.layout = projectionPipelineLayout;
+      pi.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+      pi.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+      pi.stage.module = module;
+      pi.stage.pName = "main";
+      const VkResult created = vkCreateComputePipelines(
+          c.device, VK_NULL_HANDLE, 1, &pi, nullptr, &projectionPipeline);
+      vkDestroyShaderModule(c.device, module, nullptr);
+      if (created != VK_SUCCESS) return failure();
+      std::array<VkDescriptorPoolSize, 2> poolSizes{{
+          {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1},
+          {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}}};
+      VkDescriptorPoolCreateInfo di{};
+      di.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+      di.maxSets = 1;
+      di.poolSizeCount = uint32_t(poolSizes.size());
+      di.pPoolSizes = poolSizes.data();
+      if (vkCreateDescriptorPool(c.device, &di, nullptr,
+                                 &projectionDescriptorPool) != VK_SUCCESS)
+        return failure();
+      VkDescriptorSetAllocateInfo ai{};
+      ai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+      ai.descriptorPool = projectionDescriptorPool;
+      ai.descriptorSetCount = 1;
+      ai.pSetLayouts = &projectionSetLayout;
+      if (vkAllocateDescriptorSets(c.device, &ai, &projectionDescriptorSet) != VK_SUCCESS)
+        return failure();
+      return true;
+    } catch (...) { return failure(); }
+  }
+
   void initialize(uint32_t w, uint32_t h, VkFormat depth, VkFormat color,
                   uint32_t providerConsumerFamily = UINT32_MAX) {
     static_assert(sizeof(Params) == 416, "FG uniform ABI");
@@ -551,16 +655,6 @@ public:
     else
       providerConsumerQueueFamily = UINT32_MAX;
     timestampBits = families[c.family].timestampValidBits;
-    // Optional post-classification FPB projection uses an ordinary Vulkan
-    // blit, preserving the exact current-frame RGB, including UI overlaps.
-    // Alpha originates from the backbuffer; white-debug exposes any alpha
-    // incompatibility rather than silently changing the existing FG shader.
-    VkFormatProperties sourceProperties{}, maskProperties{};
-    props(c.physical, finalFormat, &sourceProperties);
-    props(c.physical, VK_FORMAT_R8G8B8A8_UNORM, &maskProperties);
-    projectionBlitSupported =
-        (sourceProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) &&
-        (maskProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT);
     VkPhysicalDeviceProperties properties{};
     auto getProperties = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(
         gi(c.instance, "vkGetPhysicalDeviceProperties"));
@@ -891,34 +985,64 @@ public:
                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
                            1, &clear, 0, nullptr);
     vkCmdDispatch(c.command, (width + 7) / 8, (height + 7) / 8, 1);
-    // Override just the approximate visible FPB rectangles in the existing
-    // current-frame RGB+alpha protection texture. No FSR shader change and no
-    // full-frame CPU upload. A blit converts BGRA backbuffers to RGBA masks.
-    // Source backbuffer alpha is preserved; inspect white debug on hardware.
+    // Paint projected body regions into the already-classified RGBA overlay.
+    // Reuse the tested HUD compositor Shader: its sampled input view forces
+    // alpha to ONE, and it writes vec4(exactCurrent.rgb, 1.0). This avoids the
+    // undefined D3D9 backbuffer-alpha prerequisite of a raw Vulkan blit.
     if (providerInputsOnly && bodyProjection && bodyProjection->count &&
-        projectionBlitSupported) {
+        projectionPipeline) {
       auto &src = images[CurrentFinal];
       auto &dst = images[providerUi(activeProviderSlot)];
-      transition(src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-      transition(dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-      std::array<VkImageBlit, 3> blits{};
-      for (uint32_t n = 0; n < bodyProjection->count; ++n) {
-        const auto &rect = bodyProjection->regions[n];
-        auto &blit = blits[n];
-        blit.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-        blit.dstSubresource = blit.srcSubresource;
-        blit.srcOffsets[0] = {rect.left, rect.top, 0};
-        blit.srcOffsets[1] = {rect.right, rect.bottom, 1};
-        blit.dstOffsets[0] = blit.srcOffsets[0];
-        blit.dstOffsets[1] = blit.srcOffsets[1];
+      std::array<VkDescriptorImageInfo, 2> ii{};
+      ii[0] = {VK_NULL_HANDLE, src.projectionView,
+               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+      ii[1] = {VK_NULL_HANDLE, dst.view, VK_IMAGE_LAYOUT_GENERAL};
+      std::array<VkWriteDescriptorSet, 2> writes{};
+      for (uint32_t i = 0; i < 2; ++i) {
+        writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[i].dstSet = projectionDescriptorSet;
+        writes[i].dstBinding = i;
+        writes[i].descriptorCount = 1;
+        writes[i].descriptorType =
+            i == 0 ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+                   : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        writes[i].pImageInfo = &ii[i];
       }
-      vkCmdBlitImage(c.command, src.image, src.layout, dst.image, dst.layout,
-                     bodyProjection->count, blits.data(), VK_FILTER_NEAREST);
-      transition(src, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-      transition(dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    } else
-      transition(images[providerUi(activeProviderSlot)],
-                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+      vkUpdateDescriptorSets(c.device, uint32_t(writes.size()), writes.data(),
+                             0, nullptr);
+      VkImageMemoryBarrier sync{};
+      sync.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+      sync.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+      sync.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+      sync.oldLayout = sync.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+      sync.srcQueueFamilyIndex = sync.dstQueueFamilyIndex =
+          VK_QUEUE_FAMILY_IGNORED;
+      sync.image = dst.image;
+      sync.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+      vkCmdBindPipeline(c.command, VK_PIPELINE_BIND_POINT_COMPUTE,
+                        projectionPipeline);
+      vkCmdBindDescriptorSets(c.command, VK_PIPELINE_BIND_POINT_COMPUTE,
+                              projectionPipelineLayout, 0, 1,
+                              &projectionDescriptorSet, 0, nullptr);
+      for (uint32_t n = 0; n < bodyProjection->count; ++n) {
+        const auto &r = bodyProjection->regions[n];
+        if (!r.valid()) continue;
+        // DispatchBase uses global workgroup IDs, so rounded regions add
+        // at most seven pixels of intentional conservative edge protection.
+        const uint32_t x = uint32_t(r.left) / 8u;
+        const uint32_t y = uint32_t(r.top) / 8u;
+        const uint32_t xEnd = (uint32_t(r.right) + 7u) / 8u;
+        const uint32_t yEnd = (uint32_t(r.bottom) + 7u) / 8u;
+        if (xEnd <= x || yEnd <= y) continue;
+        // Also synchronizes partially overlapping torso/leg dispatches.
+        vkCmdPipelineBarrier(c.command, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0,
+                             nullptr, 0, nullptr, 1, &sync);
+        vkCmdDispatchBase(c.command, x, y, 0, xEnd - x, yEnd - y, 1);
+      }
+    }
+    transition(images[providerUi(activeProviderSlot)],
+               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     transition(images[providerDepth(activeProviderSlot)], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     transition(images[providerMotion(activeProviderSlot)], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     // The HUD-less image must keep the swapchain format (often BGRA), which
