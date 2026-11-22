@@ -98,7 +98,7 @@ index fede970..02e8236 100644
      default: return VK_FORMAT_R8G8B8A8_UNORM;
      }
  }
-@@ -600,6 +610,231 @@ inline void RecordContentProbe(FgSwapchainState &state, VkCommandBuffer commandB
+@@ -600,6 +610,241 @@ inline void RecordContentProbe(FgSwapchainState &state, VkCommandBuffer commandB
      state.contentProbeFrameIds[slot] = frameID;
  }
  
@@ -290,13 +290,23 @@ index fede970..02e8236 100644
 +                               const FfxResource &uiResource,
 +                               const FfxResource &outputResource)
 +{
-+    wchar_t whiteValue[8]{}, dilationValue[8]{};
-+    const DWORD whiteLength = GetEnvironmentVariableW(
-+        L"LDB_FG_MASK_DEBUG_WHITE", whiteValue, 8);
-+    const DWORD dilationLength = GetEnvironmentVariableW(
-+        L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8);
-+    const uint32_t mode = (whiteLength == 1 && whiteValue[0] == L'1' ? 1u : 0u) |
-+                          (dilationLength == 1 && dilationValue[0] == L'0' ? 2u : 0u);
++    wchar_t modeValue[8]{};
++    const DWORD modeLength = GetEnvironmentVariableW(
++        L"LDB_FG_RUNTIME_COMPOSITE_MODE", modeValue, 8);
++    uint32_t mode = 0;
++    if (modeLength == 1 && modeValue[0] >= L'0' && modeValue[0] <= L'3')
++        mode = static_cast<uint32_t>(modeValue[0] - L'0');
++    else
++    {
++        // Backwards-compatible fallback for standalone Layer diagnostics.
++        wchar_t whiteValue[8]{}, dilationValue[8]{};
++        const DWORD whiteLength = GetEnvironmentVariableW(
++            L"LDB_FG_MASK_DEBUG_WHITE", whiteValue, 8);
++        const DWORD dilationLength = GetEnvironmentVariableW(
++            L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8);
++        mode = (whiteLength == 1 && whiteValue[0] == L'1' ? 1u : 0u) |
++               (dilationLength == 1 && dilationValue[0] == L'0' ? 2u : 0u);
++    }
 +    const VkPipeline activePipeline = state.hudPipelines[mode];
 +    if (!activePipeline || !commandBuffer) return false;
 +    const VkDescriptorSet descriptors = HudCompositeDescriptorSet(state, uiResource, outputResource);
@@ -330,7 +340,7 @@ index fede970..02e8236 100644
  inline void DestroyGpuImage(VkDevice device, GpuImage &img)
  {
      if (img.handle != VK_NULL_HANDLE)
-@@ -873,6 +1108,11 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -873,6 +1118,11 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
      recovery.successful = result == FFX_OK;
      if (recovery.successful)
      {
@@ -342,7 +352,7 @@ index fede970..02e8236 100644
          RecordContentProbe(state, cmd, dispatch.currentBackBuffer, desc->outputs[0], currentFrameId);
          ++state.interpolationDispatches;
          if (input->motionSource == MotionInputSource::Engine)
-@@ -935,6 +1175,7 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
+@@ -935,6 +1185,7 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
      }
      if (state.device != VK_NULL_HANDLE)
      {
@@ -350,7 +360,7 @@ index fede970..02e8236 100644
          DestroyContentProbe(state);
          DestroyGpuImage(state.device, state.reconstructed);
          DestroyGpuImage(state.device, state.dilatedDepth);
-@@ -989,10 +1230,9 @@ inline VkResult InitializeSwapchainResources(
+@@ -989,10 +1240,9 @@ inline VkResult InitializeSwapchainResources(
      fgInfo.asyncComputeQueue = {queues.asyncComputeQueue, queues.asyncComputeFamily, nullptr};
      fgInfo.presentQueue = {queues.presentQueue, queues.presentFamily, nullptr};
      fgInfo.imageAcquireQueue = {queues.imageAcquireQueue, queues.imageAcquireFamily, nullptr};
@@ -364,7 +374,7 @@ index fede970..02e8236 100644
  
      state.deviceContext = {device, physicalDevice, nextGdpa};
      FfxDevice ffxDevice = ffxGetDeviceVK(&state.deviceContext);
-@@ -1097,6 +1337,11 @@ inline VkResult InitializeSwapchainResources(
+@@ -1097,6 +1347,11 @@ inline VkResult InitializeSwapchainResources(
      // Diagnostic only: failure leaves FG active and reports no pixel samples.
      if (IsContentProbeRequested())
          (void)AllocateContentProbe(state);
@@ -376,7 +386,7 @@ index fede970..02e8236 100644
  
      FfxFrameGenerationConfig config{};
      config.swapChain = state.swapchainBox;
-@@ -1191,22 +1436,9 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
+@@ -1191,22 +1446,9 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
      }
      if (!valid) { input.reset(); state.historyReset.store(true); }
      std::atomic_store_explicit(&state.currentInputs, std::move(input), std::memory_order_release);
