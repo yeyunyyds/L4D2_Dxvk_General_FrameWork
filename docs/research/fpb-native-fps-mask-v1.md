@@ -24,13 +24,26 @@ dynamic_mask_dilation=1
 mask_debug_white=1
 ```
 
-A lower threshold protects more changed pixels, possibly reducing real FG coverage. Higher values protect fewer pixels, possibly increasing body blur/ghosting. Invalid entries fall back to the preset instead of disabling GF; the session log reports `dynamic_residual_threshold` and `dynamic_residual_override_rejected`. A full restart is required. This setting does not alter HUD/viewmodel thresholds or change the underlying scene-depth gate.
+A lower threshold protects more changed pixels, possibly reducing real FG coverage. Higher values protect fewer pixels, possibly increasing body blur/ghosting. Invalid startup entries fall back to the preset instead of disabling GF; the session log reports `dynamic_residual_threshold` and `dynamic_residual_override_rejected`. During a running session, invalid live edits are rejected as a group and the previous good values are retained. This setting does not alter HUD/viewmodel thresholds or change the underlying scene-depth gate.
 
-`first_person_fallback_start` is configurable within `0.0..1.0`, default `0.28`. It determines the vertical position below which the lower-screen relaxed colour-change protection is used. `1.0` essentially disables that fallback (other colour/depth criteria still protect pixels). The pinned FG SPIR-V has its unique 0.28 literal patched at shader-module creation; the default passes the original binary unchanged.
+`first_person_fallback_start` is configurable within `0.0..1.0`, default `0.28`. It determines the vertical position below which the lower-screen relaxed colour-change protection is used. `1.0` essentially disables that fallback (other colour/depth criteria still protect pixels). The pinned FG SPIR-V has its unique 0.28 literal patched at shader-module creation. Runtime changes create a replacement Host protection pipeline and drain the Host submission queue before retiring the old one; there may be a brief hitch at the instant of an edit.
 
-`dynamic_mask_dilation` supports **0 or 1** (default `1`). At `1`, the dynamic candidate test additionally checks four adjacent pixels and final composite further expands the combined HUD/viewmodel/dynamic overlay to a 3x3 neighbourhood. At `0`, the pinned FG shader's cardinal offset array is replaced by zero offsets and both final-composite neighbourhood loops operate only at (0,0). This affects all overlay types in the final stage; it is not an FPB-only dilation. The normal, white-debug and no-dilation compositor variants are generated from the same checked-in SPIR-V with exact opcode/offset assertions; the existing bytecode is unchanged on default settings. Invalid values fall back to defaults, with reject flags in the Host session log.
+`dynamic_mask_dilation` supports **0 or 1** (default `1`). At `1`, the dynamic candidate test additionally checks four adjacent pixels and final composite further expands the combined HUD/viewmodel/dynamic overlay to a 3x3 neighbourhood. At `0`, the pinned FG shader's cardinal offset array is replaced by zero offsets and both final-composite neighbourhood loops operate only at (0,0). This affects all overlay types in the final stage; it is not an FPB-only dilation. All four normal/white and expanded/single-pixel compositor variants are created once per swapchain from the same checked-in SPIR-V with exact opcode/offset assertions. The Layer selects the appropriate existing pipeline for each generated frame; invalid runtime settings preserve the last good configuration.
 
 The effective depth residual tolerance (currently at least `0.0005`) remains internal and is **not** configurable in this experiment. The current INI only accepts dilation `0/1`, not arbitrary radii.
+
+## Live INI reload (four parameters)
+
+With GF started using `enabled=1`, the Host polls `bin/.l4d2bridge/fg-config.ini` modification time about every **500 ms** while frames are presented. Saving any of the following four values takes effect without a game restart:
+
+- `dynamic_residual_threshold` — directly updates the Host GPU frame parameter (no Pipeline recreation).
+- `first_person_fallback_start` — rebuilds the Host classification pipeline on edit and waits for existing Host queue work to complete before destroying its predecessor.
+- `dynamic_mask_dilation` — updates Host classification and switches Asteria's post-FSR compositor between prebuilt expanded and single-pixel variants.
+- `mask_debug_white` — instantly selects Asteria's prebuilt white debug output on **generated** frames; original frames are never painted white.
+
+Values are checked as a single batch; an invalid value rejects the edit, leaves the old settings in place, and writes `live_protection_rejected` to `fg-events.jsonl`. Valid changes write `live_protection_updated`. The runtime flags are sent from Host to Vulkan Layer through the **same x64 process environment**, not L4N, a new hook, or Bridge IPC. In the legacy `GF_FG_ISOLATION` script mode, inherited settings retain authority and the live INI poll is disabled.
+
+**Still startup-only:** `enabled` (controls Layer injection), `hud`, `viewmodel`, `dynamic_models`, `fpb_protect`, and other infrastructure options. Editing these while playing is unsupported. A full restart is required to enable FG if the process started with `enabled=0`.
 
 ## Why the experiment may help
 
@@ -42,7 +55,7 @@ FPB renders the local player through the game-native model draw and optionally m
 
 ## White protection overlay diagnostics
 
-Set `mask_debug_white=1` under `[frame_generation]` and fully restart the game.
+Set `mask_debug_white=1` under `[frame_generation]` and save the file while the game is running. The Host detects the modification and the Layer switches to the already-created white compositor pipeline automatically.
 On **generated intermediate frames only**, the post-FSR overlay shader paints
 every pixel that would have been replaced by the original real-frame colour
 **pure white (#FFFFFF)**. Real frames and non-protected generated pixels remain
@@ -64,9 +77,9 @@ the default. There are no new hooks, memory readbacks or CPU masks.
 
 1. Use a matched GF experimental build with L4D2Visual FPB enabled. Do not swap only one Bridge binary; keep Client/Host32/Host64 and the Layer matched.
 2. Baseline: `dynamic_models=1`, `fpb_protect=0`; compare FG on/off while looking down at the body and slowly turning, walking and crouching.
-3. Trial: `dynamic_models=1`, `fpb_protect=1`; restart fully to apply the config and repeat the same actions. Compare body ghosting, body clarity, nearby world background and HUD.
+3. Trial: `dynamic_models=1`, `fpb_protect=1`; these **structural** settings still require a full restart. To compare the four tuning parameters below, save the file live without restarting and repeat the same actions. Compare body ghosting, body clarity, nearby world background and HUD.
 4. Control: `dynamic_models=0`; confirm the new toggle cannot force protection when dynamic protection is disabled.
 5. Enable `mask_debug_white=1` and look at the generated output; compare the size/location of white regions with `fpb_protect=0` and `fpb_protect=1`, including HUD and FPB body.
-6. Check `fg-bootstrap.txt` for `fpb_protect` and `mask_debug_white`. In current Provider mode, `dynamic_protected_pixels` is **not** a reliable percentage because GPU quality reduction/readback is skipped. White coverage is visual only.
+6. Check `fg-bootstrap.txt` for **startup** settings and `fg-events.jsonl` for `live_protection_updated` / `live_protection_rejected` messages after INI edits. In current Provider mode, `dynamic_protected_pixels` is **not** a reliable percentage because GPU quality reduction/readback is skipped. White coverage is visual only.
 
 This is source-only until a new build and real-game comparison are completed. Do **not** claim FPB compatibility as validated.
