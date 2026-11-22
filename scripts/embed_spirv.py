@@ -1,5 +1,6 @@
 """Embed a validated little-endian SPIR-V module as a C++ uint32 array."""
 import argparse
+import hashlib
 from pathlib import Path
 import struct
 
@@ -12,8 +13,14 @@ def embed(source: Path, output: Path, symbol: str, provenance: str):
     rows = []
     for offset in range(0, len(words), 12):
         rows.append(','.join(hex(word) for word in words[offset:offset + 12]))
+    provenance_path = Path(provenance)
+    source_stamp = (
+        f'// source-sha256: {hashlib.sha256(provenance_path.read_bytes()).hexdigest()}\\n'
+        if provenance_path.is_file() else ''
+    )
     output.write_text(
-        f'// Generated from {provenance}; validated Vulkan 1.1 SPIR-V.\n'
+        f'// Generated from {provenance}; validated Vulkan 1.1 SPIR-V.\\n'
+        + source_stamp + ''
         '#pragma once\n#include <cstdint>\n'
         f'namespace dxvk_capture {{ inline constexpr uint32_t {symbol}[]={{\n'
         + ',\n'.join(rows) + '\n}; }\n')
