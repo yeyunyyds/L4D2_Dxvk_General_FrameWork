@@ -253,6 +253,7 @@ struct State {
     float fallbackStart = 0.28f;
     uint32_t dilation = 1;
     bool debugWhite = false;
+    ldb_fpb_projection::Settings projectedBody{};
   };
   LiveProtection liveProtection{};
   std::filesystem::path liveIniPath;
@@ -274,8 +275,9 @@ struct State {
     burstRemaining = config().captures;
   }
 
-  // Only the four experimental protection parameters are live. Structural
-  // settings (enabled, HUD collection, Layer injection) remain startup-only.
+  // Residual, mask and camera-proxy FPB protection parameters are live.
+  // Structural settings (enabled, HUD collection, Layer injection) remain
+  // startup-only. The proxy needs no game entity or Visual model hook.
   // Poll timestamps, not INI text, every 500 ms; avoid per-frame disk IO.
   void refreshLiveProtection(uint32_t uid) noexcept {
     if (!providerOnly || liveIniPath.empty()) return;
@@ -317,6 +319,20 @@ struct State {
       if (debug != L"0" && debug != L"1")
         throw std::invalid_argument("FG live debug mask must be 0 or 1");
       updated.debugWhite = debug == L"1";
+      const auto projection = readValue(L"fpb_projection_protect", L"0");
+      if (projection != L"0" && projection != L"1")
+        throw std::invalid_argument("FG FPB projection enable must be 0 or 1");
+      updated.projectedBody.enabled = projection == L"1";
+      updated.projectedBody.forward = parseFloat(
+          readValue(L"fpb_projection_forward", L"-13"), -48.0f, 48.0f);
+      updated.projectedBody.right = parseFloat(
+          readValue(L"fpb_projection_right", L"-1"), -48.0f, 48.0f);
+      updated.projectedBody.up = parseFloat(
+          readValue(L"fpb_projection_up", L"-1"), -48.0f, 48.0f);
+      updated.projectedBody.width = parseFloat(
+          readValue(L"fpb_projection_width", L"1.0"), 0.5f, 2.5f);
+      updated.projectedBody.eyeHeight = parseFloat(
+          readValue(L"fpb_projection_eye_height", L"64"), 24.0f, 85.0f);
       // Reject an edit raced with another editor write; do not consume the
       // original mtime, so the next poll retries the completed file.
       std::error_code verifiedError;
@@ -326,7 +342,13 @@ struct State {
       if (updated.residual == liveProtection.residual &&
           updated.fallbackStart == liveProtection.fallbackStart &&
           updated.dilation == liveProtection.dilation &&
-          updated.debugWhite == liveProtection.debugWhite) {
+          updated.debugWhite == liveProtection.debugWhite &&
+          updated.projectedBody.enabled == liveProtection.projectedBody.enabled &&
+          updated.projectedBody.forward == liveProtection.projectedBody.forward &&
+          updated.projectedBody.right == liveProtection.projectedBody.right &&
+          updated.projectedBody.up == liveProtection.projectedBody.up &&
+          updated.projectedBody.width == liveProtection.projectedBody.width &&
+          updated.projectedBody.eyeHeight == liveProtection.projectedBody.eyeHeight) {
         liveIniSeen = true;
         liveIniStamp = stamp;
         liveIniRejectedSeen = false;
@@ -353,7 +375,15 @@ struct State {
            ",\"fallback_start\":" + std::to_string(updated.fallbackStart) +
            ",\"dilation\":" + std::to_string(updated.dilation) +
            ",\"debug_white\":" +
-           std::string(updated.debugWhite ? "true" : "false"));
+           std::string(updated.debugWhite ? "true" : "false") +
+           ",\"fpb_projection\":" +
+           std::string(updated.projectedBody.enabled ? "true" : "false") +
+           ",\"fpb_forward\":" + std::to_string(updated.projectedBody.forward) +
+           ",\"fpb_right\":" + std::to_string(updated.projectedBody.right) +
+           ",\"fpb_up\":" + std::to_string(updated.projectedBody.up) +
+           ",\"fpb_width\":" + std::to_string(updated.projectedBody.width) +
+           ",\"fpb_eye_height\":" +
+           std::to_string(updated.projectedBody.eyeHeight));
     } catch (const std::exception &error) {
       // Failed edits remain retryable at the next poll. Rate-limit logging
       // for the same malformed INI revision to one event per file timestamp.
@@ -1087,6 +1117,19 @@ struct State {
               // requested; the shader, motion vectors and base path stay intact.
               // It is a heuristic, not an exact body segmentation mask.
               providerParams.thresholds[3] = liveProtection.residual;
+              const auto projectedBody = ldb_fpb_projection::project(
+                  currentMatrix, gpu->width, gpu->height,
+                  liveProtection.projectedBody);
+              if (liveProtection.projectedBody.enabled &&
+                  (frame < 16 || frame % 120 == 0))
+                emit("fpb_projection", uid,
+                     "\"regions\":" + std::to_string(projectedBody.count) +
+                     ",\"estimated_pixels\":" +
+                     std::to_string(projectedBody.upperBoundPixels) +
+                     ",\"coverage_rejected\":" +
+                     std::string(projectedBody.rejectedCoverage ? "true" : "false") +
+                     ",\"blit_supported\":" +
+                     std::string(gpu->canBlitProjectedBody() ? "true" : "false"));
               try {
                 if (!config().mergeSubmissions) {
                   if (hudOverlay)
@@ -1115,7 +1158,8 @@ struct State {
                           gpu->copyInto(infos[3], ResidentFg::CurrentNearAfter,
                                         VK_IMAGE_ASPECT_COLOR_BIT, true);
                           gpu->generate(providerParams, false, true,
-                                        uint32_t(nativeSlot), sceneOnly, true);
+                                        uint32_t(nativeSlot), sceneOnly, true,
+                                        &projectedBody);
                         });
                   } else if (viewmodelOverlay) {
                     withTransferredColorSources<3>(
@@ -1130,7 +1174,8 @@ struct State {
                           gpu->copyInto(infos[2], ResidentFg::CurrentNearAfter,
                                         VK_IMAGE_ASPECT_COLOR_BIT, true);
                           gpu->generate(providerParams, false, true,
-                                        uint32_t(nativeSlot), sceneOnly, true);
+                                        uint32_t(nativeSlot), sceneOnly, true,
+                                        &projectedBody);
                         });
                   } else if (hudOverlay) {
                     withTransferredColorSources<2>(
@@ -1141,7 +1186,8 @@ struct State {
                           gpu->copyInto(infos[1], ResidentFg::CurrentUi,
                                         VK_IMAGE_ASPECT_COLOR_BIT, true);
                           gpu->generate(providerParams, false, true,
-                                        uint32_t(nativeSlot), sceneOnly, true);
+                                        uint32_t(nativeSlot), sceneOnly, true,
+                                        &projectedBody);
                         });
                   } else {
                     withTransferredSurface(
@@ -1150,12 +1196,14 @@ struct State {
                           gpu->copyInto(info, ResidentFg::CurrentFinal, aspect,
                                         true);
                           gpu->generate(providerParams, false, true,
-                                        uint32_t(nativeSlot), sceneOnly, true);
+                                        uint32_t(nativeSlot), sceneOnly, true,
+                                        &projectedBody);
                         });
                   }
                 } else {
                   gpu->generate(providerParams, false, true,
-                                uint32_t(nativeSlot), sceneOnly);
+                                uint32_t(nativeSlot), sceneOnly, false,
+                                &projectedBody);
                 }
               } catch (...) {
                 asteria.cancelNativeSlot(uint32_t(nativeSlot));
