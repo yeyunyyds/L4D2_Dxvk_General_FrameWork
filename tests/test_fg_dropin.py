@@ -265,7 +265,7 @@ class FrameGenerationDropInTests(unittest.TestCase):
         self.assertIn("updated.projectedBody.eyeHeight = parseFloat(", host)
         self.assertIn("liveProtection = updated;", host)
         self.assertIn("const auto projectedBody = ldb_fpb_projection::project(", host)
-        self.assertIn("if (projectedBody.count && gpu->canBlitProjectedBody())", host)
+        self.assertIn("if (projectedBody.count && gpu->canOverlayProjectedBody())", host)
         self.assertIn("sceneOnly = false;", host)
         self.assertIn("&projectedBody);", host)
         self.assertIn('emit("fpb_projection"', host)
