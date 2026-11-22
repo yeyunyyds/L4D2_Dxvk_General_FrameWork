@@ -254,6 +254,8 @@ struct State {
   std::filesystem::path liveIniPath;
   std::filesystem::file_time_type liveIniStamp{};
   bool liveIniSeen = false;
+  bool liveIniRejectedSeen = false;
+  std::filesystem::file_time_type liveIniRejectedStamp{};
   uint64_t liveIniPollTick = 0;
   int64_t now() const {
     LARGE_INTEGER q{};
@@ -279,8 +281,6 @@ struct State {
     std::error_code ec;
     const auto stamp = std::filesystem::last_write_time(liveIniPath, ec);
     if (ec || (liveIniSeen && stamp == liveIniStamp)) return;
-    liveIniSeen = true;
-    liveIniStamp = stamp;
     try {
       auto readValue = [&](const wchar_t *key, const wchar_t *fallback) {
         wchar_t value[96]{};
@@ -313,20 +313,37 @@ struct State {
       if (debug != L"0" && debug != L"1")
         throw std::invalid_argument("FG live debug mask must be 0 or 1");
       updated.debugWhite = debug == L"1";
+      // Reject an edit raced with another editor write; do not consume the
+      // original mtime, so the next poll retries the completed file.
+      std::error_code verifiedError;
+      const auto verifiedStamp = std::filesystem::last_write_time(
+          liveIniPath, verifiedError);
+      if (verifiedError || verifiedStamp != stamp) return;
       if (updated.residual == liveProtection.residual &&
           updated.fallbackStart == liveProtection.fallbackStart &&
           updated.dilation == liveProtection.dilation &&
-          updated.debugWhite == liveProtection.debugWhite) return;
+          updated.debugWhite == liveProtection.debugWhite) {
+        liveIniSeen = true;
+        liveIniStamp = stamp;
+        liveIniRejectedSeen = false;
+        return;
+      }
       if (gpu) gpu->updateProtectionShader(updated.fallbackStart,
                                            updated.dilation);
       // Host and Vulkan Layer share a process environment. The Layer selects
       // among four already-created pipelines at the next generated frame.
-      if (!SetEnvironmentVariableW(L"LDB_FG_DYNAMIC_MASK_DILATION",
-                                   updated.dilation ? L"1" : L"0") ||
-          !SetEnvironmentVariableW(L"LDB_FG_MASK_DEBUG_WHITE",
-                                   updated.debugWhite ? L"1" : L"0"))
+      // One atomic mode value avoids a transient white/dilation mismatch
+      // when Asteria's asynchronous callback reads the process environment.
+      const unsigned mode = (updated.debugWhite ? 1u : 0u) |
+                            (updated.dilation == 0u ? 2u : 0u);
+      const std::wstring modeText = std::to_wstring(mode);
+      if (!SetEnvironmentVariableW(L"LDB_FG_RUNTIME_COMPOSITE_MODE",
+                                   modeText.c_str()))
         throw std::runtime_error("FG Layer live environment update failed");
       liveProtection = updated;
+      liveIniSeen = true;
+      liveIniStamp = stamp;
+      liveIniRejectedSeen = false;
       emit("live_protection_updated", uid,
            "\"residual\":" + std::to_string(updated.residual) +
            ",\"fallback_start\":" + std::to_string(updated.fallbackStart) +
@@ -334,8 +351,14 @@ struct State {
            ",\"debug_white\":" +
            std::string(updated.debugWhite ? "true" : "false"));
     } catch (const std::exception &error) {
-      emit("live_protection_rejected", uid,
-           "\"reason\":" + quote(error.what()));
+      // Failed edits remain retryable at the next poll. Rate-limit logging
+      // for the same malformed INI revision to one event per file timestamp.
+      if (!liveIniRejectedSeen || liveIniRejectedStamp != stamp) {
+        emit("live_protection_rejected", uid,
+             "\"reason\":" + quote(error.what()));
+        liveIniRejectedStamp = stamp;
+        liveIniRejectedSeen = true;
+      }
     }
   }
 
