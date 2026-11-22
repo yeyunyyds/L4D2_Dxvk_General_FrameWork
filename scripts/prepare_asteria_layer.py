@@ -72,6 +72,8 @@ def prepare(source: Path, output: Path) -> Path:
             for patch in patches
         ],
         "hud_composite_header_sha256": sha256(hud_header),
+        "hud_composite_white_header_sha256": sha256(
+            ROOT / "integration/fg/HudCompositeWhiteSpirv.h"),
         "hud_composite_shader_sha256": sha256(ROOT / "shaders/hud_composite.comp"),
         "architecture": "x86_64",
         "route": "L4D2Bridge64 -> Vulkan loader -> GF layer -> DXVK/driver",
