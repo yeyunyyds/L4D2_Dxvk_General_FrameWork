@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <stdexcept>
 #include <memory>
@@ -566,7 +567,12 @@ public:
 
   void initialize(uint32_t w, uint32_t h, VkFormat depth, VkFormat color,
                   uint32_t providerConsumerFamily = UINT32_MAX) {
-    static_assert(sizeof(Params) == 432, "FG uniform ABI");
+    static_assert(offsetof(Params, rows) == 0 &&
+                  offsetof(Params, flags) == 384 &&
+                  offsetof(Params, thresholds) == 400 &&
+                  offsetof(Params, liveProtection) == 416 &&
+                  sizeof(Params) >= 432,
+                  "FG std140 uniform field offsets");
     if (!w || !h || w > 4096 || h > 4096 || uint64_t(w) * h > 4096ull * 2160)
       throw std::runtime_error("FG extent budget");
     if ((color != VK_FORMAT_B8G8R8A8_UNORM &&
@@ -849,7 +855,12 @@ public:
     else if (!recording)
       throw std::runtime_error("FG append without recorded copy");
     activeProviderSlot = providerSlot % 3;
-    static_assert(sizeof(Params) == 432, "FG std140 uniform ABI changed");
+    static_assert(offsetof(Params, rows) == 0 &&
+                  offsetof(Params, flags) == 384 &&
+                  offsetof(Params, thresholds) == 400 &&
+                  offsetof(Params, liveProtection) == 416 &&
+                  sizeof(Params) >= 432,
+                  "FG std140 uniform field offsets");
     Params liveParams = params;
     liveParams.liveProtection = {firstPersonFallbackStart,
                                  float(dynamicMaskDilation),
