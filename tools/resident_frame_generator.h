@@ -7,7 +7,10 @@
 #include "fsr_camera.h"
 #include "fsr_presenter_api.h"
 #include <algorithm>
+#include <array>
+#include <cstring>
 #include <memory>
+#include <vector>
 namespace dxvk_capture {
 // Own Vulkan histories only. The device/interop is borrowed from the live Host
 // device.
@@ -51,6 +54,8 @@ public:
 
 private:
   Capture c;
+  float firstPersonFallbackStart = 0.28f;
+  uint32_t dynamicMaskDilation = 1;
   struct FsrLibrary {
     HMODULE module{};
     const LdbFsrApi *api{};
@@ -313,7 +318,10 @@ public:
     return providerConsumerQueueFamily != UINT32_MAX &&
            providerConsumerQueueFamily != c.family;
   }
-  explicit ResidentFg(ID3D9VkInteropDevice *interop) : c(interop) {
+  explicit ResidentFg(ID3D9VkInteropDevice *interop,
+                      float fallbackStart = 0.28f, uint32_t maskDilation = 1)
+      : c(interop), firstPersonFallbackStart(fallbackStart),
+        dynamicMaskDilation(maskDilation) {
     QueryPerformanceFrequency(&clockFrequency);
     auto gi = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(
         GetModuleHandleW(L"vulkan-1.dll"), "vkGetInstanceProcAddr"));
@@ -594,8 +602,46 @@ public:
            VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     VkShaderModuleCreateInfo sm{};
     sm.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    sm.codeSize = sizeof(frameGenerateSpirv);
-    sm.pCode = frameGenerateSpirv;
+    // The pinned, validated GLSL shader has two fixed debug parameters.
+    // Patch only its checked SPIR-V constants; this does not add a shader
+    // binding, extra draw, or new Vulkan synchronization. On defaults the
+    // original bytecode is passed through unchanged.
+    std::vector<uint32_t> fgShader(
+        frameGenerateSpirv,
+        frameGenerateSpirv + sizeof(frameGenerateSpirv) / sizeof(uint32_t));
+    if (fgShader.size() <= 704 ||
+        fgShader[755] != 0x0004002bu || fgShader[756] != 8u ||
+        fgShader[757] != 765u || fgShader[758] != 0x3e8f5c29u ||
+        fgShader[698] != 0x0007002cu || fgShader[699] != 488u ||
+        fgShader[700] != 494u || fgShader[701] != 489u ||
+        fgShader[702] != 491u || fgShader[703] != 492u ||
+        fgShader[704] != 493u)
+      throw std::runtime_error("FG shader parameter layout changed");
+    if (firstPersonFallbackStart != 0.28f) {
+      uint32_t encoded = 0;
+      static_assert(sizeof(encoded) == sizeof(firstPersonFallbackStart),
+                    "FG parameter float size");
+      std::memcpy(&encoded, &firstPersonFallbackStart, sizeof(encoded));
+      fgShader[758] = encoded; // exclusive lower-screen boundary (0..1)
+    }
+    if (dynamicMaskDilation == 0u) {
+      // Replace the shared vec2[4] cardinal offsets with an all-zero
+      // constant. In Provider mode that disables the 4-neighbour expansion
+      // of dynamic-model candidates. Insert its definition before array ID
+      // 494 so SPIR-V constant use/definition ordering stays valid.
+      if (fgShader[3] != 0xaea0u)
+        throw std::runtime_error("FG shader ID bound changed");
+      const uint32_t zeroVector = fgShader[3];
+      const std::array<uint32_t, 5> zeroDefinition{
+          0x0005002cu, 16u, zeroVector, 378u, 378u};
+      fgShader.insert(fgShader.begin() + 698, zeroDefinition.begin(),
+                      zeroDefinition.end());
+      fgShader[3] = zeroVector + 1u;
+      for (uint32_t i = 0; i < 4u; ++i)
+        fgShader[706u + i] = zeroVector;
+    }
+    sm.codeSize = fgShader.size() * sizeof(uint32_t);
+    sm.pCode = fgShader.data();
     vkcheck(vkCreateShaderModule(c.device, &sm, nullptr, &shader), "FG shader");
     std::array<VkDescriptorSetLayoutBinding, 18> bindings{};
     for (uint32_t n = 0; n < 18; n++) {
