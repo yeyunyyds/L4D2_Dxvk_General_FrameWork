@@ -17,6 +17,7 @@ struct Settings {
   bool hud = true;
   bool viewmodel = true;
   bool dynamicModels = true;
+  bool fpbProtect = false; // Experimental stronger dynamic-pixel protection.
   bool contentProbe = false;
   bool monitor = false;
   bool mergeSubmissions = true;
@@ -98,6 +99,7 @@ inline Settings readSettings(const std::filesystem::path &path) noexcept {
   result.viewmodel = iniBool(path, L"viewmodel", result.viewmodel);
   result.dynamicModels =
       iniBool(path, L"dynamic_models", result.dynamicModels);
+  result.fpbProtect = iniBool(path, L"fpb_protect", result.fpbProtect);
   result.contentProbe =
       iniBool(path, L"content_probe", result.contentProbe);
   result.monitor = iniBool(path, L"monitor", result.monitor);
@@ -165,7 +167,7 @@ inline void clearManagedEnvironment() noexcept {
       L"LDB_FG_BACKEND",          L"LDB_FG_PRESENTER",
       L"LDB_FG_MODE",             L"LDB_FG_FAST_INPUTS",
       L"LDB_FG_HUD_BYPASS",       L"LDB_FG_VIEWMODEL",
-      L"LDB_FG_DYNAMIC_MODELS",
+      L"LDB_FG_DYNAMIC_MODELS",    L"LDB_FG_FPB_PROTECT",
       L"LDB_FG_MERGE_SUBMISSIONS", L"LDB_FG_CAPTURE_FRAMES",
       L"LDB_FG_HOTKEYS",          L"LDB_FG_AUTO_CAPTURE",
       L"LDB_FG_PACING_MS",        L"LDB_FG_LOG_DIR",
@@ -228,6 +230,7 @@ inline void initialize() noexcept {
       setEnvironment(L"LDB_FG_VIEWMODEL", flag(settings.viewmodel), replace);
       setEnvironment(L"LDB_FG_DYNAMIC_MODELS", flag(settings.dynamicModels),
                      replace);
+      setEnvironment(L"LDB_FG_FPB_PROTECT", flag(settings.fpbProtect), replace);
       setEnvironment(L"LDB_FG_MERGE_SUBMISSIONS",
                      flag(settings.mergeSubmissions), replace);
       setEnvironment(L"LDB_FG_CAPTURE_FRAMES",
@@ -293,6 +296,7 @@ inline void attachLogSession(const std::filesystem::path &ldbSession) noexcept {
                  << "hud=" << state.settings.hud << "\n"
                  << "viewmodel=" << state.settings.viewmodel << "\n"
                  << "dynamic_models=" << state.settings.dynamicModels << "\n"
+                 << "fpb_protect=" << state.settings.fpbProtect << "\n"
                  << "content_probe=" << state.settings.contentProbe << "\n"
                  << "monitor=" << state.settings.monitor << "\n"
                  << "script_mode=" << state.scriptMode << "\n"
