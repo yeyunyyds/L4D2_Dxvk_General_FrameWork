@@ -12,13 +12,22 @@
 #include <limits>
 
 namespace ldb_fpb_projection {
+struct ScreenAdjust {
+  // Scale about the *projected* rectangle center. Zero disables this region.
+  float width = 1.0f, height = 1.0f;
+  // Screen-pixel offset referenced to 1920x1080 (scaled to viewport).
+  // Positive x = right, positive y = down.
+  float x = 0.0f, y = 0.0f;
+};
 struct Settings {
   bool enabled = false;
   float forward = -13.0f; // Source world units, horizontal camera yaw only.
   float right = -1.0f;
   float up = -1.0f;
   float width = 1.0f;     // Scales torso/leg horizontal dimensions.
-  float torsoScreenWidth = 1.0f; // Post-projection horizontal torso crop (0.1..1).
+  float torsoScreenWidth = 1.0f; // Legacy torso horizontal crop (0.1..1).
+  // Ordered as: torso, left leg, right leg. No game/Studio hooks required.
+  std::array<ScreenAdjust, 3> screen{};
   float eyeHeight = 64.0f; // Estimated standing eye-to-origin distance.
 };
 struct Rect {
@@ -45,6 +54,27 @@ inline void cropTorsoSides(Rect &r, float fraction) {
       1, int32_t(std::lround(double(original) * double(fraction))));
   r.left += (original - target) / 2;
   r.right = r.left + target;
+}
+// Apply user screen-space corrections to one projected region only, after
+// camera projection and near-plane clipping. No changes to other regions.
+inline bool adjustScreenRect(Rect &r, const ScreenAdjust &s,
+                             uint32_t screenWidth, uint32_t screenHeight) {
+  if (!r.valid() || s.width <= 0.0f || s.height <= 0.0f) return false;
+  const double cx = (double(r.left) + r.right) * .5 +
+                    double(s.x) * screenWidth / 1920.0;
+  const double cy = (double(r.top) + r.bottom) * .5 +
+                    double(s.y) * screenHeight / 1080.0;
+  const double halfW = double(r.right - r.left) * s.width * .5;
+  const double halfH = double(r.bottom - r.top) * s.height * .5;
+  const double left = cx - halfW, right = cx + halfW;
+  const double top = cy - halfH, bottom = cy + halfH;
+  if (right <= 0 || bottom <= 0 || left >= screenWidth ||
+      top >= screenHeight) return false;
+  r.left = int32_t(std::max(0.0, std::floor(left)));
+  r.top = int32_t(std::max(0.0, std::floor(top)));
+  r.right = int32_t(std::min(double(screenWidth), std::ceil(right)));
+  r.bottom = int32_t(std::min(double(screenHeight), std::ceil(bottom)));
+  return r.valid();
 }
 struct Vec3 { double x = 0, y = 0, z = 0; };
 struct Clip { double x, y, z, w; };
@@ -129,6 +159,14 @@ inline Projection project(const ldb_camera::Matrix &vp,
       !std::isfinite(s.eyeHeight) || s.width < .5f || s.width > 2.5f ||
       s.torsoScreenWidth < .1f || s.torsoScreenWidth > 1.0f ||
       s.eyeHeight < 24 || s.eyeHeight > 85) return result;
+  for (const auto &r : s.screen)
+    if (!std::isfinite(r.width) || !std::isfinite(r.height) ||
+        !std::isfinite(r.x) || !std::isfinite(r.y) ||
+        r.width < 0.0f || r.width > 3.0f ||
+        r.height < 0.0f || r.height > 3.0f ||
+        r.x < -1920.0f || r.x > 1920.0f ||
+        r.y < -1080.0f || r.y > 1080.0f)
+      return result;
   ldb_fsr::Camera cam;
   if (!ldb_fsr::cameraFromViewProjection(vp, .0254f, cam)) return result;
   // Use the camera's *actual* forward axis. Rotating camera.right by a
@@ -165,13 +203,16 @@ inline Projection project(const ldb_camera::Matrix &vp,
   if (boxRect(vp,width,height,base,forward,right,-14*scale,14*scale,
               -9*scale,9*scale,34,62,r)) {
     cropTorsoSides(r, s.torsoScreenWidth);
-    result.regions[result.count++] = r;
+    if (adjustScreenRect(r, s.screen[0], width, height))
+      result.regions[result.count++] = r;
   }
   if (boxRect(vp,width,height,base,forward,right,-12*scale,-1*scale,
-              -8*scale,8*scale,2,40,r))
+              -8*scale,8*scale,2,40,r) &&
+      adjustScreenRect(r, s.screen[1], width, height))
     result.regions[result.count++] = r;
   if (boxRect(vp,width,height,base,forward,right,1*scale,12*scale,
-              -8*scale,8*scale,2,40,r))
+              -8*scale,8*scale,2,40,r) &&
+      adjustScreenRect(r, s.screen[2], width, height))
     result.regions[result.count++] = r;
   for (uint32_t i = 0; i < result.count; ++i)
     result.upperBoundPixels += result.regions[i].area();
