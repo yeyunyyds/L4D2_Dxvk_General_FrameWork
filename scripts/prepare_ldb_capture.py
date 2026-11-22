@@ -91,7 +91,7 @@ def prepare(args):
     meson.write_text(text.replace(old, old.replace('public_include_path', "public_include_path, include_directories('.')")))
     receipt = {**baseline, 'hooks_sha256': digest(hooks), 'host_capture_sha256': digest(server / 'host_capture.h'),
                'shared_capture_sha256': digest(server / 'dxvk_capture_shared.h'),
-               'gpu_sources_sha256': {name:digest(server/name) for name in ['fsr_backend_api.h','fsr_presenter_api.h','fg_bootstrap.h','camera_state.h','fsr_camera.h','asteria_host_control.h','gpu_reprojection.h','camera_reproject_spirv.h','frame_generation.h','frame_math.h','fg_input_ring.h','resident_frame_generator.h','frame_generate_spirv.h','frame_quality_spirv.h']},
+               'gpu_sources_sha256': {name:digest(server/name) for name in ['fsr_backend_api.h','fsr_presenter_api.h','fg_bootstrap.h','camera_state.h','fsr_camera.h','fpb_projection.h','asteria_host_control.h','gpu_reprojection.h','camera_reproject_spirv.h','frame_generation.h','frame_math.h','fg_input_ring.h','resident_frame_generator.h','frame_generate_spirv.h','frame_quality_spirv.h']},
                'native_host_build': 'unrun', 'l4d2_game_capture': 'unrun'}
     receipt['build_fingerprint']=hashlib.sha256(json.dumps(receipt,sort_keys=True).encode()).hexdigest()
     (args.output / 'capture-source.json').write_text(json.dumps(receipt, indent=2) + '\n')
