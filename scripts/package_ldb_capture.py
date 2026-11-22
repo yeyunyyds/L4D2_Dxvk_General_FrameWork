@@ -20,6 +20,19 @@ def validate_package_paths(entries):
             raise ValueError(f'Non-runtime package path: {name}')
 
 
+def readme_with_notices(readme, notices):
+    """Embed original license notices in README; create no LICENSE files."""
+    parts = [readme.rstrip(b'\r\n'), b'\n\n---\n\n',
+             b'## Third-party redistributable license notices\n\n']
+    for name, data in sorted(notices.items()):
+        if not data:
+            raise ValueError(f'Empty required redistribution notice: {name}')
+        # Preserve exact upstream bytes, apart from trailing linebreaks.
+        parts += [f'### {name}\n\n'.encode('utf-8'),
+                  data.rstrip(b'\r\n'), b'\n\n']
+    return b''.join(parts)
+
+
 def package(source, build_id, output):
     if output.exists():
         raise ValueError('Preserve existing package; choose another --output')
@@ -81,24 +94,30 @@ def package(source, build_id, output):
                    binaries_sha256={name: hashlib.sha256(data).hexdigest() for name,data in entries.items()})
     entries['bin/.l4d2bridge/capture-build.json'] = (
         json.dumps(receipt, indent=2) + '\n').encode()
+    # Keep mandatory redistribution notices, but do not generate separate
+    # LICENSE files inside the CI ZIP. Collect the exact upstream texts in the
+    # existing root README instead, so the installable bin/ stays clean.
+    notices = {
+        'Remix-LICENSE': (source / 'LICENSE').read_bytes(),
+        'LDB-LICENSE':
+            (ROOT / '.research/sources/bridge-134/LICENSE').read_bytes(),
+        'DXVK-LICENSE':
+            (ROOT / '.research/sources/dxvk/LICENSE').read_bytes(),
+        'Vulkan-Headers-LICENSE.md':
+            (ROOT / '.research/sources/vulkan_headers/LICENSE.md').read_bytes(),
+        'Asteria-LICENSE':
+            (ROOT / '.research/sources/asteria/LICENSE').read_bytes(),
+    }
     for name, data in assets.items():
         if name.startswith('licenses/'):
-            entries['bin/.l4d2bridge/' + name] = data
-    licenses = {
-        'Remix-LICENSE': source / 'LICENSE',
-        'LDB-LICENSE': ROOT / '.research/sources/bridge-134/LICENSE',
-        'DXVK-LICENSE': ROOT / '.research/sources/dxvk/LICENSE',
-        'Vulkan-Headers-LICENSE.md':
-            ROOT / '.research/sources/vulkan_headers/LICENSE.md',
-        'Asteria-LICENSE': ROOT / '.research/sources/asteria/LICENSE',
-    }
-    for name, path in licenses.items():
-        entries[f'bin/.l4d2bridge/licenses/{name}'] = path.read_bytes()
+            notices[name] = data
+    readme = readme_with_notices(
+        (ROOT / 'docs/package-readme.md').read_bytes(), notices)
     validate_package_paths(entries)
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for name, data in entries.items(): archive.writestr(name, data)
-        archive.write(ROOT/'docs/package-readme.md', 'README.md')
+        archive.writestr('README.md', readme)
     print(output)
 
 
