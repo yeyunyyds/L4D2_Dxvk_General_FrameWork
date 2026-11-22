@@ -566,7 +566,7 @@ public:
 
   void initialize(uint32_t w, uint32_t h, VkFormat depth, VkFormat color,
                   uint32_t providerConsumerFamily = UINT32_MAX) {
-    static_assert(sizeof(Params) == 416, "FG uniform ABI");
+    static_assert(sizeof(Params) == 432, "FG uniform ABI");
     if (!w || !h || w > 4096 || h > 4096 || uint64_t(w) * h > 4096ull * 2160)
       throw std::runtime_error("FG extent budget");
     if ((color != VK_FORMAT_B8G8R8A8_UNORM &&
