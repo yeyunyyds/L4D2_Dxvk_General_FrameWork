@@ -1,0 +1,146 @@
+name: Publish GF v1.0.1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v1.0.1.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-gf-v1.0.1
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check release provenance and avoid duplicate tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/45052346712" --jq '.conclusion')" = "success"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/45052346712" --jq '.head_sha')" = "013b002fa6c0a7e5dfb9e70fac065f0806928c80"
+          if gh release view v1.0.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "v1.0.1 already exists; refusing to replace it" >&2
+            exit 1
+          fi
+
+      - name: Download verified Windows build (no rebuilding)
+        uses: actions/download-artifact@v4
+        with:
+          name: gf-v1.0.1-candidate-013b002fa6c0a7e5dfb9e70fac065f0806928c80
+          run-id: 45052346712
+          github-token: ${{ github.token }}
+          path: artifact
+
+      - name: Validate package contents and retain exact CI ZIP bytes
+        shell: python
+        run: |
+          import configparser
+          import hashlib
+          import json
+          from pathlib import Path
+          import shutil
+          import struct
+          import zipfile
+
+          found = list(Path("artifact").rglob("ldb-host-capture-dev.zip"))
+          if len(found) != 1:
+              raise SystemExit(f"Expected exactly one built install ZIP: {found}")
+          source = found[0]
+          images = {
+              "bin/dxvk_d3d9.dll": 0x014c,
+              "bin/.l4d2bridge/L4D2Bridge32.exe": 0x014c,
+              "bin/.l4d2bridge/L4D2Bridge64.exe": 0x8664,
+              "bin/.l4d2bridge/LDBFsrBackend64.dll": 0x8664,
+              "bin/.l4d2bridge/d3d9vk_x64.dll": 0x8664,
+              "bin/.l4d2bridge/vulkan-layer/AsteriaFrameGenerationLayer64.dll": 0x8664,
+          }
+          with zipfile.ZipFile(source) as archive:
+              if archive.testzip() is not None:
+                  raise SystemExit("ZIP CRC verification failed")
+              roots = sorted({n.split("/", 1)[0] for n in archive.namelist() if n})
+              if roots != ["README.md", "bin"]:
+                  raise SystemExit(f"Invalid install ZIP top level: {roots}")
+              for name, machine in images.items():
+                  data = archive.read(name)
+                  if data[:2] != b"MZ":
+                      raise SystemExit(f"Missing PE header: {name}")
+                  offset = struct.unpack_from("<I", data, 0x3c)[0]
+                  actual = struct.unpack_from("<H", data, offset + 4)[0]
+                  if actual != machine:
+                      raise SystemExit(f"Unexpected PE architecture in {name}: {actual:#x}")
+              receipt = json.loads(archive.read("bin/.l4d2bridge/capture-build.json"))
+              if receipt.get("native_host_build") != "compiled_MSVC_Release":
+                  raise SystemExit("Not a compiled MSVC Release build")
+              if receipt.get("bridge_version") != "v1.3.4":
+                  raise SystemExit("Unexpected Bridge version")
+              if receipt.get("dxvk_runtime_origin") != "unmodified_upstream_release":
+                  raise SystemExit("Unexpected DXVK runtime")
+              conf = configparser.ConfigParser()
+              conf.read_string(archive.read("bin/.l4d2bridge/fg-config.ini").decode("utf-8-sig"))
+              fg = conf["frame_generation"]
+              checks = {
+                  "enabled": "1", "viewmodel": "1", "dynamic_models": "1",
+                  "fpb_protect": "1", "dynamic_residual_threshold": "0.2",
+                  "first_person_fallback_start": "1",
+                  "dynamic_mask_dilation": "1", "generated_only": "0",
+                  "fpb_projection_protect": "0",
+              }
+              for key, expected in checks.items():
+                  if fg.get(key) != expected:
+                      raise SystemExit(f"Unexpected {key}: {fg.get(key)!r}")
+              if "viewmodel_sweep" in fg:
+                  raise SystemExit("Abandoned Viewmodel Sweep must not be included")
+          target = Path("L4D2-DXVK-General-Framework-v1.0.1.zip")
+          shutil.copyfile(source, target)
+          digest = hashlib.sha256(target.read_bytes()).hexdigest()
+          if digest != hashlib.sha256(source.read_bytes()).hexdigest():
+              raise SystemExit("Release ZIP differs from tested CI artifact")
+          Path("SHA256SUMS.txt").write_text(f"{digest}  {target.name}\n", encoding="utf-8")
+          print(f"Verified CI build: {target.name}, sha256={digest}")
+
+      - name: Publish public GitHub Release v1.0.1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create v1.0.1 \
+            L4D2-DXVK-General-Framework-v1.0.1.zip \
+            SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --latest \
+            --title "L4D2 DXVK General Framework v1.0.1" \
+            --notes-file - <<'EOF'
+          ## GF v1.0.1 — 正式发布
+
+          此版本将经 Windows CI 验证的 v1.0.1 构建正式发布，不再对当前版本进行额外的 FPB 或 Generated Only 代码修改。
+
+          ### 变化
+          - 采用归档的 FPB 保护调优基线，保留 HUD、Viewmodel、动态像素与 FPB 保护功能。
+          - 保留当前调优参数：`dynamic_residual_threshold=0.2`、`first_person_fallback_start=1`、`dynamic_mask_dilation=1`；独立 FPB 投影默认关闭。
+          - 添加实验性 `generated_only` 仅显示生成帧模式（默认 `0`，支持运行中热更新）；当生成停止或失败时，回退显示原始帧。
+          - Viewmodel Sweep 中间遮罩实验未达到预期，已撤回，**不包含**于本版本。
+
+          ### 验证与限制
+          - 来源构建：`013b002fa6c0a7e5dfb9e70fac065f0806928c80`；Windows CI #45052346712 成功。
+          - Release ZIP 与 CI 验证的 ZIP 字节一致，另附 SHA-256 校验和。
+          - `generated_only` 仍属于实验性功能，不能解决生成帧自身的武器或人物残影；未声明所有设备和 Mod 组合均已验证。
+
+          ### 安装
+          退出游戏及 Bridge Host，建议备份 `bin` 目录；将 ZIP 解压至 Left 4 Dead 2 游戏根目录并合并 `bin`。压缩包中的 Client、Host32、Host64 和 Vulkan Layer 为配套构建。
+
+          ---
+
+          ## English
+          v1.0.1 promotes the Windows-CI-verified build to a public release. It retains the tuned FPB protection baseline and the optional hot-reloadable `generated_only` FSR swapchain presentation mode (default off). The unsuccessful Viewmodel Sweep experiment is **not included**. Experimental frame display behavior is not claimed as universally validated. The released installation ZIP is byte-identical to the successful CI artifact; SHA-256 checksums are included.
+          EOF

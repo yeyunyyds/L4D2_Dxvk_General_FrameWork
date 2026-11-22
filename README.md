@@ -2,15 +2,15 @@
 
 ## 介绍
 
-## v1.0.1 预备版（待验证）
+## v1.0.1 正式版
 
-当前 `main` 为 **v1.0.1 发布候选源代码**，尚未经过最终实机验证，**尚未正式发布 v1.0.1 Release**。验证通过后再决定正式发布。
+**v1.0.1 已作为正式版本发布。** 使用通过 Windows CI 测试的现有构建，不再追加 FPB 或 Generated Only 修复。此版本的部分实验性视觉功能尚未完成广泛实机兼容性验证。
 
-本次基于已归档的 FPB 保护调优基线，保留原有 HUD、Viewmodel、动态像素与 FPB 保护（`dynamic_residual_threshold=0.2`、`first_person_fallback_start=1`、`dynamic_mask_dilation=1`，独立 FPB 投影默认关闭）；额外保留可热更新的 `generated_only` 实验开关，默认 `0`。开启后仅在 FG 正常生成时显示生成帧；FG 暂停或不可用时仍显示真实帧，显示帧率通常回到原生帧率。
+本版本基于已归档的 FPB 保护调优基线，保留原有 HUD、Viewmodel、动态像素与 FPB 保护（`dynamic_residual_threshold=0.2`、`first_person_fallback_start=1`、`dynamic_mask_dilation=1`，独立 FPB 投影默认关闭）；额外保留可热更新的 `generated_only` 实验开关，默认 `0`。开启后仅在 FG 正常生成时显示生成帧；FG 暂停或不可用时仍显示真实帧，显示帧率通常回到原生帧率。
 
 **失败实验已撤回：** Viewmodel Sweep 的中间遮罩搜索未达到预期，未合并进 `main`。保留其原实验分支，仅供追溯；不宣称已解决武器残影或闪烁。
 
-CI 在 `main` 上构建测试 ZIP 作为验证产物，**不会创建版本标签或 GitHub Release**。
+CI 在 `main` 上构建并测试安装 ZIP；本次 v1.0.1 Release 直接采用已通过 CI 的安装包，保留其原始构建字节。
 
 
 L4D2 DXVK General Framework 为《Left 4 Dead 2》提供基于 FidelityFX FSR 3 的帧生成功能。
@@ -68,15 +68,15 @@ L4D2BridgeLogs/<会话 GUID>/frame-generation/
 
 ## Introduction
 
-## v1.0.1 release candidate — validation pending
+## v1.0.1 release
 
-The `main` branch contains **v1.0.1 candidate source**. In-game validation is pending; **v1.0.1 has not been released**. A final release may follow successful validation.
+**v1.0.1 is released as a stable GitHub Release using the existing Windows CI-verified build**, without further FPB or Generated Only code changes. Broad real-game compatibility testing of experimental visual features remains limited.
 
-This candidate preserves the archived tuned FPB protection baseline, including HUD, viewmodel, dynamic-pixel and FPB protection (`dynamic_residual_threshold=0.2`, `first_person_fallback_start=1`, `dynamic_mask_dilation=1`; independent FPB projection disabled by default). It adds only the opt-in, hot-reloadable `generated_only` experiment (default `0`). When enabled, only interpolated frames are presented while FG is working; original frames are still displayed when FG pauses or fails, and displayed FPS generally returns to source FPS.
+This release preserves the archived tuned FPB protection baseline, including HUD, viewmodel, dynamic-pixel and FPB protection (`dynamic_residual_threshold=0.2`, `first_person_fallback_start=1`, `dynamic_mask_dilation=1`; independent FPB projection disabled by default). It adds only the opt-in, hot-reloadable `generated_only` experiment (default `0`). When enabled, only interpolated frames are presented while FG is working; original frames are still displayed when FG pauses or fails, and displayed FPS generally returns to source FPS.
 
 **Withdrawn experiment:** Viewmodel Sweep did not meet expectations and is not merged into `main`. Its experiment branch remains available for traceability. No successful fix for viewmodel ghosting or flashing is claimed.
 
-CI produces a test ZIP for validation but **does not create a version tag or GitHub Release**.
+CI builds and tests the installation ZIP; the v1.0.1 GitHub Release uses that verified artifact unchanged.
 
 
 L4D2 DXVK General Framework adds FidelityFX FSR 3 Frame Generation to *Left 4 Dead 2*.
