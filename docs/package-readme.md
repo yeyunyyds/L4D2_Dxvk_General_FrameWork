@@ -1,127 +1,83 @@
 # L4D2 DXVK General Framework
 
-## 介绍
+**v1.0.1 — FidelityFX FSR 3 Frame Generation for Left 4 Dead 2**
 
-## v1.0.1 正式版
+Project / 项目主页：https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork
 
-**v1.0.1 已作为正式版本发布。** 使用通过 Windows CI 测试的现有构建，不再追加 FPB 或 Generated Only 修复。此版本的部分实验性视觉功能尚未完成广泛实机兼容性验证。
+## 中文说明
 
-本版本基于已归档的 FPB 保护调优基线，保留原有 HUD、Viewmodel、动态像素与 FPB 保护（`dynamic_residual_threshold=0.2`、`first_person_fallback_start=1`、`dynamic_mask_dilation=1`，独立 FPB 投影默认关闭）；额外保留可热更新的 `generated_only` 实验开关，默认 `0`。开启后仅在 FG 正常生成时显示生成帧；FG 暂停或不可用时仍显示真实帧，显示帧率通常回到原生帧率。
+GF 通过 L4D2Bridge v1.3.4 获取场景颜色、深度和相机信息，再通过 FidelityFX FSR 3 与 x64 Vulkan Layer 生成中间帧。此安装包包含配套的 Client、Host32、Host64、官方 DXVK v2.6.1 和 Vulkan Layer，提供 HUD、第一人称武器、动态模型及 FPB 画面保护。
 
-**失败实验已撤回：** Viewmodel Sweep 的中间遮罩搜索未达到预期，未合并进 `main`。保留其原实验分支，仅供追溯；不宣称已解决武器残影或闪烁。
+### 安装
 
-CI 在 `main` 上构建并测试安装 ZIP；本次 v1.0.1 Release 直接采用已通过 CI 的安装包，保留其原始构建字节。
+1. 退出游戏与 `L4D2Bridge32.exe`、`L4D2Bridge64.exe`（Steam 可保持运行）。
+2. 备份现有游戏 `bin` 目录。
+3. 将安装 ZIP 解压到 **Left 4 Dead 2 游戏根目录**，按需合并并覆盖 `bin` 中的文件。
+4. 在 Steam 中正常启动游戏。
 
+请成套安装所有组件。若此前设置过 `client.testX86Server=True`，请改回 `False`。
 
-L4D2 DXVK General Framework 为《Left 4 Dead 2》提供基于 FidelityFX FSR 3 的帧生成功能。
+### 使用与配置
 
-本安装包包含配套的 L4D2Bridge v1.3.4 Client、Host32 与 Host64，并通过 x64 Vulkan Layer 完成帧生成与显示。当前版本使用官方 DXVK v2.6.1，同时支持 HUD、第一人称手部与武器、第三人称人物及动态模型保护。
+帧生成默认启用。在游戏内按 **F8** 暂停或恢复。配置文件位于 `bin/.l4d2bridge/fg-config.ini`。
 
-项目基于或参考以下开源项目：
-
-- [L4D2_Dxvk_32to64_Bridge](https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge)
-- [DXVK](https://github.com/doitsujin/dxvk)
-- [FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK)
-- [L4D2 Asteria Graphics Enhancement](https://github.com/Anokianx/L4D2-Asteria-Graphics-Enhancement)
-- [L4D2 Danyria Integration Tool](https://github.com/Anokianx/L4D2-Danyria-Integration-Tool)
-
-完整引用、固定版本与许可证信息见[项目仓库](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/main/THIRD_PARTY.md)。
-
-## 安装
-
-1. 退出游戏以及 `L4D2Bridge64.exe`、`L4D2Bridge32.exe`；Steam 可以保持运行。
-2. 备份游戏现有的 `bin` 文件夹。
-3. 将本压缩包解压到 Left 4 Dead 2 游戏根目录，合并并覆盖 `bin` 中的同名文件。
-4. 从 Steam 正常启动游戏。
-
-压缩包中的 Client、Host32 与 Host64 应当一并安装。若曾设置 `client.testX86Server=True`，请将其改回 `False`。
-
-## 使用
-
-帧生成在游戏启动时自动启用。运行过程中按 `F8` 可以暂停或恢复帧生成。
-
-配置文件位于：
-
-```text
-bin/.l4d2bridge/fg-config.ini
-```
-
-| 选项 | 默认值 | 功能 |
+| 选项 | 默认值 | 说明 |
 | --- | ---: | --- |
-| `enabled` | `1` | 启用帧生成；设为 `0` 可在下次启动时关闭 |
-| `hud` | `1` | 保护游戏 HUD |
-| `viewmodel` | `1` | 保护第一人称手部与武器 |
-| `generated_only` | `0` | 实验性：仅显示生成帧（热更新） |
-| `dynamic_models` | `1` | 保护第三人称人物及动态模型 |
-| `monitor` | `0` | 启用实时监测窗口 |
+| `enabled` | `1` | FG 开关，关闭后需重启 |
+| `hud` | `1` | HUD 保护 |
+| `viewmodel` | `1` | 第一人称武器与手部保护 |
+| `dynamic_models` | `1` | 动态模型保护 |
+| `fpb_protect` | `1` | FPB 动态像素保护 |
+| `generated_only` | `0` | 实验性仅显示生成帧（热更新） |
+| `fpb_projection_protect` | `0` | 实验性身体投影保护 |
+| `monitor` | `0` | 监测窗口 |
 
-运行日志保存在：
+其他 FPB 参数范围与说明见配置文件注释。`generated_only` 仅改变显示策略，不解决生成帧自身伪影；开启后正常情况下显示帧率通常等于原生帧率，FG 停止或失败时将回退真实帧。
 
-```text
-L4D2BridgeLogs/<会话 GUID>/frame-generation/
-```
+日志：`L4D2BridgeLogs/<会话 GUID>/frame-generation/`
+
+### 兼容性与许可
+
+项目针对 Windows L4D2 与本安装包配套的 Bridge/DXVK 构建。自定义模型、显卡驱动及其他 DXVK 版本未必兼容；帧生成不会改变游戏逻辑更新率或原始输入延迟。
+
+第三方再分发许可证全文附于本文末尾。项目的完整致谢和依赖版本见 [THIRD_PARTY.md](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/main/THIRD_PARTY.md)。
 
 ---
 
-# English
+## English
 
-## Introduction
+GF provides FidelityFX FSR 3 Frame Generation for *Left 4 Dead 2*, using L4D2Bridge v1.3.4 and an x64 Vulkan Layer. This package includes matched Client/Host32/Host64 components, upstream DXVK v2.6.1, and HUD, Viewmodel, dynamic-model, and FPB protection.
 
-## v1.0.1 release
+### Installation
 
-**v1.0.1 is released as a stable GitHub Release using the existing Windows CI-verified build**, without further FPB or Generated Only code changes. Broad real-game compatibility testing of experimental visual features remains limited.
+1. Exit L4D2, `L4D2Bridge32.exe` and `L4D2Bridge64.exe`; Steam can stay open.
+2. Back up your game `bin` directory.
+3. Extract the ZIP into the *Left 4 Dead 2* game root, merging matching files in `bin`.
+4. Launch normally through Steam.
 
-This release preserves the archived tuned FPB protection baseline, including HUD, viewmodel, dynamic-pixel and FPB protection (`dynamic_residual_threshold=0.2`, `first_person_fallback_start=1`, `dynamic_mask_dilation=1`; independent FPB projection disabled by default). It adds only the opt-in, hot-reloadable `generated_only` experiment (default `0`). When enabled, only interpolated frames are presented while FG is working; original frames are still displayed when FG pauses or fails, and displayed FPS generally returns to source FPS.
+Use all bundled components as a matched set. Restore `client.testX86Server=False` if previously changed.
 
-**Withdrawn experiment:** Viewmodel Sweep did not meet expectations and is not merged into `main`. Its experiment branch remains available for traceability. No successful fix for viewmodel ghosting or flashing is claimed.
+### Usage and configuration
 
-CI builds and tests the installation ZIP; the v1.0.1 GitHub Release uses that verified artifact unchanged.
+Frame Generation is enabled by default. Press **F8** in-game to pause or resume. Edit `bin/.l4d2bridge/fg-config.ini`:
 
-
-L4D2 DXVK General Framework adds FidelityFX FSR 3 Frame Generation to *Left 4 Dead 2*.
-
-This package contains a matched L4D2Bridge v1.3.4 Client, Host32, and Host64. Frame generation and presentation are provided through an x64 Vulkan Layer. The current version uses the official DXVK v2.6.1 release and protects the HUD, first-person hands and weapons, third-person characters, and dynamic models.
-
-The project is built upon or informed by the following open-source projects:
-
-- [L4D2_Dxvk_32to64_Bridge](https://github.com/yeyunyyds/L4D2_Dxvk_32to64_Bridge)
-- [DXVK](https://github.com/doitsujin/dxvk)
-- [FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK)
-- [L4D2 Asteria Graphics Enhancement](https://github.com/Anokianx/L4D2-Asteria-Graphics-Enhancement)
-- [L4D2 Danyria Integration Tool](https://github.com/Anokianx/L4D2-Danyria-Integration-Tool)
-
-See the [project repository](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/main/THIRD_PARTY.md) for complete credits, pinned versions, and license information.
-
-## Installation
-
-1. Close the game, `L4D2Bridge64.exe`, and `L4D2Bridge32.exe`. Steam may remain open.
-2. Back up the game's existing `bin` directory.
-3. Extract this archive into the *Left 4 Dead 2* game directory, then merge and overwrite matching files in `bin`.
-4. Launch the game normally from Steam.
-
-The Client, Host32, and Host64 included in the archive are a matched set and must be installed together. If `client.testX86Server=True` was previously enabled, change it back to `False`.
-
-## Usage
-
-Frame Generation is enabled automatically at startup. Press `F8` during gameplay to pause or resume it.
-
-Configuration file:
-
-```text
-bin/.l4d2bridge/fg-config.ini
-```
-
-| Option | Default | Description |
+| Setting | Default | Description |
 | --- | ---: | --- |
-| `enabled` | `1` | Enables Frame Generation; set to `0` to disable it on the next launch |
-| `hud` | `1` | Protects the game HUD |
-| `viewmodel` | `1` | Protects first-person hands and weapons |
-| `generated_only` | `0` | Experimental: generated frames only (hot-reload) |
-| `dynamic_models` | `1` | Protects third-person characters and dynamic models |
-| `monitor` | `0` | Enables the live monitoring window |
+| `enabled` | `1` | FG switch; restart after disabling |
+| `hud` | `1` | HUD protection |
+| `viewmodel` | `1` | First-person weapon protection |
+| `dynamic_models` | `1` | Dynamic model protection |
+| `fpb_protect` | `1` | FPB dynamic-pixel protection |
+| `generated_only` | `0` | Experimental generated-only output (hot-reload) |
+| `fpb_projection_protect` | `0` | Experimental body projection |
+| `monitor` | `0` | Live monitoring window |
 
-Runtime logs are stored in:
+Other FPB settings are described in the INI comments. Generated-only presentation does not fix interpolation artifacts. Display FPS typically matches source FPS in this mode, with real frames shown when FG is unavailable.
 
-```text
-L4D2BridgeLogs/<session GUID>/frame-generation/
-```
+Logs: `L4D2BridgeLogs/<session GUID>/frame-generation/`
+
+### Compatibility and licensing
+
+Designed for Windows L4D2 with the bundled Bridge/DXVK combination. Alternative DXVK builds, GPU drivers and Mods are not guaranteed. Frame Generation does not remove native simulation or input latency.
+
+Required third-party license notices follow this guide. See [THIRD_PARTY.md](https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork/blob/main/THIRD_PARTY.md) for dependency versions and full credits.
