@@ -30,7 +30,7 @@ inline std::wstring readEnv(const wchar_t *key) {
 struct Config {
   bool enabled = false, generatedOnly = false, providerOnly = false,
        hotkeys = true, fastInputs = false, hudBypass = false,
-       viewmodel = false, dynamicModels = false,
+       viewmodel = false, dynamicModels = false, fpbProtect = false,
        mergeSubmissions = true;
   uint32_t captures = 4, pacingMs = 0;
   bool autoCapture = false;
@@ -55,6 +55,7 @@ struct Config {
       hudBypass = readEnv(L"LDB_FG_HUD_BYPASS") == L"1";
       viewmodel = readEnv(L"LDB_FG_VIEWMODEL") == L"1";
       dynamicModels = readEnv(L"LDB_FG_DYNAMIC_MODELS") == L"1";
+      fpbProtect = readEnv(L"LDB_FG_FPB_PROTECT") == L"1";
       mergeSubmissions = readEnv(L"LDB_FG_MERGE_SUBMISSIONS") != L"0";
       autoCapture = readEnv(L"LDB_FG_AUTO_CAPTURE") == L"1";
       auto pacing = readEnv(L"LDB_FG_PACING_MS");
@@ -255,6 +256,8 @@ struct State {
              std::string(config().viewmodel ? "true" : "false") +
              ",\"dynamic_model_protection_requested\":" +
              std::string(config().dynamicModels ? "true" : "false") +
+             ",\"fpb_protection_requested\":" +
+             std::string(config().fpbProtect ? "true" : "false") +
              ",\"merge_submissions\":" +
              std::string(config().mergeSubmissions ? "true" : "false") +
              ",\"qpc_frequency\":" +
@@ -891,7 +894,14 @@ struct State {
               providerParams.flags = {gpu->width, gpu->height, providerFlags,
                                       previousFlags};
               providerParams.thresholds[2] = 1.0f;
-              providerParams.thresholds[3] = 0.08f;
+              // First pass: reuse the existing dynamic-pixel alpha overlay.
+              // FPB moves its render-only skeleton relative to the camera, so
+              // subtle changed pixels can miss the normal 0.08 residual guard.
+              // This lowers sensitivity only in provider mode when explicitly
+              // requested; the shader, motion vectors and base path stay intact.
+              // It is a heuristic, not an exact body segmentation mask.
+              providerParams.thresholds[3] =
+                  config().dynamicModels && config().fpbProtect ? 0.035f : 0.08f;
               try {
                 if (!config().mergeSubmissions) {
                   if (hudOverlay)
