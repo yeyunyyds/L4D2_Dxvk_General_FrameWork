@@ -61,22 +61,27 @@ source view. Toggle `fpb_projection_protect` in game to see the difference.
 
 At each accepted provider frame, the CPU projects up to three clipped 3D
 volumes and produces 0..3 integer screen-space rectangles. These are not
-uploaded as bitmaps. The Host's Vulkan command buffer first dispatches its
-existing mask classification shader, then blits the corresponding rectangular
-regions from the **current final color** to the existing RGBA8 provider
-overlay. The Layer's existing exact-current composite handles the result.
-The blit performs BGRA-to-RGBA conversion where necessary.
+uploaded as bitmaps. The Host's existing mask classifier first writes the
+normal exact-current RGB+alpha overlay.
 
-The source's **alpha channel is preserved** by this blit. Actual mask
-coverage therefore depends on the game's backbuffer alpha in these
-regions; this is a known unverified hardware prerequisite. Inspect
-`mask_debug_white=1` before judging visual quality. If no FPB regions
-become white, the alpha path needs a purpose-built mask-writing shader.
-The blit requires Vulkan format `BLIT_SRC`/`BLIT_DST` support and
-fails closed if those features are unavailable.
+The optional projected-region compositor **reuses the already validated
+Asteria HUD compute SPIR-V**, without recompiling FSR or the main
+classifier. It samples the current real frame through a Vulkan image view
+whose alpha component is mapped to `VK_COMPONENT_SWIZZLE_ONE`. It then
+explicitly writes **RGB from the real frame and alpha=1** to the existing
+RGBA8 overlay inside the projected region, independently of any
+unspecified D3D9 backbuffer alpha.
 
-No extra Vulkan pipeline is rebuilt when offsets change, only a small
-bounded number of blit regions are updated each accepted frame.
+The optional pipeline is created lazily when projection is enabled and uses
+`VK_PIPELINE_CREATE_DISPATCH_BASE_BIT`. Up to three `vkCmdDispatchBase`
+calls cover the 8x8-workgroup-rounded rectangles. This intentionally
+protects up to seven additional pixels along each edge. Overlapping body
+regions are synchronized with compute image barriers. Unsupported Vulkan
+dispatch or incomplete descriptor allocations disable **only** the
+optional projection, leaving existing FG untouched.
+
+INI edits change only the CPU projection parameters. They do not
+rebuild the pipeline or upload any pixel bitmap.
 
 ## Safety and diagnostics
 
@@ -87,12 +92,12 @@ bounded number of blit regions are updated each accepted frame.
 - If summed upper-bound area exceeds 70% of screen area, the frame's
   projection is rejected instead of protecting most of the screen.
 - Only provider mode is supported; other FG modes are untouched.
-- Unsupported camera matrices, invalid input or unsupported blit formats
+- Unsupported camera matrices, invalid input or unavailable ROI compute support
   disable the projected overlay for the affected frame.
 - `live_protection_updated` and `live_protection_rejected` log INI changes.
   `fpb_projection` samples report region count, conservative area estimate,
-  coverage rejection and device blit support.
-- No user-testing of image quality, occlusion or actual source alpha has yet
+  coverage rejection and GPU overlay readiness.
+- No user-testing of image quality, occlusion or on-device ROI dispatch has yet
   been completed. Screen-space rectangles can protect background between
   body parts, causing local 60 FPS stepping.
 
