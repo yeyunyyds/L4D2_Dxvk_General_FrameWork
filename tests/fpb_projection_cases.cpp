@@ -75,6 +75,48 @@ int main() {
             "torso-only crop changed a leg projection");
     }
     cfg.torsoScreenWidth = 1.0f;
+    // Each rectangle has separate post-projection dimensions/offsets.
+    cfg.screen[0].width = .35f;
+    cfg.screen[0].height = .8f;
+    cfg.screen[0].x = 50.f;
+    cfg.screen[0].y = -40.f;
+    auto movedTorso = ldb_fpb_projection::project(down, 1920, 1080, cfg);
+    check(movedTorso.count == visible.count, "torso edit removed a box");
+    check(movedTorso.regions[0].right - movedTorso.regions[0].left <
+          visible.regions[0].right - visible.regions[0].left,
+          "torso-only width did not shrink");
+    check(movedTorso.regions[0].bottom - movedTorso.regions[0].top <=
+          visible.regions[0].bottom - visible.regions[0].top,
+          "torso-only height grew unexpectedly");
+    check(movedTorso.regions[0].left + movedTorso.regions[0].right >
+          visible.regions[0].left + visible.regions[0].right,
+          "torso +X did not move to the right");
+    for (uint32_t i = 1; i < visible.count; ++i) {
+      const auto &a = visible.regions[i], &b = movedTorso.regions[i];
+      check(a.left == b.left && a.right == b.right &&
+            a.top == b.top && a.bottom == b.bottom,
+            "torso-only screen adjustment changed a leg");
+    }
+    cfg.screen[0] = {};
+    cfg.screen[1].width = .5f;
+    cfg.screen[1].y = -35.f;
+    auto movedLeft = ldb_fpb_projection::project(down, 1920, 1080, cfg);
+    check(movedLeft.count == visible.count, "left-leg edit removed a box");
+    check(movedLeft.regions[0].left == visible.regions[0].left &&
+          movedLeft.regions[0].top == visible.regions[0].top,
+          "left-leg edit moved torso");
+    check(movedLeft.regions[1].right - movedLeft.regions[1].left <
+          visible.regions[1].right - visible.regions[1].left,
+          "left-leg width did not shrink");
+    check(movedLeft.regions[2].left == visible.regions[2].left &&
+          movedLeft.regions[2].right == visible.regions[2].right,
+          "left-leg edit changed right leg");
+    cfg.screen[1] = {};
+    cfg.screen[2].width = 0.f;
+    auto disabled = ldb_fpb_projection::project(down, 1920, 1080, cfg);
+    check(disabled.count == visible.count - 1,
+          "zero width should disable only the right-leg box");
+    cfg.screen[2] = {};
 
     for (unsigned i = 0; i < visible.count; ++i) {
       const auto &r = visible.regions[i];
@@ -112,6 +154,14 @@ int main() {
     check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
           "too-large torso crop should fail closed");
     cfg.torsoScreenWidth = 1.0f;
+    cfg.screen[0].width = 3.1f;
+    check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
+          "invalid box scale should fail closed");
+    cfg.screen[0] = {};
+    cfg.screen[1].x = 1921.f;
+    check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
+          "invalid box offset should fail closed");
+    cfg.screen[1] = {};
     cfg.width = 3.0f;
     check(ldb_fpb_projection::project(down, 1920, 1080, cfg).count == 0,
           "invalid width should fail closed");
