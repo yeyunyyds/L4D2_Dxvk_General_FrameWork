@@ -52,12 +52,15 @@ public:
     std::array<float, 96> rows{};
     std::array<uint32_t, 4> flags{};
     std::array<float, 4> thresholds{.0002f, .16f, 0, 0};
+    std::array<float, 4> liveProtection{.28f, 1.f, 0.f, 16.f};
   };
 
 private:
   Capture c;
   float firstPersonFallbackStart = 0.28f;
   uint32_t dynamicMaskDilation = 1;
+  bool viewmodelSweepEnabled = false;
+  uint32_t viewmodelSweepRadius = 16;
   // Opt-in, lazy-initialized ROI composer. Alpha is explicitly written as 1
   // through the already-tested HUD compositor shader, never copied from D3D9.
   bool projectionUnavailable = false;
@@ -444,96 +447,32 @@ public:
         c.vkFreeMemory(c.device, i.memory, nullptr);
     }
   }
-  VkShaderModule createTunedGenerateShader(float fallbackStart,
-                                            uint32_t maskDilation) {
-    std::vector<uint32_t> fgShader(
-        frameGenerateSpirv,
-        frameGenerateSpirv + sizeof(frameGenerateSpirv) / sizeof(uint32_t));
-    if (fgShader.size() <= 704 ||
-        fgShader[755] != 0x0004002bu || fgShader[756] != 8u ||
-        fgShader[757] != 765u || fgShader[758] != 0x3e8f5c29u ||
-        fgShader[698] != 0x0007002cu || fgShader[699] != 488u ||
-        fgShader[700] != 494u || fgShader[701] != 489u ||
-        fgShader[702] != 491u || fgShader[703] != 492u ||
-        fgShader[704] != 493u)
-      throw std::runtime_error("FG shader parameter layout changed");
-    if (fallbackStart != 0.28f) {
-      uint32_t encoded = 0;
-      static_assert(sizeof(encoded) == sizeof(fallbackStart),
-                    "FG parameter float size");
-      std::memcpy(&encoded, &fallbackStart, sizeof(encoded));
-      fgShader[758] = encoded; // exclusive lower-screen boundary (0..1)
-    }
-    if (maskDilation == 0u) {
-      // The original vec2[4] constant (ID 494) is shared by foregroundEdge,
-      // temporalChange and providerDynamic after GLSL constant folding.
-      // Never overwrite it: that would also weaken unrelated protection.
-      // Create a new all-zero array and retarget only providerDynamic's
-      // OpStore at the pinned instruction offset (31858).
-      if (fgShader.size() <= 31860u || fgShader[3] != 0xaea0u ||
-          fgShader[31858] != 0x0003003eu ||
-          fgShader[31859] != 3049u ||
-          fgShader[31860] != 494u)
-        throw std::runtime_error("FG dynamic offset shader layout changed");
-      const uint32_t zeroVector = fgShader[3];
-      const uint32_t zeroArray = zeroVector + 1u;
-      const std::array<uint32_t, 12> zeroDefinition{
-          0x0005002cu, 16u, zeroVector, 378u, 378u,
-          0x0007002cu, 488u, zeroArray,
-          zeroVector, zeroVector, zeroVector, zeroVector};
-      fgShader.insert(fgShader.begin() + 698, zeroDefinition.begin(),
-                      zeroDefinition.end());
-      fgShader[3] = zeroArray + 1u;
-      fgShader[31858u + 12u + 2u] = zeroArray;
-    }
+  // GLSL consumes all protection controls as std140 uniforms. Unlike the
+  // previous fixed-offset SPIR-V mutation, changing these at runtime does not
+  // rebuild GPU pipelines and cannot perturb unrelated shader constants.
+  VkShaderModule createGenerateShader() {
     VkShaderModuleCreateInfo sm{};
     sm.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    sm.codeSize = fgShader.size() * sizeof(uint32_t);
-    sm.pCode = fgShader.data();
+    sm.codeSize = sizeof(frameGenerateSpirv);
+    sm.pCode = frameGenerateSpirv;
     VkShaderModule result = VK_NULL_HANDLE;
     vkcheck(vkCreateShaderModule(c.device, &sm, nullptr, &result),
-            "FG tuned shader");
+            "FG generate shader");
     return result;
   }
 
-  // INI hot reload is manual/rare. Rebuild only the Host's classification
-  // pipeline, then retire its predecessor after the DXVK submission queue
-  // is drained. Never mutate a pipeline referenced by an in-flight command.
-  void updateProtectionShader(float fallbackStart, uint32_t maskDilation) {
-    if (firstPersonFallbackStart == fallbackStart &&
-        dynamicMaskDilation == maskDilation)
-      return;
-    if (!pipeline || !pipelineLayout || recording)
-      throw std::runtime_error("FG runtime shader not ready");
-    VkShaderModule nextShader = createTunedGenerateShader(fallbackStart, maskDilation);
-    VkComputePipelineCreateInfo create{};
-    create.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    create.layout = pipelineLayout;
-    create.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    create.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    create.stage.module = nextShader;
-    create.stage.pName = "main";
-    VkPipeline nextPipeline = VK_NULL_HANDLE;
-    const VkResult created = vkCreateComputePipelines(
-        c.device, VK_NULL_HANDLE, 1, &create, nullptr, &nextPipeline);
-    vkDestroyShaderModule(c.device, nextShader, nullptr);
-    if (created != VK_SUCCESS) {
-      if (nextPipeline)
-        vkDestroyPipeline(c.device, nextPipeline, nullptr);
-      vkcheck(created, "FG tuned pipeline");
-    }
-    c.interop->LockSubmissionQueue();
-    const VkResult drained = c.vkQueueWaitIdle(c.queue);
-    c.interop->ReleaseSubmissionQueue();
-    if (drained != VK_SUCCESS) {
-      vkDestroyPipeline(c.device, nextPipeline, nullptr);
-      vkcheck(drained, "FG shader switch queue drain");
-    }
-    VkPipeline previous = pipeline;
-    pipeline = nextPipeline;
-    vkDestroyPipeline(c.device, previous, nullptr);
+  void updateProtectionShader(float fallbackStart, uint32_t maskDilation,
+                              bool sweepEnabled = false,
+                              uint32_t sweepRadius = 16) {
+    if (!std::isfinite(fallbackStart) || fallbackStart < 0.f ||
+        fallbackStart > 1.f || maskDilation > 1u ||
+        sweepRadius < 4u || sweepRadius > 24u ||
+        (sweepRadius % 4u) != 0u)
+      throw std::invalid_argument("FG protection parameters");
     firstPersonFallbackStart = fallbackStart;
     dynamicMaskDilation = maskDilation;
+    viewmodelSweepEnabled = sweepEnabled;
+    viewmodelSweepRadius = sweepRadius;
   }
 
   // Creates only when the user enables the new projection at runtime.
@@ -804,8 +743,7 @@ public:
             "FG quality GPU memory");
     buffer(qualityReadback, qualityReadbackMemory, qualityMap, sizeof(Quality),
            VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-    shader = createTunedGenerateShader(firstPersonFallbackStart,
-                                      dynamicMaskDilation);
+    shader = createGenerateShader();
     std::array<VkDescriptorSetLayoutBinding, 18> bindings{};
     for (uint32_t n = 0; n < 18; n++) {
       bindings[n].binding = n;
@@ -909,7 +847,13 @@ public:
     else if (!recording)
       throw std::runtime_error("FG append without recorded copy");
     activeProviderSlot = providerSlot % 3;
-    std::memcpy(uniformMap, &params, sizeof(params));
+    static_assert(sizeof(Params) == 432, "FG std140 uniform ABI changed");
+    Params liveParams = params;
+    liveParams.liveProtection = {firstPersonFallbackStart,
+                                 float(dynamicMaskDilation),
+                                 viewmodelSweepEnabled ? 1.f : 0.f,
+                                 float(viewmodelSweepRadius)};
+    std::memcpy(uniformMap, &liveParams, sizeof(liveParams));
     VkMappedMemoryRange range{};
     range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     range.memory = uniformMemory;
