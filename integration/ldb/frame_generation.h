@@ -1099,7 +1099,7 @@ struct State {
                   config().viewmodel && nearColourCopied && !nearInvalid &&
                   viewmodelBeforeSnapshot.get() &&
                   viewmodelAfterSnapshot.get();
-              const bool sceneOnly =
+              bool sceneOnly =
                   config().fastInputs && !hudOverlay && !viewmodelOverlay;
               const uint32_t providerFlags =
                 (nearCopied ? 1u : 0u) | (uiCopied ? 2u : 0u) |
@@ -1120,6 +1120,10 @@ struct State {
               const auto projectedBody = ldb_fpb_projection::project(
                   currentMatrix, gpu->width, gpu->height,
                   liveProtection.projectedBody);
+              // Even without HUD/viewmodel, the projected body requires the
+              // provider UI composite. Do not mark its input scene-only.
+              if (projectedBody.count && gpu->canBlitProjectedBody())
+                sceneOnly = false;
               if (liveProtection.projectedBody.enabled &&
                   (frame < 16 || frame % 120 == 0))
                 emit("fpb_projection", uid,
