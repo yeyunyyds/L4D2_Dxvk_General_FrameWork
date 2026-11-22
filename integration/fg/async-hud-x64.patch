@@ -48,7 +48,7 @@ index fede970..02e8236 100644
 +    std::mutex hudCompositeMutex;
 +    VkDescriptorSetLayout hudDescriptorSetLayout = VK_NULL_HANDLE;
 +    VkPipelineLayout hudPipelineLayout = VK_NULL_HANDLE;
-+    VkPipeline hudPipeline = VK_NULL_HANDLE;
++    std::array<VkPipeline, 4> hudPipelines{};
 +    VkDescriptorPool hudDescriptorPool = VK_NULL_HANDLE;
 +    std::vector<HudCompositeBinding> hudBindings;
 +    std::atomic<uint64_t> hudCompositeDispatches{0};
@@ -98,7 +98,7 @@ index fede970..02e8236 100644
      default: return VK_FORMAT_R8G8B8A8_UNORM;
      }
  }
-@@ -600,6 +610,227 @@ inline void RecordContentProbe(FgSwapchainState &state, VkCommandBuffer commandB
+@@ -600,6 +610,231 @@ inline void RecordContentProbe(FgSwapchainState &state, VkCommandBuffer commandB
      state.contentProbeFrameIds[slot] = frameID;
  }
  
@@ -112,11 +112,12 @@ index fede970..02e8236 100644
 +    }
 +    state.hudBindings.clear();
 +    if (state.hudDescriptorPool) vkDestroyDescriptorPool(state.device, state.hudDescriptorPool, nullptr);
-+    if (state.hudPipeline) vkDestroyPipeline(state.device, state.hudPipeline, nullptr);
++    for (VkPipeline candidate : state.hudPipelines)
++        if (candidate) vkDestroyPipeline(state.device, candidate, nullptr);
 +    if (state.hudPipelineLayout) vkDestroyPipelineLayout(state.device, state.hudPipelineLayout, nullptr);
 +    if (state.hudDescriptorSetLayout) vkDestroyDescriptorSetLayout(state.device, state.hudDescriptorSetLayout, nullptr);
 +    state.hudDescriptorPool = VK_NULL_HANDLE;
-+    state.hudPipeline = VK_NULL_HANDLE;
++    state.hudPipelines.fill(VK_NULL_HANDLE);
 +    state.hudPipelineLayout = VK_NULL_HANDLE;
 +    state.hudDescriptorSetLayout = VK_NULL_HANDLE;
 +}
@@ -148,65 +149,60 @@ index fede970..02e8236 100644
 +        return false;
 +    }
 +
-+    // Debug mode affects GENERATED frames only: the exact same 3x3 protected
-+    // overlay is composed after FSR, with protected output pixels painted white.
-+    wchar_t maskDebugValue[8]{};
-+    const DWORD maskDebugLength = GetEnvironmentVariableW(
-+        L"LDB_FG_MASK_DEBUG_WHITE", maskDebugValue, 8);
-+    const bool maskDebugWhite = maskDebugLength == 1 && maskDebugValue[0] == L'1';
-+    // The compositing shader already checks a fixed 3x3 neighbourhood. For
-+    // mask dilation=0, change both loop initial values and <= bounds to 0.
-+    // The full original shader is kept byte-for-byte for dilation=1.
-+    wchar_t dilationValue[8]{};
-+    const DWORD dilationLength = GetEnvironmentVariableW(
-+        L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8);
-+    const bool noDilation = dilationLength == 1 && dilationValue[0] == L'0';
-+    std::vector<uint32_t> compositeWords = maskDebugWhite
-+        ? std::vector<uint32_t>(HudCompositeWhiteSpirv.begin(), HudCompositeWhiteSpirv.end())
-+        : std::vector<uint32_t>(HudCompositeSpirv,
-+                                HudCompositeSpirv + HudCompositeSpirvSize / sizeof(uint32_t));
-+    if (noDilation)
++    // All four immutable compositor variants are prepared at swapchain init:
++    // normal/white x expanded/single-pixel. Switching variants at dispatch
++    // does not rebuild or destroy Vulkan pipelines while GPU work is active.
++    for (uint32_t mode = 0; mode < 4; ++mode)
 +    {
-+        const size_t shift = maskDebugWhite ? 7u : 0u;
-+        if (compositeWords[301 + shift] != 0x000700f5u ||
-+            compositeWords[308 + shift] != 0x000500b3u ||
-+            compositeWords[336 + shift] != 0x000700f5u ||
-+            compositeWords[343 + shift] != 0x000500b3u ||
-+            compositeWords[304 + shift] != 0x27u ||
-+            compositeWords[312 + shift] != 0x2eu ||
-+            compositeWords[339 + shift] != 0x27u ||
-+            compositeWords[347 + shift] != 0x2eu)
++        const bool maskDebugWhite = (mode & 1u) != 0u;
++        const bool noDilation = (mode & 2u) != 0u;
++        std::vector<uint32_t> compositeWords = maskDebugWhite
++            ? std::vector<uint32_t>(HudCompositeWhiteSpirv.begin(), HudCompositeWhiteSpirv.end())
++            : std::vector<uint32_t>(HudCompositeSpirv,
++                                    HudCompositeSpirv + HudCompositeSpirvSize / sizeof(uint32_t));
++        if (noDilation)
++        {
++            const size_t shift = maskDebugWhite ? 7u : 0u;
++            if (compositeWords[301 + shift] != 0x000700f5u ||
++                compositeWords[308 + shift] != 0x000500b3u ||
++                compositeWords[336 + shift] != 0x000700f5u ||
++                compositeWords[343 + shift] != 0x000500b3u ||
++                compositeWords[304 + shift] != 0x27u ||
++                compositeWords[312 + shift] != 0x2eu ||
++                compositeWords[339 + shift] != 0x27u ||
++                compositeWords[347 + shift] != 0x2eu)
++            {
++                DestroyHudComposite(state);
++                return false;
++            }
++            compositeWords[304 + shift] = 0x41u;
++            compositeWords[312 + shift] = 0x41u;
++            compositeWords[339 + shift] = 0x41u;
++            compositeWords[347 + shift] = 0x41u;
++        }
++        VkShaderModuleCreateInfo shaderInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
++        shaderInfo.codeSize = compositeWords.size() * sizeof(uint32_t);
++        shaderInfo.pCode = compositeWords.data();
++        VkShaderModule shader = VK_NULL_HANDLE;
++        if (vkCreateShaderModule(state.device, &shaderInfo, nullptr, &shader) != VK_SUCCESS)
 +        {
 +            DestroyHudComposite(state);
 +            return false;
 +        }
-+        compositeWords[304 + shift] = 0x41u;
-+        compositeWords[312 + shift] = 0x41u;
-+        compositeWords[339 + shift] = 0x41u;
-+        compositeWords[347 + shift] = 0x41u;
-+    }
-+    VkShaderModuleCreateInfo shaderInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-+    shaderInfo.codeSize = compositeWords.size() * sizeof(uint32_t);
-+    shaderInfo.pCode = compositeWords.data();
-+    VkShaderModule shader = VK_NULL_HANDLE;
-+    if (vkCreateShaderModule(state.device, &shaderInfo, nullptr, &shader) != VK_SUCCESS)
-+    {
-+        DestroyHudComposite(state);
-+        return false;
-+    }
-+    VkComputePipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-+    pipelineInfo.stage = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
-+    pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-+    pipelineInfo.stage.module = shader;
-+    pipelineInfo.stage.pName = "main";
-+    pipelineInfo.layout = state.hudPipelineLayout;
-+    const VkResult pipelineResult = vkCreateComputePipelines(
-+        state.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &state.hudPipeline);
-+    vkDestroyShaderModule(state.device, shader, nullptr);
-+    if (pipelineResult != VK_SUCCESS)
-+    {
-+        DestroyHudComposite(state);
-+        return false;
++        VkComputePipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
++        pipelineInfo.stage = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
++        pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
++        pipelineInfo.stage.module = shader;
++        pipelineInfo.stage.pName = "main";
++        pipelineInfo.layout = state.hudPipelineLayout;
++        const VkResult pipelineResult = vkCreateComputePipelines(
++            state.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &state.hudPipelines[mode]);
++        vkDestroyShaderModule(state.device, shader, nullptr);
++        if (pipelineResult != VK_SUCCESS)
++        {
++            DestroyHudComposite(state);
++            return false;
++        }
 +    }
 +
 +    VkDescriptorPoolSize poolSizes[2]{};
@@ -294,7 +290,15 @@ index fede970..02e8236 100644
 +                               const FfxResource &uiResource,
 +                               const FfxResource &outputResource)
 +{
-+    if (!state.hudPipeline || !commandBuffer) return false;
++    wchar_t whiteValue[8]{}, dilationValue[8]{};
++    const DWORD whiteLength = GetEnvironmentVariableW(
++        L"LDB_FG_MASK_DEBUG_WHITE", whiteValue, 8);
++    const DWORD dilationLength = GetEnvironmentVariableW(
++        L"LDB_FG_DYNAMIC_MASK_DILATION", dilationValue, 8);
++    const uint32_t mode = (whiteLength == 1 && whiteValue[0] == L'1' ? 1u : 0u) |
++                          (dilationLength == 1 && dilationValue[0] == L'0' ? 2u : 0u);
++    const VkPipeline activePipeline = state.hudPipelines[mode];
++    if (!activePipeline || !commandBuffer) return false;
 +    const VkDescriptorSet descriptors = HudCompositeDescriptorSet(state, uiResource, outputResource);
 +    const VkImage output = asteria_vk::Decode<VkImage>(
 +        outputResource.resource, state.device, asteria_vk::HandleKind::Image);
@@ -309,7 +313,7 @@ index fede970..02e8236 100644
 +    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 +                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
 +                         0, nullptr, 0, nullptr, 1, &before);
-+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state.hudPipeline);
++    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, activePipeline);
 +    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
 +                            state.hudPipelineLayout, 0, 1, &descriptors, 0, nullptr);
 +    vkCmdDispatch(commandBuffer, (state.width + 7) / 8, (state.height + 7) / 8, 1);
@@ -326,7 +330,7 @@ index fede970..02e8236 100644
  inline void DestroyGpuImage(VkDevice device, GpuImage &img)
  {
      if (img.handle != VK_NULL_HANDLE)
-@@ -873,6 +1104,11 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
+@@ -873,6 +1108,11 @@ inline FfxErrorCode LayerFrameGenerationCallback(const FfxFrameGenerationDispatc
      recovery.successful = result == FFX_OK;
      if (recovery.successful)
      {
@@ -338,7 +342,7 @@ index fede970..02e8236 100644
          RecordContentProbe(state, cmd, dispatch.currentBackBuffer, desc->outputs[0], currentFrameId);
          ++state.interpolationDispatches;
          if (input->motionSource == MotionInputSource::Engine)
-@@ -935,6 +1171,7 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
+@@ -935,6 +1175,7 @@ inline void DestroySwapchainResources(FgSwapchainState &state)
      }
      if (state.device != VK_NULL_HANDLE)
      {
@@ -346,7 +350,7 @@ index fede970..02e8236 100644
          DestroyContentProbe(state);
          DestroyGpuImage(state.device, state.reconstructed);
          DestroyGpuImage(state.device, state.dilatedDepth);
-@@ -989,10 +1226,9 @@ inline VkResult InitializeSwapchainResources(
+@@ -989,10 +1230,9 @@ inline VkResult InitializeSwapchainResources(
      fgInfo.asyncComputeQueue = {queues.asyncComputeQueue, queues.asyncComputeFamily, nullptr};
      fgInfo.presentQueue = {queues.presentQueue, queues.presentFamily, nullptr};
      fgInfo.imageAcquireQueue = {queues.imageAcquireQueue, queues.imageAcquireFamily, nullptr};
@@ -360,7 +364,7 @@ index fede970..02e8236 100644
  
      state.deviceContext = {device, physicalDevice, nextGdpa};
      FfxDevice ffxDevice = ffxGetDeviceVK(&state.deviceContext);
-@@ -1097,6 +1333,11 @@ inline VkResult InitializeSwapchainResources(
+@@ -1097,6 +1337,11 @@ inline VkResult InitializeSwapchainResources(
      // Diagnostic only: failure leaves FG active and reports no pixel samples.
      if (IsContentProbeRequested())
          (void)AllocateContentProbe(state);
@@ -372,7 +376,7 @@ index fede970..02e8236 100644
  
      FfxFrameGenerationConfig config{};
      config.swapChain = state.swapchainBox;
-@@ -1191,22 +1432,9 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
+@@ -1191,22 +1436,9 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageI
      }
      if (!valid) { input.reset(); state.historyReset.store(true); }
      std::atomic_store_explicit(&state.currentInputs, std::move(input), std::memory_order_release);
