@@ -410,5 +410,30 @@ class FrameGenerationDropInTests(unittest.TestCase):
             self.assertNotIn(obsolete, package)
 
 
+    def test_generated_only_on_fpb_baseline_without_sweep(self):
+        config = configparser.ConfigParser()
+        config.read(ROOT / "integration/ldb/fg-config.ini", encoding="utf-8")
+        settings = config["frame_generation"]
+        self.assertFalse(settings.getboolean("generated_only"))
+        self.assertNotIn("viewmodel_sweep", settings)
+        self.assertEqual(settings["dynamic_residual_threshold"], "0.2")
+        self.assertEqual(settings["first_person_fallback_start"], "1")
+        bootstrap = (ROOT / "integration/ldb/fg_bootstrap.h").read_text()
+        host = (ROOT / "integration/ldb/frame_generation.h").read_text()
+        shader = (ROOT / "shaders/frame_generate.comp").read_text()
+        gpu = (ROOT / "tools/resident_frame_generator.h").read_text()
+        patch = (ROOT / "integration/fg/synthetic-only-x64.patch").read_text()
+        prepare = (ROOT / "scripts/prepare_asteria_layer.py").read_text()
+        self.assertIn('iniBool(path, L"generated_only", result.generatedOnly)', bootstrap)
+        self.assertIn('L"LDB_FG_SYNTHETIC_ONLY"', bootstrap)
+        self.assertIn('readValue(L"generated_only", L"0")', host)
+        self.assertIn('SetEnvironmentVariableW(L"LDB_FG_SYNTHETIC_ONLY"', host)
+        self.assertIn("config.onlyPresentInterpolated = valid", patch)
+        self.assertIn("synthetic-only-x64.patch", prepare)
+        self.assertNotIn("providerSweptViewmodel", shader)
+        self.assertNotIn("viewmodelSweep", host)
+        self.assertNotIn("viewmodelSweep", gpu)
+
+
 if __name__ == "__main__":
     unittest.main()

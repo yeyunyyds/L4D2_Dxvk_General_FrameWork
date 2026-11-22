@@ -253,6 +253,7 @@ struct State {
     float fallbackStart = 1.0f;
     uint32_t dilation = 1;
     bool debugWhite = false;
+    bool syntheticOnly = false;
     ldb_fpb_projection::Settings projectedBody{};
   };
   LiveProtection liveProtection{};
@@ -319,6 +320,10 @@ struct State {
       if (debug != L"0" && debug != L"1")
         throw std::invalid_argument("FG live debug mask must be 0 or 1");
       updated.debugWhite = debug == L"1";
+      const auto syntheticOnly = readValue(L"generated_only", L"0");
+      if (syntheticOnly != L"0" && syntheticOnly != L"1")
+        throw std::invalid_argument("FG generated_only must be 0 or 1");
+      updated.syntheticOnly = syntheticOnly == L"1";
       const auto projection = readValue(L"fpb_projection_protect", L"0");
       if (projection != L"0" && projection != L"1")
         throw std::invalid_argument("FG FPB projection enable must be 0 or 1");
@@ -369,6 +374,7 @@ struct State {
           updated.fallbackStart == liveProtection.fallbackStart &&
           updated.dilation == liveProtection.dilation &&
           updated.debugWhite == liveProtection.debugWhite &&
+          updated.syntheticOnly == liveProtection.syntheticOnly &&
           updated.projectedBody.enabled == liveProtection.projectedBody.enabled &&
           updated.projectedBody.forward == liveProtection.projectedBody.forward &&
           updated.projectedBody.right == liveProtection.projectedBody.right &&
@@ -395,6 +401,9 @@ struct State {
       if (!SetEnvironmentVariableW(L"LDB_FG_RUNTIME_COMPOSITE_MODE",
                                    modeText.c_str()))
         throw std::runtime_error("FG Layer live environment update failed");
+      if (!SetEnvironmentVariableW(L"LDB_FG_SYNTHETIC_ONLY",
+                                   updated.syntheticOnly ? L"1" : L"0"))
+        throw std::runtime_error("FG synthetic-only live environment update failed");
       liveProtection = updated;
       liveIniSeen = true;
       liveIniStamp = stamp;
@@ -415,6 +424,8 @@ struct State {
            ",\"dilation\":" + std::to_string(updated.dilation) +
            ",\"debug_white\":" +
            std::string(updated.debugWhite ? "true" : "false") +
+           ",\"generated_only\":" +
+           std::string(updated.syntheticOnly ? "true" : "false") +
            ",\"fpb_projection\":" +
            std::string(updated.projectedBody.enabled ? "true" : "false") +
            ",\"fpb_forward\":" + std::to_string(updated.projectedBody.forward) +
