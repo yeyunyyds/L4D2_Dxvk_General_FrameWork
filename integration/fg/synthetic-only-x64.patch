@@ -1,0 +1,16 @@
+diff --git a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
+--- a/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
++++ b/Runtime/FrameGeneration/Layer/FrameGenerationRuntime.h
+@@ -1457,6 +1457,12 @@ inline bool AdvanceSwapchainFrameConfig(FgSwapchainState &state, uint32_t imageIndex)
+     FfxFrameGenerationConfig config{};
+     config.swapChain = state.swapchainBox;
+     config.frameGenerationEnabled = valid;
++    // GF experiment: SDK-native synthetic-only output. The SDK still
++    // presents real frames if interpolation becomes unavailable.
++    wchar_t syntheticOnly[4]{};
++    const DWORD length = GetEnvironmentVariableW(
++        L"LDB_FG_SYNTHETIC_ONLY", syntheticOnly, 4);
++    config.onlyPresentInterpolated = valid && length == 1 && syntheticOnly[0] == L'1';
+     config.frameGenerationCallback = &LayerFrameGenerationCallback;
+     config.frameGenerationCallbackContext = &state;
+     config.allowAsyncWorkloads = state.asyncWorkloadsActive;
