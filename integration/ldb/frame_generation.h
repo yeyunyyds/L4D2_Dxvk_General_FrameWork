@@ -38,9 +38,9 @@ struct Config {
        hotkeys = true, fastInputs = false, hudBypass = false,
        viewmodel = false, dynamicModels = false, fpbProtect = false,
        mergeSubmissions = true;
-  float dynamicResidualThreshold = 0.08f;
+  float dynamicResidualThreshold = 0.2f;
   bool dynamicResidualOverrideRejected = false;
-  float firstPersonFallbackStart = 0.28f;
+  float firstPersonFallbackStart = 1.0f;
   bool firstPersonFallbackOverrideRejected = false;
   uint32_t dynamicMaskDilation = 1;
   bool dynamicMaskDilationOverrideRejected = false;
@@ -249,8 +249,8 @@ struct State {
   HANDLE pacingTimer = nullptr;
   bool pacingUnavailable = false;
   struct LiveProtection {
-    float residual = 0.08f;
-    float fallbackStart = 0.28f;
+    float residual = 0.2f;
+    float fallbackStart = 1.0f;
     uint32_t dilation = 1;
     bool debugWhite = false;
     ldb_fpb_projection::Settings projectedBody{};
@@ -305,12 +305,12 @@ struct State {
         return parsed;
       };
       LiveProtection updated = liveProtection;
-      const auto residual = readValue(L"dynamic_residual_threshold", L"auto");
+      const auto residual = readValue(L"dynamic_residual_threshold", L"0.2");
       updated.residual = residual == L"auto"
           ? (config().dynamicModels && config().fpbProtect ? 0.035f : 0.08f)
           : parseFloat(residual, 0.001f, 0.5f);
       updated.fallbackStart = parseFloat(
-          readValue(L"first_person_fallback_start", L"0.28"), 0.0f, 1.0f);
+          readValue(L"first_person_fallback_start", L"1"), 0.0f, 1.0f);
       const auto dilation = readValue(L"dynamic_mask_dilation", L"1");
       if (dilation != L"0" && dilation != L"1")
         throw std::invalid_argument("FG live dilation must be 0 or 1");
@@ -330,9 +330,9 @@ struct State {
       updated.projectedBody.up = parseFloat(
           readValue(L"fpb_projection_up", L"-1"), -48.0f, 48.0f);
       updated.projectedBody.width = parseFloat(
-          readValue(L"fpb_projection_width", L"1.0"), 0.5f, 2.5f);
+          readValue(L"fpb_projection_width", L"2"), 0.5f, 2.5f);
       updated.projectedBody.torsoScreenWidth = parseFloat(
-          readValue(L"fpb_projection_torso_screen_width", L"1.0"),
+          readValue(L"fpb_projection_torso_screen_width", L"0.5"),
           0.1f, 1.0f);
       // Independent post-projection box controls. All use the same live
       // INI read/validation path, so changing any one needs no restart.
@@ -345,10 +345,10 @@ struct State {
            L"fpb_projection_right_leg_x", L"fpb_projection_right_leg_y"}};
       for (size_t i = 0; i < 3; ++i) {
         auto &r = updated.projectedBody.screen[i];
-        r.width = parseFloat(readValue(screenKeys[i][0], L"1.0"), 0.0f, 3.0f);
-        r.height = parseFloat(readValue(screenKeys[i][1], L"1.0"), 0.0f, 3.0f);
+        r.width = parseFloat(readValue(screenKeys[i][0], i == 0 ? L"1.4" : L"0"), 0.0f, 3.0f);
+        r.height = parseFloat(readValue(screenKeys[i][1], i == 0 ? L"0.7" : L"1.0"), 0.0f, 3.0f);
         r.x = parseFloat(readValue(screenKeys[i][2], L"0"), -1920.0f, 1920.0f);
-        r.y = parseFloat(readValue(screenKeys[i][3], L"0"), -1080.0f, 1080.0f);
+        r.y = parseFloat(readValue(screenKeys[i][3], i == 0 ? L"200" : L"0"), -1080.0f, 1080.0f);
       }
       updated.projectedBody.eyeHeight = parseFloat(
           readValue(L"fpb_projection_eye_height", L"64"), 24.0f, 85.0f);
