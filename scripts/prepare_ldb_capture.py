@@ -77,7 +77,7 @@ def prepare(args):
     hooks = ROOT / 'integration/ldb/host-hooks.patch'
     subprocess.run(['git', 'apply', '--check', str(hooks)], cwd=args.output, check=True)
     subprocess.run(['git', 'apply', str(hooks)], cwd=args.output, check=True)
-    for source in [ROOT / 'tools/fsr_backend_api.h', ROOT / 'tools/fsr_presenter_api.h', ROOT / 'integration/ldb/host_capture.h', ROOT / 'integration/ldb/fg_bootstrap.h', ROOT / 'integration/ldb/camera_state.h', ROOT / 'integration/ldb/fsr_camera.h', ROOT / 'integration/ldb/asteria_host_control.h', ROOT / 'tools/dxvk_capture_shared.h', ROOT / 'tools/gpu_reprojection.h', ROOT / 'tools/camera_reproject_spirv.h', ROOT / 'integration/ldb/frame_generation.h', ROOT / 'integration/ldb/frame_math.h', ROOT / 'integration/ldb/fg_input_ring.h', ROOT / 'tools/resident_frame_generator.h', ROOT / 'tools/frame_generate_spirv.h', ROOT / 'tools/frame_quality_spirv.h']:
+    for source in [ROOT / 'tools/fsr_backend_api.h', ROOT / 'tools/fsr_presenter_api.h', ROOT / 'integration/ldb/host_capture.h', ROOT / 'integration/ldb/fg_bootstrap.h', ROOT / 'integration/ldb/camera_state.h', ROOT / 'integration/ldb/fsr_camera.h', ROOT / 'integration/ldb/fpb_projection.h', ROOT / 'integration/ldb/asteria_host_control.h', ROOT / 'tools/dxvk_capture_shared.h', ROOT / 'tools/gpu_reprojection.h', ROOT / 'tools/camera_reproject_spirv.h', ROOT / 'integration/ldb/frame_generation.h', ROOT / 'integration/ldb/frame_math.h', ROOT / 'integration/ldb/fg_input_ring.h', ROOT / 'tools/resident_frame_generator.h', ROOT / 'tools/frame_generate_spirv.h', ROOT / 'tools/frame_quality_spirv.h']:
         shutil.copy2(source, server / source.name)
     generate_interop(args.dxvk, server / 'dxvk_interop.h')
     for name in ('vulkan', 'vk_video'):
