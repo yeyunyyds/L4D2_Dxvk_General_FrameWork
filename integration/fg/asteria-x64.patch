@@ -731,7 +731,7 @@ diff --git a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h b/Runtime/FrameG
 index 3f56217..328acbf 100644
 --- a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
 +++ b/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
-@@ -1,86 +1,97 @@
+@@ -1,86 +1,110 @@
  #pragma once
  #include <vulkan/vulkan.h>
  #include <vulkan/vk_layer.h>
@@ -741,8 +741,18 @@ index 3f56217..328acbf 100644
  
  namespace asteria_device_features
  {
-+// ABI-compatible fallback for Vulkan headers predating VK_NV_descriptor_pool_overallocation.
-+// This feature structure has only one VkBool32 member after sType and pNext.
++// DXVK may be built against newer Vulkan headers than the layer.  Maintenance 7
++// has a single feature bit, so keep its ABI-sized representation here until the
++// pinned Asteria headers expose VkPhysicalDeviceMaintenance7FeaturesKHR.
++struct PhysicalDeviceMaintenance7FeaturesKHRCompat
++{
++    VkStructureType sType;
++    void *pNext;
++    VkBool32 maintenance7;
++};
++
++// ABI-compatible fallback for pinned Vulkan headers lacking VK_NV_descriptor_pool_overallocation.
++// sType, pNext and descriptorPoolOverallocation match the Vulkan spec.
 +struct PhysicalDeviceDescriptorPoolOverallocationFeaturesNVCompat
 +{
 +    VkStructureType sType;
@@ -803,6 +813,8 @@ index 3f56217..328acbf 100644
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_FEATURES_EXT: CopyNode<VkPhysicalDeviceShaderModuleIdentifierFeaturesEXT>(node); break;
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT: CopyNode<VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT>(node); break;
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT: CopyNode<VkPhysicalDeviceMemoryPriorityFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT: CopyNode<VkPhysicalDeviceMultiDrawFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT: CopyNode<VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT>(node); break;
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR: CopyNode<VkPhysicalDeviceLineRasterizationFeaturesKHR>(node); break;
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GRAPHICS_PIPELINE_LIBRARY_FEATURES_EXT: CopyNode<VkPhysicalDeviceGraphicsPipelineLibraryFeaturesEXT>(node); break;
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_INTERLOCK_FEATURES_EXT: CopyNode<VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT>(node); break;
@@ -813,6 +825,7 @@ index 3f56217..328acbf 100644
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentIdFeaturesKHR>(node); break;
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentWaitFeaturesKHR>(node); break;
              case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT: CopyNode<VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT>(node); break;
++            case static_cast<VkStructureType>(1000562000): CopyNode<PhysicalDeviceMaintenance7FeaturesKHRCompat>(node); break;
 +            case static_cast<VkStructureType>(1000546000): CopyNode<PhysicalDeviceDescriptorPoolOverallocationFeaturesNVCompat>(node); break;
              default:
 +                if (unsupportedSType) *unsupportedSType = node->sType;
@@ -830,6 +843,7 @@ index 3f56217..328acbf 100644
      }
  };
  }
+
 diff --git a/Runtime/FrameGeneration/Layer/FrameGenerationInputs.h b/Runtime/FrameGeneration/Layer/FrameGenerationInputs.h
 index 388a517..444a654 100644
 --- a/Runtime/FrameGeneration/Layer/FrameGenerationInputs.h
