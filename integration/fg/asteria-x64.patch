@@ -18,25 +18,27 @@ index 0476bc7..8e5ba19 100644
  
  using Json = nlohmann::json;
  using Clock = std::chrono::steady_clock;
-@@ -650,11 +652,14 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -650,16 +652,19 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
      if (fgRequested)
      {
          try
          {
--            if (!featureChain.Copy(info->pNext))
 +            VkStructureType unsupportedSType = VK_STRUCTURE_TYPE_MAX_ENUM;
+-            if (!featureChain.Copy(info->pNext))
 +            if (!featureChain.Copy(info->pNext, &unsupportedSType))
              {
                  fgRequested = false;
                  metadata["frame_generation_device_status"] = "unsupported_device_feature_chain";
--            }
 +                if (unsupportedSType != VK_STRUCTURE_TYPE_MAX_ENUM)
--        }
 +                    metadata["unsupported_device_feature_stype"] = int64_t(unsupportedSType);
--        catch (const std::bad_alloc &)
-+            }
-+        }
-+        catch (const std::bad_alloc &)
+             }
+         }
+         catch (const std::bad_alloc &)
+         {
+             fgRequested = false;
+             metadata["frame_generation_device_status"] = "device_feature_chain_allocation_failed";
+         }
+     }
 @@ -668,7 +673,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
      VkDeviceCreateInfo modifiedInfo = *info;
      if (fgRequested) modifiedInfo.pNext = featureChain.Head();
