@@ -15,7 +15,15 @@ GF 通过 L4D2Bridge v1.3.4 获取场景颜色、深度和相机信息，再通�
 3. 将安装 ZIP 解压到 **Left 4 Dead 2 游戏根目录**，按需合并并覆盖 `bin` 中的文件。
 4. 在 Steam 中正常启动游戏。
 
-请成套安装所有组件。若此前设置过 `client.testX86Server=True`，请改回 `False`。
+请成套安装所有组件。此 ZIP **不包含也不覆盖** `bin/.l4d2bridge/bridge.conf`。请检查该文件的 LDB Host 配置，确保：
+```ini
+forceX64Server = True
+client.testX86Server = False
+server.useVanillaDxvk = True
+```
+这些是 **Bridge 配置项**，不能写入 `fg-config.ini` 的 `[frame_generation]` 下。修改后完整退出游戏和 Bridge Host 再启动。确认 Host 日志显示加载 `d3d9vk_x64.dll`，而非 Windows 系统 `d3d9.dll`。
+
+当前 FG 捕获路径要求单采样图像。如果日志出现 `Capture requires a single-sample, single-subresource transfer-source image`，请先将游戏内 MSAA/抗锯齿设为关闭并重启；本测试版尚未实现多采样图像捕获兼容。
 
 ### 使用与配置
 
@@ -55,7 +63,15 @@ GF provides FidelityFX FSR 3 Frame Generation for *Left 4 Dead 2*, using L4D2Bri
 3. Extract the ZIP into the *Left 4 Dead 2* game root, merging matching files in `bin`.
 4. Launch normally through Steam.
 
-Use all bundled components as a matched set. Restore `client.testX86Server=False` if previously changed.
+Install the bundled components as a matched set. The ZIP **does not contain or overwrite** `bin/.l4d2bridge/bridge.conf`. Verify these LDB Host settings in that file:
+```ini
+forceX64Server = True
+client.testX86Server = False
+server.useVanillaDxvk = True
+```
+These belong in **`bridge.conf`**, not under `[frame_generation]` in `fg-config.ini`. Completely exit L4D2 and the Bridge Host before restarting. The Host log must show `d3d9vk_x64.dll`, not Windows `d3d9.dll`.
+
+The current FG capture path requires single-sample images. If the log reports `Capture requires a single-sample, single-subresource transfer-source image`, disable in-game MSAA/anti-aliasing and restart. Multisampled capture is not yet supported by this test build.
 
 ### Usage and configuration
 
