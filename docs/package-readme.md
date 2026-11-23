@@ -1,10 +1,12 @@
 # L4D2 DXVK General Framework
 
-**v1.0.1 — FidelityFX FSR 3 Frame Generation for Left 4 Dead 2**
+**v1.0.2 — FidelityFX FSR 3 Frame Generation for Left 4 Dead 2**
 
 Project / 项目主页：https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork
 
 ## 中文说明
+
+**v1.0.2：**修复 NVIDIA 驱动 Vulkan Device Feature Chain 导致的 FG 初始化失败；保留既有渲染和画面保护逻辑。Alt+Tab 后可能冻结、额外延迟与 MSAA 捕获限制尚未在此补丁中修复。
 
 GF 通过 L4D2Bridge v1.3.4 获取场景颜色、深度和相机信息，再通过 FidelityFX FSR 3 与 x64 Vulkan Layer 生成中间帧。此安装包包含配套的 Client、Host32、Host64、官方 DXVK v2.6.1 和 Vulkan Layer，提供 HUD、第一人称武器、动态模型及 FPB 画面保护。
 
@@ -53,6 +55,8 @@ server.useVanillaDxvk = True
 ---
 
 ## English
+
+**v1.0.2:** Fixes the Vulkan device feature-chain compatibility blocker observed on NVIDIA drivers. Existing rendering and protection paths are unchanged. Alt+Tab display freezes, additional latency and MSAA capture limitations are not fixed by this patch.
 
 GF provides FidelityFX FSR 3 Frame Generation for *Left 4 Dead 2*, using L4D2Bridge v1.3.4 and an x64 Vulkan Layer. This package includes matched Client/Host32/Host64 components, upstream DXVK v2.6.1, and HUD, Viewmodel, dynamic-model, and FPB protection.
 
