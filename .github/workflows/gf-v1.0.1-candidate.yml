@@ -6,6 +6,11 @@ on:
       - fix/nvidia-vulkan-feature-chain-3060
     paths-ignore:
       - docs/**
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - docs/**
   workflow_dispatch:
 permissions:
   contents: read
