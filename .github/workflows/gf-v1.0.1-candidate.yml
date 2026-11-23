@@ -1,4 +1,4 @@
-name: Build GF v1.0.1 candidate (FPB baseline + generated-only)
+name: Build GF Windows candidate
 on:
   push:
     branches:
@@ -35,7 +35,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p test_fg_dropin.py -v
           if ($LASTEXITCODE -ne 0) { throw "GF source/config tests failed before build" }
-      - name: Build v1.0.1 candidate and run tests
+      - name: Build GF Windows candidate and run tests
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -56,7 +56,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gf-v1.0.1-candidate-${{ github.sha }}
+          name: gf-v1.0.2-candidate-${{ github.sha }}
           path: |
             .research/dist/ldb-host-capture-dev.zip
           if-no-files-found: warn
