@@ -1,10 +1,12 @@
 # L4D2 DXVK General Framework
 
-**v1.0.1 — FidelityFX FSR 3 Frame Generation for Left 4 Dead 2**
+**v1.0.2 — FidelityFX FSR 3 Frame Generation for Left 4 Dead 2**
 
 Project / 项目主页：https://github.com/yeyunyyds/L4D2_Dxvk_General_FrameWork
 
 ## 中文说明
+
+**v1.0.2：**修复 NVIDIA 驱动 Vulkan Device Feature Chain 导致的 FG 初始化失败；保留既有渲染和画面保护逻辑。Alt+Tab 后可能冻结、额外延迟与 MSAA 捕获限制尚未在此补丁中修复。
 
 GF 通过 L4D2Bridge v1.3.4 获取场景颜色、深度和相机信息，再通过 FidelityFX FSR 3 与 x64 Vulkan Layer 生成中间帧。此安装包包含配套的 Client、Host32、Host64、官方 DXVK v2.6.1 和 Vulkan Layer，提供 HUD、第一人称武器、动态模型及 FPB 画面保护。
 
@@ -15,7 +17,15 @@ GF 通过 L4D2Bridge v1.3.4 获取场景颜色、深度和相机信息，再通�
 3. 将安装 ZIP 解压到 **Left 4 Dead 2 游戏根目录**，按需合并并覆盖 `bin` 中的文件。
 4. 在 Steam 中正常启动游戏。
 
-请成套安装所有组件。若此前设置过 `client.testX86Server=True`，请改回 `False`。
+请成套安装所有组件。此 ZIP **不包含也不覆盖** `bin/.l4d2bridge/bridge.conf`。请检查该文件的 LDB Host 配置，确保：
+```ini
+forceX64Server = True
+client.testX86Server = False
+server.useVanillaDxvk = True
+```
+这些是 **Bridge 配置项**，不能写入 `fg-config.ini` 的 `[frame_generation]` 下。修改后完整退出游戏和 Bridge Host 再启动。确认 Host 日志显示加载 `d3d9vk_x64.dll`，而非 Windows 系统 `d3d9.dll`。
+
+当前 FG 捕获路径要求单采样图像。如果日志出现 `Capture requires a single-sample, single-subresource transfer-source image`，请先将游戏内 MSAA/抗锯齿设为关闭并重启；本测试版尚未实现多采样图像捕获兼容。
 
 ### 使用与配置
 
@@ -46,6 +56,8 @@ GF 通过 L4D2Bridge v1.3.4 获取场景颜色、深度和相机信息，再通�
 
 ## English
 
+**v1.0.2:** Fixes the Vulkan device feature-chain compatibility blocker observed on NVIDIA drivers. Existing rendering and protection paths are unchanged. Alt+Tab display freezes, additional latency and MSAA capture limitations are not fixed by this patch.
+
 GF provides FidelityFX FSR 3 Frame Generation for *Left 4 Dead 2*, using L4D2Bridge v1.3.4 and an x64 Vulkan Layer. This package includes matched Client/Host32/Host64 components, upstream DXVK v2.6.1, and HUD, Viewmodel, dynamic-model, and FPB protection.
 
 ### Installation
@@ -55,7 +67,15 @@ GF provides FidelityFX FSR 3 Frame Generation for *Left 4 Dead 2*, using L4D2Bri
 3. Extract the ZIP into the *Left 4 Dead 2* game root, merging matching files in `bin`.
 4. Launch normally through Steam.
 
-Use all bundled components as a matched set. Restore `client.testX86Server=False` if previously changed.
+Install the bundled components as a matched set. The ZIP **does not contain or overwrite** `bin/.l4d2bridge/bridge.conf`. Verify these LDB Host settings in that file:
+```ini
+forceX64Server = True
+client.testX86Server = False
+server.useVanillaDxvk = True
+```
+These belong in **`bridge.conf`**, not under `[frame_generation]` in `fg-config.ini`. Completely exit L4D2 and the Bridge Host before restarting. The Host log must show `d3d9vk_x64.dll`, not Windows `d3d9.dll`.
+
+The current FG capture path requires single-sample images. If the log reports `Capture requires a single-sample, single-subresource transfer-source image`, disable in-game MSAA/anti-aliasing and restart. Multisampled capture is not yet supported by this test build.
 
 ### Usage and configuration
 

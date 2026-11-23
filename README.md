@@ -28,7 +28,7 @@ L4D2 DXVK General Framework（GF）为《Left 4 Dead 2》提供基于 **Fidelity
 4. 将 ZIP 解压到 **Left 4 Dead 2 游戏根目录**，合并并覆盖 `bin` 中的同名文件。
 5. 通过 Steam 正常启动游戏。
 
-Client、Host32、Host64、DXVK 与 Vulkan Layer 必须使用安装包内的配套版本，不建议只替换其中一部分。此前若设置了 `client.testX86Server=True`，请恢复为 `False`。
+Client、Host32、Host64、DXVK 与 Vulkan Layer 必须使用安装包内的配套版本，不建议只替换其中一部分。此 ZIP 不包含或覆盖 `bin/.l4d2bridge/bridge.conf`。请在该 **LDB Host 配置文件**中确认 `forceX64Server=True`、`client.testX86Server=False`、`server.useVanillaDxvk=True`（不要写进 FG 的 `fg-config.ini`）。修改后完整重启游戏和 Host；Host 日志应加载 `d3d9vk_x64.dll`，而非 Windows 系统 `d3d9.dll`。
 
 ### 配置
 
@@ -61,6 +61,7 @@ Client、Host32、Host64、DXVK 与 Vulkan Layer 必须使用安装包内的配�
 
 - 面向 Windows 的 L4D2 和本项目提供的 Bridge/DXVK 配套构建；其他 DXVK、GPU、驱动或 Mod 组合不保证兼容。
 - 快速移动、遮挡与自定义模型可能造成武器、人物或 HUD 残影和闪烁。
+- 当前 Host 捕获要求单采样图像；若日志提示 `Capture requires a single-sample, single-subresource transfer-source image`，请关闭游戏 MSAA/抗锯齿并重启。
 - 原生帧率过低时，即使显示帧数增加，操作响应仍受到原生帧率限制。
 - `generated_only` 与 FPB 投影均为实验性可选功能。
 
@@ -98,7 +99,7 @@ The package integrates **L4D2Bridge v1.3.4** and upstream **DXVK v2.6.1**. Frame
 4. Extract the ZIP into the *Left 4 Dead 2* game root and merge matching files in `bin`.
 5. Launch normally through Steam.
 
-Install the included Client, Host32, Host64, DXVK, and Vulkan Layer together. If `client.testX86Server=True` was previously enabled, restore it to `False`.
+Install the included Client, Host32, Host64, DXVK, and Vulkan Layer together. The ZIP does not contain or overwrite `bin/.l4d2bridge/bridge.conf`. In that **LDB Host configuration file**, verify `forceX64Server=True`, `client.testX86Server=False`, and `server.useVanillaDxvk=True` (do not place them in FG's `fg-config.ini`). Restart the game and Host; the Host log should load `d3d9vk_x64.dll`, not Windows `d3d9.dll`.
 
 ### Configuration
 
@@ -131,6 +132,7 @@ For black screens, freezes, artifacts or unexpected performance, collect the GPU
 
 - Designed for Windows L4D2 with the bundled Bridge/DXVK versions. Other drivers, GPUs, DXVK builds, and Mods may not work.
 - Rapid motion, occlusion and custom models can still produce ghosting and flicker.
+- Current Host capture requires single-sample images. If the log reports `Capture requires a single-sample, single-subresource transfer-source image`, disable in-game MSAA/anti-aliasing and restart.
 - More displayed frames do not remove native input or simulation latency.
 - Generated-only presentation and projected FPB protection remain experimental.
 

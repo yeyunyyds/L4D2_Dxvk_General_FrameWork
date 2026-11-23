@@ -1,6 +1,11 @@
-name: Build GF v1.0.1 candidate (FPB baseline + generated-only)
+name: Build GF Windows candidate
 on:
   push:
+    branches:
+      - main
+    paths-ignore:
+      - docs/**
+  pull_request:
     branches:
       - main
     paths-ignore:
@@ -30,7 +35,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p test_fg_dropin.py -v
           if ($LASTEXITCODE -ne 0) { throw "GF source/config tests failed before build" }
-      - name: Build v1.0.1 candidate and run tests
+      - name: Build GF Windows candidate and run tests
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -42,11 +47,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "GF native build/package failed" }
           python -m unittest discover -s tests -v
           if ($LASTEXITCODE -ne 0) { throw "Regression tests failed" }
+      - name: Test NVIDIA and existing Vulkan pNext feature-chain compatibility
+        shell: pwsh
+        run: |
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test_fg_device_feature_chain.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Vulkan feature-chain native smoke test failed" }
       - name: Upload experiment ZIP
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gf-v1.0.1-candidate-${{ github.sha }}
+          name: gf-v1.0.2-candidate-${{ github.sha }}
           path: |
             .research/dist/ldb-host-capture-dev.zip
           if-no-files-found: warn
