@@ -18,7 +18,26 @@ index 0476bc7..8e5ba19 100644
  
  using Json = nlohmann::json;
  using Clock = std::chrono::steady_clock;
-@@ -668,7 +670,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -650,11 +652,14 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+     if (fgRequested)
+     {
+         try
+         {
+-            if (!featureChain.Copy(info->pNext))
++            VkStructureType unsupportedSType = VK_STRUCTURE_TYPE_MAX_ENUM;
++            if (!featureChain.Copy(info->pNext, &unsupportedSType))
+             {
+                 fgRequested = false;
+                 metadata["frame_generation_device_status"] = "unsupported_device_feature_chain";
+-            }
++                if (unsupportedSType != VK_STRUCTURE_TYPE_MAX_ENUM)
+-        }
++                    metadata["unsupported_device_feature_stype"] = int64_t(unsupportedSType);
+-        catch (const std::bad_alloc &)
++            }
++        }
++        catch (const std::bad_alloc &)
+@@ -668,7 +673,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
      VkDeviceCreateInfo modifiedInfo = *info;
      if (fgRequested) modifiedInfo.pNext = featureChain.Head();
      std::vector<VkDeviceQueueCreateInfo> modifiedQueues;
@@ -28,7 +47,7 @@ index 0476bc7..8e5ba19 100644
      VkPhysicalDeviceFeatures enabledCoreFeatures{};
      VkPhysicalDevice16BitStorageFeatures added16Bit{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES, nullptr, VK_TRUE, VK_TRUE, VK_FALSE, VK_FALSE};
      VkPhysicalDeviceShaderFloat16Int8Features addedFloat16{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES, nullptr, VK_TRUE, VK_TRUE};
-@@ -676,7 +679,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -676,7 +682,8 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
      VkPhysicalDeviceSubgroupSizeControlFeatures addedSubgroup{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES, nullptr, VK_TRUE, VK_TRUE};
      std::vector<const char *> modifiedExtensions;
      uint32_t fgFamily = UINT32_MAX;
@@ -38,7 +57,7 @@ index 0476bc7..8e5ba19 100644
      if (fgRequested && info->pQueueCreateInfos && info->queueCreateInfoCount > 0)
      {
          const auto getQueueFamilies = Next<PFN_vkGetPhysicalDeviceQueueFamilyProperties>(parent, "vkGetPhysicalDeviceQueueFamilyProperties");
-@@ -688,27 +692,43 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -688,27 +695,43 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
              familyProps.resize(familyCount);
              if (familyCount > 0) getQueueFamilies(physical, &familyCount, familyProps.data());
          }
@@ -98,7 +117,7 @@ index 0476bc7..8e5ba19 100644
          modifiedInfo.pQueueCreateInfos = modifiedQueues.data();
          if (info->ppEnabledExtensionNames && info->enabledExtensionCount > 0)
          {
-@@ -834,29 +854,30 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
+@@ -834,29 +857,30 @@ static VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physical, const VkDevic
          AsteriaRegisterSwapchainImagesReplacement(&vkGetSwapchainImagesFFX, &asteria_vk::IsProxyToken);
          try { MappedBuffers.AddDevice(Id(*output), Id(parent->instance)); } catch (...) {}
          try { DescriptorEvidence.AddDevice(Id(*output), Id(parent->instance)); } catch (...) {}
@@ -146,7 +165,7 @@ index 0476bc7..8e5ba19 100644
              }
          }
      }
-@@ -1756,6 +1777,138 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
+@@ -1756,6 +1780,138 @@ extern "C" BOOL __stdcall AsteriaSubmitFrameGenerationCamera(const AsteriaFrameG
      return TRUE;
  }
  
@@ -285,7 +304,7 @@ index 0476bc7..8e5ba19 100644
  static bool IsFgSwapchainHandle(VkSwapchainKHR swapchain)
  {
      const std::lock_guard<std::mutex> lock(StateMutex);
-@@ -1816,6 +1969,69 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
+@@ -1816,6 +1972,69 @@ static VkResult SafeGetSwapchainImagesFFX(VkDevice device, VkSwapchainKHR swapch
      }
  }
  
@@ -355,7 +374,7 @@ index 0476bc7..8e5ba19 100644
  static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCreateInfoKHR *info, const VkAllocationCallbacks *allocator, VkSwapchainKHR *swapchain)
  
  {
-@@ -1875,6 +2091,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
+@@ -1875,6 +2094,7 @@ static VkResult VKAPI_CALL CreateSwapchain(VkDevice device, const VkSwapchainCre
          if (qIt != FgDeviceQueuesMap.end()) fgQueues = qIt->second;
  
      }
@@ -363,7 +382,7 @@ index 0476bc7..8e5ba19 100644
  if (oldState && !FgSwapchainRuntime.wait(*oldState)) return VK_ERROR_DEVICE_LOST;
  
      const auto retireOld = [&] {
-@@ -2250,7 +2467,11 @@ static void RecordAcquire(const char *method, VkSwapchainKHR swapchain, VkSemaph
+@@ -2250,7 +2470,11 @@ static void RecordAcquire(const char *method, VkSwapchainKHR swapchain, VkSemaph
  
                  record["last_acquired_index"] = *index;
  
@@ -376,7 +395,7 @@ index 0476bc7..8e5ba19 100644
  
                  if (fg != FgSwapchains.end()) session = fg->second->inputSession;
  
-@@ -2319,8 +2540,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2319,8 +2543,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
      VkResult result = VK_ERROR_EXTENSION_NOT_PRESENT;
      uint64_t inputAttempts = 0;
      uint64_t interpolationDispatches = 0;
@@ -387,7 +406,7 @@ index 0476bc7..8e5ba19 100644
      {
          const std::lock_guard<std::mutex> lock(StateMutex);
          for (uint32_t index = 0; index < info->swapchainCount; ++index)
-@@ -2332,6 +2555,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2332,6 +2558,10 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  if (info->swapchainCount != 1) return VK_ERROR_FEATURE_NOT_PRESENT;
                  fg = it->second.get();
@@ -398,7 +417,7 @@ index 0476bc7..8e5ba19 100644
              }
              else if (asteria_vk::IsProxyToken(info->pSwapchains[index]))
                  return VK_ERROR_SURFACE_LOST_KHR;
-@@ -2359,6 +2586,9 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2359,6 +2589,9 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
      }
      bool inputReady = false;
      bool callbackRecorded = false;
@@ -408,7 +427,7 @@ index 0476bc7..8e5ba19 100644
      uint32_t motionSource = 0;
      if (isFgPresent)
      {
-@@ -2373,15 +2603,52 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2373,15 +2606,52 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              const auto input = std::atomic_load_explicit(&fg->currentInputs, std::memory_order_acquire);
              inputReady = bool(input);
              if (input) motionSource = uint32_t(input->motionSource);
@@ -461,7 +480,7 @@ index 0476bc7..8e5ba19 100644
      }
      else
      {
-@@ -2407,6 +2665,26 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2407,6 +2668,26 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              State["fg_camera_valid"] = FgCamera.valid;
              State["fg_camera_in_game"] = FgCamera.inGame;
              State["fg_camera_sample_count"] = FgCamera.sampleCount;
@@ -488,7 +507,7 @@ index 0476bc7..8e5ba19 100644
          }
          Json waits = Json::array();
          for (uint32_t i = 0; i < info->waitSemaphoreCount; ++i) waits.push_back(Id(info->pWaitSemaphores[i]));
-@@ -2422,13 +2700,109 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
+@@ -2422,13 +2703,109 @@ static VkResult VKAPI_CALL QueuePresent(VkQueue queue, const VkPresentInfoKHR *i
              {
                  record["frame_input_attempts"] = inputAttempts;
                  record["interpolation_dispatches"] = interpolationDispatches;
@@ -710,40 +729,176 @@ diff --git a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h b/Runtime/FrameG
 index 3f56217..328acbf 100644
 --- a/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
 +++ b/Runtime/FrameGeneration/Layer/DeviceFeatureChain.h
-@@ -7,6 +7,16 @@
+@@ -1,86 +1,97 @@
+ #pragma once
+ #include <vulkan/vulkan.h>
+ #include <vulkan/vk_layer.h>
+ #include <algorithm>
+ #include <memory>
+ #include <vector>
  
  namespace asteria_device_features
  {
-+// DXVK may be built against newer Vulkan headers than the layer.  Maintenance 7
-+// has a single feature bit, so keep its ABI-sized representation here until the
-+// pinned Asteria headers expose VkPhysicalDeviceMaintenance7FeaturesKHR.
-+struct PhysicalDeviceMaintenance7FeaturesKHRCompat
-+{
-+    VkStructureType sType;
-+    void *pNext;
-+    VkBool32 maintenance7;
-+};
-+
- class OwnedChain
+-class OwnedChain
++// ABI-compatible fallback for Vulkan headers predating VK_NV_descriptor_pool_overallocation.
++// This feature structure has only one VkBool32 member after sType and pNext.
++struct PhysicalDeviceDescriptorPoolOverallocationFeaturesNVCompat
  {
-     std::vector<std::shared_ptr<void>> nodes;
-@@ -59,6 +69,8 @@ public:
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_FEATURES_EXT: CopyNode<VkPhysicalDeviceShaderModuleIdentifierFeaturesEXT>(node); break;
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT: CopyNode<VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT>(node); break;
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT: CopyNode<VkPhysicalDeviceMemoryPriorityFeaturesEXT>(node); break;
-+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT: CopyNode<VkPhysicalDeviceMultiDrawFeaturesEXT>(node); break;
-+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT: CopyNode<VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT>(node); break;
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR: CopyNode<VkPhysicalDeviceLineRasterizationFeaturesKHR>(node); break;
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GRAPHICS_PIPELINE_LIBRARY_FEATURES_EXT: CopyNode<VkPhysicalDeviceGraphicsPipelineLibraryFeaturesEXT>(node); break;
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_INTERLOCK_FEATURES_EXT: CopyNode<VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT>(node); break;
-@@ -69,6 +81,7 @@ public:
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentIdFeaturesKHR>(node); break;
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentWaitFeaturesKHR>(node); break;
-             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT: CopyNode<VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT>(node); break;
-+            case static_cast<VkStructureType>(1000562000): CopyNode<PhysicalDeviceMaintenance7FeaturesKHRCompat>(node); break;
-             default:
-                 nodes.clear();
-                 return false;
+-    std::vector<std::shared_ptr<void>> nodes;
++    VkStructureType sType;
+-    VkBaseOutStructure *head = nullptr;
++    void *pNext;
++    VkBool32 descriptorPoolOverallocation;
++};
+ 
+-    template<typename T> void CopyNode(const VkBaseInStructure *source)
++class OwnedChain
+-    {
++{
+-        nodes.push_back(std::make_shared<T>(*reinterpret_cast<const T *>(source)));
++    std::vector<std::shared_ptr<void>> nodes;
+-    }
++    VkBaseOutStructure *head = nullptr;
+ 
+-public:
++    template<typename T> void CopyNode(const VkBaseInStructure *source)
+-    VkBaseOutStructure *Head() { return head; }
++    {
++        nodes.push_back(std::make_shared<T>(*reinterpret_cast<const T *>(source)));
++    }
+ 
+-    bool Copy(const void *source)
++public:
+-    {
++    VkBaseOutStructure *Head() { return head; }
+-        nodes.clear();
++
+-        head = nullptr;
++    bool Copy(const void *source, VkStructureType *unsupportedSType = nullptr)
+-        std::vector<const VkBaseInStructure *> observed;
++    {
+-        for (auto node = static_cast<const VkBaseInStructure *>(source); node; node = node->pNext)
++        nodes.clear();
+-        {
++        head = nullptr;
+-            if (observed.size() >= 64 || std::find(observed.begin(), observed.end(), node) != observed.end())
++        std::vector<const VkBaseInStructure *> observed;
+-            {
++        for (auto node = static_cast<const VkBaseInStructure *>(source); node; node = node->pNext)
+-                nodes.clear();
++        {
+-                return false;
++            if (observed.size() >= 64 || std::find(observed.begin(), observed.end(), node) != observed.end())
+-            }
++            {
+-            observed.push_back(node);
++                nodes.clear();
+-            switch (node->sType)
++                return false;
+-            {
++            }
+-            case VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO: CopyNode<VkLayerDeviceCreateInfo>(node); break;
++            observed.push_back(node);
+-            case VK_STRUCTURE_TYPE_DEVICE_PRIVATE_DATA_CREATE_INFO: CopyNode<VkDevicePrivateDataCreateInfo>(node); break;
++            switch (node->sType)
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2: CopyNode<VkPhysicalDeviceFeatures2>(node); break;
++            {
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES: CopyNode<VkPhysicalDeviceVulkan11Features>(node); break;
++            case VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO: CopyNode<VkLayerDeviceCreateInfo>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES: CopyNode<VkPhysicalDeviceVulkan12Features>(node); break;
++            case VK_STRUCTURE_TYPE_DEVICE_PRIVATE_DATA_CREATE_INFO: CopyNode<VkDevicePrivateDataCreateInfo>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES: CopyNode<VkPhysicalDeviceVulkan13Features>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2: CopyNode<VkPhysicalDeviceFeatures2>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES: CopyNode<VkPhysicalDevice16BitStorageFeatures>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES: CopyNode<VkPhysicalDeviceVulkan11Features>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES: CopyNode<VkPhysicalDeviceShaderFloat16Int8Features>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES: CopyNode<VkPhysicalDeviceVulkan12Features>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES: CopyNode<VkPhysicalDeviceTimelineSemaphoreFeatures>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES: CopyNode<VkPhysicalDeviceVulkan13Features>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES: CopyNode<VkPhysicalDeviceSubgroupSizeControlFeatures>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES: CopyNode<VkPhysicalDevice16BitStorageFeatures>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRIVATE_DATA_FEATURES: CopyNode<VkPhysicalDevicePrivateDataFeatures>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES: CopyNode<VkPhysicalDeviceShaderFloat16Int8Features>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES: CopyNode<VkPhysicalDeviceDynamicRenderingFeatures>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES: CopyNode<VkPhysicalDeviceTimelineSemaphoreFeatures>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES: CopyNode<VkPhysicalDeviceHostQueryResetFeatures>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES: CopyNode<VkPhysicalDeviceSubgroupSizeControlFeatures>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT: CopyNode<VkPhysicalDeviceExtendedDynamicStateFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRIVATE_DATA_FEATURES: CopyNode<VkPhysicalDevicePrivateDataFeatures>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT: CopyNode<VkPhysicalDeviceExtendedDynamicState3FeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES: CopyNode<VkPhysicalDeviceDynamicRenderingFeatures>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_FEATURES_EXT: CopyNode<VkPhysicalDeviceHostImageCopyFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES: CopyNode<VkPhysicalDeviceHostQueryResetFeatures>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAW_ACCESS_CHAINS_FEATURES_NV: CopyNode<VkPhysicalDeviceRawAccessChainsFeaturesNV>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT: CopyNode<VkPhysicalDeviceExtendedDynamicStateFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR: CopyNode<VkPhysicalDeviceMaintenance5FeaturesKHR>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT: CopyNode<VkPhysicalDeviceExtendedDynamicState3FeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_KHR: CopyNode<VkPhysicalDeviceVertexAttributeDivisorFeaturesKHR>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_FEATURES_EXT: CopyNode<VkPhysicalDeviceHostImageCopyFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TRANSFORM_FEEDBACK_FEATURES_EXT: CopyNode<VkPhysicalDeviceTransformFeedbackFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAW_ACCESS_CHAINS_FEATURES_NV: CopyNode<VkPhysicalDeviceRawAccessChainsFeaturesNV>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT: CopyNode<VkPhysicalDeviceRobustness2FeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR: CopyNode<VkPhysicalDeviceMaintenance5FeaturesKHR>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_FEATURES_EXT: CopyNode<VkPhysicalDeviceShaderModuleIdentifierFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_KHR: CopyNode<VkPhysicalDeviceVertexAttributeDivisorFeaturesKHR>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT: CopyNode<VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TRANSFORM_FEEDBACK_FEATURES_EXT: CopyNode<VkPhysicalDeviceTransformFeedbackFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT: CopyNode<VkPhysicalDeviceMemoryPriorityFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT: CopyNode<VkPhysicalDeviceRobustness2FeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR: CopyNode<VkPhysicalDeviceLineRasterizationFeaturesKHR>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_FEATURES_EXT: CopyNode<VkPhysicalDeviceShaderModuleIdentifierFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GRAPHICS_PIPELINE_LIBRARY_FEATURES_EXT: CopyNode<VkPhysicalDeviceGraphicsPipelineLibraryFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT: CopyNode<VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_INTERLOCK_FEATURES_EXT: CopyNode<VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT: CopyNode<VkPhysicalDeviceMemoryPriorityFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_BIAS_CONTROL_FEATURES_EXT: CopyNode<VkPhysicalDeviceDepthBiasControlFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR: CopyNode<VkPhysicalDeviceLineRasterizationFeaturesKHR>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT: CopyNode<VkPhysicalDeviceDepthClipEnableFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GRAPHICS_PIPELINE_LIBRARY_FEATURES_EXT: CopyNode<VkPhysicalDeviceGraphicsPipelineLibraryFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT: CopyNode<VkPhysicalDeviceCustomBorderColorFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_INTERLOCK_FEATURES_EXT: CopyNode<VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT: CopyNode<VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_BIAS_CONTROL_FEATURES_EXT: CopyNode<VkPhysicalDeviceDepthBiasControlFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentIdFeaturesKHR>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT: CopyNode<VkPhysicalDeviceDepthClipEnableFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentWaitFeaturesKHR>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT: CopyNode<VkPhysicalDeviceCustomBorderColorFeaturesEXT>(node); break;
+-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT: CopyNode<VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT>(node); break;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT: CopyNode<VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT>(node); break;
+-            default:
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentIdFeaturesKHR>(node); break;
+-                nodes.clear();
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR: CopyNode<VkPhysicalDevicePresentWaitFeaturesKHR>(node); break;
+-                return false;
++            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT: CopyNode<VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT>(node); break;
+-            }
++            case static_cast<VkStructureType>(1000546000): CopyNode<PhysicalDeviceDescriptorPoolOverallocationFeaturesNVCompat>(node); break;
+-        }
++            default:
+-        for (size_t index = 0; index < nodes.size(); ++index)
++                if (unsupportedSType) *unsupportedSType = node->sType;
+-        {
++                nodes.clear();
+-            auto *node = static_cast<VkBaseOutStructure *>(nodes[index].get());
++                return false;
+-            node->pNext = index + 1 < nodes.size() ? static_cast<VkBaseOutStructure *>(nodes[index + 1].get()) : nullptr;
++            }
+         }
+-        if (!nodes.empty()) head = static_cast<VkBaseOutStructure *>(nodes.front().get());
++        for (size_t index = 0; index < nodes.size(); ++index)
+-        return true;
++        {
+-    }
++            auto *node = static_cast<VkBaseOutStructure *>(nodes[index].get());
+-};
++            node->pNext = index + 1 < nodes.size() ? static_cast<VkBaseOutStructure *>(nodes[index + 1].get()) : nullptr;
+-}
++        }
++        if (!nodes.empty()) head = static_cast<VkBaseOutStructure *>(nodes.front().get());
++        return true;
++    }
++};
++}
 diff --git a/Runtime/FrameGeneration/Layer/FrameGenerationInputs.h b/Runtime/FrameGeneration/Layer/FrameGenerationInputs.h
 index 388a517..444a654 100644
 --- a/Runtime/FrameGeneration/Layer/FrameGenerationInputs.h
