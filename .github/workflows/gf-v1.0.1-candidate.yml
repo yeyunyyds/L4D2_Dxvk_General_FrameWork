@@ -48,6 +48,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "GF native build/package failed" }
           python -m unittest discover -s tests -v
           if ($LASTEXITCODE -ne 0) { throw "Regression tests failed" }
+      - name: Test NVIDIA and existing Vulkan pNext feature-chain compatibility
+        shell: pwsh
+        run: |
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test_fg_device_feature_chain.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Vulkan feature-chain native smoke test failed" }
       - name: Upload experiment ZIP
         if: always()
         uses: actions/upload-artifact@v4
