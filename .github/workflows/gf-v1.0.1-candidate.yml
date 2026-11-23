@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - fix/nvidia-vulkan-feature-chain-3060
     paths-ignore:
       - docs/**
   pull_request:
