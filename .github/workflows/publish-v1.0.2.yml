@@ -1,0 +1,155 @@
+name: Publish GF v1.0.2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v1.0.2.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-gf-v1.0.2
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check release provenance and avoid duplicate tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/45246244178" --jq '.conclusion')" = "success"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/45246244178" --jq '.head_sha')" = "ed69c408a10c3c86ff4ac4925d64abb7987d1f7c"
+          if gh release view v1.0.2 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "v1.0.2 already exists; refusing to replace it" >&2
+            exit 1
+          fi
+
+      - name: Download verified Windows build (no rebuilding)
+        uses: actions/download-artifact@v4
+        with:
+          name: gf-v1.0.2-candidate-ed69c408a10c3c86ff4ac4925d64abb7987d1f7c
+          run-id: 45246244178
+          github-token: ${{ github.token }}
+          path: artifact
+
+      - name: Validate package contents and retain exact CI ZIP bytes
+        shell: python
+        run: |
+          import configparser
+          import hashlib
+          import json
+          from pathlib import Path
+          import shutil
+          import struct
+          import zipfile
+
+          found = list(Path("artifact").rglob("ldb-host-capture-dev.zip"))
+          if len(found) != 1:
+              raise SystemExit(f"Expected exactly one built install ZIP: {found}")
+          source = found[0]
+          images = {
+              "bin/dxvk_d3d9.dll": 0x014c,
+              "bin/.l4d2bridge/L4D2Bridge32.exe": 0x014c,
+              "bin/.l4d2bridge/L4D2Bridge64.exe": 0x8664,
+              "bin/.l4d2bridge/LDBFsrBackend64.dll": 0x8664,
+              "bin/.l4d2bridge/d3d9vk_x64.dll": 0x8664,
+              "bin/.l4d2bridge/vulkan-layer/AsteriaFrameGenerationLayer64.dll": 0x8664,
+          }
+          with zipfile.ZipFile(source) as archive:
+              if archive.testzip() is not None:
+                  raise SystemExit("ZIP CRC verification failed")
+              roots = sorted({n.split("/", 1)[0] for n in archive.namelist() if n})
+              if roots != ["README.md", "bin"]:
+                  raise SystemExit(f"Invalid install ZIP top level: {roots}")
+              for name, machine in images.items():
+                  data = archive.read(name)
+                  if data[:2] != b"MZ":
+                      raise SystemExit(f"Missing PE header: {name}")
+                  offset = struct.unpack_from("<I", data, 0x3c)[0]
+                  actual = struct.unpack_from("<H", data, offset + 4)[0]
+                  if actual != machine:
+                      raise SystemExit(f"Unexpected PE architecture in {name}: {actual:#x}")
+              guide = archive.read("README.md").decode("utf-8", errors="strict")
+              if "v1.0.2" not in guide or "server.useVanillaDxvk" not in guide:
+                  raise SystemExit("Wrong release version or missing DXVK Host instructions")
+              receipt = json.loads(archive.read("bin/.l4d2bridge/capture-build.json"))
+              if receipt.get("native_host_build") != "compiled_MSVC_Release":
+                  raise SystemExit("Not a compiled MSVC Release build")
+              if receipt.get("bridge_version") != "v1.3.4":
+                  raise SystemExit("Unexpected Bridge version")
+              if receipt.get("dxvk_runtime_origin") != "unmodified_upstream_release":
+                  raise SystemExit("Unexpected DXVK runtime")
+              conf = configparser.ConfigParser()
+              conf.read_string(archive.read("bin/.l4d2bridge/fg-config.ini").decode("utf-8-sig"))
+              fg = conf["frame_generation"]
+              checks = {
+                  "enabled": "1", "viewmodel": "1", "dynamic_models": "1",
+                  "fpb_protect": "1", "dynamic_residual_threshold": "0.2",
+                  "first_person_fallback_start": "1",
+                  "dynamic_mask_dilation": "1", "generated_only": "0",
+                  "fpb_projection_protect": "0",
+              }
+              for key, expected in checks.items():
+                  if fg.get(key) != expected:
+                      raise SystemExit(f"Unexpected {key}: {fg.get(key)!r}")
+              if "viewmodel_sweep" in fg:
+                  raise SystemExit("Abandoned Viewmodel Sweep must not be included")
+          target = Path("L4D2-DXVK-General-Framework-v1.0.2.zip")
+          shutil.copyfile(source, target)
+          digest = hashlib.sha256(target.read_bytes()).hexdigest()
+          if digest != hashlib.sha256(source.read_bytes()).hexdigest():
+              raise SystemExit("Release ZIP differs from tested CI artifact")
+          Path("SHA256SUMS.txt").write_text(f"{digest}  {target.name}\n", encoding="utf-8")
+          print(f"Verified CI build: {target.name}, sha256={digest}")
+
+      - name: Publish public GitHub Release v1.0.2
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create v1.0.2 \
+            L4D2-DXVK-General-Framework-v1.0.2.zip \
+            SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "ed69c408a10c3c86ff4ac4925d64abb7987d1f7c" \
+            --latest \
+            --title "L4D2 DXVK General Framework v1.0.2" \
+            --notes-file - <<'EOF'
+          ## GF v1.0.2 — NVIDIA Vulkan Compatibility Patch
+          
+          ### 修复
+          - 修复部分 NVIDIA Vulkan 驱动（包括用户报告的 RTX 3060 Laptop 环境）在 DXVK 2.6.1 + GF 下，由于设备 `pNext` 特性链未被 Layer 完整识别而无法初始化 FSR 3 Frame Generation 的问题。
+          - 补充对 `VK_NV_descriptor_pool_overallocation` 结构的 ABI 安全复制，保留原有 MultiDraw、Pageable Device Local Memory、Maintenance 7 等兼容处理。
+          - 遇到其他未知 Vulkan `sType` 时，日志现在提供 `unsupported_device_feature_stype` 便于后续定位；不会忽略不认识的结构。
+          - 保持现有 LDB v1.3.4、DXVK v2.6.1、FSR 3、HUD、Viewmodel、FPB 与 `generated_only` 路径；不加入实验性冻结修复。
+          
+          ### 验证
+          - Windows x64 CI 原生编译，完整回归测试与新增 Vulkan pNext 特性链执行测试通过。
+          - 使用主分支已验证构建产物进行发布，不重新编译，并附 SHA-256 校验。
+          - 已收到 NVIDIA 用户反馈“插帧可行”；不代表所有 NVIDIA 显卡和驱动版本均已实机验证。
+          
+          ### 已知限制 / 使用注意
+          - **Alt+Tab / 切屏恢复时可能画面停留在旧帧，但游戏逻辑继续**：仍在排查，**本补丁没有修复**。
+          - 低原生帧率下的输入延迟及帧输出节奏问题仍存在，插帧不能降低游戏逻辑延迟。
+          - 当前 Host 捕获不支持游戏中的某些 MSAA 多采样输入；遇到 `Capture requires a single-sample` 请先关闭游戏抗锯齿。
+          - 安装包不包含 `bridge.conf`；确保 `bin/.l4d2bridge/bridge.conf` 内启用 `server.useVanillaDxvk=True`，并使用 x64 Host。此选项不能写入 `fg-config.ini`。
+          
+          ### 安装
+          退出 L4D2 及 Bridge Host，备份游戏 `bin` 目录，将完整 ZIP 解压至 Left 4 Dead 2 游戏根目录并覆盖配套文件。不建议单独替换某个 DLL。
+          
+          ---
+          
+          ## English
+          GF v1.0.2 fixes NVIDIA Vulkan device feature-chain handling that prevented FSR 3 frame generation initialization on some driver configurations. It preserves the existing DXVK/Bridge/FG paths and provides exact unsupported-sType diagnostics. The CI-built package is accompanied by SHA-256 checksums.
+          
+          **Known limitations:** Alt+Tab can still leave the displayed frame frozen while gameplay continues; frame-generation input latency and certain MSAA capture configurations are not fixed in this release. Keep in-game MSAA off when necessary and configure `server.useVanillaDxvk=True` in `bridge.conf`.
+          EOF
