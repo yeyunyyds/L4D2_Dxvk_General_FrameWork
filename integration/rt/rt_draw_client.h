@@ -88,6 +88,11 @@ class Collector {
   model_hook::Status modelHookStatus=model_hook::Status::Unavailable;
   bool modelHookAttempted=false;
   bool contextProbeLogged=false;
+  bool sourceTlsProbeLogged=false;
+  using SourceTlsGet=void*(__thiscall*)(void*);
+  SourceTlsGet sourceTlsGetter=nullptr;
+  uint32_t sourceTlsBase=0,sourceTlsNullAttempts=0;
+  std::set<DWORD> sourceTlsThreads;
   bool rawDown = false;
   void control(const char* name, uint64_t value = 0, uint64_t other = 0) {
     if (!request.session || controlEvents >= 2048) { return; }
@@ -147,7 +152,9 @@ class Collector {
     control("model_binding_stage",model_hook::bindingStage(),model_hook::bindingFailure());
     control("model_context_attempts",model_hook::contextAttempts(),model_hook::maxContextAttempts());
     for(uint32_t variant=0;variant<model_hook::kContextVariants;++variant) {
-      control("model_context_variant",variant,model_hook::contextVariant(variant));
+      const auto vtable=model_hook::contextVariant(variant);
+      if(!vtable) { continue; }
+      control("model_context_variant",variant,vtable);
       control("model_context_variant_hits",variant,model_hook::contextVariantHits(variant));
       for(uint32_t index=0;index<model_hook::kCandidateSlots;++index) {
         const auto slot=model_hook::kFirstCandidateSlot+index;
@@ -157,6 +164,61 @@ class Collector {
       }
     }
     contextProbeLogged=true;
+  }
+  void sourceTlsProbe() {
+#if !defined(_M_IX86) && !defined(__i386__)
+    sourceTlsProbeLogged=true;
+    return;
+#else
+    const auto thread=GetCurrentThreadId();
+    if(sourceTlsProbeLogged||sourceTlsThreads.count(thread)) { return; }
+    // This is the exact tier0 TLS getter used by the pinned material-system
+    // GetRenderContext candidate. Sample only on the D3D Draw thread; do not
+    // call a Source context or queue virtual method.
+    LocalMemory memory;
+    if(!sourceTlsGetter) {
+      const auto material=GetModuleHandleW(L"materialsystem.dll");
+      const auto tier0=GetModuleHandleW(L"tier0.dll");
+      wchar_t path[32768]{};
+      if(!material||!tier0||!GetModuleFileNameW(material,path,32768)||
+         fileSha256(path)!="09fd324cd977d5d4e2a216ee831c07ff8b882efd024137c27de4155fbdfcf0ba") {
+        control("source_tls_probe_status",1,thread);sourceTlsProbeLogged=true;return;
+      }
+      const auto symbol=GetProcAddress(tier0,"?Get@CThreadLocalBase@GenericThreadLocals@@QBEPAXXZ");
+      sourceTlsBase=uint32_t(reinterpret_cast<uintptr_t>(material));
+      uint32_t imported=0;
+      if(!symbol||!memory.read(sourceTlsBase+0x991b0,&imported,4)||imported!=uint32_t(reinterpret_cast<uintptr_t>(symbol))) {
+        control("source_tls_probe_status",2,thread);sourceTlsProbeLogged=true;return;
+      }
+      static_assert(sizeof(sourceTlsGetter)==sizeof(symbol),"x86 TLS getter ABI");
+      std::memcpy(&sourceTlsGetter,&symbol,sizeof(sourceTlsGetter));
+    }
+    const auto base=sourceTlsBase;
+    const auto context=uint32_t(reinterpret_cast<uintptr_t>(sourceTlsGetter(reinterpret_cast<void*>(uintptr_t(base+0xfc274)))));
+    uint32_t table=0;
+    if(!context||!memory.read(context,&table,4)) {
+      if(++sourceTlsNullAttempts>=32) {
+        control("source_tls_probe_status",context?4:3,thread);sourceTlsProbeLogged=true;
+      }
+      return;
+    }
+    if(table<base||table>=base+0x13d000-146*4) {
+      sourceTlsThreads.insert(thread);
+      control("source_tls_probe_status",5,thread);
+      control("source_tls_context_vtable_address",table,0);
+      return;
+    }
+    sourceTlsThreads.insert(thread);
+    control("source_tls_context_thread",thread,context);
+    control("source_tls_context_vtable_rva",table-base,0);
+    for(uint32_t slot=142;slot<=146;slot+=4) {
+      uint32_t method=0;
+      if(memory.read(table+slot*4,&method,4))
+        control("source_tls_context_candidate_rva",slot,method>=base&&method<base+0x13d000?method-base:method);
+    }
+    control("source_tls_probe_status",0,thread);
+    if(sourceTlsThreads.size()>=4) { sourceTlsProbeLogged=true; }
+#endif
   }
 public:
   template<class Device> Bytes snapshot(Device* device) noexcept {
@@ -172,7 +234,8 @@ public:
           Request next;
           if (readRequest(next) && next.session != request.session) {
             request = std::move(next); ordinal = 0; materials.clear(); materialLog.close(); finished = false;contextProbeLogged=false;
-            controlLog.close(); controlEvents = 0; heartbeatAt = 0;modelHookAttempted=modelHookStatus==model_hook::Status::Installed;control("request_seen");
+            controlLog.close(); controlEvents = 0; heartbeatAt = 0;modelHookAttempted=modelHookStatus==model_hook::Status::Installed;
+            sourceTlsProbeLogged=false;sourceTlsGetter=nullptr;sourceTlsBase=0;sourceTlsNullAttempts=0;sourceTlsThreads.clear();control("request_seen");
           }
           if(request.session&&request.performance&&!modelHookAttempted) {
             modelHookAttempted=true;
@@ -203,7 +266,7 @@ public:
           control("model_hook_detached",model_hook::uninstall()?1:0,0);
         }
       }
-      if(active) { contextProbe(); }
+      if(active) { contextProbe();sourceTlsProbe(); }
       if (!active) { return {}; }
       Snapshot s; s.session = request.session; s.ordinal = ++ordinal; s.thread = GetCurrentThreadId();
       LARGE_INTEGER ticks{}; QueryPerformanceCounter(&ticks); s.ticks = uint64_t(ticks.QuadPart);
