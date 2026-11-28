@@ -57,6 +57,19 @@ inline std::atomic<uint32_t> g_contextAttempts{0};
 inline std::atomic<bool> g_producerSampled{false};
 inline std::atomic<uint32_t> g_producerStatus{0},g_producerThread{0},g_producerVtable{0},g_producerSlot142{0},g_producerSlot146{0};
 inline std::atomic<uint64_t> g_producerResource{0},g_producerScope{0};
+inline std::atomic<uint64_t> g_modelSpanCalls{0},g_modelSpanWithDraw{0},g_modelSpanDraws{0};
+inline thread_local uint32_t t_modelSpanDepth=0,t_modelSpanDraws=0;
+inline void noteConsumerDraw() noexcept {
+  if(t_modelSpanDepth) { ++t_modelSpanDraws;g_modelSpanDraws.fetch_add(1,std::memory_order_relaxed); }
+}
+struct ModelSpan {
+  uint32_t previous=0;
+  ModelSpan() noexcept : previous(t_modelSpanDraws) { t_modelSpanDraws=0;++t_modelSpanDepth;g_modelSpanCalls.fetch_add(1,std::memory_order_relaxed); }
+  ~ModelSpan() noexcept {
+    if(t_modelSpanDraws)g_modelSpanWithDraw.fetch_add(1,std::memory_order_relaxed);
+    const auto own=t_modelSpanDraws;--t_modelSpanDepth;t_modelSpanDraws=previous+own;
+  }
+};
 constexpr uint32_t kContextVariants=4,kFirstCandidateSlot=128,kCandidateSlots=32,kCandidateCodeWords=2;
 constexpr uint32_t kManagerSlots=32,kManagerWords=128;
 inline std::array<std::atomic<uintptr_t>,kContextVariants> g_contextVtableVariants{};
@@ -199,6 +212,7 @@ inline void __fastcall hooked(void* self,void* edx,const DrawModelState& stateRe
   g_captured.fetch_add(1,std::memory_order_relaxed);
   if(!g_contextEvidenceReady.load(std::memory_order_acquire)&&!passiveContextProbe())g_probeFailures.fetch_add(1,std::memory_order_relaxed);
   producerContextProbe(captured);
+  ModelSpan span;
   g_original(self,edx,stateRef,infoRef,customBones);
 }
 
@@ -208,6 +222,7 @@ inline void setCaptureActive(bool active) noexcept {
     g_queueStatus.store(QueueStatus::Unavailable,std::memory_order_release);
     g_bindingStage.store(0);g_bindingFailure.store(0);g_contextAttempts.store(0);g_contextVtableRva.store(0);
     g_producerSampled.store(false);g_producerStatus.store(0);g_producerThread.store(0);g_producerVtable.store(0);g_producerSlot142.store(0);g_producerSlot146.store(0);g_producerResource.store(0);g_producerScope.store(0);
+    g_modelSpanCalls.store(0);g_modelSpanWithDraw.store(0);g_modelSpanDraws.store(0);
     for(auto& value:g_contextVtableVariants)value.store(0);for(auto& value:g_contextVariantHits)value.store(0);for(auto& value:g_contextVariantCaptured)value.store(false);g_contextEvidenceReady.store(false);
     for(auto& variant:g_candidateRva)for(auto& rva:variant)rva.store(0);
     for(auto& variant:g_candidateCode)for(auto& row:variant)for(auto& word:row)word.store(0);
@@ -241,6 +256,9 @@ inline uint32_t producerSlot142() noexcept { return g_producerSlot142.load(std::
 inline uint32_t producerSlot146() noexcept { return g_producerSlot146.load(std::memory_order_relaxed); }
 inline uint64_t producerResource() noexcept { return g_producerResource.load(std::memory_order_relaxed); }
 inline uint64_t producerScope() noexcept { return g_producerScope.load(std::memory_order_relaxed); }
+inline uint64_t modelSpanCalls() noexcept { return g_modelSpanCalls.load(std::memory_order_relaxed); }
+inline uint64_t modelSpanWithDraw() noexcept { return g_modelSpanWithDraw.load(std::memory_order_relaxed); }
+inline uint64_t modelSpanDraws() noexcept { return g_modelSpanDraws.load(std::memory_order_relaxed); }
 inline bool contextEvidenceReady() noexcept { return g_contextEvidenceReady.load(std::memory_order_acquire); }
 inline uintptr_t managerVtableRva() noexcept { return g_managerVtableRva.load(std::memory_order_relaxed); }
 inline uintptr_t managerCandidateRva(uint32_t index) noexcept { return index<kManagerSlots?g_managerCandidateRva[index].load(std::memory_order_relaxed):0; }
@@ -318,6 +336,10 @@ inline uint32_t producerSlot142() noexcept { return 0; }
 inline uint32_t producerSlot146() noexcept { return 0; }
 inline uint64_t producerResource() noexcept { return 0; }
 inline uint64_t producerScope() noexcept { return 0; }
+inline void noteConsumerDraw() noexcept { }
+inline uint64_t modelSpanCalls() noexcept { return 0; }
+inline uint64_t modelSpanWithDraw() noexcept { return 0; }
+inline uint64_t modelSpanDraws() noexcept { return 0; }
 inline bool contextEvidenceReady() noexcept { return false; }
 inline uintptr_t managerVtableRva() noexcept { return 0; }
 inline uintptr_t managerCandidateRva(uint32_t) noexcept { return 0; }

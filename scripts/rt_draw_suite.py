@@ -607,6 +607,13 @@ def review_performance(directory):
                 'slot_142_rva':one('source_producer_context_slot_142_rva').get('value'),
                 'slot_146_rva':one('source_producer_context_slot_146_rva').get('value')}
             hook['consumer_context']={'thread':consumer.get('other'),'vtable_rva':cv.get('value')}
+            span=one('source_model_draw_span');span_draws=one('source_model_draw_span_draws')
+            if (span.get('value')!=hook.get('captured_delta') or not isinstance(span.get('other'),int) or
+                not 0<=span['other']<=span['value'] or not isinstance(span_draws.get('value'),int) or
+                span_draws['value']<span['other']):
+                errors.append('performance_model_draw_span_probe')
+            hook['draw_span']={'model_calls':span.get('value'),'calls_with_nested_draw':span.get('other'),
+                               'nested_draws':span_draws.get('value')}
         elif context_variant_probe:
             populated={e.get('value'):e.get('other') for e in variants if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')>0}
             hits={e.get('value'):e.get('other') for e in variant_hits if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}

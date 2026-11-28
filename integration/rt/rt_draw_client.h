@@ -264,6 +264,8 @@ public:
           control("source_producer_context_slot_142_rva",model_hook::producerSlot142(),0);
           control("source_producer_context_slot_146_rva",model_hook::producerSlot146(),0);
           control("source_producer_model_identity",model_hook::producerResource(),model_hook::producerScope());
+          control("source_model_draw_span",model_hook::modelSpanCalls(),model_hook::modelSpanWithDraw());
+          control("source_model_draw_span_draws",model_hook::modelSpanDraws(),0);
           control("model_hook_rejected",model_hook::rejected(),0);active = false; finished = true;
           control("model_queue_mode",uint64_t(model_hook::queueStatus()),model_hook::immediate());
           control("model_queue_enqueued",model_hook::queued(),model_hook::queueCancelled());
@@ -275,6 +277,7 @@ public:
       }
       if(active) { contextProbe();sourceTlsProbe(); }
       if (!active) { return {}; }
+      model_hook::noteConsumerDraw();
       Snapshot s; s.session = request.session; s.ordinal = ++ordinal; s.thread = GetCurrentThreadId();
       LARGE_INTEGER ticks{}; QueryPerformanceCounter(&ticks); s.ticks = uint64_t(ticks.QuadPart);
       s.status = binding.capture(s);
