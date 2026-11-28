@@ -20,11 +20,11 @@ def sha(data):return hashlib.sha256(data).hexdigest()
 
 
 def observer_files():
-    names=['scripts/'+name for name in ['rt_draw_suite.py','rt_gpu_telemetry.py','analyze_rt_runtime.py','analyze_rt_draw.py','analyze_rt_scene.py','analyze_rt_world.py','analyze_rt_live.py','analyze_rt_textures.py','analyze_rt_infected.py','rt_game_probe.py',
+    names=['scripts/'+name for name in ['rt_draw_suite.py','trigger_rt_capture.py','rt_gpu_telemetry.py','analyze_rt_runtime.py','analyze_rt_draw.py','analyze_rt_scene.py','analyze_rt_world.py','analyze_rt_live.py','analyze_rt_textures.py','analyze_rt_infected.py','rt_game_probe.py',
                                        'rt_preflight.py','rt_visual.py','rt_suite.py']]
     names+=list(SUPPORT_FILES)
     entries={name:(ROOT/name).read_bytes() for name in names}
-    for target,source in [('run-test.cmd','run-draw-test.cmd'),('run-performance.cmd','run-world-performance.cmd'),('restore.cmd','restore-draw-test.cmd'),
+    for target,source in [('run-test.cmd','run-draw-test.cmd'),('run-performance.cmd','run-world-performance.cmd'),('trigger_capture.cmd','trigger-capture.cmd'),('restore.cmd','restore-draw-test.cmd'),
                           ('README.txt','draw-observer-readme.txt')]:
         entries[target]=(ROOT/'integration/rt'/source).read_bytes()
     return entries

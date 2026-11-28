@@ -243,13 +243,15 @@ public:
           }
           DWORD pid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &pid);
           const bool raw = (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
-          const bool pressed = pid == GetCurrentProcessId() && raw;
+          const bool external=request.session&&fs::exists(triggerFile(request));
+          const bool pressed = (pid == GetCurrentProcessId() && raw) || external;
           if (raw && !rawDown) { control("f9_key_down", pid, pressed ? 1 : 0); } rawDown = raw;
           if (now >= heartbeatAt) {
             control("waiting_for_f9", pid, drawsSeen);
             heartbeatAt = now + 5000;
           }
           if (pressed && !down && request.session && !finished) {
+            if(external) { std::error_code ec;fs::remove(triggerFile(request),ec);control("capture_external_trigger",ec?0:1,pid); }
             model_hook::setCaptureActive(true);active = true; startedAt = now; control("capture_started", pid, drawsSeen);
             control("model_hook_capture_start",model_hook::calls(),model_hook::captured());
           }

@@ -940,9 +940,11 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
             report['game_rt']='attempted_requires_review'
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
-        notify('Enter a map, return to the game, and press F9 once. The '+('30-frame performance gate' if performance else '30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
-        if performance:notify('RT Performance v52: this read-only run acquires one render context and immediately records its actual vtable, binding stage/failure and slots 128-159. Repeated context acquisition is removed; no candidate virtual function is called and no model is submitted. Keep several characters in view and do not press F9 again.')
-        elif beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
+        if performance:
+            notify('Enter the map, then run trigger_capture.cmd and return to the game during its 5-second countdown. Do not press F9. Keep characters visible until collection completes.')
+            notify('This read-only probe records model entry and the D3D Draw thread TLS context. No queue method or model RT submission is enabled.')
+        else:notify('Enter a map, return to the game, and press F9 once. The '+('30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
+        if beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')
         if not game_pids():os.startfile('steam://rungameid/550')
         done=directory/f'rt-draw-done-{session}.json'
