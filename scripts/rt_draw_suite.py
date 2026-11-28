@@ -483,6 +483,7 @@ def review_performance(directory):
     structural_batch=43<=revision<47
     persistent_batch=44<=revision<47
     hook={'status':'not_required','target':0,'calls_delta':0,'captured_delta':0,'rejected':0}
+    producer_probe=False
     api_wait={'schema':1,'pass':revision<49,'errors':[],'roles':{}}
     if revision>=48:
         control=[]
@@ -491,6 +492,7 @@ def review_performance(directory):
             try:control.extend(json.loads(line) for line in file.read_text(encoding='utf-8').splitlines() if line.strip())
             except json.JSONDecodeError:errors.append('invalid_model_hook_control_log')
         installed=[e for e in control if e.get('event')=='model_hook_status' and e.get('value')==1 and isinstance(e.get('other'),int) and e.get('other')>0]
+        producer_probe=any(e.get('event')=='source_producer_probe' for e in control)
         starts=[e for e in control if e.get('event')=='model_hook_capture_start']
         stops=[e for e in control if e.get('event')=='model_hook_capture_end']
         rejects=[e for e in control if e.get('event')=='model_hook_rejected']
@@ -510,7 +512,12 @@ def review_performance(directory):
             surfaces=[e for e in control if e.get('event')=='model_queue_surfaces']
             detached=[e for e in control if e.get('event')=='model_hook_detached']
             complete_queue_rows=len(modes)==len(enqueued)==len(executed)==len(surfaces)==len(detached)==1
-            if context_variant_probe and complete_queue_rows:
+            if producer_probe and complete_queue_rows:
+                valid_queue=(detached[0].get('value')==1 and modes[0].get('value')==5 and
+                    enqueued[0].get('value')==enqueued[0].get('other')==0 and
+                    executed[0].get('value')==executed[0].get('other')==0 and
+                    surfaces[0].get('value')==surfaces[0].get('other')==0)
+            elif context_variant_probe and complete_queue_rows:
                 valid_queue=(detached[0].get('value')==1 and modes[0].get('value') in (1,2,5) and
                     isinstance(modes[0].get('other'),int) and modes[0]['other']>=0 and
                     isinstance(enqueued[0].get('value'),int) and enqueued[0]['value']>=0 and enqueued[0].get('other')==0 and
@@ -587,7 +594,20 @@ def review_performance(directory):
         attempts=[e for e in control if e.get('event')=='model_context_attempts']
         variants=[e for e in control if e.get('event')=='model_context_variant']
         variant_hits=[e for e in control if e.get('event')=='model_context_variant_hits']
-        if context_variant_probe:
+        if producer_probe:
+            def one(name):
+                rows=[e for e in control if e.get('event')==name]
+                return rows[0] if len(rows)==1 else {}
+            producer=one('source_producer_probe');consumer=one('source_tls_probe_status')
+            pv=one('source_producer_context_vtable_rva');cv=one('source_tls_context_vtable_rva')
+            if (producer.get('value')!=5 or not producer.get('other') or consumer.get('value')!=0 or
+                not consumer.get('other') or not pv.get('value') or not cv.get('value')):
+                errors.append('performance_producer_consumer_context_probe')
+            hook['producer_context']={'thread':producer.get('other'),'vtable_rva':pv.get('value'),
+                'slot_142_rva':one('source_producer_context_slot_142_rva').get('value'),
+                'slot_146_rva':one('source_producer_context_slot_146_rva').get('value')}
+            hook['consumer_context']={'thread':consumer.get('other'),'vtable_rva':cv.get('value')}
+        elif context_variant_probe:
             populated={e.get('value'):e.get('other') for e in variants if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')>0}
             hits={e.get('value'):e.get('other') for e in variant_hits if isinstance(e.get('value'),int) and isinstance(e.get('other'),int)}
             observed={(e.get('value',0)>>32,e.get('value',0)&0xffffffff) for e in rvas if isinstance(e.get('value'),int) and isinstance(e.get('other'),int) and e.get('other')>0}
@@ -941,8 +961,8 @@ def run(root=ROOT,game=None,restore_only=False,verify_only=False,beta=False,perf
         if request.exists():raise ValueError('Another observation request exists. Preserve it and finish its collector first: '+str(request))
         with request.open('xb') as f:f.write(content)
         if performance:
-            notify('Enter the map, then run trigger_capture.cmd and return to the game during its 5-second countdown. Do not press F9. Keep characters visible until collection completes.')
-            notify('This read-only probe records model entry and the D3D Draw thread TLS context. No queue method or model RT submission is enabled.')
+            notify('Enter the map and press F9 once. If F9 cannot trigger, run trigger_capture.cmd and return to the game during its 5-second countdown. Use only one trigger.')
+            notify('This read-only probe compares model producer and D3D Draw consumer TLS contexts. No queue method or model RT submission is enabled.')
         else:notify('Enter a map, return to the game, and press F9 once. The '+('30-frame beta gate' if beta else '600-Present capture' if world else '120-Present capture')+' starts automatically.')
         if beta:notify('RT Beta v30: after the 30-frame safety gate, play normally for five minutes. GPU skinning keeps 16 submissions per frame at ordinary model density and a 4-submission baseline above 256 model draws; excess models use CPU poses. Do not press F9 again. Exit only when this window asks.')
         elif world:notify('World Pilot v30: keep animated characters nearby, then press F9 ONCE. Move and turn slowly. GPU skinning keeps 16 submissions per frame at ordinary model density and 4 above 256 model draws; excess models use CPU poses. Exit only when this window asks; keep it open until the final ONE ZIP path appears.')

@@ -259,6 +259,11 @@ public:
         }
         if (active && (now - startedAt > (request.world ? 420000u : 60000u) || (fs::exists(doneFile(request)) && (!request.world || !fs::exists(previewRunningFile(request)) || fs::exists(previewDoneFile(request)))))) {
           model_hook::setCaptureActive(false);control("capture_stopped", ordinal);control("model_hook_capture_end",model_hook::calls(),model_hook::captured());
+          control("source_producer_probe",model_hook::producerStatus(),model_hook::producerThread());
+          control("source_producer_context_vtable_rva",model_hook::producerVtable(),0);
+          control("source_producer_context_slot_142_rva",model_hook::producerSlot142(),0);
+          control("source_producer_context_slot_146_rva",model_hook::producerSlot146(),0);
+          control("source_producer_model_identity",model_hook::producerResource(),model_hook::producerScope());
           control("model_hook_rejected",model_hook::rejected(),0);active = false; finished = true;
           control("model_queue_mode",uint64_t(model_hook::queueStatus()),model_hook::immediate());
           control("model_queue_enqueued",model_hook::queued(),model_hook::queueCancelled());

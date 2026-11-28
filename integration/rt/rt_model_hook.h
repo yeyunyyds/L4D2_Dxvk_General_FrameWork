@@ -54,6 +54,9 @@ inline std::atomic<uint64_t> g_observedQueued{0},g_immediate{0},g_probeFailures{
 inline std::atomic<uintptr_t> g_target{0},g_materialBase{0},g_materialSystem{0};
 inline std::atomic<uint32_t> g_bindingStage{0},g_bindingFailure{0};
 inline std::atomic<uint32_t> g_contextAttempts{0};
+inline std::atomic<bool> g_producerSampled{false};
+inline std::atomic<uint32_t> g_producerStatus{0},g_producerThread{0},g_producerVtable{0},g_producerSlot142{0},g_producerSlot146{0};
+inline std::atomic<uint64_t> g_producerResource{0},g_producerScope{0};
 constexpr uint32_t kContextVariants=4,kFirstCandidateSlot=128,kCandidateSlots=32,kCandidateCodeWords=2;
 constexpr uint32_t kManagerSlots=32,kManagerWords=128;
 inline std::array<std::atomic<uintptr_t>,kContextVariants> g_contextVtableVariants{};
@@ -147,6 +150,31 @@ inline bool passiveContextProbe() noexcept {
   g_queueStatus.store(QueueStatus::ObservedUnknown,std::memory_order_release);
   g_contextEvidenceReady.store(true,std::memory_order_release);return true;
 }
+inline void producerContextProbe(const model_scope::Captured& captured) noexcept {
+  if(g_producerSampled.exchange(true,std::memory_order_acq_rel)) { return; }
+  g_producerThread.store(GetCurrentThreadId(),std::memory_order_relaxed);
+  g_producerResource.store(captured.identity.resource,std::memory_order_relaxed);
+  g_producerScope.store(captured.scope,std::memory_order_relaxed);
+  const auto base=g_materialBase.load(std::memory_order_acquire);
+  const auto tier0=GetModuleHandleW(L"tier0.dll");
+  const auto symbol=tier0?GetProcAddress(tier0,"?Get@CThreadLocalBase@GenericThreadLocals@@QBEPAXXZ"):nullptr;
+  uint32_t imported=0;
+  if(!base||!symbol||!readProcess(reinterpret_cast<const void*>(base+0x991b0),imported)||imported!=reinterpret_cast<uintptr_t>(symbol)) {
+    g_producerStatus.store(1,std::memory_order_release);return;
+  }
+  using TlsGet=void*(__thiscall*)(void*);
+  TlsGet get=nullptr;static_assert(sizeof(get)==sizeof(symbol),"x86 TLS getter ABI");std::memcpy(&get,&symbol,sizeof(get));
+  const auto context=get(reinterpret_cast<void*>(base+0xfc274));
+  void** table=nullptr;
+  if(!context||!readProcess(context,table)) { g_producerStatus.store(context?3:2,std::memory_order_release);return; }
+  const auto address=reinterpret_cast<uintptr_t>(table);
+  if(address<base||address>=base+0x13d000-146*4) { g_producerStatus.store(4,std::memory_order_release);return; }
+  g_producerVtable.store(uint32_t(address-base),std::memory_order_relaxed);
+  void* method=nullptr;
+  if(readProcess(table+142,method))g_producerSlot142.store(uint32_t(reinterpret_cast<uintptr_t>(method)-base),std::memory_order_relaxed);
+  if(readProcess(table+146,method))g_producerSlot146.store(uint32_t(reinterpret_cast<uintptr_t>(method)-base),std::memory_order_relaxed);
+  g_producerStatus.store(5,std::memory_order_release);
+}
 
 inline bool capture(const DrawModelState& stateRef,const ModelRenderInfo& infoRef,model_scope::Matrix3x4* customBones,model_scope::Captured& output) noexcept {
   DrawModelState state{};ModelRenderInfo info{};StudioHeaderPrefix studio{};ModelPrefix model{};
@@ -170,6 +198,7 @@ inline void __fastcall hooked(void* self,void* edx,const DrawModelState& stateRe
   if(!capture(stateRef,infoRef,customBones,captured)) { g_rejected.fetch_add(1,std::memory_order_relaxed);g_original(self,edx,stateRef,infoRef,customBones);return; }
   g_captured.fetch_add(1,std::memory_order_relaxed);
   if(!g_contextEvidenceReady.load(std::memory_order_acquire)&&!passiveContextProbe())g_probeFailures.fetch_add(1,std::memory_order_relaxed);
+  producerContextProbe(captured);
   g_original(self,edx,stateRef,infoRef,customBones);
 }
 
@@ -178,6 +207,7 @@ inline void setCaptureActive(bool active) noexcept {
     g_calls.store(0);g_captured.store(0);g_rejected.store(0);g_observedQueued.store(0);g_immediate.store(0);g_probeFailures.store(0);
     g_queueStatus.store(QueueStatus::Unavailable,std::memory_order_release);
     g_bindingStage.store(0);g_bindingFailure.store(0);g_contextAttempts.store(0);g_contextVtableRva.store(0);
+    g_producerSampled.store(false);g_producerStatus.store(0);g_producerThread.store(0);g_producerVtable.store(0);g_producerSlot142.store(0);g_producerSlot146.store(0);g_producerResource.store(0);g_producerScope.store(0);
     for(auto& value:g_contextVtableVariants)value.store(0);for(auto& value:g_contextVariantHits)value.store(0);for(auto& value:g_contextVariantCaptured)value.store(false);g_contextEvidenceReady.store(false);
     for(auto& variant:g_candidateRva)for(auto& rva:variant)rva.store(0);
     for(auto& variant:g_candidateCode)for(auto& row:variant)for(auto& word:row)word.store(0);
@@ -204,6 +234,13 @@ inline uint32_t bindingStage() noexcept { return g_bindingStage.load(std::memory
 inline uint32_t bindingFailure() noexcept { return g_bindingFailure.load(std::memory_order_relaxed); }
 inline uint32_t contextAttempts() noexcept { return g_contextAttempts.load(std::memory_order_relaxed); }
 inline uint32_t maxContextAttempts() noexcept { return kMaxContextAttempts; }
+inline uint32_t producerStatus() noexcept { return g_producerStatus.load(std::memory_order_acquire); }
+inline uint32_t producerThread() noexcept { return g_producerThread.load(std::memory_order_relaxed); }
+inline uint32_t producerVtable() noexcept { return g_producerVtable.load(std::memory_order_relaxed); }
+inline uint32_t producerSlot142() noexcept { return g_producerSlot142.load(std::memory_order_relaxed); }
+inline uint32_t producerSlot146() noexcept { return g_producerSlot146.load(std::memory_order_relaxed); }
+inline uint64_t producerResource() noexcept { return g_producerResource.load(std::memory_order_relaxed); }
+inline uint64_t producerScope() noexcept { return g_producerScope.load(std::memory_order_relaxed); }
 inline bool contextEvidenceReady() noexcept { return g_contextEvidenceReady.load(std::memory_order_acquire); }
 inline uintptr_t managerVtableRva() noexcept { return g_managerVtableRva.load(std::memory_order_relaxed); }
 inline uintptr_t managerCandidateRva(uint32_t index) noexcept { return index<kManagerSlots?g_managerCandidateRva[index].load(std::memory_order_relaxed):0; }
@@ -274,6 +311,13 @@ inline uint32_t bindingStage() noexcept { return 0; }
 inline uint32_t bindingFailure() noexcept { return 0; }
 inline uint32_t contextAttempts() noexcept { return 0; }
 inline uint32_t maxContextAttempts() noexcept { return kMaxContextAttempts; }
+inline uint32_t producerStatus() noexcept { return 0; }
+inline uint32_t producerThread() noexcept { return 0; }
+inline uint32_t producerVtable() noexcept { return 0; }
+inline uint32_t producerSlot142() noexcept { return 0; }
+inline uint32_t producerSlot146() noexcept { return 0; }
+inline uint64_t producerResource() noexcept { return 0; }
+inline uint64_t producerScope() noexcept { return 0; }
 inline bool contextEvidenceReady() noexcept { return false; }
 inline uintptr_t managerVtableRva() noexcept { return 0; }
 inline uintptr_t managerCandidateRva(uint32_t) noexcept { return 0; }
